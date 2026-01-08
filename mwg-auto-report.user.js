@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         MWG AUTO REPORT V4.1
+// @name         MWG AUTO REPORT V4.3
 // @namespace    http://tampermonkey.net/
-// @version      4.1
+// @version      4.3
 // @description  Tool báo cáo tự động cho quản lý MWG
 // @author       42060
 // @match        https://bi.thegioididong.com/*
