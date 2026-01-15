@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         MWG AUTO REPORT V5.9
+// @name         MWG AUTO REPORT V6.0
 // @namespace    http://tampermonkey.net/
-// @version      5.9
-// @description  Tool báo cáo tự động (Fix Config CRM & Logic Link 8)
+// @version      6.0
+// @description  Tool báo cáo tự động cho quản lý MWG.
 // @author       42060
 // @match        https://bi.thegioididong.com/*
 // @match        https://crm.thegioididong.com/*
