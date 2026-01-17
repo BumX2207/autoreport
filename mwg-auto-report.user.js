@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         MWG AUTO REPORT V6.0
+// @name         AUTO BI V6.0
 // @namespace    http://tampermonkey.net/
 // @version      6.0
 // @description  Tool báo cáo tự động cho quản lý MWG.
