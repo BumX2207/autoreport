@@ -7,11 +7,6 @@
 // @match        https://bi.thegioididong.com/*
 // @match        https://crm.thegioididong.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=thegioididong.com
-// @connect      docs.google.com
-// @connect      googleusercontent.com
-// @connect      script.google.com
-// @connect      script.googleusercontent.com
-// @connect      drive.google.com
 // @connect      *
 // @grant        GM_setValue
 // @grant        GM_getValue
