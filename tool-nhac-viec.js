@@ -1,93 +1,195 @@
 /* 
-   MODULE: NHẮC VIỆC (MULTI TASKS VERSION)
+   MODULE: NHẮC VIỆC (NÂNG CẤP V2)
+   - Hỗ trợ ngày tháng tương lai.
+   - Hỗ trợ chỉnh sửa (Edit).
+   - Sắp xếp thời gian.
+   - UI tối ưu.
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE, GM_xmlhttpRequest } = context;
 
-    // CSS MỚI CHO GIAO DIỆN DANH SÁCH
     const MY_CSS = `
         #tgdd-reminder-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(3px); z-index:2147483650; justify-content:center; align-items:center; }
-        .rm-content { background:white; width:95%; max-width:450px; border-radius:15px; padding:20px; box-shadow:0 10px 40px rgba(0,0,0,0.3); animation: popIn 0.3s; font-family: sans-serif; display:flex; flex-direction:column; max-height:90vh; }
-        .rm-header { font-size:18px; font-weight:bold; margin-bottom:10px; text-align:center; color:#ff9800; border-bottom:2px solid #eee; padding-bottom:10px; flex-shrink:0; }
+        .rm-content { background:white; width:95%; max-width:450px; border-radius:15px; padding:20px; box-shadow:0 10px 40px rgba(0,0,0,0.3); animation: popIn 0.3s; font-family: sans-serif; display:flex; flex-direction:column; max-height:90vh; position: relative; }
         
+        /* Header & Close Button */
+        .rm-header { font-size:18px; font-weight:bold; margin-bottom:10px; text-align:center; color:#ff9800; border-bottom:2px solid #eee; padding-bottom:10px; flex-shrink:0; }
+        .rm-btn-close { position:absolute; top:15px; right:15px; background:none; border:none; font-size:24px; color:#999; cursor:pointer; line-height:1; z-index:10; transition:color 0.2s; }
+        .rm-btn-close:hover { color:#333; }
+
         /* List Area */
-        .rm-list-container { flex:1; overflow-y:auto; margin-bottom:15px; border:1px solid #eee; border-radius:8px; background:#f9f9f9; padding:5px; min-height:100px; }
-        .rm-item { background:white; border-radius:8px; padding:10px; margin-bottom:5px; border:1px solid #e0e0e0; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 5px rgba(0,0,0,0.05); }
-        .rm-item-info { flex:1; }
-        .rm-time { font-weight:bold; color:#d35400; font-size:14px; }
-        .rm-text { font-size:12px; color:#555; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:200px; }
-        .rm-item-del { color:red; cursor:pointer; padding:5px 10px; font-weight:bold; font-size:16px; }
+        .rm-list-container { flex:1; overflow-y:auto; margin-bottom:15px; border:1px solid #eee; border-radius:8px; background:#f9f9f9; padding:5px; min-height:120px; }
+        .rm-item { background:white; border-radius:8px; padding:10px; margin-bottom:5px; border:1px solid #e0e0e0; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 5px rgba(0,0,0,0.05); transition: background 0.2s; }
+        .rm-item:hover { border-color:#ff9800; }
+        .rm-item.editing { background:#fff3e0; border-color:#ff9800; }
+        
+        .rm-item-info { flex:1; cursor:pointer; } /* Click vào text để sửa */
+        .rm-time { font-weight:bold; color:#d35400; font-size:14px; display:flex; align-items:center; gap:5px; }
+        .rm-badge { font-size:10px; padding:2px 6px; border-radius:4px; color:white; font-weight:bold; }
+        .rm-badge-daily { background:#4caf50; }
+        .rm-badge-once { background:#2196f3; }
+        
+        .rm-text { font-size:12px; color:#555; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; margin-top:3px; }
+        
+        /* Action Buttons */
+        .rm-actions { display:flex; align-items:center; gap:5px; }
+        .rm-btn-icon { cursor:pointer; padding:5px; border-radius:5px; display:flex; align-items:center; justify-content:center; }
+        .rm-btn-edit { color:#2196f3; font-size:18px; }
+        .rm-btn-del { color:#e74c3c; font-size:22px; padding:0 10px; font-weight:bold; }
+        .rm-btn-edit:hover, .rm-btn-del:hover { background:#eee; }
 
         /* Form Area */
-        .rm-form { border-top:2px solid #eee; padding-top:15px; flex-shrink:0; }
-        .rm-label { font-size:11px; font-weight:bold; color:#555; display:block; margin-bottom:3px; }
-        .rm-input { width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; margin-bottom:8px; box-sizing: border-box; font-size:13px; }
-        .rm-group-box { max-height:80px; overflow-y:auto; border:1px solid #eee; border-radius:6px; padding:5px; background:#fff; margin-bottom:8px; }
+        .rm-form { border-top:2px solid #eee; padding-top:10px; flex-shrink:0; background:#fff; }
+        .rm-row { display:flex; gap:10px; margin-bottom:8px; }
+        .rm-col { flex:1; }
         
-        .rm-btn { width:100%; padding:10px; border:none; color:white; font-weight:bold; border-radius:8px; cursor:pointer; margin-top:5px; }
+        .rm-label { font-size:11px; font-weight:bold; color:#555; display:block; margin-bottom:3px; }
+        .rm-input { width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; box-sizing: border-box; font-size:13px; }
+        .rm-input:focus { border-color:#ff9800; outline:none; }
+        
+        .rm-group-box { max-height:60px; overflow-y:auto; border:1px solid #eee; border-radius:6px; padding:5px; background:#fff; }
+        
+        /* Toggle Switch for Daily */
+        .rm-toggle { display:flex; align-items:center; gap:5px; cursor:pointer; font-size:12px; font-weight:bold; color:#4caf50; margin-bottom:5px; }
+        .rm-toggle input { width:16px; height:16px; accent-color:#4caf50; }
+
+        .rm-btn { width:100%; padding:10px; border:none; color:white; font-weight:bold; border-radius:8px; cursor:pointer; margin-top:5px; transition: 0.2s; }
         .rm-btn-add { background:#4caf50; }
+        .rm-btn-update { background:#ff9800; } /* Màu cam cho nút Update */
         .rm-btn-save { background:#2196f3; margin-top:10px; }
-        .rm-btn-close { position:absolute; top:10px; right:15px; background:none; border:none; font-size:24px; color:#aaa; cursor:pointer; }
+        .rm-btn:active { transform:scale(0.98); }
     `;
 
     const runTool = () => {
         const modalId = 'tgdd-reminder-modal';
         let modal = document.getElementById(modalId);
 
-        // -- DATA STORE --
-        let currentTasks = []; // Chứa danh sách các task
+        // -- STATE MANAGEMENT --
+        let currentTasks = [];
+        let editingId = null; // ID của task đang sửa (null = thêm mới)
         const userCfg = UTILS.getPersistentConfig();
         
-        // Load dữ liệu cũ (nếu là object thì chuyển thành array)
+        // Load & Normalize Data
         if (userCfg.reminderTask) {
-            if (Array.isArray(userCfg.reminderTask)) {
-                currentTasks = userCfg.reminderTask;
-            } else {
-                currentTasks = [userCfg.reminderTask];
-            }
+            currentTasks = Array.isArray(userCfg.reminderTask) ? userCfg.reminderTask : [userCfg.reminderTask];
+            // Migrating old data: Add ID if missing
+            currentTasks.forEach(t => { if(!t.id) t.id = Date.now() + Math.random(); });
         }
 
-        // -- HELPER: RENDER LIST --
+        // -- HELPER FUNCTIONS --
+        
+        // Sắp xếp: Gần -> Xa
+        const sortTasks = () => {
+            currentTasks.sort((a, b) => {
+                // Logic: 
+                // Daily xem như là "0000-00-00" để so sánh giờ
+                // Once thì dùng Date thực
+                // Tuy nhiên để dễ nhìn: Xếp theo Giờ trước, nếu cùng giờ xét Ngày
+                // Hoặc: Xếp Date (Daily = Today), sau đó Time.
+                
+                const today = new Date().toISOString().split('T')[0];
+                const dateA = (a.mode === 'daily' || !a.mode) ? today : a.date;
+                const dateB = (b.mode === 'daily' || !b.mode) ? today : b.date;
+                
+                if (dateA !== dateB) return dateA.localeCompare(dateB);
+                return a.time.localeCompare(b.time);
+            });
+        };
+
         const renderList = () => {
             const container = document.getElementById('rm-task-list');
             if(!container) return;
             container.innerHTML = '';
             
             if (currentTasks.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:20px; color:#999; font-size:12px;">Chưa có lịch nhắc nào.<br>Hãy thêm mới bên dưới.</div>';
+                container.innerHTML = '<div style="text-align:center; padding:30px; color:#999; font-size:12px;">📭 Chưa có lịch nhắc nào.<br>Thêm mới bên dưới nhé!</div>';
                 return;
             }
 
-            // Sắp xếp theo giờ
-            currentTasks.sort((a,b) => a.time.localeCompare(b.time));
+            sortTasks();
 
-            currentTasks.forEach((task, index) => {
+            currentTasks.forEach((task) => {
                 const div = document.createElement('div');
-                div.className = 'rm-item';
+                div.className = `rm-item ${task.id === editingId ? 'editing' : ''}`;
                 
-                // Lấy tên các nhóm (để hiển thị tooltip nếu cần)
-                const groupCount = task.groups ? task.groups.length : 0;
+                // Xác định Badge
+                const isDaily = (!task.mode || task.mode === 'daily');
+                const badgeHtml = isDaily 
+                    ? `<span class="rm-badge rm-badge-daily">Hàng ngày</span>` 
+                    : `<span class="rm-badge rm-badge-once">${task.date || '??'}</span>`;
+
+                // Status Completed
+                const opacityStyle = (task.status === 'completed') ? 'opacity: 0.5; text-decoration: line-through;' : '';
 
                 div.innerHTML = `
-                    <div class="rm-item-info">
-                        <div class="rm-time">⏰ ${task.time} <span style="font-size:10px; color:#999; font-weight:normal">(${groupCount} nhóm)</span></div>
-                        <div class="rm-text">${task.msg}</div>
+                    <div class="rm-item-info" onclick="document.getElementById('btn-edit-${task.id}').click()" style="${opacityStyle}">
+                        <div class="rm-time">${badgeHtml} <span>⏰ ${task.time}</span></div>
+                        <div class="rm-text" title="${task.msg}">${task.msg}</div>
                     </div>
-                    <div class="rm-item-del" data-idx="${index}">×</div>
+                    <div class="rm-actions">
+                        <div id="btn-edit-${task.id}" class="rm-btn-icon rm-btn-edit" title="Sửa">✎</div>
+                        <div id="btn-del-${task.id}" class="rm-btn-icon rm-btn-del" title="Xóa">×</div>
+                    </div>
                 `;
                 container.appendChild(div);
-            });
 
-            // Gán sự kiện xóa
-            document.querySelectorAll('.rm-item-del').forEach(btn => {
-                btn.onclick = (e) => {
+                // Event Delete
+                div.querySelector('.rm-btn-del').onclick = (e) => {
+                    e.stopPropagation();
                     if(confirm('Bạn muốn xóa lịch nhắc này?')) {
-                        const idx = parseInt(e.target.dataset.idx);
-                        currentTasks.splice(idx, 1);
-                        renderList(); // Render lại
+                        currentTasks = currentTasks.filter(t => t.id !== task.id);
+                        if (editingId === task.id) resetForm(); // Nếu đang sửa cái bị xóa thì reset
+                        renderList();
                     }
                 };
+
+                // Event Edit
+                div.querySelector('.rm-btn-edit').onclick = (e) => {
+                    e.stopPropagation();
+                    loadToForm(task);
+                };
             });
+        };
+
+        const loadToForm = (task) => {
+            editingId = task.id;
+            document.getElementById('rm-time').value = task.time;
+            document.getElementById('rm-msg').value = task.msg;
+            
+            const isDaily = (!task.mode || task.mode === 'daily');
+            const chkDaily = document.getElementById('chk-daily');
+            const dateInput = document.getElementById('rm-date');
+            
+            chkDaily.checked = isDaily;
+            dateInput.disabled = isDaily;
+            dateInput.value = isDaily ? '' : (task.date || '');
+
+            // Chọn nhóm
+            document.querySelectorAll('.chk-rm-new-group').forEach(chk => {
+                chk.checked = (task.groups || []).includes(chk.value);
+            });
+
+            // Đổi nút thành Update
+            const btnAdd = document.getElementById('btn-rm-add');
+            btnAdd.innerText = "Cập nhật thay đổi";
+            btnAdd.className = "rm-btn rm-btn-update";
+            
+            renderList(); // Re-render để highlight item đang sửa
+        };
+
+        const resetForm = () => {
+            editingId = null;
+            document.getElementById('rm-msg').value = '';
+            // Giữ nguyên giờ để nhập cho nhanh nếu cần
+            document.getElementById('chk-daily').checked = true;
+            document.getElementById('rm-date').disabled = true;
+            document.getElementById('rm-date').value = '';
+            
+            const btnAdd = document.getElementById('btn-rm-add');
+            btnAdd.innerText = "Thêm vào danh sách";
+            btnAdd.className = "rm-btn rm-btn-add";
+            
+            renderList();
         };
 
         // -- INIT UI --
@@ -95,7 +197,6 @@
             modal = document.createElement('div');
             modal.id = modalId;
             
-            // Lấy danh sách nhóm từ Config
             const groups = userCfg.lineGroups || [];
             let groupHtml = groups.length === 0 ? '<div style="color:red; font-size:11px;">Chưa có nhóm Line!</div>' : '';
             groups.forEach(g => {
@@ -106,67 +207,102 @@
 
             modal.innerHTML = `
                 <div class="rm-content">
-                    <button class="rm-btn-close" id="btn-rm-close">×</button>
+                    <button class="rm-btn-close" id="btn-rm-close" title="Đóng">×</button>
                     <div class="rm-header">🔔 QUẢN LÝ NHẮC VIỆC</div>
                     
-                    <!-- DANH SÁCH -->
                     <div id="rm-task-list" class="rm-list-container"></div>
 
-                    <!-- FORM THÊM MỚI -->
                     <div class="rm-form">
-                        <div style="font-size:13px; font-weight:bold; color:#2196f3; margin-bottom:10px;">➕ Thêm lịch nhắc mới</div>
-                        
-                        <div style="display:flex; gap:10px;">
-                            <div style="flex:1">
-                                <label class="rm-label">Giờ gửi:</label>
-                                <input type="time" id="rm-new-time" class="rm-input">
+                        <div class="rm-row">
+                            <div class="rm-col">
+                                <label class="rm-toggle">
+                                    <input type="checkbox" id="chk-daily" checked> Lặp lại hàng ngày
+                                </label>
+                                <input type="date" id="rm-date" class="rm-input" disabled>
                             </div>
-                            <div style="flex:2">
+                            <div class="rm-col">
+                                <label class="rm-label">Giờ gửi:</label>
+                                <input type="time" id="rm-time" class="rm-input">
+                            </div>
+                        </div>
+
+                        <div class="rm-row">
+                            <div class="rm-col">
+                                <label class="rm-label">Nội dung:</label>
+                                <input type="text" id="rm-msg" class="rm-input" placeholder="Nhập nội dung...">
+                            </div>
+                        </div>
+
+                        <div class="rm-row">
+                            <div class="rm-col">
                                 <label class="rm-label">Nhóm nhận tin:</label>
                                 <div class="rm-group-box">${groupHtml}</div>
                             </div>
                         </div>
 
-                        <label class="rm-label">Nội dung:</label>
-                        <input type="text" id="rm-new-msg" class="rm-input" placeholder="Nhập nội dung nhắc nhở...">
-
                         <button id="btn-rm-add" class="rm-btn rm-btn-add">Thêm vào danh sách</button>
                     </div>
 
-                    <!-- SAVE ALL BUTTON -->
-                    <button id="btn-rm-save-cloud" class="rm-btn rm-btn-save">☁️ LƯU TẤT CẢ LÊN SERVER</button>
+                    <button id="btn-rm-save-cloud" class="rm-btn rm-btn-save">☁️ LƯU LÊN SERVER</button>
                 </div>
             `;
             document.body.appendChild(modal);
 
-            // 1. Đóng Modal
+            // EVENTS
             document.getElementById('btn-rm-close').onclick = () => { modal.style.display = 'none'; };
 
-            // 2. Thêm Task mới vào List (Chưa lưu Server)
+            // Toggle Daily/Date
+            document.getElementById('chk-daily').onchange = (e) => {
+                const dateInput = document.getElementById('rm-date');
+                dateInput.disabled = e.target.checked;
+                if(e.target.checked) dateInput.value = '';
+                else {
+                    // Default to today/tomorrow
+                    const d = new Date();
+                    dateInput.value = d.toISOString().split('T')[0];
+                }
+            };
+
+            // BUTTON ADD / UPDATE
             document.getElementById('btn-rm-add').onclick = () => {
-                const time = document.getElementById('rm-new-time').value;
-                const msg = document.getElementById('rm-new-msg').value.trim();
+                const time = document.getElementById('rm-time').value;
+                const msg = document.getElementById('rm-msg').value.trim();
+                const isDaily = document.getElementById('chk-daily').checked;
+                const date = document.getElementById('rm-date').value;
                 const selectedGroups = Array.from(document.querySelectorAll('.chk-rm-new-group:checked')).map(c => c.value);
 
-                if(!time) return alert("Chưa chọn giờ!");
-                if(!msg) return alert("Chưa nhập nội dung!");
-                if(selectedGroups.length === 0) return alert("Chưa chọn nhóm!");
+                if(!time) return alert("Vui lòng chọn giờ!");
+                if(!isDaily && !date) return alert("Vui lòng chọn ngày!");
+                if(!msg) return alert("Vui lòng nhập nội dung!");
+                if(selectedGroups.length === 0) return alert("Vui lòng chọn nhóm!");
 
-                // Thêm vào mảng tạm
-                currentTasks.push({
+                const taskObj = {
+                    id: editingId || Date.now(), // Giữ ID cũ nếu sửa, tạo mới nếu thêm
                     isActive: true,
+                    mode: isDaily ? 'daily' : 'once',
+                    date: isDaily ? '' : date,
                     time: time,
                     msg: msg,
                     groups: selectedGroups,
-                    lastRun: ''
-                });
+                    lastRun: '',
+                    status: 'pending'
+                };
 
-                // Reset form
-                document.getElementById('rm-new-msg').value = '';
-                renderList();
+                if (editingId) {
+                    // Update existing
+                    const idx = currentTasks.findIndex(t => t.id === editingId);
+                    if(idx !== -1) currentTasks[idx] = taskObj;
+                    UI.showToast("Đã cập nhật!");
+                } else {
+                    // Add new
+                    currentTasks.push(taskObj);
+                    UI.showToast("Đã thêm vào danh sách!");
+                }
+
+                resetForm();
             };
 
-            // 3. Lưu lên Server (Cột D)
+            // BUTTON SAVE CLOUD
             document.getElementById('btn-rm-save-cloud').onclick = () => {
                 const currentUser = AUTH_STATE.userName;
                 if (!currentUser || currentUser === "---") return alert("Chưa có User!");
@@ -180,8 +316,8 @@
                     url: CONSTANTS.GSHEET.CONFIG_API,
                     data: JSON.stringify({
                         user: currentUser,
-                        type: 'reminder', // Ghi vào cột D
-                        config: currentTasks // Gửi cả mảng lên
+                        type: 'reminder',
+                        config: currentTasks
                     }),
                     headers: { "Content-Type": "application/x-www-form-urlencoded" },
                     onload: (res) => {
@@ -189,22 +325,20 @@
                         try {
                             const response = JSON.parse(res.responseText);
                             if (response.status === 'success') {
-                                UI.showToast("✅ Đã lưu thành công!");
-                                
-                                // Cập nhật LocalStorage
+                                UI.showToast("✅ Lưu thành công!");
+                                // Update Local
                                 userCfg.reminderTask = currentTasks;
                                 UTILS.savePersistentConfig(userCfg);
-                                
                                 modal.style.display = 'none';
                             } else { alert("Lỗi: " + response.message); }
                         } catch (e) { alert("Lỗi phản hồi Server"); }
                     },
-                    onerror: () => { btn.innerText = oldText; btn.disabled = false; alert("Lỗi mạng!"); }
+                    onerror: () => { btn.innerText = oldText; btn.disabled = false; alert("Lỗi kết nối!"); }
                 });
             };
         }
 
-        renderList();
+        resetForm(); // Đảm bảo sạch sẽ khi mở lên
         modal.style.display = 'flex';
     };
 
