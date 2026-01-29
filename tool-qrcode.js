@@ -1,9 +1,8 @@
 /* 
-   MODULE: TẠO & QUÉT MÃ (GENERATE & SCAN) - V4 (BWIP-JS ENGINE)
-   - Sử dụng BWIP-JS: Thư viện mã vạch chuyên nghiệp.
-   - Hỗ trợ Tiếng Việt cho QR Code 100%.
-   - Tự động lọc dấu triệt để cho Barcode (Chống crash).
-   - Tải ảnh siêu nét.
+   MODULE: TẠO & QUÉT MÃ (GENERATE & SCAN) - V5 (FINAL FIT)
+   - Fix lỗi tràn khung khi Barcode quá dài (Responsive Canvas).
+   - Tối ưu hóa logic tải ảnh (Ảnh tải về vẫn giữ độ nét cao nhất).
+   - Hỗ trợ Tiếng Việt & Lọc dấu.
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE } = context;
@@ -38,7 +37,7 @@
         .qr-radio-label:has(input:checked) { border-color:#007bff; background:#007bff; color:#fff; box-shadow:0 4px 10px rgba(0,123,255,0.3); }
         .qr-radio-label input { display:none; }
 
-        /* PREVIEW AREA */
+        /* PREVIEW AREA (Đã cập nhật để Fit khung) */
         .qr-preview-area { 
             width: 100%; 
             min-height: 220px; 
@@ -51,11 +50,17 @@
             align-items: center; 
             margin-bottom: 15px; 
             position: relative;
-            padding: 20px; /* Padding cho khung */
+            padding: 20px; 
             box-sizing: border-box;
+            overflow: hidden; /* Cắt phần thừa nếu có */
         }
-        /* Canvas do thư viện vẽ ra */
-        canvas.qr-canvas { max-width: 100%; height: auto !important; }
+        
+        /* Canvas tự động co giãn theo khung cha */
+        canvas#main-canvas { 
+            max-width: 100% !important; 
+            height: auto !important;
+            object-fit: contain;
+        }
 
         .qr-warning { color:#d63031; font-size:11px; margin-top:10px; font-style:italic; display:none; text-align:center; background:#fff0f0; padding:5px; border-radius:5px; width:100%; }
 
@@ -73,14 +78,10 @@
     `;
 
     // --- 2. CÁC HÀM HỖ TRỢ ---
-    
-    // Hàm xóa dấu Tiếng Việt và ký tự lạ (Giữ lại số, chữ không dấu, khoảng trắng, gạch ngang)
-    // Code 128 B hỗ trợ ASCII từ 32-126.
     const sanitizeForBarcode = (str) => {
         if(!str) return "";
         let s = str.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
                    .replace(/đ/g, "d").replace(/Đ/g, "D");
-        // Chỉ giữ lại các ký tự ASCII in được (từ 32 đến 126)
         s = s.replace(/[^\x20-\x7E]/g, ""); 
         return s;
     };
@@ -178,9 +179,7 @@
             // Tải thư viện
             UI.showToast("⏳ Đang tải module xử lý mã...");
             try {
-                // BWIP-JS: Thư viện vẽ mã vạch/QR cực mạnh (Vẽ trực tiếp lên Canvas)
                 await loadScript('https://unpkg.com/bwip-js@3.0.4/dist/bwip-js-min.js');
-                // Html5-Qrcode: Để quét
                 await loadScript('https://unpkg.com/html5-qrcode');
                 UI.showToast("✅ Đã sẵn sàng!");
             } catch (e) {
@@ -189,7 +188,7 @@
             }
         }
 
-        // B. Logic TẠO MÃ (GENERATE) - Dùng BWIP-JS
+        // B. Logic TẠO MÃ (GENERATE)
         const inputEl = document.getElementById('qr-input-text');
         const canvas = document.getElementById('main-canvas');
         const placeholder = document.getElementById('qr-placeholder');
@@ -214,73 +213,80 @@
                 canvas.style.display = 'block';
 
                 let finalOptions = {
-                    bcid: type,       // 'qrcode' or 'code128'
+                    bcid: type,
                     text: rawText,
-                    scale: 3,         // Độ nét
-                    height: 10,       // Chiều cao (cho barcode)
-                    includetext: true,// Hiện text bên dưới mã vạch
+                    scale: 3,
+                    height: 10,
+                    includetext: true,
                     textxalign: 'center',
                 };
 
-                // Xử lý riêng cho từng loại
                 if (type === 'qrcode') {
-                    // QR Code: Giữ nguyên UTF-8, chỉnh lại kích thước
-                    finalOptions.height = 30; // Aspect ratio cho QR
+                    finalOptions.height = 30; 
                     finalOptions.width = 30;
-                    finalOptions.includetext = false; // QR không hiện text
+                    finalOptions.includetext = false; 
                 } else {
-                    // Barcode 128: PHẢI LỌC DẤU
+                    // Xử lý Barcode
                     const safeText = sanitizeForBarcode(rawText);
-                    
                     if (safeText !== rawText) {
-                        warningEl.innerText = "⚠️ Đã tự động chuyển Tiếng Việt có dấu thành không dấu để tạo mã vạch hợp lệ.";
+                        warningEl.innerText = "⚠️ Đã tự động chuyển Tiếng Việt có dấu thành không dấu.";
                         warningEl.style.display = 'block';
                     }
-                    if (safeText.length === 0) {
-                        throw "Vui lòng nhập ký tự không dấu hoặc số.";
-                    }
-                    
-                    finalOptions.text = safeText; // Dùng text đã lọc
+                    if (safeText.length === 0) throw "Vui lòng nhập ký tự hợp lệ.";
+                    finalOptions.text = safeText;
                 }
 
-                // VẼ LÊN CANVAS
                 bwipjs.toCanvas(canvas, finalOptions);
 
             } catch (e) {
-                // Nếu lỗi (thường do ký tự quá dị mà code128 không chịu nổi)
                 canvas.style.display = 'none';
                 placeholder.style.display = 'block';
-                placeholder.innerText = "❌ Lỗi: " + e;
-                if(e.toString().includes("bwipp")) placeholder.innerText = "❌ Nội dung chứa ký tự không hỗ trợ!";
+                placeholder.innerText = "❌ Lỗi: Nội dung không hỗ trợ!";
             }
         };
 
         inputEl.oninput = generateCode;
         radios.forEach(r => r.onchange = () => { generateCode(); });
 
-        // Nút Tải ảnh (Dùng html2canvas chụp cả khung Padding)
+        // Nút Tải ảnh (QUAN TRỌNG: FIX LỖI ẢNH BỊ THU NHỎ KHI TẢI)
         document.getElementById('btn-qr-download').onclick = () => {
             if (canvas.style.display === 'none') return UI.showToast("Chưa có mã để tải!");
             
             const container = document.getElementById('qr-result-container');
-            // Tạm ẩn border nét đứt
-            const oldBorder = container.style.border;
+            const originalBorder = container.style.border;
+            
+            // 1. Tạm ẩn border
             container.style.border = 'none';
+            
+            // 2. Tạm thời GỠ BỎ giới hạn max-width của canvas để html2canvas chụp được kích thước thật (Full HD)
+            // Nếu không gỡ, html2canvas sẽ chụp cái canvas bé tí đang bị CSS co lại.
+            const originalMaxWidth = canvas.style.maxWidth;
+            const originalHeight = canvas.style.height;
+            
+            canvas.style.maxWidth = 'none';
+            canvas.style.height = 'auto'; // Để nó bung ra kích thước thật
 
             if (window.html2canvas) {
                 UI.showToast("📸 Đang tạo ảnh...");
                 html2canvas(container, {
                     backgroundColor: "#ffffff",
-                    scale: 3 // Super high quality
+                    scale: 3
                 }).then(c => {
-                    container.style.border = oldBorder;
+                    // 3. Khôi phục lại trạng thái hiển thị
+                    container.style.border = originalBorder;
+                    canvas.style.maxWidth = originalMaxWidth;
+                    canvas.style.height = originalHeight;
+
                     const a = document.createElement('a');
                     a.href = c.toDataURL("image/png");
                     a.download = `CODE_${Date.now()}.png`;
                     document.body.appendChild(a); a.click(); document.body.removeChild(a);
                     UI.showToast("✅ Đã lưu ảnh!");
                 }).catch(() => {
-                    container.style.border = oldBorder;
+                    // Khôi phục nếu lỗi
+                    container.style.border = originalBorder;
+                    canvas.style.maxWidth = originalMaxWidth;
+                    canvas.style.height = originalHeight;
                     UI.showToast("❌ Lỗi!");
                 });
             } else {
@@ -303,11 +309,9 @@
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
             
             html5QrcodeScanner.start({ facingMode: "environment" }, config, (decodedText) => {
-                console.log(`Matched: ${decodedText}`);
                 resultEl.innerText = decodedText;
                 if (navigator.vibrate) navigator.vibrate(200);
                 UI.showToast("✅ Đã quét thành công!");
-                // stopScanner(); // Tự động dừng nếu muốn
             }, () => {}).catch(err => {
                 resultEl.innerText = "Lỗi Camera: " + err;
             });
