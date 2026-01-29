@@ -1,9 +1,9 @@
 /* 
-   MODULE: KIỂM KÊ KHO (INVENTORY) - V2.1
-   - Fix: Chuyển chọn trạng thái sang Tab Kiểm Kê.
-   - Auto Hide Bottom Nav.
-   - Status Mapping & Filtering.
-   - Edit Quantity with History.
+   MODULE: KIỂM KÊ KHO (INVENTORY) - V2.2
+   - Feature: Checkbox nhập số lượng thủ công (Tab kiểm kê).
+   - Feature: Cột trạng thái (Tab kiểm kê).
+   - Feature: Dropdown Filter cho Nhóm & Tên (Tab tổng hợp).
+   - Feature: Nút "Nhập đủ" thông minh trong Popup sửa.
 */
 ((context) => {
     const { UI, UTILS } = context;
@@ -11,7 +11,7 @@
     // --- 1. CSS ---
     const MY_CSS = `
         #tgdd-inventory-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); z-index:2147483646; justify-content:center; align-items:center; }
-        .inv-content { background:#fff; width:98%; max-width:1000px; height:92vh; border-radius:15px; box-shadow:0 20px 60px rgba(0,0,0,0.4); display:flex; flex-direction:column; overflow:hidden; animation: popIn 0.3s; font-family: sans-serif; position: relative; }
+        .inv-content { background:#fff; width:98%; max-width:1100px; height:92vh; border-radius:15px; box-shadow:0 20px 60px rgba(0,0,0,0.4); display:flex; flex-direction:column; overflow:hidden; animation: popIn 0.3s; font-family: sans-serif; position: relative; }
         
         /* HEADER & TABS */
         .inv-header { display:flex; background:#f8f9fa; border-bottom:1px solid #ddd; padding:0 10px; align-items:center; justify-content:space-between; height: 50px; flex-shrink: 0; }
@@ -38,7 +38,7 @@
         /* TABLE STYLES */
         .inv-table-wrapper { flex:1; overflow:auto; border:1px solid #eee; border-radius:8px; box-shadow:inset 0 0 10px rgba(0,0,0,0.05); }
         .inv-table { width:100%; border-collapse:collapse; font-size:12px; }
-        .inv-table th { background:#f1f1f1; position:sticky; top:0; z-index:10; padding:10px; text-align:left; border-bottom:2px solid #ddd; color:#444; vertical-align: bottom; }
+        .inv-table th { background:#f1f1f1; position:sticky; top:0; z-index:10; padding:10px; text-align:left; border-bottom:2px solid #ddd; color:#444; vertical-align: bottom; white-space: nowrap; }
         .inv-table td { padding:8px 10px; border-bottom:1px solid #eee; color:#333; }
         .inv-table tr:hover { background:#f9f9f9; cursor: pointer; }
         .inv-table tr.highlight { background:#fff9c4; animation: highlightFade 2s forwards; }
@@ -57,17 +57,16 @@
         .btn-import { background:#28a745; }
         .btn-scan { background:#343a40; }
         
+        /* MANUAL INPUT CHECKBOX */
+        .inv-chk-manual { font-size:12px; font-weight:bold; color:#d63031; display:flex; align-items:center; gap:5px; cursor:pointer; border:1px solid #d63031; padding:8px 12px; border-radius:6px; background:#fff0f0; height: 18px; }
+        .inv-chk-manual input { width:16px; height:16px; accent-color:#d63031; }
+
         /* SUGGESTIONS */
         .inv-search-box { position:relative; flex:1; }
         .inv-suggestions { position:absolute; top:100%; left:0; width:100%; background:white; border:1px solid #ddd; border-radius:0 0 8px 8px; box-shadow:0 10px 20px rgba(0,0,0,0.1); z-index:100; max-height:300px; overflow-y:auto; display:none; }
         .inv-sug-item { padding:10px; border-bottom:1px solid #f0f0f0; cursor:pointer; font-size:12px; }
         .inv-sug-item:hover { background:#f0f8ff; color:#007bff; }
         .inv-sug-code { font-weight:bold; color:#d63031; }
-
-        /* SCANNER OVERLAY */
-        #inv-scanner-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:black; z-index:200; display:none; flex-direction:column; }
-        #inv-reader { width:100%; height:100%; object-fit:cover; }
-        .inv-scan-close { position:absolute; top:20px; right:20px; background:white; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; z-index:201; box-shadow:0 0 10px rgba(0,0,0,0.5); }
 
         /* EDIT MODAL */
         #inv-edit-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2147483650; justify-content:center; align-items:center; backdrop-filter:blur(2px); }
@@ -76,12 +75,18 @@
         .inv-edit-list { max-height:200px; overflow-y:auto; border:1px solid #eee; border-radius:6px; margin-bottom:15px; }
         .inv-edit-item { display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #f9f9f9; align-items:center; font-size:13px; }
         .inv-edit-input { width:60px; padding:4px; text-align:center; border:1px solid #ccc; border-radius:4px; }
-        .inv-edit-actions { display:flex; gap:10px; justify-content:flex-end; }
+        .inv-edit-actions { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; }
         .inv-btn-del-all { background:#dc3545; flex:1; justify-content:center; }
+        .inv-btn-fill { background:#28a745; flex:1; justify-content:center; } /* Nút nhập đủ */
         .inv-btn-save { background:#007bff; flex:1; justify-content:center; }
 
         /* FILTERS */
-        .inv-filter-select, .inv-filter-input { padding:4px; border:1px solid #ccc; border-radius:4px; font-size:11px; width:100%; box-sizing:border-box; margin-top:2px; }
+        .inv-filter-select { padding:4px; border:1px solid #ccc; border-radius:4px; font-size:11px; width:100%; box-sizing:border-box; margin-top:2px; }
+        
+        /* SCANNER OVERLAY */
+        #inv-scanner-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:black; z-index:200; display:none; flex-direction:column; }
+        #inv-reader { width:100%; height:100%; object-fit:cover; }
+        .inv-scan-close { position:absolute; top:20px; right:20px; background:white; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; z-index:201; box-shadow:0 0 10px rgba(0,0,0,0.5); }
     `;
 
     // --- 2. GLOBAL STATE ---
@@ -91,7 +96,8 @@
         currentStatus: "Mới",
         isScannerRunning: false,
         scannerObj: null,
-        editingItem: null // Ref to item being edited
+        editingItem: null,
+        isManualInput: false // Trạng thái nhập tay
     };
 
     const STATUS_MAP = {
@@ -161,20 +167,23 @@
 
                         <!-- TAB 2: KIỂM KÊ -->
                         <div class="inv-view" id="tab-count">
-                            <!-- CHUYỂN RADIO STATUS SANG ĐÂY -->
                             <div class="inv-status-group" id="inv-status-container"></div>
 
                             <div class="inv-controls">
                                 <div class="inv-search-box">
-                                    <input type="text" id="inp-search-sku" class="inv-input" placeholder="Nhập tên/mã (Gợi ý theo trạng thái đã chọn)..." autocomplete="off">
+                                    <input type="text" id="inp-search-sku" class="inv-input" placeholder="Nhập tên/mã (Gợi ý theo trạng thái)..." autocomplete="off">
                                     <div class="inv-suggestions" id="box-suggestions"></div>
                                 </div>
+                                <label class="inv-chk-manual">
+                                    <input type="checkbox" id="chk-manual-input"> Nhập số lượng
+                                </label>
                                 <button class="inv-btn btn-scan" id="btn-open-scan">📷 Quét mã</button>
                             </div>
                             
                             <div class="inv-table-wrapper">
                                 <table class="inv-table" id="tbl-counting">
-                                    <thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Tồn</th><th>Đã kiểm</th><th>Lệch</th></tr></thead>
+                                    <!-- THÊM CỘT TRẠNG THÁI -->
+                                    <thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>Tồn</th><th>Đã kiểm</th><th>Lệch</th></tr></thead>
                                     <tbody></tbody>
                                 </table>
                             </div>
@@ -184,15 +193,21 @@
                             </div>
                         </div>
 
-                        <!-- TAB 3: TỔNG HỢP -->
+                        <!-- TAB 3: TỔNG HỢP (FILTER DROPDOWN) -->
                         <div class="inv-view" id="tab-sum">
                             <div class="inv-table-wrapper">
                                 <table class="inv-table" id="tbl-summary">
                                     <thead>
                                         <tr>
-                                            <th>Nhóm hàng<br><input class="inv-filter-input" data-col="group" placeholder="Lọc nhóm..."></th>
+                                            <th>
+                                                Nhóm hàng<br>
+                                                <select class="inv-filter-select" data-col="group"><option value="all">Tất cả</option></select>
+                                            </th>
                                             <th>Mã SP</th>
-                                            <th>Tên sản phẩm<br><input class="inv-filter-input" data-col="name" placeholder="Lọc tên..."></th>
+                                            <th>
+                                                Tên sản phẩm<br>
+                                                <select class="inv-filter-select" data-col="name"><option value="all">Tất cả</option></select>
+                                            </th>
                                             <th>Trạng thái<br><select class="inv-filter-select" data-col="status"><option value="all">Tất cả</option></select></th>
                                             <th>Tồn</th>
                                             <th>Kiểm<br><select class="inv-filter-select" data-col="count"><option value="all">All</option><option value="checked">Rồi</option><option value="unchecked">Chưa</option></select></th>
@@ -212,12 +227,14 @@
                         <div class="inv-edit-header">Điều chỉnh số lượng</div>
                         <div style="font-size:13px; margin-bottom:5px;">Sản phẩm: <b id="edit-prod-name">...</b></div>
                         <div style="font-size:12px; color:#666; margin-bottom:10px;">Mã: <span id="edit-prod-sku"></span> | Trạng thái: <span id="edit-prod-status"></span></div>
+                        <div style="font-size:12px; color:blue; margin-bottom:10px;">Tồn kho: <b id="edit-prod-stock">0</b> | Đã kiểm: <b id="edit-prod-count">0</b></div>
                         
                         <div class="inv-edit-list" id="edit-history-list"></div>
                         
                         <div class="inv-edit-actions">
-                            <button class="inv-btn inv-btn-del-all" id="btn-edit-delete">🗑️ Xóa khỏi list</button>
-                            <button class="inv-btn inv-btn-save" id="btn-edit-save">Lưu thay đổi</button>
+                            <button class="inv-btn inv-btn-del-all" id="btn-edit-delete">🗑️ Xóa</button>
+                            <button class="inv-btn inv-btn-fill" id="btn-edit-fill" style="display:none;">⚡ Nhập đủ</button>
+                            <button class="inv-btn inv-btn-save" id="btn-edit-save">Lưu</button>
                         </div>
                         <div style="text-align:center; margin-top:10px;"><a href="#" id="btn-edit-cancel" style="font-size:12px; color:#999;">Hủy bỏ</a></div>
                     </div>
@@ -236,7 +253,6 @@
                     </label>`;
             });
 
-            // LOAD LIBS
             try {
                 await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
                 await loadScript('https://unpkg.com/html5-qrcode');
@@ -246,7 +262,7 @@
             document.getElementById('btn-inv-close').onclick = () => {
                 if(STORE.isScannerRunning) stopScanner();
                 modal.style.display = 'none';
-                if(bottomNav) bottomNav.style.display = 'flex'; // Show Bottom Nav back
+                if(bottomNav) bottomNav.style.display = 'flex'; 
                 document.body.classList.remove('tgdd-body-lock');
             };
 
@@ -261,7 +277,6 @@
                 };
             });
 
-            // RADIO CHANGE
             document.querySelectorAll('input[name="inv-status-radio"]').forEach(r => {
                 r.onchange = (e) => {
                     STORE.currentStatus = e.target.value;
@@ -269,18 +284,19 @@
                 };
             });
 
+            document.getElementById('chk-manual-input').onchange = (e) => {
+                STORE.isManualInput = e.target.checked;
+            };
+
             document.getElementById('inp-excel-file').addEventListener('change', handleFileImport, false);
 
-            // SEARCH
             const searchInput = document.getElementById('inp-search-sku');
             const sugBox = document.getElementById('box-suggestions');
             searchInput.addEventListener('input', (e) => {
                 const val = e.target.value.toLowerCase().trim();
                 if (val.length < 2) { sugBox.style.display = 'none'; return; }
-                
-                // Filter by Current Status + Keyword
                 const matches = STORE.importData.filter(item => 
-                    item.status === STORE.currentStatus && // STRICT FILTER
+                    item.status === STORE.currentStatus && 
                     (item.sku.toLowerCase().includes(val) || item.name.toLowerCase().includes(val))
                 ).slice(0, 10);
 
@@ -306,11 +322,9 @@
             document.getElementById('btn-open-scan').onclick = startScanner;
             document.getElementById('btn-close-scan').onclick = stopScanner;
 
-            // Summary Filters
-            document.querySelectorAll('.inv-filter-select, .inv-filter-input').forEach(el => el.addEventListener('change', renderSummary));
-            document.querySelectorAll('.inv-filter-input').forEach(el => el.addEventListener('input', renderSummary));
+            document.querySelectorAll('.inv-filter-select').forEach(el => el.addEventListener('change', renderSummary));
 
-            // EDIT MODAL EVENTS
+            // EDIT MODAL ACTIONS
             document.getElementById('btn-edit-cancel').onclick = () => document.getElementById('inv-edit-modal').style.display = 'none';
             
             document.getElementById('btn-edit-delete').onclick = () => {
@@ -322,6 +336,39 @@
                 }
             };
 
+            // NÚT NHẬP ĐỦ
+            document.getElementById('btn-edit-fill').onclick = () => {
+                const item = STORE.editingItem;
+                const missing = item.stock - item.totalCount;
+                if (missing > 0) {
+                    if(confirm(`Xác nhận nhập thêm ${missing} cái để đủ tồn kho?`)) {
+                        const nowTime = new Date().toTimeString().split(' ')[0];
+                        // Nếu item chưa có trong countData (trường hợp click từ tab tổng hợp) -> Thêm mới
+                        // Nếu đã có -> Update
+                        const existIdx = STORE.countData.findIndex(i => i.sku === item.sku && i.status === item.status);
+                        if (existIdx === -1) {
+                            // Chưa có -> Tạo mới
+                            STORE.countData.unshift({
+                                ...item, // copy info from import
+                                history: [{ ts: nowTime, qty: missing }],
+                                totalCount: missing,
+                                counted: missing // legacy property
+                            });
+                        } else {
+                            // Đã có -> Push history
+                            const realItem = STORE.countData[existIdx];
+                            realItem.history.unshift({ ts: nowTime, qty: missing });
+                            realItem.totalCount += missing;
+                        }
+                        
+                        document.getElementById('inv-edit-modal').style.display = 'none';
+                        renderCountTable();
+                        renderSummary();
+                        UI.showToast("Đã nhập đủ!");
+                    }
+                }
+            };
+
             document.getElementById('btn-edit-save').onclick = () => {
                 const inputs = document.querySelectorAll('.inv-history-qty');
                 let newHistory = [];
@@ -330,21 +377,32 @@
                 inputs.forEach((inp, idx) => {
                     const val = parseInt(inp.value) || 0;
                     if (val > 0) {
-                        newHistory.push({
-                            ts: STORE.editingItem.history[idx].ts,
-                            qty: val
-                        });
+                        newHistory.push({ ts: STORE.editingItem.history[idx].ts, qty: val });
                         newTotal += val;
                     }
                 });
 
                 if (newTotal === 0) {
-                    alert("Số lượng phải lớn hơn 0. Nếu muốn xóa hãy bấm nút Xóa.");
-                    return;
+                    if(confirm("Số lượng bằng 0. Bạn có muốn xóa sản phẩm này không?")) {
+                        STORE.countData = STORE.countData.filter(i => !(i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status));
+                    } else return;
+                } else {
+                    // Update current item in STORE (reference)
+                    // Lưu ý: Nếu editingItem là item ảo (chưa đếm), ta cần push vào STORE
+                    const existIdx = STORE.countData.findIndex(i => i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status);
+                    
+                    if (existIdx !== -1) {
+                        STORE.countData[existIdx].history = newHistory;
+                        STORE.countData[existIdx].totalCount = newTotal;
+                    } else {
+                        // Item ảo từ tab tổng hợp
+                        STORE.countData.unshift({
+                            ...STORE.editingItem, // copy props
+                            history: newHistory,
+                            totalCount: newTotal
+                        });
+                    }
                 }
-
-                STORE.editingItem.history = newHistory;
-                STORE.editingItem.totalCount = newTotal;
                 
                 document.getElementById('inv-edit-modal').style.display = 'none';
                 renderCountTable();
@@ -358,9 +416,7 @@
             if (!raw) return "";
             const cleanRaw = String(raw).trim();
             if (STATUS_MAP[cleanRaw]) return STATUS_MAP[cleanRaw];
-            for (let key in STATUS_MAP) {
-                if (cleanRaw.includes(key) || key.includes(cleanRaw)) return STATUS_MAP[key];
-            }
+            for (let key in STATUS_MAP) { if (cleanRaw.includes(key) || key.includes(cleanRaw)) return STATUS_MAP[key]; }
             return cleanRaw; 
         }
 
@@ -389,11 +445,23 @@
                 }
                 renderImportTable();
                 UI.showToast(`✅ Đã nhập ${STORE.importData.length} dòng!`);
-                const statuses = [...new Set(STORE.importData.map(i => i.status))].filter(Boolean);
-                const statusSel = document.querySelector('.inv-filter-select[data-col="status"]');
-                statusSel.innerHTML = '<option value="all">Tất cả</option>' + statuses.map(s => `<option value="${s}">${s}</option>`).join('');
+                updateFilters();
             };
             reader.readAsArrayBuffer(file);
+        }
+
+        function updateFilters() {
+            // Helper to get unique sorted values
+            const getOptions = (key) => ['all', ...new Set(STORE.importData.map(i => i[key]))].filter(Boolean);
+            
+            const fillSelect = (col, vals) => {
+                const sel = document.querySelector(`.inv-filter-select[data-col="${col}"]`);
+                if(sel) sel.innerHTML = vals.map(v => `<option value="${v}">${v === 'all' ? 'Tất cả' : v}</option>`).join('');
+            };
+
+            fillSelect('status', getOptions('status'));
+            fillSelect('group', getOptions('group'));
+            fillSelect('name', getOptions('name').sort()); // Sort names specifically
         }
 
         function renderImportTable() {
@@ -407,51 +475,95 @@
 
         function addCountItem(sku) {
             const stockItem = STORE.importData.find(i => i.sku === sku && i.status === STORE.currentStatus);
-            if (!stockItem) {
-                UI.showToast(`⚠️ Không tìm thấy mã ${sku} với trạng thái ${STORE.currentStatus}`);
-                return;
+            if (!stockItem) { UI.showToast(`⚠️ Không tìm thấy mã ${sku} với trạng thái ${STORE.currentStatus}`); return; }
+
+            // CHECK MANUAL INPUT
+            let qty = 1;
+            if (STORE.isManualInput) {
+                const inputQty = prompt(`Nhập số lượng cho: ${stockItem.name}`, "1");
+                if (inputQty === null) return; // Cancel
+                qty = parseInt(inputQty) || 0;
+                if (qty <= 0) return;
             }
+
             const existItem = STORE.countData.find(i => i.sku === sku && i.status === STORE.currentStatus);
             const nowTime = new Date().toTimeString().split(' ')[0];
 
             if (existItem) {
-                existItem.history.unshift({ ts: nowTime, qty: 1 });
-                existItem.totalCount += 1;
+                existItem.history.unshift({ ts: nowTime, qty: qty });
+                existItem.totalCount += qty;
                 STORE.countData = STORE.countData.filter(i => i !== existItem);
                 STORE.countData.unshift(existItem);
             } else {
                 STORE.countData.unshift({
                     ...stockItem,
-                    history: [{ ts: nowTime, qty: 1 }],
-                    totalCount: 1
+                    history: [{ ts: nowTime, qty: qty }],
+                    totalCount: qty
                 });
             }
             renderCountTable();
-            UI.showToast(`Đã thêm: ${stockItem.name}`);
+            UI.showToast(`Đã thêm ${qty}: ${stockItem.name}`);
         }
 
         function openEditPopup(item) {
             const modal = document.getElementById('inv-edit-modal');
             const list = document.getElementById('edit-history-list');
             
-            // Find real object reference in countData
-            const realItem = STORE.countData.find(i => i.sku === item.sku && i.status === item.status);
-            if(!realItem) return;
-            STORE.editingItem = realItem;
+            // Try to find real object in countData
+            let realItem = STORE.countData.find(i => i.sku === item.sku && i.status === item.status);
+            
+            // If not found (uncounted item from Summary), create a virtual item
+            if (!realItem) {
+                // Find in importData to get correct details
+                const importItem = STORE.importData.find(i => i.sku === item.sku && i.status === item.status);
+                realItem = {
+                    ...importItem,
+                    history: [],
+                    totalCount: 0
+                };
+                // Note: We don't push to countData yet, only when Save/Fill is clicked
+            }
+            
+            STORE.editingItem = realItem; // Reference for actions
 
             document.getElementById('edit-prod-name').innerText = realItem.name;
             document.getElementById('edit-prod-sku').innerText = realItem.sku;
             document.getElementById('edit-prod-status').innerText = realItem.status;
+            document.getElementById('edit-prod-stock').innerText = realItem.stock;
+            document.getElementById('edit-prod-count').innerText = realItem.totalCount;
+
+            // Show/Hide "Fill All" Button
+            const btnFill = document.getElementById('btn-edit-fill');
+            if (realItem.totalCount < realItem.stock) {
+                btnFill.style.display = 'flex';
+                btnFill.innerText = `⚡ Nhập đủ (+${realItem.stock - realItem.totalCount})`;
+            } else {
+                btnFill.style.display = 'none';
+            }
 
             let html = '';
-            realItem.history.forEach((h, idx) => {
-                html += `
-                    <div class="inv-edit-item">
-                        <span>Lần nhập lúc ${h.ts}</span>
-                        <input type="number" class="inv-edit-input inv-history-qty" value="${h.qty}" min="0">
-                    </div>
-                `;
-            });
+            if (realItem.history.length === 0) {
+                html = '<div style="text-align:center; padding:10px; color:#999; font-style:italic;">Chưa có lịch sử nhập.</div>';
+            } else {
+                realItem.history.forEach((h, idx) => {
+                    html += `
+                        <div class="inv-edit-item">
+                            <span>Lần nhập lúc ${h.ts}</span>
+                            <input type="number" class="inv-edit-input inv-history-qty" value="${h.qty}" min="0">
+                        </div>
+                    `;
+                });
+            }
+            // Add a "New Entry" placeholder if it's empty or user wants to add?
+            // Requirement says "adjust quantity". If list is empty, user might want to add.
+            // Let's add a blank input at the top if it's uncounted to allow manual entry easily
+            if (realItem.totalCount === 0) {
+                html += `<div class="inv-edit-item" style="background:#e3f2fd">
+                            <span style="font-weight:bold; color:#007bff">Nhập mới:</span>
+                            <input type="number" class="inv-edit-input inv-history-qty" value="" placeholder="SL" min="1">
+                         </div>`;
+            }
+
             list.innerHTML = html;
             modal.style.display = 'flex';
         }
@@ -468,6 +580,7 @@
                 html += `<tr class="${idx===0?'highlight':''}">
                     <td style="font-weight:bold;color:#d63031">${item.sku}</td>
                     <td>${item.name}</td>
+                    <td>${item.status}</td> <!-- Added Status Column -->
                     <td>${item.stock}</td>
                     <td style="font-weight:bold;font-size:14px;color:#007bff">${item.totalCount}</td>
                     <td>${diffText}</td>
@@ -480,8 +593,8 @@
         }
 
         function renderSummary() {
-            const fGroup = document.querySelector('.inv-filter-input[data-col="group"]').value.toLowerCase();
-            const fName = document.querySelector('.inv-filter-input[data-col="name"]').value.toLowerCase();
+            const fGroup = document.querySelector('.inv-filter-select[data-col="group"]').value;
+            const fName = document.querySelector('.inv-filter-select[data-col="name"]').value;
             const fStatus = document.querySelector('.inv-filter-select[data-col="status"]').value;
             const fCount = document.querySelector('.inv-filter-select[data-col="count"]').value;
             const fDiff = document.querySelector('.inv-filter-select[data-col="diff"]').value;
@@ -490,8 +603,9 @@
             let html = '';
 
             STORE.importData.forEach(item => {
-                if (fGroup && !item.group.toLowerCase().includes(fGroup)) return;
-                if (fName && !item.name.toLowerCase().includes(fName) && !item.sku.toLowerCase().includes(fName)) return;
+                // Filters
+                if (fGroup !== 'all' && item.group !== fGroup) return;
+                if (fName !== 'all' && item.name !== fName) return;
                 if (fStatus !== 'all' && item.status !== fStatus) return;
 
                 const countedItem = STORE.countData.find(c => c.sku === item.sku && c.status === item.status);
@@ -511,6 +625,7 @@
 
                 const bgRow = countedVal === 0 ? 'background:#fff5f5;' : '';
 
+                // Add data attributes for click handler
                 html += `<tr style="${bgRow}" data-sku="${item.sku}" data-status="${item.status}">
                     <td>${item.group}</td>
                     <td style="font-weight:bold;">${item.sku}</td>
@@ -522,18 +637,20 @@
                 </tr>`;
             });
             tbody.innerHTML = html;
+            
+            // Handle Click
             tbody.querySelectorAll('tr').forEach(tr => {
                 tr.onclick = () => {
-                    const sku = tr.dataset.sku;
-                    const status = tr.dataset.status;
-                    let cItem = STORE.countData.find(i => i.sku === sku && i.status === status);
-                    if (cItem) openEditPopup(cItem);
-                    else UI.showToast("Sản phẩm này chưa được kiểm kê!");
+                    // Create a temp object to pass to openEditPopup
+                    // It will search for real object inside
+                    openEditPopup({
+                        sku: tr.dataset.sku,
+                        status: tr.dataset.status
+                    });
                 };
             });
         }
 
-        // --- SCANNER ---
         function startScanner() {
             const overlay = document.getElementById('inv-scanner-overlay');
             if(STORE.isScannerRunning) return;
@@ -545,7 +662,7 @@
                 (decodedText) => {
                     if (navigator.vibrate) navigator.vibrate(200);
                     addCountItem(decodedText);
-                    stopScanner(); // Auto Stop
+                    stopScanner();
                 }, () => {}).catch(err => { alert("Lỗi Camera: " + err); stopScanner(); });
         }
 
