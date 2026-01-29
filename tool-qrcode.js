@@ -1,8 +1,8 @@
 /* 
-   MODULE: TẠO & QUÉT MÃ (GENERATE & SCAN) - V5 (FINAL FIT)
-   - Fix lỗi tràn khung khi Barcode quá dài (Responsive Canvas).
-   - Tối ưu hóa logic tải ảnh (Ảnh tải về vẫn giữ độ nét cao nhất).
-   - Hỗ trợ Tiếng Việt & Lọc dấu.
+   MODULE: TẠO & QUÉT MÃ (GENERATE & SCAN) - V6
+   - Fix lỗi tràn khung (Responsive).
+   - Tải ảnh siêu nét (Full HD).
+   - Ẩn cảnh báo đỏ khi tải ảnh để ảnh sạch đẹp.
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE } = context;
@@ -37,7 +37,7 @@
         .qr-radio-label:has(input:checked) { border-color:#007bff; background:#007bff; color:#fff; box-shadow:0 4px 10px rgba(0,123,255,0.3); }
         .qr-radio-label input { display:none; }
 
-        /* PREVIEW AREA (Đã cập nhật để Fit khung) */
+        /* PREVIEW AREA */
         .qr-preview-area { 
             width: 100%; 
             min-height: 220px; 
@@ -52,10 +52,9 @@
             position: relative;
             padding: 20px; 
             box-sizing: border-box;
-            overflow: hidden; /* Cắt phần thừa nếu có */
+            overflow: hidden; 
         }
         
-        /* Canvas tự động co giãn theo khung cha */
         canvas#main-canvas { 
             max-width: 100% !important; 
             height: auto !important;
@@ -159,13 +158,11 @@
             `;
             document.body.appendChild(modal);
 
-            // Close
             document.getElementById('btn-qr-close').onclick = () => { 
                 stopScanner(); modal.style.display = 'none'; 
                 document.body.classList.remove('tgdd-body-lock');
             };
 
-            // Tabs
             const tabs = modal.querySelectorAll('.qr-tab');
             tabs.forEach(t => {
                 t.onclick = () => {
@@ -176,7 +173,6 @@
                 };
             });
 
-            // Tải thư viện
             UI.showToast("⏳ Đang tải module xử lý mã...");
             try {
                 await loadScript('https://unpkg.com/bwip-js@3.0.4/dist/bwip-js-min.js');
@@ -188,7 +184,7 @@
             }
         }
 
-        // B. Logic TẠO MÃ (GENERATE)
+        // B. Logic TẠO MÃ
         const inputEl = document.getElementById('qr-input-text');
         const canvas = document.getElementById('main-canvas');
         const placeholder = document.getElementById('qr-placeholder');
@@ -226,7 +222,6 @@
                     finalOptions.width = 30;
                     finalOptions.includetext = false; 
                 } else {
-                    // Xử lý Barcode
                     const safeText = sanitizeForBarcode(rawText);
                     if (safeText !== rawText) {
                         warningEl.innerText = "⚠️ Đã tự động chuyển Tiếng Việt có dấu thành không dấu.";
@@ -248,7 +243,7 @@
         inputEl.oninput = generateCode;
         radios.forEach(r => r.onchange = () => { generateCode(); });
 
-        // Nút Tải ảnh (QUAN TRỌNG: FIX LỖI ẢNH BỊ THU NHỎ KHI TẢI)
+        // Nút Tải ảnh (CẬP NHẬT: ẨN CẢNH BÁO)
         document.getElementById('btn-qr-download').onclick = () => {
             if (canvas.style.display === 'none') return UI.showToast("Chưa có mã để tải!");
             
@@ -258,24 +253,28 @@
             // 1. Tạm ẩn border
             container.style.border = 'none';
             
-            // 2. Tạm thời GỠ BỎ giới hạn max-width của canvas để html2canvas chụp được kích thước thật (Full HD)
-            // Nếu không gỡ, html2canvas sẽ chụp cái canvas bé tí đang bị CSS co lại.
+            // 2. Tạm ẩn dòng cảnh báo đỏ (NẾU CÓ)
+            const warningEl = document.getElementById('qr-warning-msg');
+            const originalWarningDisplay = warningEl.style.display; // Lưu trạng thái cũ
+            warningEl.style.display = 'none'; // Ẩn đi để chụp
+
+            // 3. Mở rộng Canvas để chụp nét
             const originalMaxWidth = canvas.style.maxWidth;
             const originalHeight = canvas.style.height;
-            
             canvas.style.maxWidth = 'none';
-            canvas.style.height = 'auto'; // Để nó bung ra kích thước thật
+            canvas.style.height = 'auto'; 
 
             if (window.html2canvas) {
                 UI.showToast("📸 Đang tạo ảnh...");
                 html2canvas(container, {
                     backgroundColor: "#ffffff",
-                    scale: 3
+                    scale: 3 
                 }).then(c => {
-                    // 3. Khôi phục lại trạng thái hiển thị
+                    // 4. Khôi phục lại mọi thứ như cũ
                     container.style.border = originalBorder;
                     canvas.style.maxWidth = originalMaxWidth;
                     canvas.style.height = originalHeight;
+                    warningEl.style.display = originalWarningDisplay; // Hiện lại cảnh báo
 
                     const a = document.createElement('a');
                     a.href = c.toDataURL("image/png");
@@ -287,6 +286,7 @@
                     container.style.border = originalBorder;
                     canvas.style.maxWidth = originalMaxWidth;
                     canvas.style.height = originalHeight;
+                    warningEl.style.display = originalWarningDisplay;
                     UI.showToast("❌ Lỗi!");
                 });
             } else {
@@ -294,7 +294,7 @@
             }
         };
 
-        // C. Logic QUÉT MÃ (Scanner)
+        // C. Logic QUÉT MÃ
         let html5QrcodeScanner = null;
 
         const startScanner = () => {
