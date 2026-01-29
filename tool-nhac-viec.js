@@ -1,15 +1,15 @@
 /* 
-   MODULE: NHẮC VIỆC (NÂNG CẤP V2)
-   - Hỗ trợ ngày tháng tương lai.
-   - Hỗ trợ chỉnh sửa (Edit).
-   - Sắp xếp thời gian.
-   - UI tối ưu.
+   MODULE: NHẮC VIỆC (V3 - FIX Z-INDEX)
+   - Toast luôn nổi trên cùng.
+   - Giao diện tối ưu.
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE, GM_xmlhttpRequest } = context;
 
     const MY_CSS = `
-        #tgdd-reminder-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(3px); z-index:2147483650; justify-content:center; align-items:center; }
+        /* Z-INDEX: 2147483646 (Thấp hơn Bottom Nav 1 đơn vị để tránh xung đột, nhưng cao hơn Tool Grid) */
+        #tgdd-reminder-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(3px); z-index:2147483646; justify-content:center; align-items:center; }
+        
         .rm-content { background:white; width:95%; max-width:450px; border-radius:15px; padding:20px; box-shadow:0 10px 40px rgba(0,0,0,0.3); animation: popIn 0.3s; font-family: sans-serif; display:flex; flex-direction:column; max-height:90vh; position: relative; }
         
         /* Header & Close Button */
@@ -23,7 +23,7 @@
         .rm-item:hover { border-color:#ff9800; }
         .rm-item.editing { background:#fff3e0; border-color:#ff9800; }
         
-        .rm-item-info { flex:1; cursor:pointer; } /* Click vào text để sửa */
+        .rm-item-info { flex:1; cursor:pointer; }
         .rm-time { font-weight:bold; color:#d35400; font-size:14px; display:flex; align-items:center; gap:5px; }
         .rm-badge { font-size:10px; padding:2px 6px; border-radius:4px; color:white; font-weight:bold; }
         .rm-badge-daily { background:#4caf50; }
@@ -49,13 +49,12 @@
         
         .rm-group-box { max-height:60px; overflow-y:auto; border:1px solid #eee; border-radius:6px; padding:5px; background:#fff; }
         
-        /* Toggle Switch for Daily */
         .rm-toggle { display:flex; align-items:center; gap:5px; cursor:pointer; font-size:12px; font-weight:bold; color:#4caf50; margin-bottom:5px; }
         .rm-toggle input { width:16px; height:16px; accent-color:#4caf50; }
 
         .rm-btn { width:100%; padding:10px; border:none; color:white; font-weight:bold; border-radius:8px; cursor:pointer; margin-top:5px; transition: 0.2s; }
         .rm-btn-add { background:#4caf50; }
-        .rm-btn-update { background:#ff9800; } /* Màu cam cho nút Update */
+        .rm-btn-update { background:#ff9800; }
         .rm-btn-save { background:#2196f3; margin-top:10px; }
         .rm-btn:active { transform:scale(0.98); }
     `;
@@ -64,33 +63,20 @@
         const modalId = 'tgdd-reminder-modal';
         let modal = document.getElementById(modalId);
 
-        // -- STATE MANAGEMENT --
         let currentTasks = [];
-        let editingId = null; // ID của task đang sửa (null = thêm mới)
+        let editingId = null;
         const userCfg = UTILS.getPersistentConfig();
         
-        // Load & Normalize Data
         if (userCfg.reminderTask) {
             currentTasks = Array.isArray(userCfg.reminderTask) ? userCfg.reminderTask : [userCfg.reminderTask];
-            // Migrating old data: Add ID if missing
             currentTasks.forEach(t => { if(!t.id) t.id = Date.now() + Math.random(); });
         }
 
-        // -- HELPER FUNCTIONS --
-        
-        // Sắp xếp: Gần -> Xa
         const sortTasks = () => {
             currentTasks.sort((a, b) => {
-                // Logic: 
-                // Daily xem như là "0000-00-00" để so sánh giờ
-                // Once thì dùng Date thực
-                // Tuy nhiên để dễ nhìn: Xếp theo Giờ trước, nếu cùng giờ xét Ngày
-                // Hoặc: Xếp Date (Daily = Today), sau đó Time.
-                
                 const today = new Date().toISOString().split('T')[0];
                 const dateA = (a.mode === 'daily' || !a.mode) ? today : a.date;
                 const dateB = (b.mode === 'daily' || !b.mode) ? today : b.date;
-                
                 if (dateA !== dateB) return dateA.localeCompare(dateB);
                 return a.time.localeCompare(b.time);
             });
@@ -112,13 +98,8 @@
                 const div = document.createElement('div');
                 div.className = `rm-item ${task.id === editingId ? 'editing' : ''}`;
                 
-                // Xác định Badge
                 const isDaily = (!task.mode || task.mode === 'daily');
-                const badgeHtml = isDaily 
-                    ? `<span class="rm-badge rm-badge-daily">Hàng ngày</span>` 
-                    : `<span class="rm-badge rm-badge-once">${task.date || '??'}</span>`;
-
-                // Status Completed
+                const badgeHtml = isDaily ? `<span class="rm-badge rm-badge-daily">Hàng ngày</span>` : `<span class="rm-badge rm-badge-once">${task.date || '??'}</span>`;
                 const opacityStyle = (task.status === 'completed') ? 'opacity: 0.5; text-decoration: line-through;' : '';
 
                 div.innerHTML = `
@@ -133,17 +114,15 @@
                 `;
                 container.appendChild(div);
 
-                // Event Delete
                 div.querySelector('.rm-btn-del').onclick = (e) => {
                     e.stopPropagation();
                     if(confirm('Bạn muốn xóa lịch nhắc này?')) {
                         currentTasks = currentTasks.filter(t => t.id !== task.id);
-                        if (editingId === task.id) resetForm(); // Nếu đang sửa cái bị xóa thì reset
+                        if (editingId === task.id) resetForm();
                         renderList();
                     }
                 };
 
-                // Event Edit
                 div.querySelector('.rm-btn-edit').onclick = (e) => {
                     e.stopPropagation();
                     loadToForm(task);
@@ -164,23 +143,20 @@
             dateInput.disabled = isDaily;
             dateInput.value = isDaily ? '' : (task.date || '');
 
-            // Chọn nhóm
             document.querySelectorAll('.chk-rm-new-group').forEach(chk => {
                 chk.checked = (task.groups || []).includes(chk.value);
             });
 
-            // Đổi nút thành Update
             const btnAdd = document.getElementById('btn-rm-add');
             btnAdd.innerText = "Cập nhật thay đổi";
             btnAdd.className = "rm-btn rm-btn-update";
             
-            renderList(); // Re-render để highlight item đang sửa
+            renderList();
         };
 
         const resetForm = () => {
             editingId = null;
             document.getElementById('rm-msg').value = '';
-            // Giữ nguyên giờ để nhập cho nhanh nếu cần
             document.getElementById('chk-daily').checked = true;
             document.getElementById('rm-date').disabled = true;
             document.getElementById('rm-date').value = '';
@@ -192,7 +168,6 @@
             renderList();
         };
 
-        // -- INIT UI --
         if (!modal) {
             modal = document.createElement('div');
             modal.id = modalId;
@@ -209,15 +184,11 @@
                 <div class="rm-content">
                     <button class="rm-btn-close" id="btn-rm-close" title="Đóng">×</button>
                     <div class="rm-header">🔔 QUẢN LÝ NHẮC VIỆC</div>
-                    
                     <div id="rm-task-list" class="rm-list-container"></div>
-
                     <div class="rm-form">
                         <div class="rm-row">
                             <div class="rm-col">
-                                <label class="rm-toggle">
-                                    <input type="checkbox" id="chk-daily" checked> Lặp lại hàng ngày
-                                </label>
+                                <label class="rm-toggle"><input type="checkbox" id="chk-daily" checked> Lặp lại hàng ngày</label>
                                 <input type="date" id="rm-date" class="rm-input" disabled>
                             </div>
                             <div class="rm-col">
@@ -225,45 +196,28 @@
                                 <input type="time" id="rm-time" class="rm-input">
                             </div>
                         </div>
-
                         <div class="rm-row">
-                            <div class="rm-col">
-                                <label class="rm-label">Nội dung:</label>
-                                <input type="text" id="rm-msg" class="rm-input" placeholder="Nhập nội dung...">
-                            </div>
+                            <div class="rm-col"><label class="rm-label">Nội dung:</label><input type="text" id="rm-msg" class="rm-input" placeholder="Nhập nội dung..."></div>
                         </div>
-
                         <div class="rm-row">
-                            <div class="rm-col">
-                                <label class="rm-label">Nhóm nhận tin:</label>
-                                <div class="rm-group-box">${groupHtml}</div>
-                            </div>
+                            <div class="rm-col"><label class="rm-label">Nhóm nhận tin:</label><div class="rm-group-box">${groupHtml}</div></div>
                         </div>
-
                         <button id="btn-rm-add" class="rm-btn rm-btn-add">Thêm vào danh sách</button>
                     </div>
-
                     <button id="btn-rm-save-cloud" class="rm-btn rm-btn-save">☁️ LƯU LÊN SERVER</button>
                 </div>
             `;
             document.body.appendChild(modal);
 
-            // EVENTS
             document.getElementById('btn-rm-close').onclick = () => { modal.style.display = 'none'; };
 
-            // Toggle Daily/Date
             document.getElementById('chk-daily').onchange = (e) => {
                 const dateInput = document.getElementById('rm-date');
                 dateInput.disabled = e.target.checked;
                 if(e.target.checked) dateInput.value = '';
-                else {
-                    // Default to today/tomorrow
-                    const d = new Date();
-                    dateInput.value = d.toISOString().split('T')[0];
-                }
+                else { const d = new Date(); dateInput.value = d.toISOString().split('T')[0]; }
             };
 
-            // BUTTON ADD / UPDATE
             document.getElementById('btn-rm-add').onclick = () => {
                 const time = document.getElementById('rm-time').value;
                 const msg = document.getElementById('rm-msg').value.trim();
@@ -277,7 +231,7 @@
                 if(selectedGroups.length === 0) return alert("Vui lòng chọn nhóm!");
 
                 const taskObj = {
-                    id: editingId || Date.now(), // Giữ ID cũ nếu sửa, tạo mới nếu thêm
+                    id: editingId || Date.now(),
                     isActive: true,
                     mode: isDaily ? 'daily' : 'once',
                     date: isDaily ? '' : date,
@@ -289,20 +243,18 @@
                 };
 
                 if (editingId) {
-                    // Update existing
                     const idx = currentTasks.findIndex(t => t.id === editingId);
                     if(idx !== -1) currentTasks[idx] = taskObj;
+                    // FIX TOAST Ở ĐÂY:
                     UI.showToast("Đã cập nhật!");
                 } else {
-                    // Add new
                     currentTasks.push(taskObj);
+                    // FIX TOAST Ở ĐÂY:
                     UI.showToast("Đã thêm vào danh sách!");
                 }
-
                 resetForm();
             };
 
-            // BUTTON SAVE CLOUD
             document.getElementById('btn-rm-save-cloud').onclick = () => {
                 const currentUser = AUTH_STATE.userName;
                 if (!currentUser || currentUser === "---") return alert("Chưa có User!");
@@ -314,19 +266,15 @@
                 GM_xmlhttpRequest({
                     method: "POST",
                     url: CONSTANTS.GSHEET.CONFIG_API,
-                    data: JSON.stringify({
-                        user: currentUser,
-                        type: 'reminder',
-                        config: currentTasks
-                    }),
+                    data: JSON.stringify({ user: currentUser, type: 'reminder', config: currentTasks }),
                     headers: { "Content-Type": "application/x-www-form-urlencoded" },
                     onload: (res) => {
                         btn.innerText = oldText; btn.disabled = false;
                         try {
                             const response = JSON.parse(res.responseText);
                             if (response.status === 'success') {
+                                // FIX TOAST Ở ĐÂY:
                                 UI.showToast("✅ Lưu thành công!");
-                                // Update Local
                                 userCfg.reminderTask = currentTasks;
                                 UTILS.savePersistentConfig(userCfg);
                                 modal.style.display = 'none';
@@ -338,7 +286,16 @@
             };
         }
 
-        resetForm(); // Đảm bảo sạch sẽ khi mở lên
+        resetForm();
+        
+        // --- KEY FIX: Ép Toast nổi lên trên ---
+        // Mỗi khi mở modal, ta tìm phần tử Toast trong DOM và đưa nó xuống cuối body.
+        // Điều này đảm bảo Toast (dù z-index bằng nhau hay thấp hơn chút) sẽ được vẽ sau Modal -> Nằm trên.
+        const toastEl = document.getElementById('tgdd-toast-notification');
+        if (toastEl) {
+            document.body.appendChild(toastEl);
+        }
+
         modal.style.display = 'flex';
     };
 
