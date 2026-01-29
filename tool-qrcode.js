@@ -1,8 +1,7 @@
 /* 
-   MODULE: TẠO & QUÉT MÃ (GENERATE & SCAN)
-   - Tạo QR Code & Barcode 128 realtime.
-   - Quét mã bằng Camera (Mobile/Desktop).
-   - Chụp ảnh mã & Copy kết quả.
+   MODULE: TẠO & QUÉT MÃ (GENERATE & SCAN) - V2
+   - Thêm padding (khoảng trắng) khi tải ảnh.
+   - Giao diện đẹp, tối ưu.
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE } = context;
@@ -37,7 +36,21 @@
         .qr-radio-label:has(input:checked) { border-color:#007bff; background:#e7f1ff; color:#007bff; }
         .qr-radio-label input { display:none; }
 
-        .qr-preview-area { background:white; padding:20px; border-radius:15px; box-shadow:0 5px 20px rgba(0,0,0,0.05); margin-bottom:15px; display:flex; justify-content:center; align-items:center; min-height:200px; width:100%; box-sizing:border-box; border:1px dashed #ccc; }
+        /* VÙNG PREVIEW: Tăng padding lên 30px để ảnh tải về có viền trắng đẹp */
+        .qr-preview-area { 
+            background:white; 
+            padding:30px; 
+            border-radius:15px; 
+            box-shadow:0 5px 20px rgba(0,0,0,0.05); 
+            margin-bottom:15px; 
+            display:flex; 
+            justify-content:center; 
+            align-items:center; 
+            min-height:200px; 
+            width:100%; 
+            box-sizing:border-box; 
+            border:1px dashed #ccc; 
+        }
         .qr-preview-area img, .qr-preview-area canvas { max-width:100%; height:auto; }
 
         .qr-btn { width:100%; padding:12px; border:none; border-radius:12px; font-weight:bold; color:white; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; gap:8px; transition:transform 0.1s; }
@@ -146,14 +159,11 @@
                 };
             });
 
-            // Tải thư viện (Nếu chưa có)
+            // Tải thư viện
             UI.showToast("⏳ Đang tải thư viện mã...");
             try {
-                // Load QRCode.js
                 await loadScript('https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js');
-                // Load JsBarcode
                 await loadScript('https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js');
-                // Load Html5Qrcode
                 await loadScript('https://unpkg.com/html5-qrcode');
                 UI.showToast("✅ Đã sẵn sàng!");
             } catch (e) {
@@ -170,7 +180,7 @@
         const generateCode = () => {
             const text = inputEl.value.trim();
             const type = document.querySelector('input[name="qr-type"]:checked').value;
-            container.innerHTML = ''; // Clear cũ
+            container.innerHTML = ''; 
 
             if (!text) {
                 container.innerHTML = '<span style="color:#999; font-size:12px;">Nhập nội dung để tạo mã...</span>';
@@ -179,7 +189,6 @@
 
             try {
                 if (type === 'qrcode') {
-                    // Tạo QR Code
                     new QRCode(container, {
                         text: text,
                         width: 200,
@@ -189,7 +198,6 @@
                         correctLevel : QRCode.CorrectLevel.H
                     });
                 } else {
-                    // Tạo Barcode
                     const canvas = document.createElement('canvas');
                     JsBarcode(canvas, text, {
                         format: "CODE128",
@@ -197,7 +205,8 @@
                         fontSize: 16,
                         height: 80,
                         width: 2,
-                        margin: 10
+                        margin: 10, // Thêm margin nội bộ cho barcode
+                        background: "#ffffff"
                     });
                     container.appendChild(canvas);
                 }
@@ -206,50 +215,51 @@
             }
         };
 
-        // Gán sự kiện Change/Input
         inputEl.oninput = generateCode;
         radios.forEach(r => r.onchange = generateCode);
 
-        // Nút Tải ảnh (Sử dụng html2canvas có sẵn trong main script)
+        // Nút Tải ảnh (CẬP NHẬT LOGIC ĐỂ LẤY CẢ PADDING)
         document.getElementById('btn-qr-download').onclick = () => {
             if (!inputEl.value.trim()) return UI.showToast("Chưa có mã để tải!");
             
-            // Tìm thẻ img hoặc canvas trong container
-            const img = container.querySelector('img');
-            const canvas = container.querySelector('canvas');
-            
-            let downloadUrl = "";
-            if (img) downloadUrl = img.src;
-            else if (canvas) downloadUrl = canvas.toDataURL("image/png");
+            // 1. Tạm thời xóa border nét đứt để ảnh tải về đẹp hơn
+            const originalBorder = container.style.border;
+            container.style.border = 'none';
 
-            if (downloadUrl) {
-                const a = document.createElement('a');
-                a.href = downloadUrl;
-                a.download = `CODE_${Date.now()}.png`;
-                document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                UI.showToast("✅ Đã lưu ảnh!");
+            // 2. Dùng html2canvas chụp lại Container (để lấy cả padding)
+            if (window.html2canvas) {
+                UI.showToast("📸 Đang xử lý ảnh...");
+                html2canvas(container, {
+                    backgroundColor: "#ffffff", // Đảm bảo nền trắng
+                    scale: 3 // Tăng độ phân giải ảnh lên cho nét
+                }).then(canvas => {
+                    // Trả lại border cũ
+                    container.style.border = originalBorder;
+
+                    const a = document.createElement('a');
+                    a.href = canvas.toDataURL("image/png");
+                    a.download = `CODE_${Date.now()}.png`;
+                    document.body.appendChild(a); 
+                    a.click(); 
+                    document.body.removeChild(a);
+                    UI.showToast("✅ Đã lưu ảnh!");
+                }).catch(err => {
+                    container.style.border = originalBorder;
+                    UI.showToast("❌ Lỗi tạo ảnh!");
+                });
             } else {
-                // Fallback nếu thư viện QR render div/table thay vì img
-                // Dùng html2canvas chụp lại vùng container
-                if (window.html2canvas) {
-                    html2canvas(container).then(c => {
-                        const a = document.createElement('a');
-                        a.href = c.toDataURL("image/png");
-                        a.download = `CODE_SNAP_${Date.now()}.png`;
-                        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                    });
-                }
+                alert("Lỗi: Không tìm thấy thư viện html2canvas!");
             }
         };
 
-        // C. Logic QUÉT MÃ (Scanner)
+        // C. Logic QUÉT MÃ
         let html5QrcodeScanner = null;
 
         const startScanner = () => {
             const resultEl = document.getElementById('scan-result');
             const stopBtn = document.getElementById('btn-scan-stop');
             
-            if (html5QrcodeScanner) return; // Đang chạy rồi
+            if (html5QrcodeScanner) return;
 
             resultEl.innerText = "Đang chờ quét...";
             stopBtn.style.display = "block";
@@ -257,21 +267,12 @@
             html5QrcodeScanner = new Html5Qrcode("qr-reader");
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
             
-            // Ưu tiên camera sau (environment)
             html5QrcodeScanner.start({ facingMode: "environment" }, config, (decodedText, decodedResult) => {
-                // Success Callback
                 console.log(`Code matched = ${decodedText}`, decodedResult);
                 resultEl.innerText = decodedText;
-                
-                // Hiệu ứng Beep hoặc rung (nếu trình duyệt hỗ trợ)
                 if (navigator.vibrate) navigator.vibrate(200);
-                
                 UI.showToast("✅ Đã quét được mã!");
-                // Có thể stop luôn hoặc để quét tiếp tùy nhu cầu
-                // stopScanner(); 
-            }, (errorMessage) => {
-                // Error Callback (bỏ qua để đỡ spam log)
-            }).catch(err => {
+            }, (errorMessage) => {}).catch(err => {
                 resultEl.innerText = "Lỗi Camera: " + err;
             });
         };
@@ -289,7 +290,6 @@
 
         document.getElementById('btn-scan-stop').onclick = stopScanner;
 
-        // Nút Copy kết quả
         document.getElementById('btn-scan-copy').onclick = () => {
             const text = document.getElementById('scan-result').innerText;
             if (text && text !== "..." && text !== "Đang chờ quét...") {
@@ -301,7 +301,6 @@
 
         // --- MỞ MODAL ---
         modal.style.display = 'flex';
-        // Reset tab về create
         document.querySelector('.qr-tab[data-tab="create"]').click();
         inputEl.focus();
     };
@@ -309,7 +308,7 @@
     return {
         name: "Tạo Mã / Quét Mã",
         icon: `<svg viewBox="0 0 24 24"><path d="M3 3h6v6H3V3zm2 2v2h2V5H5zm8-2h6v6h-6V3zm2 2v2h2V5h-2zM3 13h6v6H3v-6zm2 2v2h2v-2H5zm13-2h3v2h-3v-2zm-3 0h2v2h-2v-2zm3 3h3v3h-3v-3zm-6-3h2v2h-2v-2zm3 3h2v3h-2v-3zm-3 3h2v3h-2v-3z" fill="white"/></svg>`,
-        bgColor: "#343a40", // Màu đen/xám ngầu
+        bgColor: "#343a40",
         css: MY_CSS,
         action: runTool
     };
