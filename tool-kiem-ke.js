@@ -1,10 +1,9 @@
 /* 
-   MODULE: KIỂM KÊ KHO (INVENTORY) - V2
+   MODULE: KIỂM KÊ KHO (INVENTORY) - V2.1
+   - Fix: Chuyển chọn trạng thái sang Tab Kiểm Kê.
    - Auto Hide Bottom Nav.
    - Status Mapping & Filtering.
    - Edit Quantity with History.
-   - Auto Stop Scanner.
-   - Advanced Filters.
 */
 ((context) => {
     const { UI, UTILS } = context;
@@ -30,9 +29,9 @@
         .inv-view.active { display:flex; }
 
         /* RADIO STATUS GROUP */
-        .inv-status-group { display:flex; flex-wrap:wrap; gap:10px; padding:10px; background:#e3f2fd; border-radius:8px; margin-bottom:15px; border:1px solid #bbdefb; }
-        .inv-radio-lbl { font-size:12px; font-weight:bold; color:#0d47a1; cursor:pointer; display:flex; align-items:center; gap:5px; background:white; padding:5px 10px; border-radius:20px; border:1px solid #90caf9; transition:0.2s; }
-        .inv-radio-lbl:hover { background:#bbdefb; }
+        .inv-status-group { display:flex; flex-wrap:wrap; gap:8px; padding:10px; background:#f1f8ff; border-radius:8px; margin-bottom:15px; border:1px solid #cce5ff; }
+        .inv-radio-lbl { font-size:11px; font-weight:bold; color:#0056b3; cursor:pointer; display:flex; align-items:center; gap:5px; background:white; padding:6px 12px; border-radius:15px; border:1px solid #b8daff; transition:0.2s; }
+        .inv-radio-lbl:hover { background:#e2e6ea; }
         .inv-radio-lbl:has(input:checked) { background:#007bff; color:white; border-color:#0056b3; box-shadow:0 2px 5px rgba(0,123,255,0.3); }
         .inv-radio-lbl input { display:none; }
 
@@ -88,10 +87,11 @@
     // --- 2. GLOBAL STATE ---
     let STORE = {
         importData: [], 
-        countData: [],  // Structure: { sku, name, status, stock, history: [{ts, qty}], totalCount }
-        currentStatus: "Mới", // Default
+        countData: [],
+        currentStatus: "Mới",
         isScannerRunning: false,
-        scannerObj: null
+        scannerObj: null,
+        editingItem: null // Ref to item being edited
     };
 
     const STATUS_MAP = {
@@ -100,7 +100,7 @@
         "7-Trưng bày (bỏ mẫu)": "Trưng bày bỏ mẫu",
         "2-Đã sử dụng": "Đã sử dụng",
         "5-Lỗi (Mới)": "Lỗi (Mới)",
-        "6Lỗi (ĐSD)": "Lỗi (Đã sử dụng)", // Fix typo
+        "6Lỗi (ĐSD)": "Lỗi (Đã sử dụng)",
         "6-Lỗi (ĐSD)": "Lỗi (Đã sử dụng)",
         "7-Cũ thu mua": "Cũ thu mua",
         "8-Mới (Giảm giá)": "Mới (Giảm giá)"
@@ -151,12 +151,6 @@
                                 </label>
                                 <span id="lbl-file-name" style="font-size:12px; color:#666;">Chưa có dữ liệu</span>
                             </div>
-                            
-                            <!-- RADIO STATUS -->
-                            <div class="inv-status-group" id="inv-status-container">
-                                <!-- JS will render radios here -->
-                            </div>
-
                             <div class="inv-table-wrapper">
                                 <table class="inv-table" id="tbl-import">
                                     <thead><tr><th>#</th><th>Nhóm</th><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>Tồn</th></tr></thead>
@@ -167,6 +161,9 @@
 
                         <!-- TAB 2: KIỂM KÊ -->
                         <div class="inv-view" id="tab-count">
+                            <!-- CHUYỂN RADIO STATUS SANG ĐÂY -->
+                            <div class="inv-status-group" id="inv-status-container"></div>
+
                             <div class="inv-controls">
                                 <div class="inv-search-box">
                                     <input type="text" id="inp-search-sku" class="inv-input" placeholder="Nhập tên/mã (Gợi ý theo trạng thái đã chọn)..." autocomplete="off">
@@ -174,9 +171,7 @@
                                 </div>
                                 <button class="inv-btn btn-scan" id="btn-open-scan">📷 Quét mã</button>
                             </div>
-                            <div style="font-size:11px; color:#666; margin-bottom:5px; font-style:italic;">
-                                Đang kiểm kê cho trạng thái: <b id="lbl-current-status" style="color:#007bff">Mới</b>
-                            </div>
+                            
                             <div class="inv-table-wrapper">
                                 <table class="inv-table" id="tbl-counting">
                                     <thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Tồn</th><th>Đã kiểm</th><th>Lệch</th></tr></thead>
@@ -270,8 +265,6 @@
             document.querySelectorAll('input[name="inv-status-radio"]').forEach(r => {
                 r.onchange = (e) => {
                     STORE.currentStatus = e.target.value;
-                    document.getElementById('lbl-current-status').innerText = STORE.currentStatus;
-                    // Reset search box when filtering changed
                     document.getElementById('inp-search-sku').value = ''; 
                 };
             });
@@ -318,20 +311,18 @@
             document.querySelectorAll('.inv-filter-input').forEach(el => el.addEventListener('input', renderSummary));
 
             // EDIT MODAL EVENTS
-            let editingItem = null;
             document.getElementById('btn-edit-cancel').onclick = () => document.getElementById('inv-edit-modal').style.display = 'none';
             
             document.getElementById('btn-edit-delete').onclick = () => {
                 if(confirm("Xóa sản phẩm này khỏi danh sách đã kiểm?")) {
-                    STORE.countData = STORE.countData.filter(i => !(i.sku === editingItem.sku && i.status === editingItem.status));
+                    STORE.countData = STORE.countData.filter(i => !(i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status));
                     document.getElementById('inv-edit-modal').style.display = 'none';
                     renderCountTable();
-                    renderSummary(); // Refresh summary too
+                    renderSummary(); 
                 }
             };
 
             document.getElementById('btn-edit-save').onclick = () => {
-                // Recalculate total from history inputs
                 const inputs = document.querySelectorAll('.inv-history-qty');
                 let newHistory = [];
                 let newTotal = 0;
@@ -340,7 +331,7 @@
                     const val = parseInt(inp.value) || 0;
                     if (val > 0) {
                         newHistory.push({
-                            ts: editingItem.history[idx].ts,
+                            ts: STORE.editingItem.history[idx].ts,
                             qty: val
                         });
                         newTotal += val;
@@ -352,8 +343,8 @@
                     return;
                 }
 
-                editingItem.history = newHistory;
-                editingItem.totalCount = newTotal;
+                STORE.editingItem.history = newHistory;
+                STORE.editingItem.totalCount = newTotal;
                 
                 document.getElementById('inv-edit-modal').style.display = 'none';
                 renderCountTable();
@@ -366,14 +357,11 @@
         function normalizeStatus(raw) {
             if (!raw) return "";
             const cleanRaw = String(raw).trim();
-            // Check direct mapping
             if (STATUS_MAP[cleanRaw]) return STATUS_MAP[cleanRaw];
-            
-            // Fuzzy match keys
             for (let key in STATUS_MAP) {
                 if (cleanRaw.includes(key) || key.includes(cleanRaw)) return STATUS_MAP[key];
             }
-            return cleanRaw; // Fallback
+            return cleanRaw; 
         }
 
         function handleFileImport(e) {
@@ -394,15 +382,13 @@
                             group: row[4] || '',
                             sku: String(row[6]).trim(),
                             name: row[7] || '',
-                            status: normalizeStatus(row[8]), // Normalize here
+                            status: normalizeStatus(row[8]),
                             stock: parseInt(row[9]) || 0
                         });
                     }
                 }
                 renderImportTable();
                 UI.showToast(`✅ Đã nhập ${STORE.importData.length} dòng!`);
-                
-                // Update Filter Status in Summary
                 const statuses = [...new Set(STORE.importData.map(i => i.status))].filter(Boolean);
                 const statusSel = document.querySelector('.inv-filter-select[data-col="status"]');
                 statusSel.innerHTML = '<option value="all">Tất cả</option>' + statuses.map(s => `<option value="${s}">${s}</option>`).join('');
@@ -413,7 +399,6 @@
         function renderImportTable() {
             const tbody = document.querySelector('#tbl-import tbody');
             let html = '';
-            // Show only first 100 rows to avoid lag, or filter? Show all for now but simple
             STORE.importData.slice(0, 200).forEach((item, idx) => {
                 html += `<tr><td>${idx+1}</td><td>${item.group}</td><td style="font-weight:bold;color:#d63031">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td>${item.stock}</td></tr>`;
             });
@@ -421,22 +406,17 @@
         }
 
         function addCountItem(sku) {
-            // Find in importData matching SKU AND Current Status
             const stockItem = STORE.importData.find(i => i.sku === sku && i.status === STORE.currentStatus);
-            
             if (!stockItem) {
                 UI.showToast(`⚠️ Không tìm thấy mã ${sku} với trạng thái ${STORE.currentStatus}`);
                 return;
             }
-
-            // Check existence
             const existItem = STORE.countData.find(i => i.sku === sku && i.status === STORE.currentStatus);
             const nowTime = new Date().toTimeString().split(' ')[0];
 
             if (existItem) {
                 existItem.history.unshift({ ts: nowTime, qty: 1 });
                 existItem.totalCount += 1;
-                // Move to top
                 STORE.countData = STORE.countData.filter(i => i !== existItem);
                 STORE.countData.unshift(existItem);
             } else {
@@ -454,27 +434,9 @@
             const modal = document.getElementById('inv-edit-modal');
             const list = document.getElementById('edit-history-list');
             
-            // Save ref to editing item (Global scope within module)
-            // Use closure or find ref. Since objects are ref, finding it in array works.
-            // We need the exact object reference from STORE.countData
+            // Find real object reference in countData
             const realItem = STORE.countData.find(i => i.sku === item.sku && i.status === item.status);
             if(!realItem) return;
-
-            // Bind data to modal elements directly to be used by Save button
-            // But Save button needs access to realItem.
-            // Hack: Attach realItem to the modal DOM element temporarily
-            document.getElementById('btn-edit-save').onclick = null; // Remove old listener to avoid dupes? No, define listener once, use variable.
-            // Better: Update a module-level variable
-            // Defined `let editingItem = null;` above in init.
-            
-            // Re-find variable scope
-            // We defined `let editingItem` inside `runTool`. We need to access it.
-            // Actually, `runTool` is huge closure.
-            // We need to move `editingItem` variable to be accessible. 
-            // BUT, `openEditPopup` is defined inside `runTool` scope? No, it's outside in `Functions` block.
-            // Problem: `editingItem` was defined inside `runTool`. 
-            // Fix: Pass `editingItem` via a UI property or global STORE. Or move openEditPopup inside runTool.
-            // For cleaner code, I'll update STORE to hold editing item ref.
             STORE.editingItem = realItem;
 
             document.getElementById('edit-prod-name').innerText = realItem.name;
@@ -497,7 +459,6 @@
         function renderCountTable() {
             const tbody = document.querySelector('#tbl-counting tbody');
             let html = '';
-            
             STORE.countData.forEach((item, idx) => {
                 const diff = item.totalCount - item.stock;
                 let diffText = `<span class="st-du">Đủ</span>`;
@@ -513,12 +474,8 @@
                 </tr>`;
             });
             tbody.innerHTML = html;
-
-            // Bind click event for Edit
             tbody.querySelectorAll('tr').forEach((tr, idx) => {
-                tr.onclick = () => {
-                    openEditPopup(STORE.countData[idx]);
-                };
+                tr.onclick = () => { openEditPopup(STORE.countData[idx]); };
             });
         }
 
@@ -532,22 +489,17 @@
             const tbody = document.querySelector('#tbl-summary tbody');
             let html = '';
 
-            // We iterate importData to show everything (including unchecked)
             STORE.importData.forEach(item => {
-                // Apply Text Filters
                 if (fGroup && !item.group.toLowerCase().includes(fGroup)) return;
                 if (fName && !item.name.toLowerCase().includes(fName) && !item.sku.toLowerCase().includes(fName)) return;
                 if (fStatus !== 'all' && item.status !== fStatus) return;
 
-                // Find counted data
                 const countedItem = STORE.countData.find(c => c.sku === item.sku && c.status === item.status);
                 const countedVal = countedItem ? countedItem.totalCount : 0;
                 const diff = countedVal - item.stock;
 
-                // Apply Logic Filters
                 if (fCount === 'checked' && countedVal === 0) return;
                 if (fCount === 'unchecked' && countedVal > 0) return;
-
                 if (fDiff === 'ok' && diff !== 0) return;
                 if (fDiff === 'fail' && diff === 0) return;
                 if (fDiff === 'thua' && diff <= 0) return;
@@ -559,7 +511,6 @@
 
                 const bgRow = countedVal === 0 ? 'background:#fff5f5;' : '';
 
-                // We add data attributes to TR to identify item for Edit Popup
                 html += `<tr style="${bgRow}" data-sku="${item.sku}" data-status="${item.status}">
                     <td>${item.group}</td>
                     <td style="font-weight:bold;">${item.sku}</td>
@@ -571,23 +522,13 @@
                 </tr>`;
             });
             tbody.innerHTML = html;
-
-            // Bind click to edit (Even from Summary!)
             tbody.querySelectorAll('tr').forEach(tr => {
                 tr.onclick = () => {
                     const sku = tr.dataset.sku;
                     const status = tr.dataset.status;
-                    // Check if item exists in countData to edit
                     let cItem = STORE.countData.find(i => i.sku === sku && i.status === status);
-                    
-                    if (cItem) {
-                        openEditPopup(cItem);
-                    } else {
-                        // If not checked yet, maybe prompt to add?
-                        // For now, let's just allow editing if it's already in count list.
-                        // Or we can create a dummy 0-count entry? No, that complicates things.
-                        UI.showToast("Sản phẩm này chưa được kiểm kê!");
-                    }
+                    if (cItem) openEditPopup(cItem);
+                    else UI.showToast("Sản phẩm này chưa được kiểm kê!");
                 };
             });
         }
@@ -617,28 +558,6 @@
             } else { overlay.style.display = 'none'; STORE.isScannerRunning = false; }
         }
 
-        // --- GLOBAL BINDING FOR EDIT MODAL ---
-        // Since openEditPopup uses STORE.editingItem, we need to wire up the SAVE button
-        // inside runTool, but the handler logic is inside openEditPopup...
-        // Wait, I defined onclick inside openEditPopup (which is correct), but openEditPopup
-        // is defined outside runTool.
-        // It needs access to renderCountTable and renderSummary which are defined inside runTool?
-        // Ah, `renderCountTable` and `renderSummary` are defined inside `runTool`.
-        // So `openEditPopup` MUST be inside `runTool` to access them.
-        // I moved `openEditPopup` inside `runTool` in the code above.
-        // (Double check brackets... Yes, it seems I put functions inside runTool? No, wait.)
-        
-        // Correct approach: Move helper functions INSIDE runTool to share scope,
-        // OR pass callbacks.
-        // In the code block above, I placed `function handleFileImport` etc... at the bottom.
-        // If they are outside runTool, they can't see `renderImportTable` if that is inside.
-        // Let's ensure ALL helper functions that touch UI are INSIDE `runTool`.
-        
-        // REFACTORING FOR SAFETY: 
-        // I will declare functions inside runTool in the final output below.
-        
-        // ... (See final code block)
-        
         modal.style.display = 'flex';
         if(STORE.importData.length > 0) modal.querySelector('.inv-tab[data-tab="tab-count"]').click();
         else modal.querySelector('.inv-tab[data-tab="tab-input"]').click();
