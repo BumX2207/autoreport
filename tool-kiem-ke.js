@@ -1,25 +1,34 @@
 /* 
-   MODULE: KIỂM KÊ KHO (INVENTORY) - V4.4 (CUSTOM SHEET & SHORT NAME)
-   - Fix: Lỗi "userConfig is not defined".
-   - Fix: Chuẩn hóa biến currentUser vào STORE.
-   - Update: Lấy tên Shop rút gọn (Short Name).
-   - Update: Chỉ định rõ tên Sheet "Inventory_Stock" và "Inventory_Count".
+   MODULE: KIỂM KÊ KHO (INVENTORY) - V4.5 (FIX WRONG API URL)
+   - Fix: Lỗi load nhầm thông tin từ thư mục Tài nguyên.
+   - Update: Tách biệt API Kiểm kê và API Tài nguyên.
+   - Core: Hỗ trợ Short Name và Custom Sheet.
 */
 ((context) => {
+    
+    const OWN_API_URL = "https://script.google.com/macros/s/AKfycbxDRSg1JDNTyuYf2TSQovNIWhFk3ls9hPXxtRSMu6xI0oNjql53nJo0G1H5k1b2iq_3/exec"; 
+
+    // 2. Tên Sheet trong file Google Sheet (Phải khớp chính xác)
+    const SHEET_CONFIG = {
+        STOCK: "Inventory_Stock", // Sheet chứa Tồn kho
+        COUNT: "Inventory_Count"  // Sheet chứa Kết quả kiểm đếm
+    };
+
+    // ===============================================================
+
     const UI = context.UI || {};
     const UTILS = context.UTILS || {};
     const AUTH_STATE = context.AUTH_STATE || {};
     const CONSTANTS = context.CONSTANTS || {};
     const GM_xmlhttpRequest = context.GM_xmlhttpRequest;
 
-    // CẤU HÌNH TÊN SHEET CỦA BẠN Ở ĐÂY
-    const SHEET_CONFIG = {
-        STOCK: "Inventory_Stock",
-        COUNT: "Inventory_Count"
-    };
-
-    let API_URL = "";
-    try { API_URL = CONSTANTS.GSHEET.API_URL; } catch(e) {}
+    // Xử lý logic chọn API URL
+    let API_URL = OWN_API_URL;
+    if (!API_URL || API_URL.trim() === "") {
+        // Nếu người dùng chưa dán link, thử lấy từ config chung (nhưng dễ bị nhầm sang Tài nguyên)
+        try { API_URL = CONSTANTS.GSHEET.API_URL; } catch(e) {}
+        console.warn("⚠️ Tool Kiểm kê đang dùng API chung. Nếu thấy hiện ảnh/video, hãy dán Link App Script vào biến OWN_API_URL trong code.");
+    }
 
     // --- CSS ---
     const MY_CSS = `
@@ -123,7 +132,7 @@
     // --- API FUNCTIONS (CÓ CẬP NHẬT SHEET NAME) ---
     const API = {
         call: (params, cb) => {
-            if(!API_URL) { if(UI.showToast) UI.showToast("❌ Chưa có API URL"); return; }
+            if(!API_URL) { if(UI.showToast) UI.showToast("❌ Chưa có API URL. Hãy sửa code tool kiem ke."); return; }
             const ind = document.getElementById('inv-loading-indicator');
             if(ind) { ind.style.display = 'inline'; ind.innerText = "Đang kết nối..."; }
             
@@ -196,7 +205,6 @@
 
             const shops = [];
             // --- CẬP NHẬT: LẤY TÊN RÚT GỌN (SHORT NAME) ---
-            // Ưu tiên shopXShort, nếu không có thì lấy shopX (tên đầy đủ)
             if(userConfig.shop1) shops.push({id: '1', name: userConfig.shop1Short || userConfig.shop1});
             if(userConfig.shop2) shops.push({id: '2', name: userConfig.shop2Short || userConfig.shop2});
             if(userConfig.shop3) shops.push({id: '3', name: userConfig.shop3Short || userConfig.shop3});
