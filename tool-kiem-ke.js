@@ -36,7 +36,7 @@
 
         /* SUB HEADER (SHOP SELECT & USER) */
         .inv-sub-header { background:#e9ecef; padding:8px 15px; font-size:12px; color:#333; border-bottom:1px solid #ddd; display:flex; align-items:center; flex-wrap: wrap; gap: 10px; }
-        .inv-shop-select { padding: 4px; border-radius: 4px; border: 1px solid #007bff; font-weight: bold; color: #0056b3; outline: none; font-size: 12px; max-width: 150px; }
+        .inv-shop-select { padding: 4px; border-radius: 4px; border: 1px solid #007bff; font-weight: bold; color: #0056b3; outline: none; font-size: 12px; max-width: 110px; }
         .inv-user-info { display:flex; align-items:center; gap:5px; white-space: nowrap; margin-left: auto; }
         .inv-user-name { color:#d63031; font-weight:bold; } .inv-user-name.ready { color:#007bff; }
 
@@ -239,7 +239,7 @@
         modal.innerHTML = `
             <div class="inv-content">
                 <div class="inv-header">
-                    <div class="inv-title">📦 <span id="inv-loading-indicator" class="inv-loading">Đang tải...</span></div>
+                    <div class="inv-title">📦Kiểm kê <span id="inv-loading-indicator" class="inv-loading">Đang tải...</span></div>
                     <div class="inv-tabs">
                         <div class="inv-tab active" data-tab="tab-input">Nhập liệu</div>
                         <div class="inv-tab" data-tab="tab-count">Kiểm kê</div>
@@ -251,7 +251,7 @@
                 <div class="inv-sub-header">
                     <select id="inv-shop-select" class="inv-shop-select">${shopOpts}</select>
                     <div class="inv-user-info">
-                        👤 NV Kiểm kê: <span id="lbl-current-user" class="inv-user-name">...</span>
+                        👤 NV: <span id="lbl-current-user" class="inv-user-name">...</span>
                         <span id="lbl-status-auth" style="font-size:10px; color:#999;"></span>
                     </div>
                 </div>
