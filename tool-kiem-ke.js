@@ -1,11 +1,12 @@
 /* 
-   MODULE: KIỂM KÊ KHO (INVENTORY) - V2.7
-   - UI: Thay nút "Hủy bỏ" bằng nút (X) góc phải modal.
-   - Logic: Nút "Nhập đủ" hoạt động cho cả Thừa (trừ) và Thiếu (cộng).
-   - Fix: Z-Index, Save logic, Mobile Fullscreen.
+   MODULE: KIỂM KÊ KHO (INVENTORY) - V3.0 (MULTI-USER CLOUD)
+   - Tính năng: Đồng bộ dữ liệu nhiều người qua Google Sheet.
+   - Tab Kiểm kê: Chỉ hiện dữ liệu của User hiện tại.
+   - Tab Tổng hợp: Cộng dồn dữ liệu của tất cả User.
+   - Yêu cầu: Google Apps Script đã cấu hình sheet 'Inventory'.
 */
 ((context) => {
-    const { UI, UTILS } = context;
+    const { UI, UTILS, AUTH_STATE, CONSTANTS, GM_xmlhttpRequest } = context;
 
     // --- 1. CSS ---
     const MY_CSS = `
@@ -13,15 +14,12 @@
         
         /* RESPONSIVE LAYOUT */
         .inv-content { background:#fff; width:98%; max-width:1100px; height:92vh; border-radius:15px; box-shadow:0 20px 60px rgba(0,0,0,0.4); display:flex; flex-direction:column; overflow:hidden; animation: popIn 0.3s; font-family: sans-serif; position: relative; }
-        @media (max-width: 768px) {
-            .inv-content { width: 100% !important; height: 100% !important; max-width: none !important; border-radius: 0 !important; }
-        }
+        @media (max-width: 768px) { .inv-content { width: 100% !important; height: 100% !important; max-width: none !important; border-radius: 0 !important; } }
 
-        /* HEADER & TABS */
+        /* HEADER */
         .inv-header { display:flex; background:#f8f9fa; border-bottom:1px solid #ddd; padding:0 10px; align-items:center; justify-content:space-between; height: 50px; flex-shrink: 0; }
         .inv-title { font-weight:800; font-size:16px; color:#333; display:flex; align-items:center; gap:5px; }
         .inv-close { font-size:24px; cursor:pointer; color:#999; padding:0 15px; font-weight:bold; transition: 0.2s; } .inv-close:hover { color:red; transform: scale(1.1); }
-        
         .inv-tabs { display:flex; gap:5px; height:100%; align-items:flex-end; }
         .inv-tab { padding:10px 20px; cursor:pointer; font-weight:bold; color:#666; border-bottom:3px solid transparent; transition:0.2s; font-size:13px; white-space:nowrap; }
         .inv-tab:hover { background:#eee; }
@@ -32,13 +30,18 @@
         .inv-view { display:none; height:100%; flex-direction:column; padding:15px; box-sizing:border-box; }
         .inv-view.active { display:flex; }
 
-        /* RADIO STATUS */
-        .inv-status-group { display:flex; flex-wrap:wrap; gap:8px; padding:10px; background:#f1f8ff; border-radius:8px; margin-bottom:15px; border:1px solid #cce5ff; }
-        .inv-radio-lbl { font-size:11px; font-weight:bold; color:#0056b3; cursor:pointer; display:flex; align-items:center; gap:5px; background:white; padding:6px 12px; border-radius:15px; border:1px solid #b8daff; transition:0.2s; }
-        .inv-radio-lbl:hover { background:#e2e6ea; }
-        .inv-radio-lbl:has(input:checked) { background:#007bff; color:white; border-color:#0056b3; box-shadow:0 2px 5px rgba(0,123,255,0.3); }
-        .inv-radio-lbl input { display:none; }
-
+        /* CONTROLS */
+        .inv-controls { display:flex; gap:5px; margin-bottom:15px; align-items:center; flex-wrap: nowrap; }
+        .inv-input { padding:8px; border:1px solid #ccc; border-radius:6px; font-size:14px; }
+        .inv-search-box { position:relative; flex: 1; min-width: 0; } 
+        #inp-search-sku { width: 100%; box-sizing: border-box; }
+        .inv-btn { padding:8px 12px; border:none; border-radius:6px; font-weight:bold; color:white; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s; white-space:nowrap; font-size: 13px; }
+        .inv-btn:active { transform:scale(0.95); }
+        .btn-import { background:#28a745; }
+        .btn-scan { background:#343a40; }
+        .btn-sync { background:#17a2b8; }
+        .inv-chk-manual { font-size:12px; font-weight:bold; color:#555; display:flex; align-items:center; gap:4px; cursor:pointer; padding:0 5px; white-space: nowrap; user-select: none; }
+        
         /* TABLE */
         .inv-table-wrapper { flex:1; overflow:auto; border:1px solid #eee; border-radius:8px; box-shadow:inset 0 0 10px rgba(0,0,0,0.05); }
         .inv-table { width:100%; border-collapse:collapse; font-size:12px; }
@@ -53,60 +56,58 @@
         .st-missing { color:#dc3545; font-weight:bold; }
         .st-ok { color:#007bff; font-weight:bold; }
 
-        /* CONTROLS */
-        .inv-controls { display:flex; gap:5px; margin-bottom:15px; align-items:center; flex-wrap: nowrap; }
-        .inv-input { padding:8px; border:1px solid #ccc; border-radius:6px; font-size:14px; }
-        
-        .inv-search-box { position:relative; flex: 1; min-width: 0; } 
-        #inp-search-sku { width: 100%; box-sizing: border-box; }
+        /* EDIT MODAL */
+        #inv-edit-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2147483650; justify-content:center; align-items:center; backdrop-filter:blur(2px); }
+        .inv-edit-content { background:white; width:90%; max-width:400px; border-radius:12px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.3); animation: popIn 0.2s; display:flex; flex-direction:column; }
+        .inv-edit-header { display:flex; justify-content:space-between; align-items:center; font-weight:bold; font-size:16px; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px; color:#333; }
+        .inv-edit-close { cursor:pointer; font-size:20px; color:#999; width:30px; height:30px; display:flex; justify-content:center; align-items:center; border-radius:50%; transition:0.2s; }
+        .inv-edit-close:hover { background:#eee; color:#333; }
+        .inv-edit-input { width:60px; padding:4px; text-align:center; border:1px solid #ccc; border-radius:4px; margin-left: 10px; font-weight:bold; font-size:16px; color:#007bff; }
+        .inv-edit-actions { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top: 15px; }
+        .inv-btn-del-all { background:#dc3545; flex:1; justify-content:center; }
+        .inv-btn-fill { background:#28a745; flex:1; justify-content:center; }
+        .inv-btn-save { background:#007bff; flex:1; justify-content:center; }
 
-        .inv-btn { padding:8px 12px; border:none; border-radius:6px; font-weight:bold; color:white; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s; white-space:nowrap; font-size: 13px; }
-        .inv-btn:active { transform:scale(0.95); }
-        .btn-import { background:#28a745; }
-        .btn-scan { background:#343a40; }
+        /* STATUS RADIO */
+        .inv-status-group { display:flex; flex-wrap:wrap; gap:8px; padding:10px; background:#f1f8ff; border-radius:8px; margin-bottom:15px; border:1px solid #cce5ff; }
+        .inv-radio-lbl { font-size:11px; font-weight:bold; color:#0056b3; cursor:pointer; display:flex; align-items:center; gap:5px; background:white; padding:6px 12px; border-radius:15px; border:1px solid #b8daff; transition:0.2s; }
+        .inv-radio-lbl:hover { background:#e2e6ea; }
+        .inv-radio-lbl:has(input:checked) { background:#007bff; color:white; border-color:#0056b3; box-shadow:0 2px 5px rgba(0,123,255,0.3); }
+        .inv-radio-lbl input { display:none; }
         
-        .inv-chk-manual { font-size:12px; font-weight:bold; color:#555; display:flex; align-items:center; gap:4px; cursor:pointer; padding:0 5px; white-space: nowrap; user-select: none; }
-        .inv-chk-manual input { width:16px; height:16px; accent-color:#007bff; cursor:pointer; }
-
         /* SUGGESTIONS */
         .inv-suggestions { position:absolute; top:100%; left:0; width:100%; background:white; border:1px solid #ddd; border-radius:0 0 8px 8px; box-shadow:0 10px 20px rgba(0,0,0,0.2); z-index:2000; max-height:300px; overflow-y:auto; display:none; }
         .inv-sug-item { padding:10px; border-bottom:1px solid #f0f0f0; cursor:pointer; font-size:12px; }
         .inv-sug-item:hover { background:#f0f8ff; color:#007bff; }
         .inv-sug-code { font-weight:bold; color:#d63031; }
 
-        /* EDIT MODAL - UPDATED */
-        #inv-edit-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2147483650; justify-content:center; align-items:center; backdrop-filter:blur(2px); }
-        .inv-edit-content { background:white; width:90%; max-width:400px; border-radius:12px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.3); animation: popIn 0.2s; display:flex; flex-direction:column; }
-        
-        .inv-edit-header { display:flex; justify-content:space-between; align-items:center; font-weight:bold; font-size:16px; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px; color:#333; }
-        .inv-edit-close { cursor:pointer; font-size:20px; color:#999; width:30px; height:30px; display:flex; justify-content:center; align-items:center; border-radius:50%; transition:0.2s; }
-        .inv-edit-close:hover { background:#eee; color:#333; }
+        /* LOADING */
+        .inv-loading { font-size:12px; color:#666; font-style:italic; margin-left:10px; display:none; }
 
-        .inv-edit-list { max-height:200px; overflow-y:auto; border:1px solid #eee; border-radius:6px; margin-bottom:15px; }
-        .inv-edit-item { display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #f9f9f9; align-items:center; font-size:13px; }
-        .inv-edit-input { width:60px; padding:4px; text-align:center; border:1px solid #ccc; border-radius:4px; }
-        
-        .inv-edit-actions { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top: auto; }
-        .inv-btn-del-all { background:#dc3545; flex:1; justify-content:center; }
-        .inv-btn-fill { background:#28a745; flex:1; justify-content:center; }
-        .inv-btn-save { background:#007bff; flex:1; justify-content:center; }
-
-        /* FILTERS & SCANNER */
+        /* FILTERS */
         .inv-filter-select { padding:4px; border:1px solid #ccc; border-radius:4px; font-size:11px; width:100%; box-sizing:border-box; margin-top:4px; }
+        
+        /* SCANNER */
         #inv-scanner-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:black; z-index:200; display:none; flex-direction:column; }
         #inv-reader { width:100%; height:100%; object-fit:cover; }
         .inv-scan-close { position:absolute; top:20px; right:20px; background:white; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; z-index:201; box-shadow:0 0 10px rgba(0,0,0,0.5); }
     `;
 
     // --- 2. GLOBAL STATE ---
+    // Sử dụng API_URL từ Auto BI. Nếu chưa có thì phải nhập tay.
+    // LƯU Ý: Đây là URL Web App của GAS (Bước 2)
+    const API_URL = CONSTANTS.GSHEET.API_URL; 
+    
     let STORE = {
-        importData: [], 
-        countData: [],
+        importData: [],       // Dữ liệu từ Excel (Tồn kho chuẩn)
+        serverData: [],       // Dữ liệu từ Cloud (Tất cả mọi người)
+        myCountData: [],      // Dữ liệu kiểm đếm của riêng tôi (Derived from serverData)
         currentStatus: "Mới",
         isScannerRunning: false,
         scannerObj: null,
         editingItem: null,
-        isManualInput: false
+        isManualInput: false,
+        isLoading: false
     };
 
     const STATUS_MAP = {
@@ -125,15 +126,76 @@
         return new Promise((resolve, reject) => {
             if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
             const script = document.createElement('script');
-            script.src = src;
-            script.onload = resolve;
-            script.onerror = reject;
+            script.src = src; script.onload = resolve; script.onerror = reject;
             document.head.appendChild(script);
         });
     };
 
-    // --- 3. MAIN LOGIC ---
+    // --- 3. API FUNCTIONS ---
+    const API = {
+        // Tải dữ liệu kiểm kê của TẤT CẢ mọi người
+        fetchInventory: (callback) => {
+            if(!API_URL) { UI.showToast("❌ Chưa cấu hình API URL"); return; }
+            document.getElementById('inv-loading-indicator').style.display = 'inline';
+            
+            GM_xmlhttpRequest({
+                method: "GET",
+                url: `${API_URL}?action=get_inventory&t=${Date.now()}`,
+                onload: (res) => {
+                    document.getElementById('inv-loading-indicator').style.display = 'none';
+                    if (res.status === 200) {
+                        try {
+                            const json = JSON.parse(res.responseText);
+                            STORE.serverData = json;
+                            
+                            // Lọc ra dữ liệu của user hiện tại
+                            const currentUser = AUTH_STATE.userName;
+                            STORE.myCountData = STORE.serverData.filter(i => i.user === currentUser);
+                            
+                            if(callback) callback();
+                        } catch(e) { console.error(e); UI.showToast("❌ Lỗi dữ liệu server"); }
+                    } else { UI.showToast("❌ Lỗi kết nối server"); }
+                },
+                onerror: () => { 
+                    document.getElementById('inv-loading-indicator').style.display = 'none';
+                    UI.showToast("❌ Mất kết nối server"); 
+                }
+            });
+        },
+
+        // Lưu dữ liệu của user hiện tại lên Server
+        saveInventory: (callback) => {
+            if(!API_URL) return;
+            document.getElementById('inv-loading-indicator').style.display = 'inline';
+            UI.showToast("☁️ Đang đồng bộ...");
+
+            const currentUser = AUTH_STATE.userName;
+            const payload = {
+                action: 'save_inventory',
+                user: currentUser,
+                data: STORE.myCountData // Gửi toàn bộ những gì mình đếm lên
+            };
+
+            GM_xmlhttpRequest({
+                method: "POST",
+                url: API_URL,
+                data: JSON.stringify(payload),
+                onload: (res) => {
+                    document.getElementById('inv-loading-indicator').style.display = 'none';
+                    if (res.status === 200) {
+                        UI.showToast("✅ Đã lưu lên Cloud!");
+                        if(callback) callback();
+                    } else { UI.showToast("❌ Lỗi lưu dữ liệu!"); }
+                },
+                onerror: () => { UI.showToast("❌ Lỗi mạng!"); document.getElementById('inv-loading-indicator').style.display = 'none'; }
+            });
+        }
+    };
+
+    // --- 4. MAIN LOGIC ---
     const runTool = async () => {
+        if (!AUTH_STATE.isAuthorized) { UI.showToast("❌ Bạn chưa đăng nhập Tool Auto BI!"); return; }
+
         const bottomNav = document.getElementById('tgdd-bottom-nav');
         if(bottomNav) bottomNav.style.display = 'none';
 
@@ -146,23 +208,20 @@
         modal.innerHTML = `
             <div class="inv-content">
                 <div class="inv-header">
-                    <div class="inv-title">📦 KIỂM KÊ</div>
+                    <div class="inv-title">📦 KIỂM KÊ (MULTI-USER) <span id="inv-loading-indicator" class="inv-loading">Đang đồng bộ...</span></div>
                     <div class="inv-tabs">
                         <div class="inv-tab active" data-tab="tab-input">Nhập liệu</div>
-                        <div class="inv-tab" data-tab="tab-count">Kiểm kê</div>
-                        <div class="inv-tab" data-tab="tab-sum">Tổng hợp</div>
+                        <div class="inv-tab" data-tab="tab-count">Kiểm kê (Tôi)</div>
+                        <div class="inv-tab" data-tab="tab-sum">Tổng hợp (Team)</div>
                     </div>
                     <div class="inv-close" id="btn-inv-close" title="Đóng">×</div>
                 </div>
 
                 <div class="inv-body">
-                    <!-- TAB 1 -->
+                    <!-- TAB 1: NHẬP LIỆU -->
                     <div class="inv-view active" id="tab-input">
                         <div class="inv-controls">
-                            <label class="inv-btn btn-import">
-                                📂 Chọn file Excel
-                                <input type="file" id="inp-excel-file" accept=".xlsx, .xls" style="display:none;">
-                            </label>
+                            <label class="inv-btn btn-import">📂 Excel Tồn Kho <input type="file" id="inp-excel-file" accept=".xlsx, .xls" style="display:none;"></label>
                             <span id="lbl-file-name" style="font-size:12px; color:#666;">Chưa có dữ liệu</span>
                         </div>
                         <div class="inv-table-wrapper">
@@ -173,7 +232,7 @@
                         </div>
                     </div>
 
-                    <!-- TAB 2 -->
+                    <!-- TAB 2: KIỂM KÊ (CÁ NHÂN) -->
                     <div class="inv-view" id="tab-count">
                         <div class="inv-status-group" id="inv-status-container"></div>
                         <div class="inv-controls">
@@ -181,39 +240,36 @@
                                 <input type="text" id="inp-search-sku" class="inv-input" placeholder="Nhập tên/mã..." autocomplete="off">
                                 <div class="inv-suggestions" id="box-suggestions"></div>
                             </div>
-                            <label class="inv-chk-manual">
-                                <input type="checkbox" id="chk-manual-input"> Nhập tay
-                            </label>
-                            <button class="inv-btn btn-scan" id="btn-open-scan">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M3 4H5V20H3V4ZM7 4H8V20H7V4ZM10 4H12V20H10V4ZM14 4H15V20H14V4ZM17 4H19V20H17V4ZM21 4H22V20H21V4Z"/></svg>
-                                Quét mã
-                            </button>
+                            <label class="inv-chk-manual"><input type="checkbox" id="chk-manual-input"> Nhập tay</label>
+                            <button class="inv-btn btn-scan" id="btn-open-scan">📷 Scan</button>
+                            <button class="inv-btn btn-sync" id="btn-sync-cloud">☁️ Đồng bộ</button>
                         </div>
                         <div class="inv-table-wrapper">
                             <table class="inv-table" id="tbl-counting">
-                                <thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>Tồn</th><th>Đã kiểm</th><th>Lệch</th></tr></thead>
+                                <thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>SL Kiểm</th><th>Hành động</th></tr></thead>
                                 <tbody></tbody>
                             </table>
                         </div>
-                        <div id="inv-scanner-overlay">
-                            <div class="inv-scan-close" id="btn-close-scan">×</div>
-                            <div id="inv-reader"></div>
-                        </div>
+                        <div id="inv-scanner-overlay"><div class="inv-scan-close" id="btn-close-scan">×</div><div id="inv-reader"></div></div>
                     </div>
 
-                    <!-- TAB 3 -->
+                    <!-- TAB 3: TỔNG HỢP (TEAM) -->
                     <div class="inv-view" id="tab-sum">
+                        <div style="padding:10px; background:#fff3cd; color:#856404; font-size:12px; margin-bottom:5px;">
+                            ℹ️ Tab này cộng dồn số liệu từ Cloud của tất cả nhân viên. Nhấn <b>Đồng bộ</b> ở Tab Kiểm kê để cập nhật mới nhất.
+                        </div>
                         <div class="inv-table-wrapper">
                             <table class="inv-table" id="tbl-summary">
                                 <thead>
                                     <tr>
-                                        <th>Nhóm hàng<br><select class="inv-filter-select" data-col="group"><option value="all">Tất cả</option></select></th>
+                                        <th>Nhóm <select class="inv-filter-select" data-col="group"><option value="all">Tất cả</option></select></th>
                                         <th>Mã SP</th>
-                                        <th>Tên sản phẩm<br><select class="inv-filter-select" data-col="name"><option value="all">Tất cả</option></select></th>
-                                        <th>Trạng thái<br><select class="inv-filter-select" data-col="status"><option value="all">Tất cả</option></select></th>
+                                        <th>Tên sản phẩm <select class="inv-filter-select" data-col="name"><option value="all">Tất cả</option></select></th>
+                                        <th>Trạng thái <select class="inv-filter-select" data-col="status"><option value="all">Tất cả</option></select></th>
                                         <th>Tồn kho</th>
-                                        <th>Kiểm được<br><select class="inv-filter-select" data-col="count"><option value="all">All</option><option value="checked">Rồi</option><option value="unchecked">Chưa</option></select></th>
-                                        <th>Chênh lệch<br><select class="inv-filter-select" data-col="diff"><option value="all">All</option><option value="ok">Đủ</option><option value="fail">Lệch</option><option value="thua">Thừa</option><option value="thieu">Thiếu</option></select></th>
+                                        <th>Tổng Kiểm</th>
+                                        <th>Chênh lệch <select class="inv-filter-select" data-col="diff"><option value="all">All</option><option value="ok">Đủ</option><option value="fail">Lệch</option><option value="thua">Thừa</option><option value="thieu">Thiếu</option></select></th>
+                                        <th>Chi tiết</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -223,40 +279,35 @@
                 </div>
             </div>
 
-            <!-- EDIT POPUP (Updated) -->
+            <!-- EDIT POPUP -->
             <div id="inv-edit-modal">
                 <div class="inv-edit-content">
-                    <div class="inv-edit-header">
-                        <span>Điều chỉnh số lượng</span>
-                        <span class="inv-edit-close" id="btn-edit-close-x" title="Đóng">×</span>
+                    <div class="inv-edit-header"><span>Nhập số lượng</span><span class="inv-edit-close" id="btn-edit-close-x">×</span></div>
+                    <div style="font-size:13px; margin-bottom:5px;">Sản phẩm: <b id="edit-prod-name">...</b></div>
+                    <div style="font-size:12px; color:#666; margin-bottom:20px;">Mã: <span id="edit-prod-sku"></span> | Trạng thái: <span id="edit-prod-status"></span></div>
+                    
+                    <div style="display:flex; justify-content:center; align-items:center; margin-bottom:20px;">
+                        <span style="font-size:14px; font-weight:bold;">Số lượng kiểm:</span>
+                        <input type="number" id="inp-edit-qty" class="inv-edit-input" min="0" value="1">
                     </div>
                     
-                    <div style="font-size:13px; margin-bottom:5px;">Sản phẩm: <b id="edit-prod-name">...</b></div>
-                    <div style="font-size:12px; color:#666; margin-bottom:10px;">Mã: <span id="edit-prod-sku"></span> | Trạng thái: <span id="edit-prod-status"></span></div>
-                    <div style="font-size:12px; color:blue; margin-bottom:10px;">Tồn kho: <b id="edit-prod-stock">0</b> | Đã kiểm: <b id="edit-prod-count">0</b></div>
-                    
-                    <div class="inv-edit-list" id="edit-history-list"></div>
-                    
                     <div class="inv-edit-actions">
-                        <button class="inv-btn inv-btn-del-all" id="btn-edit-delete">🗑️ Xóa</button>
-                        <button class="inv-btn inv-btn-fill" id="btn-edit-fill" style="display:none;">⚡ Nhập đủ</button>
-                        <button class="inv-btn inv-btn-save" id="btn-edit-save">Lưu</button>
+                        <button class="inv-btn inv-btn-del-all" id="btn-edit-delete">🗑️ Xóa dòng</button>
+                        <button class="inv-btn inv-btn-save" id="btn-edit-save">💾 Lưu & Đồng bộ</button>
                     </div>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
 
-        // --- INIT DATA & STATUS ---
+        // Status Radio
         const statusList = ["Mới", "Trưng bày", "Trưng bày bỏ mẫu", "Đã sử dụng", "Lỗi (Mới)", "Lỗi (Đã sử dụng)", "Cũ thu mua", "Mới (Giảm giá)"];
         const radioContainer = document.getElementById('inv-status-container');
         statusList.forEach((st, idx) => {
-            radioContainer.innerHTML += `
-                <label class="inv-radio-lbl">
-                    <input type="radio" name="inv-status-radio" value="${st}" ${idx === 0 ? 'checked' : ''}> ${st}
-                </label>`;
+            radioContainer.innerHTML += `<label class="inv-radio-lbl"><input type="radio" name="inv-status-radio" value="${st}" ${idx===0?'checked':''}> ${st}</label>`;
         });
 
+        // Libraries
         try {
             await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
             await loadScript('https://unpkg.com/html5-qrcode');
@@ -277,7 +328,10 @@
                 document.querySelectorAll('.inv-view').forEach(v => v.classList.remove('active'));
                 document.getElementById(t.dataset.tab).classList.add('active');
                 if (t.dataset.tab === 'tab-count') setTimeout(() => document.getElementById('inp-search-sku').focus(), 100);
-                if (t.dataset.tab === 'tab-sum') renderSummary();
+                if (t.dataset.tab === 'tab-sum') {
+                    // Khi vào tab tổng hợp -> Tự động pull data mới nhất
+                    API.fetchInventory(() => { renderSummary(); });
+                }
             };
         });
 
@@ -291,137 +345,72 @@
 
         document.getElementById('chk-manual-input').onchange = (e) => STORE.isManualInput = e.target.checked;
         document.getElementById('inp-excel-file').addEventListener('change', handleFileImport, false);
+        
+        // Button Sync
+        document.getElementById('btn-sync-cloud').onclick = () => {
+             API.saveInventory(() => {
+                 API.fetchInventory(() => { renderCountTable(); });
+             });
+        };
 
+        // Search logic
         const searchInput = document.getElementById('inp-search-sku');
         const sugBox = document.getElementById('box-suggestions');
         searchInput.addEventListener('input', (e) => {
             const val = e.target.value.toLowerCase().trim();
             if (val.length < 2) { sugBox.style.display = 'none'; return; }
-            
-            const matches = STORE.importData.filter(item => 
-                item.status === STORE.currentStatus && 
-                (item.sku.toLowerCase().includes(val) || item.name.toLowerCase().includes(val))
-            ).slice(0, 10);
-
+            const matches = STORE.importData.filter(item => item.status === STORE.currentStatus && (item.sku.toLowerCase().includes(val) || item.name.toLowerCase().includes(val))).slice(0, 10);
             if (matches.length > 0) {
-                sugBox.innerHTML = matches.map(item => `
-                    <div class="inv-sug-item" data-sku="${item.sku}">
-                        <span class="inv-sug-code">${item.sku}</span> - ${item.name} <span style="font-size:10px;color:#999">(${item.stock})</span>
-                    </div>
-                `).join('');
+                sugBox.innerHTML = matches.map(item => `<div class="inv-sug-item" data-sku="${item.sku}"><span class="inv-sug-code">${item.sku}</span> - ${item.name}</div>`).join('');
                 sugBox.style.display = 'block';
                 sugBox.querySelectorAll('.inv-sug-item').forEach(el => {
-                    el.onclick = () => {
-                        addCountItem(el.dataset.sku);
-                        searchInput.value = '';
-                        sugBox.style.display = 'none';
-                        searchInput.focus();
-                    };
+                    el.onclick = () => { addCountItem(el.dataset.sku); searchInput.value = ''; sugBox.style.display = 'none'; searchInput.focus(); };
                 });
             } else sugBox.style.display = 'none';
         });
-        document.addEventListener('click', (e) => { if (!e.target.closest('.inv-search-box')) sugBox.style.display = 'none'; });
 
         document.getElementById('btn-open-scan').onclick = startScanner;
         document.getElementById('btn-close-scan').onclick = stopScanner;
         document.querySelectorAll('.inv-filter-select').forEach(el => el.addEventListener('change', renderSummary));
 
-        // --- EDIT MODAL EVENTS (New Logic) ---
-        // 1. Close Button (X)
+        // EDIT MODAL
         document.getElementById('btn-edit-close-x').onclick = () => document.getElementById('inv-edit-modal').style.display = 'none';
-
-        // 2. Delete Button
+        
         document.getElementById('btn-edit-delete').onclick = () => {
-            if(confirm("Xóa sản phẩm này khỏi danh sách đã kiểm?")) {
-                STORE.countData = STORE.countData.filter(i => !(i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status));
-                document.getElementById('inv-edit-modal').style.display = 'none';
-                renderCountTable();
-                renderSummary(); 
-            }
-        };
-
-        // 3. Fill Button (Nhập đủ - Thừa/Thiếu)
-        document.getElementById('btn-edit-fill').onclick = () => {
-            const item = STORE.editingItem;
-            // diff: số lượng cần bù vào (nếu dương là thiếu, nếu âm là thừa)
-            const diff = item.stock - item.totalCount; 
-            
-            if (diff !== 0) {
-                const actionText = diff > 0 ? "nhập thêm" : "giảm bớt";
-                const qtyAbs = Math.abs(diff);
-
-                if(confirm(`Xác nhận ${actionText} ${qtyAbs} cái để về đúng tồn kho?`)) {
-                    const nowTime = new Date().toTimeString().split(' ')[0];
-                    const existIdx = STORE.countData.findIndex(i => i.sku === item.sku && i.status === item.status);
-                    
-                    if (existIdx === -1) {
-                        // Chưa có -> Tạo mới (Chỉ xảy ra nếu thao tác từ tab Tổng hợp với item chưa kiểm)
-                        STORE.countData.unshift({
-                            ...item,
-                            history: [{ ts: nowTime, qty: diff }], // diff có thể âm
-                            totalCount: diff,
-                            counted: diff
-                        });
-                    } else {
-                        // Đã có -> Thêm vào lịch sử
-                        const realItem = STORE.countData[existIdx];
-                        realItem.history.unshift({ ts: nowTime, qty: diff });
-                        realItem.totalCount += diff; // Cộng số âm = Trừ
-                    }
-                    
+            if(confirm("Xóa dòng này?")) {
+                STORE.myCountData = STORE.myCountData.filter(i => !(i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status));
+                API.saveInventory(() => { // Sync immediately delete
                     document.getElementById('inv-edit-modal').style.display = 'none';
                     renderCountTable();
-                    renderSummary();
-                    UI.showToast("Đã cập nhật số lượng!");
-                }
+                });
             }
         };
 
-        // 4. Save Button
         document.getElementById('btn-edit-save').onclick = () => {
-            const inputs = document.querySelectorAll('.inv-history-qty');
-            let newHistory = [];
-            let newTotal = 0;
-            const nowTime = new Date().toTimeString().split(' ')[0];
-
-            inputs.forEach((inp, idx) => {
-                const val = parseInt(inp.value) || 0;
-                // Chấp nhận số âm nếu người dùng tự nhập tay để trừ tồn
-                if (val !== 0) {
-                    let currentTs = nowTime;
-                    if (STORE.editingItem.history && STORE.editingItem.history[idx]) {
-                        currentTs = STORE.editingItem.history[idx].ts;
-                    }
-                    newHistory.push({ ts: currentTs, qty: val });
-                    newTotal += val;
-                }
-            });
-
-            if (newTotal === 0) {
-                if(confirm("Số lượng bằng 0. Xóa sản phẩm khỏi danh sách?")) {
-                    STORE.countData = STORE.countData.filter(i => !(i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status));
-                } else return;
+            const qty = parseInt(document.getElementById('inp-edit-qty').value) || 0;
+            if(qty < 0) return;
+            
+            // Tìm trong myCountData
+            const existIdx = STORE.myCountData.findIndex(i => i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status);
+            
+            if(qty === 0) {
+                 if(existIdx !== -1) STORE.myCountData.splice(existIdx, 1);
             } else {
-                const existIdx = STORE.countData.findIndex(i => i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status);
-                if (existIdx !== -1) {
-                    STORE.countData[existIdx].history = newHistory;
-                    STORE.countData[existIdx].totalCount = newTotal;
-                } else {
-                    STORE.countData.unshift({
-                        ...STORE.editingItem,
-                        history: newHistory,
-                        totalCount: newTotal
-                    });
-                }
+                 if(existIdx !== -1) {
+                     STORE.myCountData[existIdx].qty = qty;
+                 } else {
+                     // Trường hợp add mới từ import (dù hiếm khi vào popup này nhưng vẫn handle)
+                     STORE.myCountData.push({ ...STORE.editingItem, qty: qty });
+                 }
             }
             
-            document.getElementById('inv-edit-modal').style.display = 'none';
-            renderCountTable();
-            renderSummary();
-            UI.showToast("Đã lưu!");
+            API.saveInventory(() => {
+                document.getElementById('inv-edit-modal').style.display = 'none';
+                renderCountTable();
+            });
         };
 
-        // --- HELPER FUNCTIONS ---
+        // --- FUNCTIONS ---
         function normalizeStatus(raw) {
             if (!raw) return "";
             const cleanRaw = String(raw).trim();
@@ -439,18 +428,11 @@
                 const data = new Uint8Array(evt.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
                 const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
-                
                 STORE.importData = [];
                 for (let i = 1; i < jsonData.length; i++) {
                     const row = jsonData[i];
                     if (row && row[6]) { 
-                        STORE.importData.push({
-                            group: row[4] || '',
-                            sku: String(row[6]).trim(),
-                            name: row[7] || '',
-                            status: normalizeStatus(row[8]),
-                            stock: parseInt(row[9]) || 0
-                        });
+                        STORE.importData.push({ group: row[4]||'', sku: String(row[6]).trim(), name: row[7]||'', status: normalizeStatus(row[8]), stock: parseInt(row[9])||0 });
                     }
                 }
                 renderImportTable();
@@ -483,116 +465,97 @@
 
         function addCountItem(sku) {
             const stockItem = STORE.importData.find(i => i.sku === sku && i.status === STORE.currentStatus);
-            if (!stockItem) { UI.showToast(`⚠️ Không tìm thấy mã ${sku} với trạng thái ${STORE.currentStatus}`); return; }
+            if (!stockItem) { UI.showToast(`⚠️ Không tìm thấy mã ${sku} (${STORE.currentStatus})`); return; }
 
-            let qty = 1;
+            let qtyToAdd = 1;
             if (STORE.isManualInput) {
                 const inputQty = prompt(`Nhập số lượng cho: ${stockItem.name}`, "1");
                 if (inputQty === null) return; 
-                qty = parseInt(inputQty) || 0;
-                if (qty <= 0) return;
+                qtyToAdd = parseInt(inputQty) || 0;
+                if (qtyToAdd <= 0) return;
             }
 
-            const existItem = STORE.countData.find(i => i.sku === sku && i.status === STORE.currentStatus);
-            const nowTime = new Date().toTimeString().split(' ')[0];
-
+            // Check if exist in myCountData
+            const existItem = STORE.myCountData.find(i => i.sku === sku && i.status === STORE.currentStatus);
+            
             if (existItem) {
-                existItem.history.unshift({ ts: nowTime, qty: qty });
-                existItem.totalCount += qty;
-                STORE.countData = STORE.countData.filter(i => i !== existItem);
-                STORE.countData.unshift(existItem);
+                existItem.qty += qtyToAdd;
+                // Move to top logic handled by render? No, array order.
+                STORE.myCountData = STORE.myCountData.filter(i => i !== existItem);
+                STORE.myCountData.unshift(existItem);
             } else {
-                STORE.countData.unshift({
-                    ...stockItem,
-                    history: [{ ts: nowTime, qty: qty }],
-                    totalCount: qty
+                STORE.myCountData.unshift({
+                    user: AUTH_STATE.userName,
+                    sku: stockItem.sku,
+                    name: stockItem.name,
+                    status: stockItem.status,
+                    qty: qtyToAdd,
+                    group: stockItem.group,
+                    time: new Date().toISOString()
                 });
             }
+            
             renderCountTable();
-            UI.showToast(`Đã thêm ${qty}: ${stockItem.name}`);
+            UI.showToast(`Đã thêm ${qtyToAdd}: ${stockItem.name}`);
+            
+            // Auto Sync (Debounce could be better, but simple is ok)
+            // Uncomment line below if you want real-time sync on every scan (slower)
+            // API.saveInventory(); 
         }
 
         function openEditPopup(item) {
             const modal = document.getElementById('inv-edit-modal');
-            const list = document.getElementById('edit-history-list');
             
-            let realItem = STORE.countData.find(i => i.sku === item.sku && i.status === item.status);
-            if (!realItem) {
-                const importItem = STORE.importData.find(i => i.sku === item.sku && i.status === item.status);
-                realItem = { ...importItem, history: [], totalCount: 0 };
-            }
-            STORE.editingItem = realItem;
+            // Deep copy item info to editingItem
+            STORE.editingItem = { ...item }; // item from myCountData
 
-            document.getElementById('edit-prod-name').innerText = realItem.name;
-            document.getElementById('edit-prod-sku').innerText = realItem.sku;
-            document.getElementById('edit-prod-status').innerText = realItem.status;
-            document.getElementById('edit-prod-stock').innerText = realItem.stock;
-            document.getElementById('edit-prod-count').innerText = realItem.totalCount;
+            document.getElementById('edit-prod-name').innerText = item.name;
+            document.getElementById('edit-prod-sku').innerText = item.sku;
+            document.getElementById('edit-prod-status').innerText = item.status;
+            document.getElementById('inp-edit-qty').value = item.qty;
 
-            const btnFill = document.getElementById('btn-edit-fill');
-            const diff = realItem.stock - realItem.totalCount;
-
-            if (diff !== 0) {
-                btnFill.style.display = 'flex';
-                // Nếu diff > 0 (Thiếu) -> Hiện dấu +
-                // Nếu diff < 0 (Thừa) -> Hiện dấu - (diff bản thân nó đã âm)
-                const sign = diff > 0 ? '+' : ''; 
-                btnFill.innerText = `⚡ Nhập đủ (${sign}${diff})`;
-            } else {
-                btnFill.style.display = 'none';
-            }
-
-            let html = '';
-            if (realItem.history.length === 0) {
-                html = '<div style="text-align:center; padding:10px; color:#999; font-style:italic;">Chưa có lịch sử nhập.</div>';
-            } else {
-                realItem.history.forEach((h, idx) => {
-                    html += `
-                        <div class="inv-edit-item">
-                            <span>Lần nhập lúc ${h.ts}</span>
-                            <input type="number" class="inv-edit-input inv-history-qty" value="${h.qty}">
-                        </div>`;
-                });
-            }
-            // Dòng nhập mới
-            html += `<div class="inv-edit-item" style="background:#e3f2fd">
-                        <span style="font-weight:bold; color:#007bff">Nhập mới:</span>
-                        <input type="number" class="inv-edit-input inv-history-qty" value="" placeholder="SL">
-                     </div>`;
-
-            list.innerHTML = html;
             modal.style.display = 'flex';
+            document.getElementById('inp-edit-qty').focus();
         }
 
         function renderCountTable() {
             const tbody = document.querySelector('#tbl-counting tbody');
             let html = '';
-            STORE.countData.forEach((item, idx) => {
-                const diff = item.stock - item.totalCount;
-                let diffText = `<span class="st-ok">Đủ</span>`;
-                if (diff > 0) diffText = `<span class="st-missing">Thiếu ${diff}</span>`;
-                else if (diff < 0) diffText = `<span class="st-surplus">Thừa ${Math.abs(diff)}</span>`;
-
-                html += `<tr class="${idx===0?'highlight':''}">
+            // Render myCountData
+            STORE.myCountData.forEach((item, idx) => {
+                html += `<tr class="${idx===0?'highlight':''}" data-idx="${idx}">
                     <td style="font-weight:bold;color:#d63031">${item.sku}</td>
                     <td>${item.name}</td>
                     <td>${item.status}</td>
-                    <td>${item.stock}</td>
-                    <td style="font-weight:bold;font-size:14px;color:#007bff">${item.totalCount}</td>
-                    <td>${diffText}</td>
+                    <td style="font-weight:bold;font-size:14px;color:#007bff">${item.qty}</td>
+                    <td><button style="font-size:10px; cursor:pointer;" onclick="document.getElementById('btn-edit-row-${idx}').click()">Sửa</button><button id="btn-edit-row-${idx}" style="display:none"></button></td>
                 </tr>`;
             });
             tbody.innerHTML = html;
-            tbody.querySelectorAll('tr').forEach((tr, idx) => {
-                tr.onclick = () => { openEditPopup(STORE.countData[idx]); };
+            
+            STORE.myCountData.forEach((item, idx) => {
+                const btn = document.getElementById(`btn-edit-row-${idx}`);
+                if(btn) btn.onclick = () => openEditPopup(item);
             });
         }
 
         function renderSummary() {
+            // Group STORE.serverData by SKU+Status
+            const aggMap = {};
+            
+            STORE.serverData.forEach(rec => {
+                const key = `${rec.sku}|${rec.status}`;
+                if (!aggMap[key]) {
+                    aggMap[key] = { qty: 0, details: [] };
+                }
+                aggMap[key].qty += (parseInt(rec.qty) || 0);
+                aggMap[key].details.push(`${rec.user}: ${rec.qty}`);
+            });
+
+            // Filters
             const fGroup = document.querySelector('.inv-filter-select[data-col="group"]').value;
             const fName = document.querySelector('.inv-filter-select[data-col="name"]').value;
             const fStatus = document.querySelector('.inv-filter-select[data-col="status"]').value;
-            const fCount = document.querySelector('.inv-filter-select[data-col="count"]').value;
             const fDiff = document.querySelector('.inv-filter-select[data-col="diff"]').value;
 
             const tbody = document.querySelector('#tbl-summary tbody');
@@ -603,13 +566,11 @@
                 if (fName !== 'all' && item.name !== fName) return;
                 if (fStatus !== 'all' && item.status !== fStatus) return;
 
-                const countedItem = STORE.countData.find(c => c.sku === item.sku && c.status === item.status);
-                const countedVal = countedItem ? countedItem.totalCount : 0;
-                
+                const key = `${item.sku}|${item.status}`;
+                const agg = aggMap[key] || { qty: 0, details: [] };
+                const countedVal = agg.qty;
                 const diff = item.stock - countedVal;
 
-                if (fCount === 'checked' && countedVal === 0) return;
-                if (fCount === 'unchecked' && countedVal > 0) return;
                 if (fDiff === 'ok' && diff !== 0) return;
                 if (fDiff === 'fail' && diff === 0) return;
                 if (fDiff === 'thua' && diff >= 0) return; 
@@ -619,9 +580,10 @@
                 if (diff > 0) diffText = `<span class="st-missing">Thiếu ${diff}</span>`;
                 else if (diff < 0) diffText = `<span class="st-surplus">Thừa ${Math.abs(diff)}</span>`;
 
+                const detailTooltip = agg.details.length > 0 ? agg.details.join('\n') : "Chưa ai kiểm";
                 const bgRow = countedVal === 0 ? 'background:#fff5f5;' : '';
 
-                html += `<tr style="${bgRow}" data-sku="${item.sku}" data-status="${item.status}">
+                html += `<tr style="${bgRow}">
                     <td>${item.group}</td>
                     <td style="font-weight:bold;">${item.sku}</td>
                     <td>${item.name}</td>
@@ -629,14 +591,13 @@
                     <td>${item.stock}</td>
                     <td style="font-weight:bold;">${countedVal}</td>
                     <td>${diffText}</td>
+                    <td title="${detailTooltip}" style="font-size:10px; cursor:help; max-width:100px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${detailTooltip}</td>
                 </tr>`;
             });
             tbody.innerHTML = html;
-            tbody.querySelectorAll('tr').forEach(tr => {
-                tr.onclick = () => { openEditPopup({ sku: tr.dataset.sku, status: tr.dataset.status }); };
-            });
         }
 
+        // Scanner
         function startScanner() {
             const overlay = document.getElementById('inv-scanner-overlay');
             if(STORE.isScannerRunning) return;
@@ -662,14 +623,17 @@
         }
 
         modal.style.display = 'flex';
-        if(STORE.importData.length > 0) modal.querySelector('.inv-tab[data-tab="tab-count"]').click();
-        else modal.querySelector('.inv-tab[data-tab="tab-input"]').click();
+        // Auto Load Data on Open
+        API.fetchInventory(() => {
+             if(STORE.importData.length === 0) modal.querySelector('.inv-tab[data-tab="tab-input"]').click();
+             else modal.querySelector('.inv-tab[data-tab="tab-count"]').click();
+        });
     };
 
     return {
-        name: "Kiểm kê V1.0",
+        name: "Kiểm kê (Cloud)",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z" fill="white"/></svg>`,
-        bgColor: "#6c757d",
+        bgColor: "#0d6efd", // Blue for Cloud
         css: MY_CSS,
         action: runTool
     };
