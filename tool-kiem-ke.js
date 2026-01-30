@@ -17,11 +17,7 @@
     const { UI, UTILS, AUTH_STATE, CONSTANTS, GM_xmlhttpRequest } = context;
 
     // API URL Logic
-    let API_URL = OWN_API_URL;
-    if (!API_URL || API_URL.trim() === "") {
-        try { API_URL = CONSTANTS.GSHEET.CONFIG_API; } catch(e) {}
-    }
-
+    let API_URL = CONSTANTS.GSHEET.CONFIG_API;
     // --- 1. CSS (V2.7 Style + Class bổ sung cho Cloud) ---
     const MY_CSS = `
         #tgdd-inventory-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); z-index:2147483700; justify-content:center; align-items:center; }
