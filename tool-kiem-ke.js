@@ -1,7 +1,8 @@
 /* 
-   MODULE: KIỂM KÊ KHO (INVENTORY) - V2.7 FINAL
-   - UI: Giao diện V2.7 (Mobile Fullscreen, Edit Modal).
-   - Core: Logic V4.5 + Fix Undefined Stock + Auto Sync (5 steps) + Sync on Close.
+   MODULE: KIỂM KÊ KHO (INVENTORY) - V2.8 (AUTO LOAD & EXPORT EXCEL)
+   - Feature: Tự động tải Stock & Count khi mở.
+   - Feature: Thêm nút Xuất Excel ở Tab Tổng hợp.
+   - Core: Giữ nguyên logic Sync an toàn của V2.7.
 */
 ((context) => {
     // ===============================================================
@@ -66,6 +67,7 @@
         .btn-cloud-load { background:#6f42c1; }
         .btn-sync { background:#17a2b8; }
         .btn-danger { background:#dc3545; }
+        .btn-export { background:#218838; } /* Excel Green */
 
         .inv-chk-manual { font-size:12px; font-weight:bold; color:#555; display:flex; align-items:center; gap:4px; cursor:pointer; padding:0 5px; white-space: nowrap; user-select: none; }
         .inv-chk-manual input { width:16px; height:16px; accent-color:#007bff; cursor:pointer; }
@@ -119,7 +121,7 @@
         scannerObj: null,
         editingItem: null,
         isManualInput: false,
-        syncCounter: 0 // Biến đếm để sync sau mỗi 5 lần
+        syncCounter: 0 
     };
 
     const STATUS_MAP = { "1-Mới": "Mới", "3-Trưng bày": "Trưng bày", "7-Trưng bày (bỏ mẫu)": "Trưng bày bỏ mẫu", "2-Đã sử dụng": "Đã sử dụng", "5-Lỗi (Mới)": "Lỗi (Mới)", "6Lỗi (ĐSD)": "Lỗi (Đã sử dụng)", "6-Lỗi (ĐSD)": "Lỗi (Đã sử dụng)", "7-Cũ thu mua": "Cũ thu mua", "8-Mới (Giảm giá)": "Mới (Giảm giá)" };
@@ -183,7 +185,6 @@
             });
         },
         saveCount: (data, cb) => { 
-            // Convert to Flat List for Server
             const flatData = data.map(item => ({
                 sku: item.sku, name: item.name, status: item.status, group: item.group, qty: item.totalCount
             }));
@@ -194,12 +195,10 @@
 
     // --- 4. LOGIC CHÍNH ---
     const runTool = async () => {
-        // Init User & Config
         if (AUTH_STATE && AUTH_STATE.userName) STORE.currentUser = AUTH_STATE.userName;
         let userConfig = {};
         if (UTILS && typeof UTILS.getPersistentConfig === 'function') userConfig = UTILS.getPersistentConfig();
 
-        // Shop Selection
         const shops = [];
         if(userConfig.shop1) shops.push({id: '1', name: userConfig.shop1Short || userConfig.shop1});
         if(userConfig.shop2) shops.push({id: '2', name: userConfig.shop2Short || userConfig.shop2});
@@ -294,6 +293,8 @@
                                 </select>
                                 <button class="inv-btn btn-danger" id="btn-delete-exec" style="padding:4px 10px;">Thực hiện</button>
                             </div>
+                            <!-- NÚT XUẤT EXCEL -->
+                            <button class="inv-btn btn-export" id="btn-export-excel">📤 Xuất Excel</button>
                         </div>
                         <div class="inv-table-wrapper">
                             <table class="inv-table" id="tbl-summary">
@@ -355,21 +356,17 @@
             STORE.importData = []; STORE.countData = [];
             renderImportTable(); renderCountTable(); renderSummary();
             UI.showToast(`Đã chuyển: ${STORE.currentShopId}`);
-            // Reset sync, don't load stock automatically
-            API.getCount((data) => { 
-                STORE.countData = data.filter(i => i.user === STORE.currentUser).map(i => ({...i, history: [{ts:'Server', qty:i.qty}], totalCount: i.qty, counted: i.qty}));
-                renderCountTable(); 
-            });
+            // Re-trigger auto load sequence when shop changes
+            autoLoadData();
         };
 
-        // LOAD STOCK CLOUD (Fix: Merge stock to count data)
+        // LOAD STOCK CLOUD
         document.getElementById('btn-load-stock-cloud').onclick = () => {
             API.getStock((data) => {
                 STORE.importData = data; 
                 renderImportTable(); updateFilters();
-                // FIX: Update Stock for existing counted items
                 syncStockToCountData();
-                renderCountTable(); // Re-render to show stock values
+                renderCountTable(); 
                 if(UI.showToast) UI.showToast(`✅ Đã tải ${data.length} dòng từ Cloud!`);
             });
         };
@@ -393,11 +390,12 @@
             });
         };
 
+        // EXPORT EXCEL EVENT
+        document.getElementById('btn-export-excel').onclick = exportToExcel;
+
         // CLOSE BUTTON: SYNC BEFORE CLOSE
         document.getElementById('btn-inv-close').onclick = () => {
             if(STORE.isScannerRunning) stopScanner();
-            
-            // Sync before close
             if(STORE.countData.length > 0) {
                 if(UI.showToast) UI.showToast("☁️ Đang lưu dữ liệu...");
                 API.saveCount(STORE.countData, () => {
@@ -463,7 +461,7 @@
                 document.getElementById('inv-edit-modal').style.display = 'none';
                 renderCountTable(); renderSummary(); 
                 UI.showToast("Đã xóa sản phẩm!");
-                triggerAutoSync(); // Sync after delete
+                triggerAutoSync(); 
             }
         };
         
@@ -486,7 +484,7 @@
                     document.getElementById('inv-edit-modal').style.display = 'none';
                     renderCountTable(); renderSummary(); 
                     UI.showToast("Đã cập nhật!");
-                    triggerAutoSync(); // Sync after fill
+                    triggerAutoSync(); 
                 }
             }
         };
@@ -516,7 +514,7 @@
             document.getElementById('inv-edit-modal').style.display = 'none';
             renderCountTable(); renderSummary(); 
             UI.showToast("Đã lưu thay đổi!");
-            triggerAutoSync(); // Sync after manual edit
+            triggerAutoSync(); 
         };
 
         // --- HELPER FUNCTIONS ---
@@ -524,22 +522,67 @@
             STORE.syncCounter++;
             if (STORE.syncCounter >= 5) {
                 STORE.syncCounter = 0;
-                API.saveCount(STORE.countData, () => {
-                    console.log("Auto synced to cloud");
-                });
+                API.saveCount(STORE.countData, () => { console.log("Auto synced"); });
             }
         }
 
-        // New: Merge Stock info into Count data (to fix undefined stock)
         function syncStockToCountData() {
             if (STORE.importData.length === 0) return;
             STORE.countData.forEach(cItem => {
                 const stockItem = STORE.importData.find(s => s.sku === cItem.sku && s.status === cItem.status);
-                if (stockItem) {
-                    cItem.stock = stockItem.stock;
-                    cItem.group = stockItem.group; // Update group too
+                if (stockItem) { cItem.stock = stockItem.stock; cItem.group = stockItem.group; }
+            });
+        }
+
+        function autoLoadData() {
+            API.getStock((data) => {
+                if(data.length > 0) {
+                    STORE.importData = data;
+                    renderImportTable(); updateFilters();
+                    // Nếu có tồn kho, chuyển ngay sang tab kiểm kê
+                    modal.querySelector('.inv-tab[data-tab="tab-count"]').click();
+                } else {
+                    // Nếu không có, ở lại tab nhập liệu
+                    modal.querySelector('.inv-tab[data-tab="tab-input"]').click();
+                }
+
+                // Tải tiếp dữ liệu kiểm kê (sau khi đã có stock để merge)
+                API.getCount((cData) => {
+                    STORE.countData = cData.filter(i => i.user === STORE.currentUser).map(i => ({
+                        ...i, history: [{ts:'Server', qty:i.qty}], totalCount: i.qty,
+                        // Quan trọng: Gán luôn Stock nếu đã tải được
+                        stock: (STORE.importData.find(s => s.sku === i.sku && s.status === i.status) || {}).stock || 0
+                    }));
+                    renderCountTable();
+                });
+            });
+        }
+
+        function exportToExcel() {
+            if (STORE.importData.length === 0 && STORE.countData.length === 0) { UI.showToast("⚠️ Không có dữ liệu để xuất!"); return; }
+            
+            const dataToExport = [];
+            // Merge Stock and Count Logic similar to Summary Table
+            STORE.importData.forEach(item => {
+                const counted = STORE.countData.find(c => c.sku === item.sku && c.status === item.status);
+                const qty = counted ? counted.totalCount : 0;
+                const diff = item.stock - qty;
+                dataToExport.push({ "Nhóm": item.group, "Mã SP": item.sku, "Tên Sản Phẩm": item.name, "Trạng Thái": item.status, "Tồn Kho": item.stock, "Thực Tế": qty, "Lệch": diff });
+            });
+            // Handle items counted but not in stock
+            STORE.countData.forEach(item => {
+                const inStock = STORE.importData.find(s => s.sku === item.sku && s.status === item.status);
+                if (!inStock) {
+                    dataToExport.push({ "Nhóm": item.group || "N/A", "Mã SP": item.sku, "Tên Sản Phẩm": item.name, "Trạng Thái": item.status, "Tồn Kho": 0, "Thực Tế": item.totalCount, "Lệch": 0 - item.totalCount });
                 }
             });
+
+            if (typeof XLSX === 'undefined') { UI.showToast("❌ Lỗi thư viện Excel!"); return; }
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(dataToExport);
+            XLSX.utils.book_append_sheet(wb, ws, "TongHop");
+            XLSX.writeFile(wb, `KiemKe_${STORE.currentShopId}_${Date.now()}.xlsx`);
+            UI.showToast("✅ Đã xuất file Excel!");
         }
 
         function normalizeStatus(raw) { if (!raw) return ""; const cleanRaw = String(raw).trim(); if (STATUS_MAP[cleanRaw]) return STATUS_MAP[cleanRaw]; for (let key in STATUS_MAP) { if (cleanRaw.includes(key) || key.includes(cleanRaw)) return STATUS_MAP[key]; } return cleanRaw; }
@@ -558,10 +601,9 @@
                     if (row && row[6]) { STORE.importData.push({ group: row[4] || '', sku: String(row[6]).trim(), name: row[7] || '', status: normalizeStatus(row[8]), stock: parseInt(row[9]) || 0 }); }
                 }
                 renderImportTable(); updateFilters(); 
-                syncStockToCountData(); // Sync stock to existing counts
+                syncStockToCountData(); 
                 renderCountTable();
                 UI.showToast(`✅ Đã nhập ${STORE.importData.length} dòng!`);
-                // Auto sync Stock to Cloud
                 if(STORE.importData.length > 0) { API.saveStock(STORE.importData, (res) => { if(res.status==='success') UI.showToast("☁️ Đã lưu Tồn kho lên Cloud!"); }); }
             };
             reader.readAsArrayBuffer(file);
@@ -570,90 +612,52 @@
         function renderImportTable() { const tbody = document.querySelector('#tbl-import tbody'); let html = ''; STORE.importData.slice(0, 200).forEach((item, idx) => { html += `<tr><td>${idx+1}</td><td>${item.group}</td><td style="font-weight:bold;color:#d63031">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td>${item.stock}</td></tr>`; }); tbody.innerHTML = html; }
         
         function addCountItem(sku) {
-            // Find in importData (Stock)
             const stockItem = STORE.importData.find(i => i.sku === sku && i.status === STORE.currentStatus);
-            // Allow adding even if stock is not loaded yet (use basic info or fallback)
             let itemToAdd = stockItem;
             if (!stockItem) {
-                // If stock not loaded, try to find in existing count data to get name
                 const existing = STORE.countData.find(i => i.sku === sku && i.status === STORE.currentStatus);
                 if (existing) itemToAdd = existing;
-                else if (STORE.importData.length > 0) {
-                    // Only show error if Stock is loaded but Item not found
-                    UI.showToast(`⚠️ Không tìm thấy mã ${sku} trong tồn kho!`); return;
-                } else {
-                    // Fallback if no stock loaded: Create dummy
-                    itemToAdd = { sku: sku, name: 'Mới thêm', status: STORE.currentStatus, stock: 0, group: '' };
-                }
+                else if (STORE.importData.length > 0) { UI.showToast(`⚠️ Không tìm thấy mã ${sku} trong tồn kho!`); return; } 
+                else { itemToAdd = { sku: sku, name: 'Mới thêm', status: STORE.currentStatus, stock: 0, group: '' }; }
             }
-
             let qty = 1;
             if (STORE.isManualInput) { const inputQty = prompt(`Nhập số lượng cho: ${itemToAdd.name}`, "1"); if (inputQty === null) return; qty = parseInt(inputQty) || 0; if (qty <= 0) return; }
-            
             const existItem = STORE.countData.find(i => i.sku === sku && i.status === STORE.currentStatus);
             const nowTime = new Date().toTimeString().split(' ')[0];
-            
-            if (existItem) { 
-                existItem.history.unshift({ ts: nowTime, qty: qty }); 
-                existItem.totalCount += qty; 
-                // Re-order to top
-                STORE.countData = STORE.countData.filter(i => i !== existItem); 
-                STORE.countData.unshift(existItem); 
-            } 
-            else { 
-                STORE.countData.unshift({ ...itemToAdd, history: [{ ts: nowTime, qty: qty }], totalCount: qty }); 
-            }
-            renderCountTable(); 
-            UI.showToast(`Đã thêm ${qty}: ${itemToAdd.name}`);
-            triggerAutoSync(); // Sync after add
+            if (existItem) { existItem.history.unshift({ ts: nowTime, qty: qty }); existItem.totalCount += qty; STORE.countData = STORE.countData.filter(i => i !== existItem); STORE.countData.unshift(existItem); } 
+            else { STORE.countData.unshift({ ...itemToAdd, history: [{ ts: nowTime, qty: qty }], totalCount: qty }); }
+            renderCountTable(); UI.showToast(`Đã thêm ${qty}: ${itemToAdd.name}`);
+            triggerAutoSync(); 
         }
 
         function openEditPopup(item) {
             const modal = document.getElementById('inv-edit-modal'); const list = document.getElementById('edit-history-list');
             let realItem = STORE.countData.find(i => i.sku === item.sku && i.status === item.status);
-            
-            // If editing from Summary list and not counted yet
-            if (!realItem) { 
-                // Find in stock
-                const importItem = STORE.importData.find(i => i.sku === item.sku && i.status === item.status);
-                if(importItem) realItem = { ...importItem, history: [], totalCount: 0 };
-            }
-            
-            if(!realItem) return; // Should not happen
-
+            if (!realItem) { const importItem = STORE.importData.find(i => i.sku === item.sku && i.status === item.status); if(importItem) realItem = { ...importItem, history: [], totalCount: 0 }; }
+            if(!realItem) return;
             STORE.editingItem = realItem;
             document.getElementById('edit-prod-name').innerText = realItem.name; document.getElementById('edit-prod-sku').innerText = realItem.sku; document.getElementById('edit-prod-status').innerText = realItem.status; document.getElementById('edit-prod-stock').innerText = realItem.stock || 0; document.getElementById('edit-prod-count').innerText = realItem.totalCount;
-            
-            const btnFill = document.getElementById('btn-edit-fill'); 
-            const diff = (realItem.stock || 0) - realItem.totalCount;
-            
+            const btnFill = document.getElementById('btn-edit-fill'); const diff = (realItem.stock || 0) - realItem.totalCount;
             if (diff !== 0) { btnFill.style.display = 'flex'; const sign = diff > 0 ? '+' : ''; btnFill.innerText = `⚡ Nhập đủ (${sign}${diff})`; } else { btnFill.style.display = 'none'; }
-            
             let html = '';
             if (realItem.history.length === 0) { html = '<div style="text-align:center; padding:10px; color:#999; font-style:italic;">Chưa có lịch sử nhập.</div>'; } 
             else { realItem.history.forEach((h, idx) => { html += `<div class="inv-edit-item"><span>Lần nhập lúc ${h.ts}</span><input type="number" class="inv-edit-input inv-history-qty" value="${h.qty}"></div>`; }); }
             html += `<div class="inv-edit-item" style="background:#e3f2fd"><span style="font-weight:bold; color:#007bff">Nhập mới:</span><input type="number" class="inv-edit-input inv-history-qty" value="" placeholder="SL"></div>`;
             list.innerHTML = html; modal.style.display = 'flex';
         }
-
         function renderCountTable() {
             const tbody = document.querySelector('#tbl-counting tbody'); let html = '';
             STORE.countData.forEach((item, idx) => {
                 const stockVal = item.stock || 0;
                 const diff = stockVal - item.totalCount;
                 let diffText = `<span class="st-ok">Đủ</span>`;
-                if (stockVal > 0) {
-                    if (diff > 0) diffText = `<span class="st-missing">Thiếu ${diff}</span>`; else if (diff < 0) diffText = `<span class="st-surplus">Thừa ${Math.abs(diff)}</span>`;
-                } else if (stockVal === 0 && item.totalCount > 0) {
-                     diffText = `<span class="st-surplus">Thừa ${item.totalCount}</span>`;
-                }
-
+                if (stockVal > 0) { if (diff > 0) diffText = `<span class="st-missing">Thiếu ${diff}</span>`; else if (diff < 0) diffText = `<span class="st-surplus">Thừa ${Math.abs(diff)}</span>`; } 
+                else if (stockVal === 0 && item.totalCount > 0) { diffText = `<span class="st-surplus">Thừa ${item.totalCount}</span>`; }
                 html += `<tr class="${idx===0?'highlight':''}" onclick="document.getElementById('edit-trigger-${idx}').click()"><td style="font-weight:bold;color:#d63031">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td>${stockVal}</td><td style="font-weight:bold;font-size:14px;color:#007bff">${item.totalCount}</td><td>${diffText}</td><td style="display:none"><button id="edit-trigger-${idx}"></button></td></tr>`;
             });
             tbody.innerHTML = html;
             STORE.countData.forEach((item, idx) => { document.getElementById(`edit-trigger-${idx}`).onclick = () => openEditPopup(item); });
         }
-
         function renderSummary() {
             const fGroup = document.querySelector('.inv-filter-select[data-col="group"]').value; const fName = document.querySelector('.inv-filter-select[data-col="name"]').value; const fStatus = document.querySelector('.inv-filter-select[data-col="status"]').value; const fCount = document.querySelector('.inv-filter-select[data-col="count"]').value; const fDiff = document.querySelector('.inv-filter-select[data-col="diff"]').value;
             const tbody = document.querySelector('#tbl-summary tbody'); let html = '';
@@ -674,18 +678,11 @@
 
         // --- INIT START ---
         modal.style.display = 'flex';
-        // Only load previous count progress, NOT STOCK
-        modal.querySelector('.inv-tab[data-tab="tab-input"]').click();
-        
-        API.getCount((cData) => { 
-            // Convert flat data to local format
-            STORE.countData = cData.filter(i => i.user === STORE.currentUser).map(i => ({...i, history: [{ts:'Server', qty:i.qty}], totalCount: i.qty}));
-            renderCountTable(); 
-        });
+        autoLoadData(); // Auto load everything on start
     };
 
     return {
-        name: "Kiểm kê V1.0",
+        name: "Kiểm kê V1.1",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z" fill="white"/></svg>`,
         bgColor: "#6c757d",
         css: MY_CSS,
