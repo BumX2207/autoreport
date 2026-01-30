@@ -1,8 +1,8 @@
 /* 
-   MODULE: KIỂM KÊ KHO (INVENTORY) - V2.9 (FIX AUTH DELAY)
-   - Fix: Chờ xác thực User xong mới tải dữ liệu (tránh lỗi Count trống).
-   - UI: Thêm dòng hiển thị Tên NV Kiểm kê.
-   - Core: Giữ nguyên Auto Load, Auto Sync, Export Excel.
+   MODULE: KIỂM KÊ KHO (INVENTORY) - V3.0 (FIX SYNC & UI TEXT)
+   - Fix: Tab Tổng hợp tự động cập nhật số liệu ngay khi mở.
+   - UI: Việt hóa hoàn toàn bộ lọc (Filter).
+   - Core: Giữ nguyên logic an toàn dữ liệu của V2.9.
 */
 ((context) => {
     // ===============================================================
@@ -33,7 +33,6 @@
         .inv-shop-select { padding: 5px; border-radius: 5px; border: 2px solid #007bff; font-weight: bold; color: #0056b3; outline: none; font-size: 13px; max-width: 150px; margin-left: 5px; }
         .inv-loading { font-size:11px; color:#666; font-style:italic; margin-left:5px; display:none; }
 
-        /* NEW: SUB HEADER FOR USER INFO */
         .inv-sub-header { background:#e9ecef; padding:5px 15px; font-size:12px; color:#333; border-bottom:1px solid #ddd; display:flex; align-items:center; justify-content:space-between; font-weight:bold; }
         .inv-user-name { color:#d63031; }
         .inv-user-name.ready { color:#007bff; }
@@ -111,7 +110,7 @@
         countData: [],
         currentStatus: "Mới",
         currentShopId: "",
-        currentUser: "---", // Mặc định là ---
+        currentUser: "---", 
         isScannerRunning: false,
         scannerObj: null,
         editingItem: null,
@@ -137,7 +136,7 @@
             const ind = document.getElementById('inv-loading-indicator');
             if(ind) { ind.style.display = 'inline'; ind.innerText = "Đang kết nối..."; }
             
-            // CHẶN NẾU USER CHƯA LOAD (Trừ lệnh get_stock không cần user)
+            // CHẶN NẾU USER CHƯA LOAD (Trừ lệnh get_stock)
             if (params.action !== 'get_stock' && (STORE.currentUser === "---" || !STORE.currentUser)) {
                 if(ind) ind.style.display = 'none';
                 if(UI.showToast) UI.showToast("❌ Lỗi: Chưa xác định được Nhân viên!");
@@ -236,7 +235,6 @@
                     <div class="inv-close" id="btn-inv-close" title="Đóng">×</div>
                 </div>
 
-                <!-- DÒNG HIỂN THỊ USER -->
                 <div class="inv-sub-header">
                     <span>👤 NV Kiểm kê: <span id="lbl-current-user" class="inv-user-name">Đang xác thực...</span></span>
                     <span id="lbl-status-auth" style="font-size:10px; color:#999;"></span>
@@ -290,7 +288,6 @@
                     <!-- TAB 3 -->
                     <div class="inv-view" id="tab-sum">
                         <div class="inv-controls" style="justify-content:space-between; background:#f8f9fa; padding:5px; border-radius:5px;">
-                            <span style="font-size:12px; font-weight:bold; color:#0056b3;">Quản lý dữ liệu Cloud</span>
                             <div style="display:flex; gap:5px;">
                                 <select id="sel-delete-mode" class="inv-input" style="padding:4px; font-size:11px;">
                                     <option value="none">-- Chọn hành động xóa --</option>
@@ -311,8 +308,8 @@
                                         <th>Tên sản phẩm<br><select class="inv-filter-select" data-col="name"><option value="all">Tất cả</option></select></th>
                                         <th>Trạng thái<br><select class="inv-filter-select" data-col="status"><option value="all">Tất cả</option></select></th>
                                         <th>Tồn kho</th>
-                                        <th>Kiểm được<br><select class="inv-filter-select" data-col="count"><option value="all">All</option><option value="checked">Rồi</option><option value="unchecked">Chưa</option></select></th>
-                                        <th>Chênh lệch<br><select class="inv-filter-select" data-col="diff"><option value="all">All</option><option value="ok">Đủ</option><option value="fail">Lệch</option><option value="thua">Thừa</option><option value="thieu">Thiếu</option></select></th>
+                                        <th>Kiểm được<br><select class="inv-filter-select" data-col="count"><option value="all">Tất cả</option><option value="checked">Đã kiểm</option><option value="unchecked">Chưa kiểm</option></select></th>
+                                        <th>Chênh lệch<br><select class="inv-filter-select" data-col="diff"><option value="all">Tất cả</option><option value="ok">Đủ</option><option value="thua">Thừa</option><option value="thieu">Thiếu</option></select></th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -363,14 +360,13 @@
             let attempt = 0;
             const check = setInterval(() => {
                 attempt++;
-                // Kiểm tra từ AUTH_STATE (được truyền từ parent)
                 if (AUTH_STATE && AUTH_STATE.userName && AUTH_STATE.userName !== "---") {
                     clearInterval(check);
                     STORE.currentUser = AUTH_STATE.userName;
                     lblUser.innerText = STORE.currentUser;
                     lblUser.classList.add('ready');
-                    autoLoadData(); // Chỉ load khi đã có User
-                } else if (attempt > 30) { // 15 giây
+                    autoLoadData();
+                } else if (attempt > 30) {
                     clearInterval(check);
                     lblUser.innerText = "Lỗi: Không tìm thấy User!";
                     lblUser.style.color = "red";
@@ -385,17 +381,16 @@
             STORE.importData = []; STORE.countData = [];
             renderImportTable(); renderCountTable(); renderSummary();
             UI.showToast(`Đã chuyển: ${STORE.currentShopId}`);
-            // Re-trigger auto load sequence when shop changes
             if(STORE.currentUser !== "---") autoLoadData();
         };
 
-        // LOAD STOCK CLOUD
         document.getElementById('btn-load-stock-cloud').onclick = () => {
             API.getStock((data) => {
                 STORE.importData = data; 
                 renderImportTable(); updateFilters();
                 syncStockToCountData();
                 renderCountTable(); 
+                renderSummary(); // Fix: Update Summary immediately
                 if(UI.showToast) UI.showToast(`✅ Đã tải ${data.length} dòng từ Cloud!`);
             });
         };
@@ -421,10 +416,8 @@
             });
         };
 
-        // EXPORT EXCEL EVENT
         document.getElementById('btn-export-excel').onclick = exportToExcel;
 
-        // CLOSE BUTTON
         document.getElementById('btn-inv-close').onclick = () => {
             if(STORE.isScannerRunning) stopScanner();
             if(STORE.countData.length > 0 && STORE.currentUser !== "---") {
@@ -566,28 +559,24 @@
         }
 
         function autoLoadData() {
-            // Chỉ load khi có user
             if (STORE.currentUser === "---") return;
 
             API.getStock((data) => {
                 if(data.length > 0) {
                     STORE.importData = data;
                     renderImportTable(); updateFilters();
-                    // Chuyển sang tab kiểm kê nếu có stock
                     modal.querySelector('.inv-tab[data-tab="tab-count"]').click();
                 } else {
                     modal.querySelector('.inv-tab[data-tab="tab-input"]').click();
                 }
 
-                // Tải tiếp dữ liệu kiểm kê
                 API.getCount((cData) => {
-                    // Lọc theo user và map về format local
                     STORE.countData = cData.filter(i => i.user === STORE.currentUser).map(i => ({
                         ...i, history: [{ts:'Server', qty:i.qty}], totalCount: i.qty,
-                        // Gán Stock nếu có
                         stock: (STORE.importData.find(s => s.sku === i.sku && s.status === i.status) || {}).stock || 0
                     }));
                     renderCountTable();
+                    renderSummary(); // Fix 1: Render summary immediately after loading count
                 });
             });
         }
@@ -635,6 +624,7 @@
                 renderImportTable(); updateFilters(); 
                 syncStockToCountData(); 
                 renderCountTable();
+                renderSummary(); // Fix: Update Summary immediately
                 UI.showToast(`✅ Đã nhập ${STORE.importData.length} dòng!`);
                 if(STORE.importData.length > 0) { API.saveStock(STORE.importData, (res) => { if(res.status==='success') UI.showToast("☁️ Đã lưu Tồn kho lên Cloud!"); }); }
             };
@@ -700,7 +690,11 @@
                 const countedItem = STORE.countData.find(c => c.sku === item.sku && c.status === item.status);
                 const countedVal = countedItem ? countedItem.totalCount : 0;
                 const diff = item.stock - countedVal;
-                if (fCount === 'checked' && countedVal === 0) return; if (fCount === 'unchecked' && countedVal > 0) return; if (fDiff === 'ok' && diff !== 0) return; if (fDiff === 'fail' && diff === 0) return; if (fDiff === 'thua' && diff >= 0) return; if (fDiff === 'thieu' && diff <= 0) return;
+                if (fCount === 'checked' && countedVal === 0) return; if (fCount === 'unchecked' && countedVal > 0) return; 
+                if (fDiff === 'ok' && diff !== 0) return; 
+                if (fDiff === 'thua' && diff >= 0) return; 
+                if (fDiff === 'thieu' && diff <= 0) return;
+                
                 let diffText = `<span class="st-ok">0</span>`; if (diff > 0) diffText = `<span class="st-missing">Thiếu ${diff}</span>`; else if (diff < 0) diffText = `<span class="st-surplus">Thừa ${Math.abs(diff)}</span>`;
                 html += `<tr style="${countedVal === 0 ? 'background:#fff5f5;' : ''}" onclick="document.getElementById('sum-edit-${idx}').click()"><td>${item.group}</td><td style="font-weight:bold;">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td>${item.stock}</td><td style="font-weight:bold;">${countedVal}</td><td>${diffText}</td><td style="display:none"><button id="sum-edit-${idx}"></button></td></tr>`;
             });
@@ -716,7 +710,7 @@
     };
 
     return {
-        name: "Kiểm kê V2.9 (Auto)",
+        name: "Kiểm kê V1.0",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z" fill="white"/></svg>`,
         bgColor: "#6c757d",
         css: MY_CSS,
