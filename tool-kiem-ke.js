@@ -453,14 +453,22 @@
         }
 
         function updateFilters() {
-            const getOptions = (key) => ['all', ...new Set(STORE.importData.map(i => i[key]))].filter(Boolean);
+            // Helper: Lấy danh sách duy nhất (chưa có 'all')
+            const getUnique = (key) => [...new Set(STORE.importData.map(i => i[key]))].filter(Boolean);
+            
+            // Helper: Render select, luôn chèn 'all' vào đầu tiên
             const fillSelect = (col, vals) => {
                 const sel = document.querySelector(`.inv-filter-select[data-col="${col}"]`);
-                if(sel) sel.innerHTML = vals.map(v => `<option value="${v}">${v === 'all' ? 'Tất cả' : v}</option>`).join('');
+                const options = ['all', ...vals]; // Chèn 'all' lên đầu danh sách đã sort
+                if(sel) sel.innerHTML = options.map(v => `<option value="${v}">${v === 'all' ? 'Tất cả' : v}</option>`).join('');
             };
-            fillSelect('status', getOptions('status'));
-            fillSelect('group', getOptions('group'));
-            fillSelect('name', getOptions('name').sort());
+
+            // Status và Group thường ít nên không cần sort hoặc để nguyên thứ tự import
+            fillSelect('status', getUnique('status'));
+            fillSelect('group', getUnique('group'));
+
+            // Riêng Name: Sort A-Z trước, sau đó fillSelect mới chèn 'all' lên đầu
+            fillSelect('name', getUnique('name').sort());
         }
 
         function renderImportTable() {
