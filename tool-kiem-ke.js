@@ -387,25 +387,44 @@
                 let newHistory = [];
                 let newTotal = 0;
                 
+                // Lấy thời gian hiện tại để dùng cho dòng nhập mới
+                const nowTime = new Date().toTimeString().split(' ')[0];
+
                 inputs.forEach((inp, idx) => {
                     const val = parseInt(inp.value) || 0;
                     if (val > 0) {
-                        newHistory.push({ ts: STORE.editingItem.history[idx].ts, qty: val });
+                        // Logic sửa lỗi:
+                        // Nếu dòng này đã có trong lịch sử cũ -> giữ nguyên thời gian (ts)
+                        // Nếu dòng này là dòng nhập mới (chưa có trong history) -> lấy thời gian hiện tại
+                        let currentTs = nowTime;
+                        if (STORE.editingItem.history && STORE.editingItem.history[idx]) {
+                            currentTs = STORE.editingItem.history[idx].ts;
+                        }
+
+                        newHistory.push({ ts: currentTs, qty: val });
                         newTotal += val;
                     }
                 });
 
+                // Nếu tổng bằng 0 -> Xóa khỏi danh sách đã kiểm
                 if (newTotal === 0) {
-                    if(confirm("Số lượng bằng 0. Bạn có muốn xóa sản phẩm này không?")) {
+                    const confirmDel = confirm("Số lượng bằng 0. Bạn có muốn xóa sản phẩm này khỏi danh sách đã kiểm không?");
+                    if(confirmDel) {
                         STORE.countData = STORE.countData.filter(i => !(i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status));
-                    } else return;
+                    } else {
+                        return; // Nếu không xóa thì không làm gì cả, giữ nguyên form
+                    }
                 } else {
+                    // Cập nhật hoặc Thêm mới vào STORE.countData
                     const existIdx = STORE.countData.findIndex(i => i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status);
                     
                     if (existIdx !== -1) {
+                        // Đã có -> Cập nhật
                         STORE.countData[existIdx].history = newHistory;
                         STORE.countData[existIdx].totalCount = newTotal;
                     } else {
+                        // Chưa có (Trường hợp sửa từ tab Tổng hợp khi chưa kiểm) -> Thêm mới
+                        // Phải đảm bảo lấy đủ thông tin từ editingItem (vốn được tạo từ importData)
                         STORE.countData.unshift({
                             ...STORE.editingItem,
                             history: newHistory,
@@ -415,8 +434,9 @@
                 }
                 
                 document.getElementById('inv-edit-modal').style.display = 'none';
-                renderCountTable();
-                renderSummary();
+                renderCountTable(); // Render lại tab kiểm kê
+                renderSummary();    // Render lại tab tổng hợp
+                UI.showToast("Đã lưu thay đổi!");
             };
         }
 
