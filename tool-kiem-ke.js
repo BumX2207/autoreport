@@ -1,9 +1,8 @@
 /* 
-   MODULE: KIỂM KÊ KHO (INVENTORY) - V2.2
-   - Feature: Checkbox nhập số lượng thủ công (Tab kiểm kê).
-   - Feature: Cột trạng thái (Tab kiểm kê).
-   - Feature: Dropdown Filter cho Nhóm & Tên (Tab tổng hợp).
-   - Feature: Nút "Nhập đủ" thông minh trong Popup sửa.
+   MODULE: KIỂM KÊ KHO (INVENTORY) - V2.3
+   - UI: Tối ưu layout Mobile cho ô tìm kiếm & nhập tay.
+   - UI: Đổi tên cột & Logic tính chênh lệch (Dương=Thiếu, Âm=Thừa).
+   - Fix: Bỏ viền đỏ checkbox.
 */
 ((context) => {
     const { UI, UTILS } = context;
@@ -19,7 +18,7 @@
         .inv-close { font-size:24px; cursor:pointer; color:#999; padding:0 15px; font-weight:bold; transition: 0.2s; } .inv-close:hover { color:red; transform: scale(1.1); }
         
         .inv-tabs { display:flex; gap:5px; height:100%; align-items:flex-end; }
-        .inv-tab { padding:10px 20px; cursor:pointer; font-weight:bold; color:#666; border-bottom:3px solid transparent; transition:0.2s; font-size:13px; }
+        .inv-tab { padding:10px 20px; cursor:pointer; font-weight:bold; color:#666; border-bottom:3px solid transparent; transition:0.2s; font-size:13px; white-space:nowrap; }
         .inv-tab:hover { background:#eee; }
         .inv-tab.active { color:#007bff; border-bottom:3px solid #007bff; background:white; border-radius: 5px 5px 0 0; }
 
@@ -45,24 +44,35 @@
         @keyframes highlightFade { from {background:#fff9c4;} to {background:transparent;} }
 
         /* STATUS COLORS */
-        .st-thua { color:#28a745; font-weight:bold; }
-        .st-thieu { color:#dc3545; font-weight:bold; }
-        .st-du { color:#007bff; font-weight:bold; }
+        .st-thua { color:#dc3545; font-weight:bold; } /* Thừa (Âm) -> Đỏ? Hay Xanh? Tùy quy ước, ở đây Thừa thường là cảnh báo hoặc tốt tùy ngữ cảnh. Để màu Đỏ/Cam cho nổi bật sự chênh lệch */
+        .st-thieu { color:#d63031; font-weight:bold; } /* Thiếu (Dương) -> Đỏ */
+        /* Theo yêu cầu cũ: Thừa=Xanh lá, Thiếu=Đỏ. Giữ nguyên màu sắc, chỉ đổi logic số */
+        .st-surplus { color:#28a745; font-weight:bold; } /* Thừa */
+        .st-missing { color:#dc3545; font-weight:bold; } /* Thiếu */
+        .st-ok { color:#007bff; font-weight:bold; }
 
-        /* INPUTS & CONTROLS */
-        .inv-controls { display:flex; gap:10px; margin-bottom:15px; align-items:center; }
-        .inv-input { padding:10px; border:1px solid #ccc; border-radius:6px; flex:1; font-size:14px; }
-        .inv-btn { padding:10px 15px; border:none; border-radius:6px; font-weight:bold; color:white; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s; white-space:nowrap; }
+        /* INPUTS & CONTROLS - MOBILE OPTIMIZED */
+        .inv-controls { display:flex; gap:5px; margin-bottom:15px; align-items:center; flex-wrap: nowrap; }
+        .inv-input { padding:8px; border:1px solid #ccc; border-radius:6px; font-size:14px; }
+        
+        /* Search Box co giãn */
+        .inv-search-box { position:relative; flex: 1; min-width: 0; } 
+        #inp-search-sku { width: 100%; box-sizing: border-box; }
+
+        .inv-btn { padding:8px 12px; border:none; border-radius:6px; font-weight:bold; color:white; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s; white-space:nowrap; font-size: 13px; }
         .inv-btn:active { transform:scale(0.95); }
         .btn-import { background:#28a745; }
         .btn-scan { background:#343a40; }
         
-        /* MANUAL INPUT CHECKBOX */
-        .inv-chk-manual { font-size:12px; font-weight:bold; color:#d63031; display:flex; align-items:center; gap:5px; cursor:pointer; border:1px solid #d63031; padding:8px 12px; border-radius:6px; background:#fff0f0; height: 18px; }
-        .inv-chk-manual input { width:16px; height:16px; accent-color:#d63031; }
+        /* MANUAL INPUT CHECKBOX - NEW STYLE */
+        .inv-chk-manual { 
+            font-size:12px; font-weight:bold; color:#555; 
+            display:flex; align-items:center; gap:4px; cursor:pointer; 
+            padding:0 5px; white-space: nowrap; user-select: none;
+        }
+        .inv-chk-manual input { width:16px; height:16px; accent-color:#007bff; cursor:pointer; }
 
         /* SUGGESTIONS */
-        .inv-search-box { position:relative; flex:1; }
         .inv-suggestions { position:absolute; top:100%; left:0; width:100%; background:white; border:1px solid #ddd; border-radius:0 0 8px 8px; box-shadow:0 10px 20px rgba(0,0,0,0.1); z-index:100; max-height:300px; overflow-y:auto; display:none; }
         .inv-sug-item { padding:10px; border-bottom:1px solid #f0f0f0; cursor:pointer; font-size:12px; }
         .inv-sug-item:hover { background:#f0f8ff; color:#007bff; }
@@ -77,7 +87,7 @@
         .inv-edit-input { width:60px; padding:4px; text-align:center; border:1px solid #ccc; border-radius:4px; }
         .inv-edit-actions { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; }
         .inv-btn-del-all { background:#dc3545; flex:1; justify-content:center; }
-        .inv-btn-fill { background:#28a745; flex:1; justify-content:center; } /* Nút nhập đủ */
+        .inv-btn-fill { background:#28a745; flex:1; justify-content:center; }
         .inv-btn-save { background:#007bff; flex:1; justify-content:center; }
 
         /* FILTERS */
@@ -97,7 +107,7 @@
         isScannerRunning: false,
         scannerObj: null,
         editingItem: null,
-        isManualInput: false // Trạng thái nhập tay
+        isManualInput: false
     };
 
     const STATUS_MAP = {
@@ -159,7 +169,7 @@
                             </div>
                             <div class="inv-table-wrapper">
                                 <table class="inv-table" id="tbl-import">
-                                    <thead><tr><th>#</th><th>Nhóm</th><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>Tồn</th></tr></thead>
+                                    <thead><tr><th>#</th><th>Nhóm</th><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>Tồn kho</th></tr></thead>
                                     <tbody></tbody>
                                 </table>
                             </div>
@@ -171,18 +181,17 @@
 
                             <div class="inv-controls">
                                 <div class="inv-search-box">
-                                    <input type="text" id="inp-search-sku" class="inv-input" placeholder="Nhập tên/mã (Gợi ý theo trạng thái)..." autocomplete="off">
+                                    <input type="text" id="inp-search-sku" class="inv-input" placeholder="Nhập tên/mã..." autocomplete="off">
                                     <div class="inv-suggestions" id="box-suggestions"></div>
                                 </div>
                                 <label class="inv-chk-manual">
-                                    <input type="checkbox" id="chk-manual-input"> Nhập số lượng
+                                    <input type="checkbox" id="chk-manual-input"> Nhập tay
                                 </label>
-                                <button class="inv-btn btn-scan" id="btn-open-scan">📷 Quét mã</button>
+                                <button class="inv-btn btn-scan" id="btn-open-scan">📷</button>
                             </div>
                             
                             <div class="inv-table-wrapper">
                                 <table class="inv-table" id="tbl-counting">
-                                    <!-- THÊM CỘT TRẠNG THÁI -->
                                     <thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>Tồn</th><th>Đã kiểm</th><th>Lệch</th></tr></thead>
                                     <tbody></tbody>
                                 </table>
@@ -193,7 +202,7 @@
                             </div>
                         </div>
 
-                        <!-- TAB 3: TỔNG HỢP (FILTER DROPDOWN) -->
+                        <!-- TAB 3: TỔNG HỢP -->
                         <div class="inv-view" id="tab-sum">
                             <div class="inv-table-wrapper">
                                 <table class="inv-table" id="tbl-summary">
@@ -209,9 +218,9 @@
                                                 <select class="inv-filter-select" data-col="name"><option value="all">Tất cả</option></select>
                                             </th>
                                             <th>Trạng thái<br><select class="inv-filter-select" data-col="status"><option value="all">Tất cả</option></select></th>
-                                            <th>Tồn</th>
-                                            <th>Kiểm<br><select class="inv-filter-select" data-col="count"><option value="all">All</option><option value="checked">Rồi</option><option value="unchecked">Chưa</option></select></th>
-                                            <th>Lệch<br><select class="inv-filter-select" data-col="diff"><option value="all">All</option><option value="ok">Đủ</option><option value="fail">Lệch</option><option value="thua">Thừa</option><option value="thieu">Thiếu</option></select></th>
+                                            <th>Tồn kho</th>
+                                            <th>Kiểm được<br><select class="inv-filter-select" data-col="count"><option value="all">All</option><option value="checked">Rồi</option><option value="unchecked">Chưa</option></select></th>
+                                            <th>Chênh lệch<br><select class="inv-filter-select" data-col="diff"><option value="all">All</option><option value="ok">Đủ</option><option value="fail">Lệch</option><option value="thua">Thừa</option><option value="thieu">Thiếu</option></select></th>
                                         </tr>
                                     </thead>
                                     <tbody></tbody>
@@ -343,19 +352,15 @@
                 if (missing > 0) {
                     if(confirm(`Xác nhận nhập thêm ${missing} cái để đủ tồn kho?`)) {
                         const nowTime = new Date().toTimeString().split(' ')[0];
-                        // Nếu item chưa có trong countData (trường hợp click từ tab tổng hợp) -> Thêm mới
-                        // Nếu đã có -> Update
                         const existIdx = STORE.countData.findIndex(i => i.sku === item.sku && i.status === item.status);
                         if (existIdx === -1) {
-                            // Chưa có -> Tạo mới
                             STORE.countData.unshift({
-                                ...item, // copy info from import
+                                ...item,
                                 history: [{ ts: nowTime, qty: missing }],
                                 totalCount: missing,
-                                counted: missing // legacy property
+                                counted: missing 
                             });
                         } else {
-                            // Đã có -> Push history
                             const realItem = STORE.countData[existIdx];
                             realItem.history.unshift({ ts: nowTime, qty: missing });
                             realItem.totalCount += missing;
@@ -387,17 +392,14 @@
                         STORE.countData = STORE.countData.filter(i => !(i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status));
                     } else return;
                 } else {
-                    // Update current item in STORE (reference)
-                    // Lưu ý: Nếu editingItem là item ảo (chưa đếm), ta cần push vào STORE
                     const existIdx = STORE.countData.findIndex(i => i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status);
                     
                     if (existIdx !== -1) {
                         STORE.countData[existIdx].history = newHistory;
                         STORE.countData[existIdx].totalCount = newTotal;
                     } else {
-                        // Item ảo từ tab tổng hợp
                         STORE.countData.unshift({
-                            ...STORE.editingItem, // copy props
+                            ...STORE.editingItem,
                             history: newHistory,
                             totalCount: newTotal
                         });
@@ -451,17 +453,14 @@
         }
 
         function updateFilters() {
-            // Helper to get unique sorted values
             const getOptions = (key) => ['all', ...new Set(STORE.importData.map(i => i[key]))].filter(Boolean);
-            
             const fillSelect = (col, vals) => {
                 const sel = document.querySelector(`.inv-filter-select[data-col="${col}"]`);
                 if(sel) sel.innerHTML = vals.map(v => `<option value="${v}">${v === 'all' ? 'Tất cả' : v}</option>`).join('');
             };
-
             fillSelect('status', getOptions('status'));
             fillSelect('group', getOptions('group'));
-            fillSelect('name', getOptions('name').sort()); // Sort names specifically
+            fillSelect('name', getOptions('name').sort());
         }
 
         function renderImportTable() {
@@ -477,11 +476,10 @@
             const stockItem = STORE.importData.find(i => i.sku === sku && i.status === STORE.currentStatus);
             if (!stockItem) { UI.showToast(`⚠️ Không tìm thấy mã ${sku} với trạng thái ${STORE.currentStatus}`); return; }
 
-            // CHECK MANUAL INPUT
             let qty = 1;
             if (STORE.isManualInput) {
                 const inputQty = prompt(`Nhập số lượng cho: ${stockItem.name}`, "1");
-                if (inputQty === null) return; // Cancel
+                if (inputQty === null) return; 
                 qty = parseInt(inputQty) || 0;
                 if (qty <= 0) return;
             }
@@ -509,22 +507,18 @@
             const modal = document.getElementById('inv-edit-modal');
             const list = document.getElementById('edit-history-list');
             
-            // Try to find real object in countData
             let realItem = STORE.countData.find(i => i.sku === item.sku && i.status === item.status);
             
-            // If not found (uncounted item from Summary), create a virtual item
             if (!realItem) {
-                // Find in importData to get correct details
                 const importItem = STORE.importData.find(i => i.sku === item.sku && i.status === item.status);
                 realItem = {
                     ...importItem,
                     history: [],
                     totalCount: 0
                 };
-                // Note: We don't push to countData yet, only when Save/Fill is clicked
             }
             
-            STORE.editingItem = realItem; // Reference for actions
+            STORE.editingItem = realItem;
 
             document.getElementById('edit-prod-name').innerText = realItem.name;
             document.getElementById('edit-prod-sku').innerText = realItem.sku;
@@ -532,7 +526,6 @@
             document.getElementById('edit-prod-stock').innerText = realItem.stock;
             document.getElementById('edit-prod-count').innerText = realItem.totalCount;
 
-            // Show/Hide "Fill All" Button
             const btnFill = document.getElementById('btn-edit-fill');
             if (realItem.totalCount < realItem.stock) {
                 btnFill.style.display = 'flex';
@@ -554,9 +547,6 @@
                     `;
                 });
             }
-            // Add a "New Entry" placeholder if it's empty or user wants to add?
-            // Requirement says "adjust quantity". If list is empty, user might want to add.
-            // Let's add a blank input at the top if it's uncounted to allow manual entry easily
             if (realItem.totalCount === 0) {
                 html += `<div class="inv-edit-item" style="background:#e3f2fd">
                             <span style="font-weight:bold; color:#007bff">Nhập mới:</span>
@@ -572,15 +562,18 @@
             const tbody = document.querySelector('#tbl-counting tbody');
             let html = '';
             STORE.countData.forEach((item, idx) => {
-                const diff = item.totalCount - item.stock;
-                let diffText = `<span class="st-du">Đủ</span>`;
-                if (diff > 0) diffText = `<span class="st-thua">Thừa ${diff}</span>`;
-                else if (diff < 0) diffText = `<span class="st-thieu">Thiếu ${Math.abs(diff)}</span>`;
+                // LOGIC CHÊNH LỆCH MỚI: Tồn - Kiểm
+                // > 0 -> Thiếu
+                // < 0 -> Thừa
+                const diff = item.stock - item.totalCount;
+                let diffText = `<span class="st-ok">Đủ</span>`;
+                if (diff > 0) diffText = `<span class="st-missing">Thiếu ${diff}</span>`;
+                else if (diff < 0) diffText = `<span class="st-surplus">Thừa ${Math.abs(diff)}</span>`;
 
                 html += `<tr class="${idx===0?'highlight':''}">
                     <td style="font-weight:bold;color:#d63031">${item.sku}</td>
                     <td>${item.name}</td>
-                    <td>${item.status}</td> <!-- Added Status Column -->
+                    <td>${item.status}</td>
                     <td>${item.stock}</td>
                     <td style="font-weight:bold;font-size:14px;color:#007bff">${item.totalCount}</td>
                     <td>${diffText}</td>
@@ -603,29 +596,31 @@
             let html = '';
 
             STORE.importData.forEach(item => {
-                // Filters
                 if (fGroup !== 'all' && item.group !== fGroup) return;
                 if (fName !== 'all' && item.name !== fName) return;
                 if (fStatus !== 'all' && item.status !== fStatus) return;
 
                 const countedItem = STORE.countData.find(c => c.sku === item.sku && c.status === item.status);
                 const countedVal = countedItem ? countedItem.totalCount : 0;
-                const diff = countedVal - item.stock;
+                
+                // LOGIC CHÊNH LỆCH MỚI
+                const diff = item.stock - countedVal;
 
                 if (fCount === 'checked' && countedVal === 0) return;
                 if (fCount === 'unchecked' && countedVal > 0) return;
+                
+                // Logic Filter Lệch
                 if (fDiff === 'ok' && diff !== 0) return;
                 if (fDiff === 'fail' && diff === 0) return;
-                if (fDiff === 'thua' && diff <= 0) return;
-                if (fDiff === 'thieu' && diff >= 0) return;
+                if (fDiff === 'thua' && diff >= 0) return; // Thừa là Âm -> diff < 0
+                if (fDiff === 'thieu' && diff <= 0) return; // Thiếu là Dương -> diff > 0
 
-                let diffText = `<span class="st-du">0</span>`;
-                if (diff > 0) diffText = `<span class="st-thua">+${diff}</span>`;
-                else if (diff < 0) diffText = `<span class="st-thieu">${diff}</span>`;
+                let diffText = `<span class="st-ok">0</span>`;
+                if (diff > 0) diffText = `<span class="st-missing">Thiếu ${diff}</span>`;
+                else if (diff < 0) diffText = `<span class="st-surplus">Thừa ${Math.abs(diff)}</span>`;
 
                 const bgRow = countedVal === 0 ? 'background:#fff5f5;' : '';
 
-                // Add data attributes for click handler
                 html += `<tr style="${bgRow}" data-sku="${item.sku}" data-status="${item.status}">
                     <td>${item.group}</td>
                     <td style="font-weight:bold;">${item.sku}</td>
@@ -638,11 +633,8 @@
             });
             tbody.innerHTML = html;
             
-            // Handle Click
             tbody.querySelectorAll('tr').forEach(tr => {
                 tr.onclick = () => {
-                    // Create a temp object to pass to openEditPopup
-                    // It will search for real object inside
                     openEditPopup({
                         sku: tr.dataset.sku,
                         status: tr.dataset.status
