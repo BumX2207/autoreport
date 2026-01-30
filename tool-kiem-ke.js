@@ -6,8 +6,6 @@
 */
 ((context) => {
     
-    const OWN_API_URL = "https://script.google.com/macros/s/AKfycbxDRSg1JDNTyuYf2TSQovNIWhFk3ls9hPXxtRSMu6xI0oNjql53nJo0G1H5k1b2iq_3/exec"; 
-
     // 2. Tên Sheet trong file Google Sheet (Phải khớp chính xác)
     const SHEET_CONFIG = {
         STOCK: "Inventory_Stock", // Sheet chứa Tồn kho
@@ -23,11 +21,9 @@
     const GM_xmlhttpRequest = context.GM_xmlhttpRequest;
 
     // Xử lý logic chọn API URL
-    let API_URL = OWN_API_URL;
+    let API_URL;
     if (!API_URL || API_URL.trim() === "") {
-        // Nếu người dùng chưa dán link, thử lấy từ config chung (nhưng dễ bị nhầm sang Tài nguyên)
-        try { API_URL = CONSTANTS.GSHEET.API_URL; } catch(e) {}
-        console.warn("⚠️ Tool Kiểm kê đang dùng API chung. Nếu thấy hiện ảnh/video, hãy dán Link App Script vào biến OWN_API_URL trong code.");
+        try { API_URL = CONSTANTS.GSHEET.CONFIG_API; } catch(e) {}
     }
 
     // --- CSS ---
