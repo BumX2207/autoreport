@@ -1,8 +1,8 @@
 /* 
-   MODULE: KIỂM KÊ KHO (INVENTORY) - V3.1 (ALL STATUS & INSTANT SEARCH)
-   - Fix: Đồng bộ dữ liệu Cloud -> Tổng hợp chính xác.
-   - Feature: Trạng thái "Tất cả", Tìm kiếm 1 ký tự, Gợi ý 2 dòng.
-   - Core: Auto Load, Auto Sync, Export Excel.
+   MODULE: KIỂM KÊ KHO (INVENTORY) - V3.2 (MOBILE UI & STARTUP FLOW)
+   - UI: Fix nút "Tất cả" đồng bộ màu.
+   - UI Mobile: Khung gợi ý mở rộng full chiều ngang.
+   - Feature: Màn hình Khởi động (Tải cũ / Tạo mới / Xóa Cloud).
 */
 ((context) => {
     // ===============================================================
@@ -50,10 +50,23 @@
         .inv-radio-lbl:has(input:checked) { background:#007bff; color:white; border-color:#0056b3; box-shadow:0 2px 5px rgba(0,123,255,0.3); }
         .inv-radio-lbl input { display:none; }
 
-        .inv-controls { display:flex; gap:5px; margin-bottom:15px; align-items:center; flex-wrap: nowrap; }
+        .inv-controls { display:flex; gap:5px; margin-bottom:15px; align-items:center; flex-wrap: nowrap; position: relative; } /* Added position:relative for mobile suggestion alignment */
         .inv-input { padding:8px; border:1px solid #ccc; border-radius:6px; font-size:14px; }
+        
         .inv-search-box { position:relative; flex: 1; min-width: 0; } 
         #inp-search-sku { width: 100%; box-sizing: border-box; }
+
+        /* SUGGESTION 2 LINES & MOBILE FIX */
+        .inv-suggestions { position:absolute; top:100%; left:0; width:100%; background:white; border:1px solid #ddd; border-radius:0 0 8px 8px; box-shadow:0 10px 20px rgba(0,0,0,0.2); z-index:2000; max-height:300px; overflow-y:auto; display:none; }
+        @media (max-width: 768px) {
+            /* Mobile: Break search box constraint, align to inv-controls */
+            .inv-search-box { position: static; } 
+            .inv-suggestions { width: 100%; left: 0; top: 100%; } 
+        }
+        .inv-sug-item { padding:8px 10px; border-bottom:1px solid #f0f0f0; cursor:pointer; font-size:13px; line-height: 1.4; }
+        .inv-sug-item:hover { background:#f0f8ff; color:#007bff; }
+        .inv-sug-code { font-weight:bold; color:#d63031; }
+        .inv-sug-sub { font-size:11px; color:#666; font-style: italic; }
 
         .inv-btn { padding:8px 12px; border:none; border-radius:6px; font-weight:bold; color:white; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s; white-space:nowrap; font-size: 13px; }
         .inv-btn:active { transform:scale(0.95); }
@@ -82,24 +95,26 @@
         .inv-edit-actions { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top: auto; }
         .inv-btn-del-all { background:#dc3545; flex:1; justify-content:center; } .inv-btn-fill { background:#28a745; flex:1; justify-content:center; } .inv-btn-save { background:#007bff; flex:1; justify-content:center; }
 
-        /* SUGGESTION 2 LINES */
-        .inv-suggestions { position:absolute; top:100%; left:0; width:100%; background:white; border:1px solid #ddd; border-radius:0 0 8px 8px; box-shadow:0 10px 20px rgba(0,0,0,0.2); z-index:2000; max-height:300px; overflow-y:auto; display:none; }
-        .inv-sug-item { padding:8px 10px; border-bottom:1px solid #f0f0f0; cursor:pointer; font-size:13px; line-height: 1.4; }
-        .inv-sug-item:hover { background:#f0f8ff; color:#007bff; }
-        .inv-sug-code { font-weight:bold; color:#d63031; }
-        .inv-sug-sub { font-size:11px; color:#666; font-style: italic; }
-
         .inv-filter-select { padding:4px; border:1px solid #ccc; border-radius:4px; font-size:11px; width:100%; box-sizing:border-box; margin-top:4px; }
         #inv-scanner-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:black; z-index:200; display:none; flex-direction:column; }
         #inv-reader { width:100%; height:100%; object-fit:cover; }
         .inv-scan-close { position:absolute; top:20px; right:20px; background:white; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; z-index:201; box-shadow:0 0 10px rgba(0,0,0,0.5); }
+
+        /* STARTUP OVERLAY */
+        #inv-startup-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.95); z-index:2005; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:20px; animation:fadeIn 0.5s; }
+        .inv-startup-title { font-size:24px; font-weight:800; color:#333; margin-bottom:10px; text-align:center; }
+        .inv-startup-btn { padding:15px 25px; border:none; border-radius:10px; font-size:16px; font-weight:bold; cursor:pointer; width:80%; max-width:300px; transition:0.2s; box-shadow:0 5px 15px rgba(0,0,0,0.1); display:flex; align-items:center; justify-content:center; gap:10px; }
+        .inv-startup-btn:active { transform:scale(0.95); }
+        .btn-start-load { background:linear-gradient(135deg, #007bff, #0056b3); color:white; }
+        .btn-start-new { background:linear-gradient(135deg, #28a745, #218838); color:white; }
+        .inv-startup-user { font-size:14px; color:#666; font-style:italic; }
     `;
 
     // --- 2. GLOBAL STATE ---
     let STORE = {
         importData: [],
         countData: [],
-        currentStatus: "Mới", // Mặc định là Mới, nếu chọn Tất cả sẽ là "All"
+        currentStatus: "Mới",
         currentShopId: "",
         currentUser: "---", 
         isScannerRunning: false,
@@ -218,11 +233,16 @@
                     </div>
                     <div class="inv-close" id="btn-inv-close" title="Đóng">×</div>
                 </div>
-                <div class="inv-sub-header">
-                    <span>👤 NV Kiểm kê: <span id="lbl-current-user" class="inv-user-name">Đang xác thực...</span></span>
-                    <span id="lbl-status-auth" style="font-size:10px; color:#999;"></span>
-                </div>
+                <div class="inv-sub-header"><span>👤 NV Kiểm kê: <span id="lbl-current-user" class="inv-user-name">Đang xác thực...</span></span><span id="lbl-status-auth" style="font-size:10px; color:#999;"></span></div>
                 <div class="inv-body">
+                    <!-- STARTUP OVERLAY -->
+                    <div id="inv-startup-overlay" style="display:none;">
+                        <div class="inv-startup-title">Bạn muốn làm gì?</div>
+                        <span class="inv-startup-user" id="lbl-startup-user">User: ...</span>
+                        <button class="inv-startup-btn btn-start-load" id="btn-start-load">📥 Tải dữ liệu cũ</button>
+                        <button class="inv-startup-btn btn-start-new" id="btn-start-new">🆕 Kiểm kê mới</button>
+                    </div>
+
                     <!-- TAB 1 -->
                     <div class="inv-view active" id="tab-input">
                         <div class="inv-controls">
@@ -235,7 +255,7 @@
                     <!-- TAB 2 -->
                     <div class="inv-view" id="tab-count">
                         <div class="inv-status-group" id="inv-status-container">
-                            <label class="inv-radio-lbl" style="background:#e3f2fd; border-color:#2196f3;"><input type="radio" name="inv-status-radio" value="All"> Tất cả</label>
+                            <label class="inv-radio-lbl"><input type="radio" name="inv-status-radio" value="All"> Tất cả</label>
                         </div>
                         <div class="inv-controls">
                             <div class="inv-search-box"><input type="text" id="inp-search-sku" class="inv-input" placeholder="Nhập tên/mã..." autocomplete="off"><div class="inv-suggestions" id="box-suggestions"></div></div>
@@ -249,9 +269,9 @@
                     <!-- TAB 3 -->
                     <div class="inv-view" id="tab-sum">
                         <div class="inv-controls" style="justify-content:space-between; background:#f8f9fa; padding:5px; border-radius:5px;">
-                            <span style="font-size:12px; font-weight:bold; color:#0056b3;">Xóa dữ liệu:</span>
+                            <span style="font-size:12px; font-weight:bold; color:#0056b3;">Xóa dữ liệu Cloud</span>
                             <div style="display:flex; gap:5px;">
-                                <select id="sel-delete-mode" class="inv-input" style="padding:4px; font-size:11px;"><option value="none">-- Chọn hành động xóa --</option><option value="count">Xóa Dữ liệu Kiểm kê</option><option value="stock">Xóa Dữ liệu Tồn kho</option><option value="all">Xóa TẤT CẢ (Reset Shop)</option></select>
+                                <select id="sel-delete-mode" class="inv-input" style="padding:4px; font-size:11px;"><option value="none">-- Chọn dữ liệu --</option><option value="count">Xóa Dữ liệu Kiểm kê</option><option value="stock">Xóa Dữ liệu Tồn kho</option><option value="all">Xóa tất cả</option></select>
                                 <button class="inv-btn btn-danger" id="btn-delete-exec" style="padding:4px 10px;">Thực hiện</button>
                             </div>
                             <button class="inv-btn btn-export" id="btn-export-excel">📤 Xuất Excel</button>
@@ -285,20 +305,59 @@
 
         try { await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'); await loadScript('https://unpkg.com/html5-qrcode'); } catch (e) { }
 
-        // --- AUTH CHECK ---
+        // --- AUTH & STARTUP LOGIC ---
         const lblUser = document.getElementById('lbl-current-user');
+        const overlay = document.getElementById('inv-startup-overlay');
+        const lblStartUser = document.getElementById('lbl-startup-user');
+
         const waitForUserAndLoad = () => {
             let attempt = 0;
             const check = setInterval(() => {
                 attempt++;
                 if (AUTH_STATE && AUTH_STATE.userName && AUTH_STATE.userName !== "---") {
-                    clearInterval(check); STORE.currentUser = AUTH_STATE.userName; lblUser.innerText = STORE.currentUser; lblUser.classList.add('ready'); autoLoadData();
+                    clearInterval(check); 
+                    STORE.currentUser = AUTH_STATE.userName; 
+                    lblUser.innerText = STORE.currentUser; 
+                    lblStartUser.innerText = "User: " + STORE.currentUser;
+                    lblUser.classList.add('ready'); 
+                    overlay.style.display = 'flex'; // Show Options
                 } else if (attempt > 30) { clearInterval(check); lblUser.innerText = "Lỗi: Không tìm thấy User!"; lblUser.style.color = "red"; UI.showToast("❌ Không lấy được thông tin User!"); }
             }, 500);
         };
 
-        // --- EVENTS ---
-        document.getElementById('inv-shop-select').onchange = (e) => { STORE.currentShopId = e.target.value; STORE.importData = []; STORE.countData = []; renderImportTable(); renderCountTable(); renderSummary(); UI.showToast(`Đã chuyển: ${STORE.currentShopId}`); if(STORE.currentUser !== "---") autoLoadData(); };
+        // --- EVENTS STARTUP ---
+        document.getElementById('btn-start-load').onclick = () => {
+            overlay.style.display = 'none';
+            autoLoadData();
+        };
+
+        document.getElementById('btn-start-new').onclick = () => {
+            if(confirm("Bạn có muốn XÓA DỮ LIỆU CŨ trên Cloud để bắt đầu đợt kiểm kê mới không?")) {
+                overlay.style.display = 'none';
+                if(UI.showToast) UI.showToast("⏳ Đang xóa dữ liệu cũ...");
+                // Delete Count Data on Server
+                API.deleteData('count', (res) => {
+                    if(res.status === 'success') {
+                        if(UI.showToast) UI.showToast("✅ Đã xóa dữ liệu cũ. Sẵn sàng kiểm kê mới!");
+                        STORE.countData = [];
+                        STORE.importData = []; // Clear local stock too
+                        renderImportTable(); renderCountTable(); renderSummary();
+                        modal.querySelector('.inv-tab[data-tab="tab-input"]').click();
+                    } else {
+                        if(UI.showToast) UI.showToast("❌ Lỗi xóa dữ liệu: " + res.msg);
+                    }
+                });
+            } else {
+                // User chose not to delete, just start fresh locally (but risky if cloud has data)
+                overlay.style.display = 'none';
+                STORE.countData = [];
+                renderCountTable();
+                modal.querySelector('.inv-tab[data-tab="tab-input"]').click();
+            }
+        };
+
+        // --- MAIN EVENTS ---
+        document.getElementById('inv-shop-select').onchange = (e) => { STORE.currentShopId = e.target.value; STORE.importData = []; STORE.countData = []; renderImportTable(); renderCountTable(); renderSummary(); UI.showToast(`Đã chuyển: ${STORE.currentShopId}`); overlay.style.display = 'flex'; };
         document.getElementById('btn-load-stock-cloud').onclick = () => { API.getStock((data) => { STORE.importData = data; renderImportTable(); updateFilters(); syncStockToCountData(); renderCountTable(); renderSummary(); if(UI.showToast) UI.showToast(`✅ Đã tải ${data.length} dòng từ Cloud!`); }); };
         document.getElementById('btn-sync-cloud').onclick = () => { if (STORE.currentUser === "---") { UI.showToast("⚠️ Đang xác thực User..."); return; } API.saveCount(STORE.countData, (res) => { if(res.status==='success' && UI.showToast) UI.showToast("✅ Đã đồng bộ lên Cloud!"); }); };
         document.getElementById('btn-delete-exec').onclick = () => { if (STORE.currentUser === "---") return; const mode = document.getElementById('sel-delete-mode').value; if(mode === 'none') return; if(!confirm(`⚠️ Xóa dữ liệu "${mode.toUpperCase()}" của Shop "${STORE.currentShopId}"?`)) return; API.deleteData(mode, (res) => { if(res.status === 'success') { if(UI.showToast) UI.showToast("✅ " + res.msg); if(mode === 'stock' || mode === 'all') { STORE.importData = []; renderImportTable(); } if(mode === 'count' || mode === 'all') { STORE.countData = []; renderCountTable(); renderSummary(); } } }); };
@@ -315,29 +374,16 @@
         const sugBox = document.getElementById('box-suggestions');
         searchInput.addEventListener('input', (e) => {
             const val = e.target.value.toLowerCase().trim();
-            if (val.length < 1) { sugBox.style.display = 'none'; return; } // Trigger after 1 char
-            
+            if (val.length < 1) { sugBox.style.display = 'none'; return; }
             const matches = STORE.importData.filter(item => {
                 const statusMatch = STORE.currentStatus === 'All' ? true : item.status === STORE.currentStatus;
                 const textMatch = item.sku.toLowerCase().includes(val) || item.name.toLowerCase().includes(val);
                 return statusMatch && textMatch;
             }).slice(0, 10);
-
             if (matches.length > 0) {
-                sugBox.innerHTML = matches.map(item => `
-                    <div class="inv-sug-item" data-sku="${item.sku}" data-status="${item.status}">
-                        <div><span class="inv-sug-code">${item.sku}</span> - ${item.name}</div>
-                        <div class="inv-sug-sub">TT: ${item.status} | Tồn: ${item.stock}</div>
-                    </div>
-                `).join('');
+                sugBox.innerHTML = matches.map(item => `<div class="inv-sug-item" data-sku="${item.sku}" data-status="${item.status}"><div><span class="inv-sug-code">${item.sku}</span> - ${item.name}</div><div class="inv-sug-sub">TT: ${item.status} | Tồn: ${item.stock}</div></div>`).join('');
                 sugBox.style.display = 'block';
-                sugBox.querySelectorAll('.inv-sug-item').forEach(el => {
-                    el.onclick = () => { 
-                        // Truyền thêm status cụ thể từ item được chọn
-                        addCountItem(el.dataset.sku, el.dataset.status); 
-                        searchInput.value = ''; sugBox.style.display = 'none'; searchInput.focus(); 
-                    };
-                });
+                sugBox.querySelectorAll('.inv-sug-item').forEach(el => { el.onclick = () => { addCountItem(el.dataset.sku, el.dataset.status); searchInput.value = ''; sugBox.style.display = 'none'; searchInput.focus(); }; });
             } else sugBox.style.display = 'none';
         });
         document.addEventListener('click', (e) => { if (!e.target.closest('.inv-search-box')) sugBox.style.display = 'none'; });
@@ -361,14 +407,9 @@
             API.getStock((data) => {
                 if(data.length > 0) { STORE.importData = data; renderImportTable(); updateFilters(); modal.querySelector('.inv-tab[data-tab="tab-count"]').click(); } 
                 else { modal.querySelector('.inv-tab[data-tab="tab-input"]').click(); }
-                // Fix: Sync ngay khi tải dữ liệu về
                 API.getCount((cData) => {
-                    STORE.countData = cData.filter(i => i.user === STORE.currentUser).map(i => ({
-                        ...i, history: [{ts:'Server', qty:i.qty}], totalCount: i.qty,
-                        stock: (STORE.importData.find(s => s.sku === i.sku && s.status === i.status) || {}).stock || 0
-                    }));
-                    renderCountTable();
-                    renderSummary(); 
+                    STORE.countData = cData.filter(i => i.user === STORE.currentUser).map(i => ({ ...i, history: [{ts:'Server', qty:i.qty}], totalCount: i.qty, stock: (STORE.importData.find(s => s.sku === i.sku && s.status === i.status) || {}).stock || 0 }));
+                    renderCountTable(); renderSummary(); 
                 });
             });
         }
@@ -376,15 +417,8 @@
         function exportToExcel() {
             if (STORE.importData.length === 0 && STORE.countData.length === 0) { UI.showToast("⚠️ Không có dữ liệu để xuất!"); return; }
             const dataToExport = [];
-            STORE.importData.forEach(item => {
-                const counted = STORE.countData.find(c => c.sku === item.sku && c.status === item.status);
-                const qty = counted ? counted.totalCount : 0;
-                dataToExport.push({ "Nhóm": item.group, "Mã SP": item.sku, "Tên Sản Phẩm": item.name, "Trạng Thái": item.status, "Tồn Kho": item.stock, "Thực Tế": qty, "Lệch": item.stock - qty });
-            });
-            STORE.countData.forEach(item => {
-                const inStock = STORE.importData.find(s => s.sku === item.sku && s.status === item.status);
-                if (!inStock) dataToExport.push({ "Nhóm": item.group || "N/A", "Mã SP": item.sku, "Tên Sản Phẩm": item.name, "Trạng Thái": item.status, "Tồn Kho": 0, "Thực Tế": item.totalCount, "Lệch": 0 - item.totalCount });
-            });
+            STORE.importData.forEach(item => { const counted = STORE.countData.find(c => c.sku === item.sku && c.status === item.status); const qty = counted ? counted.totalCount : 0; dataToExport.push({ "Nhóm": item.group, "Mã SP": item.sku, "Tên Sản Phẩm": item.name, "Trạng Thái": item.status, "Tồn Kho": item.stock, "Thực Tế": qty, "Lệch": item.stock - qty }); });
+            STORE.countData.forEach(item => { const inStock = STORE.importData.find(s => s.sku === item.sku && s.status === item.status); if (!inStock) dataToExport.push({ "Nhóm": item.group || "N/A", "Mã SP": item.sku, "Tên Sản Phẩm": item.name, "Trạng Thái": item.status, "Tồn Kho": 0, "Thực Tế": item.totalCount, "Lệch": 0 - item.totalCount }); });
             if (typeof XLSX === 'undefined') { UI.showToast("❌ Lỗi thư viện Excel!"); return; }
             const wb = XLSX.utils.book_new(); const ws = XLSX.utils.json_to_sheet(dataToExport); XLSX.utils.book_append_sheet(wb, ws, "TongHop");
             XLSX.writeFile(wb, `KiemKe_${STORE.currentShopId}_${STORE.currentUser}.xlsx`); UI.showToast("✅ Đã xuất file Excel!");
@@ -397,23 +431,13 @@
         
         function addCountItem(sku, specificStatus) {
             if (STORE.currentUser === "---") { UI.showToast("❌ Chờ xác thực..."); return; }
-            
-            // Tìm trong kho
             let stockItem;
-            if (specificStatus) {
-                // Nếu được chỉ định status (từ gợi ý), tìm chính xác
-                stockItem = STORE.importData.find(i => i.sku === sku && i.status === specificStatus);
-            } else if (STORE.currentStatus !== 'All') {
-                // Nếu đang ở tab cụ thể, tìm theo status tab đó
-                stockItem = STORE.importData.find(i => i.sku === sku && i.status === STORE.currentStatus);
-            } else {
-                // Nếu đang ở "Tất cả" mà nhập tay (không qua gợi ý), thử tìm cái đầu tiên khớp SKU
-                stockItem = STORE.importData.find(i => i.sku === sku);
-            }
+            if (specificStatus) stockItem = STORE.importData.find(i => i.sku === sku && i.status === specificStatus);
+            else if (STORE.currentStatus !== 'All') stockItem = STORE.importData.find(i => i.sku === sku && i.status === STORE.currentStatus);
+            else stockItem = STORE.importData.find(i => i.sku === sku);
 
             let itemToAdd = stockItem;
             if (!stockItem) {
-                // Tìm trong đã kiểm (nếu chưa có trong kho)
                 const existing = STORE.countData.find(i => i.sku === sku && (specificStatus ? i.status === specificStatus : (STORE.currentStatus !== 'All' ? i.status === STORE.currentStatus : true)));
                 if (existing) itemToAdd = existing;
                 else if (STORE.importData.length > 0) { UI.showToast(`⚠️ Không tìm thấy mã ${sku}!`); return; } 
@@ -422,15 +446,11 @@
 
             let qty = 1;
             if (STORE.isManualInput) { const inputQty = prompt(`Nhập số lượng cho: ${itemToAdd.name}\n(Trạng thái: ${itemToAdd.status})`, "1"); if (inputQty === null) return; qty = parseInt(inputQty) || 0; if (qty <= 0) return; }
-            
             const existItem = STORE.countData.find(i => i.sku === sku && i.status === itemToAdd.status);
             const nowTime = new Date().toTimeString().split(' ')[0];
             if (existItem) { existItem.history.unshift({ ts: nowTime, qty: qty }); existItem.totalCount += qty; STORE.countData = STORE.countData.filter(i => i !== existItem); STORE.countData.unshift(existItem); } 
             else { STORE.countData.unshift({ ...itemToAdd, history: [{ ts: nowTime, qty: qty }], totalCount: qty }); }
-            
-            renderCountTable(); 
-            UI.showToast(`Đã thêm ${qty}: ${itemToAdd.name}`);
-            triggerAutoSync(); 
+            renderCountTable(); UI.showToast(`Đã thêm ${qty}: ${itemToAdd.name}`); triggerAutoSync(); 
         }
 
         function openEditPopup(item) {
@@ -487,7 +507,7 @@
     };
 
     return {
-        name: "Kiểm kê V1",
+        name: "Kiểm kê V1.0",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z" fill="white"/></svg>`,
         bgColor: "#6c757d",
         css: MY_CSS,
