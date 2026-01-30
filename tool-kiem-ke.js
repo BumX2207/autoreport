@@ -1,8 +1,9 @@
 /* 
-   MODULE: KIỂM KÊ KHO (INVENTORY) - V3.2 (MOBILE UI & STARTUP FLOW)
-   - UI: Fix nút "Tất cả" đồng bộ màu.
-   - UI Mobile: Khung gợi ý mở rộng full chiều ngang.
-   - Feature: Màn hình Khởi động (Tải cũ / Tạo mới / Xóa Cloud).
+   MODULE: KIỂM KÊ KHO (INVENTORY) - V3.3 (UI POLISH)
+   - UI Tab 1: Layout lại Header & Nút nhập liệu.
+   - UI Tab 2: Icon Barcode, Trạng thái dạng trượt ngang (Mobile friendly).
+   - UI Tab 3: Tinh chỉnh text Droplist & Nút xóa.
+   - Core: Giữ nguyên logic V3.2.
 */
 ((context) => {
     // ===============================================================
@@ -27,13 +28,17 @@
         .inv-content { background:#fff; width:98%; max-width:1100px; height:92vh; border-radius:15px; box-shadow:0 20px 60px rgba(0,0,0,0.4); display:flex; flex-direction:column; overflow:hidden; animation: popIn 0.3s; font-family: sans-serif; position: relative; }
         @media (max-width: 768px) { .inv-content { width: 100% !important; height: 100% !important; max-width: none !important; border-radius: 0 !important; } }
 
+        /* HEADER */
         .inv-header { display:flex; background:#f8f9fa; border-bottom:1px solid #ddd; padding:0 10px; align-items:center; justify-content:space-between; height: 50px; flex-shrink: 0; }
         .inv-title { font-weight:800; font-size:16px; color:#333; display:flex; align-items:center; gap:5px; }
         .inv-close { font-size:24px; cursor:pointer; color:#999; padding:0 15px; font-weight:bold; transition: 0.2s; } .inv-close:hover { color:red; transform: scale(1.1); }
-        .inv-shop-select { padding: 5px; border-radius: 5px; border: 2px solid #007bff; font-weight: bold; color: #0056b3; outline: none; font-size: 13px; max-width: 150px; margin-left: 5px; }
-        
-        .inv-sub-header { background:#e9ecef; padding:5px 15px; font-size:12px; color:#333; border-bottom:1px solid #ddd; display:flex; align-items:center; justify-content:space-between; font-weight:bold; }
-        .inv-user-name { color:#d63031; } .inv-user-name.ready { color:#007bff; }
+        .inv-loading { font-size:11px; color:#666; font-style:italic; margin-left:5px; display:none; }
+
+        /* SUB HEADER (SHOP SELECT & USER) */
+        .inv-sub-header { background:#e9ecef; padding:8px 15px; font-size:12px; color:#333; border-bottom:1px solid #ddd; display:flex; align-items:center; flex-wrap: wrap; gap: 10px; }
+        .inv-shop-select { padding: 4px; border-radius: 4px; border: 1px solid #007bff; font-weight: bold; color: #0056b3; outline: none; font-size: 12px; max-width: 150px; }
+        .inv-user-info { display:flex; align-items:center; gap:5px; white-space: nowrap; margin-left: auto; }
+        .inv-user-name { color:#d63031; font-weight:bold; } .inv-user-name.ready { color:#007bff; }
 
         .inv-tabs { display:flex; gap:5px; height:100%; align-items:flex-end; }
         .inv-tab { padding:10px 20px; cursor:pointer; font-weight:bold; color:#666; border-bottom:3px solid transparent; transition:0.2s; font-size:13px; white-space:nowrap; }
@@ -44,36 +49,34 @@
         .inv-view { display:none; height:100%; flex-direction:column; padding:15px; box-sizing:border-box; }
         .inv-view.active { display:flex; }
 
-        .inv-status-group { display:flex; flex-wrap:wrap; gap:8px; padding:10px; background:#f1f8ff; border-radius:8px; margin-bottom:15px; border:1px solid #cce5ff; }
-        .inv-radio-lbl { font-size:11px; font-weight:bold; color:#0056b3; cursor:pointer; display:flex; align-items:center; gap:5px; background:white; padding:6px 12px; border-radius:15px; border:1px solid #b8daff; transition:0.2s; }
+        /* STATUS GROUP - SCROLLABLE MOBILE STYLE */
+        .inv-status-group { display:flex; gap:8px; padding:10px 5px; background:#fff; border-bottom:1px solid #eee; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+        .inv-status-group::-webkit-scrollbar { display: none; } /* Hide scrollbar */
+        .inv-radio-lbl { flex: 0 0 auto; font-size:12px; font-weight:bold; color:#555; cursor:pointer; display:flex; align-items:center; gap:5px; background:#f1f3f5; padding:6px 12px; border-radius:20px; border:1px solid #ddd; transition:0.2s; }
         .inv-radio-lbl:hover { background:#e2e6ea; }
         .inv-radio-lbl:has(input:checked) { background:#007bff; color:white; border-color:#0056b3; box-shadow:0 2px 5px rgba(0,123,255,0.3); }
         .inv-radio-lbl input { display:none; }
 
-        .inv-controls { display:flex; gap:5px; margin-bottom:15px; align-items:center; flex-wrap: nowrap; position: relative; } /* Added position:relative for mobile suggestion alignment */
+        /* CONTROLS ROW */
+        .inv-controls { display:flex; gap:10px; margin-bottom:15px; align-items:center; flex-wrap: nowrap; position: relative; }
         .inv-input { padding:8px; border:1px solid #ccc; border-radius:6px; font-size:14px; }
-        
         .inv-search-box { position:relative; flex: 1; min-width: 0; } 
         #inp-search-sku { width: 100%; box-sizing: border-box; }
 
-        /* SUGGESTION 2 LINES & MOBILE FIX */
-        .inv-suggestions { position:absolute; top:100%; left:0; width:100%; background:white; border:1px solid #ddd; border-radius:0 0 8px 8px; box-shadow:0 10px 20px rgba(0,0,0,0.2); z-index:2000; max-height:300px; overflow-y:auto; display:none; }
-        @media (max-width: 768px) {
-            /* Mobile: Break search box constraint, align to inv-controls */
-            .inv-search-box { position: static; } 
-            .inv-suggestions { width: 100%; left: 0; top: 100%; } 
-        }
-        .inv-sug-item { padding:8px 10px; border-bottom:1px solid #f0f0f0; cursor:pointer; font-size:13px; line-height: 1.4; }
-        .inv-sug-item:hover { background:#f0f8ff; color:#007bff; }
-        .inv-sug-code { font-weight:bold; color:#d63031; }
-        .inv-sug-sub { font-size:11px; color:#666; font-style: italic; }
+        /* TAB 1 SPECIFIC */
+        .tab1-controls { justify-content: space-between; }
+        .tab1-left { display: flex; gap: 10px; align-items: center; }
+        .tab1-right { display: flex; gap: 10px; align-items: center; }
 
-        .inv-btn { padding:8px 12px; border:none; border-radius:6px; font-weight:bold; color:white; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s; white-space:nowrap; font-size: 13px; }
+        /* BUTTONS */
+        .inv-btn { padding:8px 12px; border:none; border-radius:6px; font-weight:bold; color:white; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s; white-space:nowrap; font-size: 13px; height: 36px; }
         .inv-btn:active { transform:scale(0.95); }
         .btn-import { background:#28a745; } .btn-scan { background:#343a40; } .btn-cloud-load { background:#6f42c1; } .btn-sync { background:#17a2b8; } .btn-danger { background:#dc3545; } .btn-export { background:#218838; }
+        
         .inv-chk-manual { font-size:12px; font-weight:bold; color:#555; display:flex; align-items:center; gap:4px; cursor:pointer; padding:0 5px; white-space: nowrap; user-select: none; }
         .inv-chk-manual input { width:16px; height:16px; accent-color:#007bff; cursor:pointer; }
 
+        /* TABLES */
         .inv-table-wrapper { flex:1; overflow:auto; border:1px solid #eee; border-radius:8px; box-shadow:inset 0 0 10px rgba(0,0,0,0.05); }
         .inv-table { width:100%; border-collapse:collapse; font-size:12px; }
         .inv-table th { background:#f1f1f1; position:sticky; top:0; z-index:10; padding:10px; text-align:left; border-bottom:2px solid #ddd; color:#444; vertical-align: top; white-space: nowrap; }
@@ -84,6 +87,18 @@
 
         .st-surplus { color:#28a745; font-weight:bold; } .st-missing { color:#dc3545; font-weight:bold; } .st-ok { color:#007bff; font-weight:bold; }
 
+        /* SUGGESTIONS & MOBILE FIX */
+        .inv-suggestions { position:absolute; top:100%; left:0; width:100%; background:white; border:1px solid #ddd; border-radius:0 0 8px 8px; box-shadow:0 10px 20px rgba(0,0,0,0.2); z-index:2000; max-height:300px; overflow-y:auto; display:none; }
+        @media (max-width: 768px) {
+            .inv-search-box { position: static; } 
+            .inv-suggestions { width: 100%; left: 0; top: 100%; } 
+        }
+        .inv-sug-item { padding:8px 10px; border-bottom:1px solid #f0f0f0; cursor:pointer; font-size:13px; line-height: 1.4; }
+        .inv-sug-item:hover { background:#f0f8ff; color:#007bff; }
+        .inv-sug-code { font-weight:bold; color:#d63031; }
+        .inv-sug-sub { font-size:11px; color:#666; font-style: italic; }
+
+        /* MODALS */
         #inv-edit-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2147483750; justify-content:center; align-items:center; backdrop-filter:blur(2px); }
         .inv-edit-content { background:white; width:90%; max-width:400px; border-radius:12px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.3); animation: popIn 0.2s; display:flex; flex-direction:column; }
         .inv-edit-header { display:flex; justify-content:space-between; align-items:center; font-weight:bold; font-size:16px; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px; color:#333; }
@@ -100,7 +115,6 @@
         #inv-reader { width:100%; height:100%; object-fit:cover; }
         .inv-scan-close { position:absolute; top:20px; right:20px; background:white; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; z-index:201; box-shadow:0 0 10px rgba(0,0,0,0.5); }
 
-        /* STARTUP OVERLAY */
         #inv-startup-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.95); z-index:2005; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:20px; animation:fadeIn 0.5s; }
         .inv-startup-title { font-size:24px; font-weight:800; color:#333; margin-bottom:10px; text-align:center; }
         .inv-startup-btn { padding:15px 25px; border:none; border-radius:10px; font-size:16px; font-weight:bold; cursor:pointer; width:80%; max-width:300px; transition:0.2s; box-shadow:0 5px 15px rgba(0,0,0,0.1); display:flex; align-items:center; justify-content:center; gap:10px; }
@@ -225,7 +239,7 @@
         modal.innerHTML = `
             <div class="inv-content">
                 <div class="inv-header">
-                    <div class="inv-title">📦 <select id="inv-shop-select" class="inv-shop-select">${shopOpts}</select><span id="inv-loading-indicator" class="inv-loading">Đang tải...</span></div>
+                    <div class="inv-title">📦 <span id="inv-loading-indicator" class="inv-loading">Đang tải...</span></div>
                     <div class="inv-tabs">
                         <div class="inv-tab active" data-tab="tab-input">Nhập liệu</div>
                         <div class="inv-tab" data-tab="tab-count">Kiểm kê</div>
@@ -233,7 +247,15 @@
                     </div>
                     <div class="inv-close" id="btn-inv-close" title="Đóng">×</div>
                 </div>
-                <div class="inv-sub-header"><span>👤 NV Kiểm kê: <span id="lbl-current-user" class="inv-user-name">Đang xác thực...</span></span><span id="lbl-status-auth" style="font-size:10px; color:#999;"></span></div>
+                
+                <div class="inv-sub-header">
+                    <select id="inv-shop-select" class="inv-shop-select">${shopOpts}</select>
+                    <div class="inv-user-info">
+                        👤 NV Kiểm kê: <span id="lbl-current-user" class="inv-user-name">...</span>
+                        <span id="lbl-status-auth" style="font-size:10px; color:#999;"></span>
+                    </div>
+                </div>
+
                 <div class="inv-body">
                     <!-- STARTUP OVERLAY -->
                     <div id="inv-startup-overlay" style="display:none;">
@@ -245,11 +267,11 @@
 
                     <!-- TAB 1 -->
                     <div class="inv-view active" id="tab-input">
-                        <div class="inv-controls">
-                            <label class="inv-btn btn-import">📂 Excel File<input type="file" id="inp-excel-file" accept=".xlsx, .xls" style="display:none;"></label>
-                            <button class="inv-btn btn-cloud-load" id="btn-load-stock-cloud">☁️ Tải Tồn Kho</button>
-                            <span id="lbl-file-name" style="font-size:12px; color:#666;">Chưa có dữ liệu</span>
+                        <div class="inv-controls tab1-controls">
+                            <label class="inv-btn btn-import">📂 Nhập Excel<input type="file" id="inp-excel-file" accept=".xlsx, .xls" style="display:none;"></label>
+                            <button class="inv-btn btn-cloud-load" id="btn-load-stock-cloud">☁️ Tải tồn kho</button>
                         </div>
+                        <div style="padding:0 10px 10px; font-size:12px; color:#666;" id="lbl-file-name">Chưa có dữ liệu</div>
                         <div class="inv-table-wrapper"><table class="inv-table" id="tbl-import"><thead><tr><th>#</th><th>Nhóm</th><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>Tồn kho</th></tr></thead><tbody></tbody></table></div>
                     </div>
                     <!-- TAB 2 -->
@@ -260,7 +282,9 @@
                         <div class="inv-controls">
                             <div class="inv-search-box"><input type="text" id="inp-search-sku" class="inv-input" placeholder="Nhập tên/mã..." autocomplete="off"><div class="inv-suggestions" id="box-suggestions"></div></div>
                             <label class="inv-chk-manual"><input type="checkbox" id="chk-manual-input"> Nhập tay</label>
-                            <button class="inv-btn btn-scan" id="btn-open-scan">📷 Scan</button>
+                            <button class="inv-btn btn-scan" id="btn-open-scan">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M3 5h2v14H3V5zm4 0h2v14H7V5zm4 0h2v14h-2V5zm4 0h2v14h-2V5zm4 0h2v14h-2V5z"/></svg>
+                            </button>
                             <button class="inv-btn btn-sync" id="btn-sync-cloud">☁️ Đồng bộ</button>
                         </div>
                         <div class="inv-table-wrapper"><table class="inv-table" id="tbl-counting"><thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>Tồn</th><th>Đã kiểm</th><th>Lệch</th></tr></thead><tbody></tbody></table></div>
@@ -269,10 +293,9 @@
                     <!-- TAB 3 -->
                     <div class="inv-view" id="tab-sum">
                         <div class="inv-controls" style="justify-content:space-between; background:#f8f9fa; padding:5px; border-radius:5px;">
-                            <span style="font-size:12px; font-weight:bold; color:#0056b3;">Xóa dữ liệu Cloud</span>
                             <div style="display:flex; gap:5px;">
-                                <select id="sel-delete-mode" class="inv-input" style="padding:4px; font-size:11px;"><option value="none">-- Chọn dữ liệu --</option><option value="count">Xóa Dữ liệu Kiểm kê</option><option value="stock">Xóa Dữ liệu Tồn kho</option><option value="all">Xóa tất cả</option></select>
-                                <button class="inv-btn btn-danger" id="btn-delete-exec" style="padding:4px 10px;">Thực hiện</button>
+                                <select id="sel-delete-mode" class="inv-input" style="padding:4px; font-size:11px;"><option value="none">-- Chọn hành động xóa --</option><option value="stock">Xóa dữ liệu tồn kho</option><option value="count">Xóa dữ liệu kiểm kê</option><option value="all">Xóa tất cả</option></select>
+                                <button class="inv-btn btn-danger" id="btn-delete-exec" style="padding:4px 10px;">Xóa dữ liệu</button>
                             </div>
                             <button class="inv-btn btn-export" id="btn-export-excel">📤 Xuất Excel</button>
                         </div>
@@ -315,52 +338,27 @@
             const check = setInterval(() => {
                 attempt++;
                 if (AUTH_STATE && AUTH_STATE.userName && AUTH_STATE.userName !== "---") {
-                    clearInterval(check); 
-                    STORE.currentUser = AUTH_STATE.userName; 
-                    lblUser.innerText = STORE.currentUser; 
-                    lblStartUser.innerText = "User: " + STORE.currentUser;
-                    lblUser.classList.add('ready'); 
-                    overlay.style.display = 'flex'; // Show Options
+                    clearInterval(check); STORE.currentUser = AUTH_STATE.userName; lblUser.innerText = STORE.currentUser; lblStartUser.innerText = "User: " + STORE.currentUser; lblUser.classList.add('ready'); overlay.style.display = 'flex';
                 } else if (attempt > 30) { clearInterval(check); lblUser.innerText = "Lỗi: Không tìm thấy User!"; lblUser.style.color = "red"; UI.showToast("❌ Không lấy được thông tin User!"); }
             }, 500);
         };
 
-        // --- EVENTS STARTUP ---
-        document.getElementById('btn-start-load').onclick = () => {
-            overlay.style.display = 'none';
-            autoLoadData();
-        };
-
+        // --- EVENTS ---
+        document.getElementById('btn-start-load').onclick = () => { overlay.style.display = 'none'; autoLoadData(); };
         document.getElementById('btn-start-new').onclick = () => {
             if(confirm("Bạn có muốn XÓA DỮ LIỆU CŨ trên Cloud để bắt đầu đợt kiểm kê mới không?")) {
-                overlay.style.display = 'none';
-                if(UI.showToast) UI.showToast("⏳ Đang xóa dữ liệu cũ...");
-                // Delete Count Data on Server
+                overlay.style.display = 'none'; if(UI.showToast) UI.showToast("⏳ Đang xóa dữ liệu cũ...");
                 API.deleteData('count', (res) => {
-                    if(res.status === 'success') {
-                        if(UI.showToast) UI.showToast("✅ Đã xóa dữ liệu cũ. Sẵn sàng kiểm kê mới!");
-                        STORE.countData = [];
-                        STORE.importData = []; // Clear local stock too
-                        renderImportTable(); renderCountTable(); renderSummary();
-                        modal.querySelector('.inv-tab[data-tab="tab-input"]').click();
-                    } else {
-                        if(UI.showToast) UI.showToast("❌ Lỗi xóa dữ liệu: " + res.msg);
-                    }
+                    if(res.status === 'success') { if(UI.showToast) UI.showToast("✅ Đã xóa dữ liệu cũ. Sẵn sàng kiểm kê mới!"); STORE.countData = []; STORE.importData = []; renderImportTable(); renderCountTable(); renderSummary(); modal.querySelector('.inv-tab[data-tab="tab-input"]').click(); } 
+                    else { if(UI.showToast) UI.showToast("❌ Lỗi xóa dữ liệu: " + res.msg); }
                 });
-            } else {
-                // User chose not to delete, just start fresh locally (but risky if cloud has data)
-                overlay.style.display = 'none';
-                STORE.countData = [];
-                renderCountTable();
-                modal.querySelector('.inv-tab[data-tab="tab-input"]').click();
-            }
+            } else { overlay.style.display = 'none'; STORE.countData = []; renderCountTable(); modal.querySelector('.inv-tab[data-tab="tab-input"]').click(); }
         };
 
-        // --- MAIN EVENTS ---
         document.getElementById('inv-shop-select').onchange = (e) => { STORE.currentShopId = e.target.value; STORE.importData = []; STORE.countData = []; renderImportTable(); renderCountTable(); renderSummary(); UI.showToast(`Đã chuyển: ${STORE.currentShopId}`); overlay.style.display = 'flex'; };
         document.getElementById('btn-load-stock-cloud').onclick = () => { API.getStock((data) => { STORE.importData = data; renderImportTable(); updateFilters(); syncStockToCountData(); renderCountTable(); renderSummary(); if(UI.showToast) UI.showToast(`✅ Đã tải ${data.length} dòng từ Cloud!`); }); };
         document.getElementById('btn-sync-cloud').onclick = () => { if (STORE.currentUser === "---") { UI.showToast("⚠️ Đang xác thực User..."); return; } API.saveCount(STORE.countData, (res) => { if(res.status==='success' && UI.showToast) UI.showToast("✅ Đã đồng bộ lên Cloud!"); }); };
-        document.getElementById('btn-delete-exec').onclick = () => { if (STORE.currentUser === "---") return; const mode = document.getElementById('sel-delete-mode').value; if(mode === 'none') return; if(!confirm(`⚠️ Xóa dữ liệu "${mode.toUpperCase()}" của Shop "${STORE.currentShopId}"?`)) return; API.deleteData(mode, (res) => { if(res.status === 'success') { if(UI.showToast) UI.showToast("✅ " + res.msg); if(mode === 'stock' || mode === 'all') { STORE.importData = []; renderImportTable(); } if(mode === 'count' || mode === 'all') { STORE.countData = []; renderCountTable(); renderSummary(); } } }); };
+        document.getElementById('btn-delete-exec').onclick = () => { if (STORE.currentUser === "---") return; const mode = document.getElementById('sel-delete-mode').value; if(mode === 'none') return; if(!confirm(`⚠️ Xác nhận xóa dữ liệu?`)) return; API.deleteData(mode, (res) => { if(res.status === 'success') { if(UI.showToast) UI.showToast("✅ " + res.msg); if(mode === 'stock' || mode === 'all') { STORE.importData = []; renderImportTable(); } if(mode === 'count' || mode === 'all') { STORE.countData = []; renderCountTable(); renderSummary(); } } }); };
         document.getElementById('btn-export-excel').onclick = exportToExcel;
         document.getElementById('btn-inv-close').onclick = () => { if(STORE.isScannerRunning) stopScanner(); if(STORE.countData.length > 0 && STORE.currentUser !== "---") { if(UI.showToast) UI.showToast("☁️ Đang lưu dữ liệu..."); API.saveCount(STORE.countData, () => { modal.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; document.body.classList.remove('tgdd-body-lock'); }); } else { modal.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; document.body.classList.remove('tgdd-body-lock'); } };
 
@@ -381,7 +379,7 @@
                 return statusMatch && textMatch;
             }).slice(0, 10);
             if (matches.length > 0) {
-                sugBox.innerHTML = matches.map(item => `<div class="inv-sug-item" data-sku="${item.sku}" data-status="${item.status}"><div><span class="inv-sug-code">${item.sku}</span> - ${item.name}</div><div class="inv-sug-sub">Trạng thái: ${item.status} | Tồn: ${item.stock}</div></div>`).join('');
+                sugBox.innerHTML = matches.map(item => `<div class="inv-sug-item" data-sku="${item.sku}" data-status="${item.status}"><div><span class="inv-sug-code">${item.sku}</span> - ${item.name}</div><div class="inv-sug-sub">TT: ${item.status} | Tồn: ${item.stock}</div></div>`).join('');
                 sugBox.style.display = 'block';
                 sugBox.querySelectorAll('.inv-sug-item').forEach(el => { el.onclick = () => { addCountItem(el.dataset.sku, el.dataset.status); searchInput.value = ''; sugBox.style.display = 'none'; searchInput.focus(); }; });
             } else sugBox.style.display = 'none';
@@ -507,7 +505,7 @@
     };
 
     return {
-        name: "Kiểm kê V1.0",
+        name: "Kiểm kê V1",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z" fill="white"/></svg>`,
         bgColor: "#6c757d",
         css: MY_CSS,
