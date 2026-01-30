@@ -1,20 +1,18 @@
 /* 
-   MODULE: KIỂM KÊ KHO (INVENTORY) - V4.2 (FIX CRASH & DEBUG)
-   - Fix: Bắt lỗi try-catch toàn bộ để hiện Alert nếu code crash.
-   - Fix: Tự động đóng Modal Tiện ích khi mở Kiểm kê.
-   - UI: Z-Index cao nhất, đảm bảo đè lên mọi thứ.
+   MODULE: KIỂM KÊ KHO (INVENTORY) - V4.3 (FIX VAR UNDEFINED)
+   - Fix: Lỗi "userConfig is not defined".
+   - Fix: Chuẩn hóa biến currentUser vào STORE để tránh mất scope.
+   - Core: Giữ nguyên tính năng Cloud/Multi-Shop V4.0.
 */
 ((context) => {
-    // Lấy context an toàn, nếu thiếu cái nào thì để null tránh crash ngay
     const UI = context.UI || {};
     const UTILS = context.UTILS || {};
     const AUTH_STATE = context.AUTH_STATE || {};
     const CONSTANTS = context.CONSTANTS || {};
     const GM_xmlhttpRequest = context.GM_xmlhttpRequest;
 
-    // Lấy API URL an toàn
     let API_URL = "";
-    try { API_URL = CONSTANTS.GSHEET.API_URL; } catch(e) { console.log("API URL missing"); }
+    try { API_URL = CONSTANTS.GSHEET.API_URL; } catch(e) {}
 
     // --- CSS ---
     const MY_CSS = `
@@ -97,6 +95,7 @@
         myCountData: [],
         currentStatus: "Mới",
         currentShopId: "",
+        currentUser: "Guest", // LƯU USER VÀO ĐÂY ĐỂ DÙNG CHUNG
         isScannerRunning: false,
         scannerObj: null,
         editingItem: null,
@@ -159,32 +158,30 @@
                 }
             });
         },
-        saveCount: (data, cb) => { 
-            // Dùng tên user an toàn, nếu chưa đăng nhập thì dùng Guest
-            const user = (AUTH_STATE && AUTH_STATE.userName) ? AUTH_STATE.userName : "Guest";
-            API.call({action: 'save_count', user: user, data: data}, cb); 
-        },
+        saveCount: (data, cb) => { API.call({action: 'save_count', user: STORE.currentUser, data: data}, cb); },
         deleteData: (mode, cb) => { API.call({action: 'delete_data', mode: mode}, cb); }
     };
 
     // --- MAIN EXECUTOR ---
     const runTool = async () => {
         try {
-            // 1. Đóng Modal Tiện Ích (Menu) nếu đang mở
+            // 1. Tự động đóng Modal Tiện Ích (Menu) nếu đang mở
             const toolsModal = document.getElementById('tgdd-tools-modal');
             if (toolsModal) toolsModal.classList.remove('show');
 
-            // 2. Kiểm tra Auth (Nhưng không chặn đứng, chỉ cảnh báo)
-            let currentUser = "Chưa đăng nhập";
-            if (AUTH_STATE && AUTH_STATE.userName) currentUser = AUTH_STATE.userName;
-            else if (UI.showToast) UI.showToast("⚠️ Cảnh báo: Chưa đăng nhập, dùng chế độ Guest");
+            // 2. Định danh User (Lưu vào STORE)
+            if (AUTH_STATE && AUTH_STATE.userName) STORE.currentUser = AUTH_STATE.userName;
 
-            // 3. Lấy Config Shop
-            const userCfg = UTILS.getPersistentConfig ? UTILS.getPersistentConfig() : {};
+            // 3. Lấy Config Shop an toàn (CHUẨN HÓA BIẾN THÀNH userConfig)
+            let userConfig = {};
+            if (UTILS && typeof UTILS.getPersistentConfig === 'function') {
+                userConfig = UTILS.getPersistentConfig();
+            }
+
             const shops = [];
-            if(userCfg.shop1) shops.push({id: '1', name: userConfig.shop1});
-            if(userCfg.shop2) shops.push({id: '2', name: userConfig.shop2});
-            if(userCfg.shop3) shops.push({id: '3', name: userConfig.shop3});
+            if(userConfig.shop1) shops.push({id: '1', name: userConfig.shop1});
+            if(userConfig.shop2) shops.push({id: '2', name: userConfig.shop2});
+            if(userConfig.shop3) shops.push({id: '3', name: userConfig.shop3});
             
             if(shops.length > 0) STORE.currentShopId = shops[0].name;
             else STORE.currentShopId = "SHOP_UNK";
@@ -308,16 +305,16 @@
             `;
             document.body.appendChild(modal);
 
-            // 6. HIỂN THỊ NGAY LẬP TỨC (QUAN TRỌNG)
+            // 6. HIỂN THỊ NGAY LẬP TỨC
             modal.style.display = 'flex';
             document.body.classList.add('tgdd-body-lock');
 
-            // 7. Render UI phụ (Status, Events...)
+            // 7. Render UI phụ
             const statusList = ["Mới", "Trưng bày", "Trưng bày bỏ mẫu", "Đã sử dụng", "Lỗi (Mới)", "Lỗi (Đã sử dụng)", "Cũ thu mua", "Mới (Giảm giá)"];
             const radioContainer = document.getElementById('inv-status-container');
             statusList.forEach((st, idx) => radioContainer.innerHTML += `<label class="inv-radio-lbl"><input type="radio" name="inv-status-radio" value="${st}" ${idx===0?'checked':''}> ${st}</label>`);
 
-            // 8. Tải thư viện ASYNC (Không chặn UI)
+            // 8. Tải thư viện ASYNC
             const indicator = document.getElementById('inv-loading-indicator');
             if(indicator) indicator.innerText = "Đang tải thư viện...";
             try { 
@@ -329,17 +326,15 @@
             }
 
             // 9. BINDING EVENTS
-            // Shop Change
             document.getElementById('inv-shop-select').onchange = (e) => {
                 STORE.currentShopId = e.target.value;
                 STORE.importData = []; STORE.myCountData = []; STORE.serverCountData = [];
                 renderImportTable(); renderCountTable(); renderSummary();
                 if(UI.showToast) UI.showToast(`Đã chuyển sang: ${STORE.currentShopId}`);
                 API.getStock((data) => { STORE.importData = data; renderImportTable(); });
-                API.getCount((data) => { STORE.serverCountData = data; STORE.myCountData = data.filter(i => i.user === currentUser); renderCountTable(); });
+                API.getCount((data) => { STORE.serverCountData = data; STORE.myCountData = data.filter(i => i.user === STORE.currentUser); renderCountTable(); });
             };
 
-            // Excel Import
             document.getElementById('inp-excel-file').addEventListener('change', (e) => {
                 const file = e.target.files[0]; if (!file) return;
                 document.getElementById('lbl-file-name').innerText = file.name;
@@ -372,7 +367,6 @@
                 });
             };
 
-            // Delete
             document.getElementById('btn-delete-exec').onclick = () => {
                 const mode = document.getElementById('sel-delete-mode').value;
                 if(mode === 'none') return;
@@ -386,17 +380,15 @@
                 });
             };
 
-            // Sync
             document.getElementById('btn-sync-cloud').onclick = () => {
                 API.saveCount(STORE.myCountData, (res) => {
                     if(res.status==='success') {
                         if(UI.showToast) UI.showToast("✅ Đã đồng bộ!");
-                        API.getCount((data) => { STORE.serverCountData = data; STORE.myCountData = data.filter(i => i.user === currentUser); renderCountTable(); });
+                        API.getCount((data) => { STORE.serverCountData = data; STORE.myCountData = data.filter(i => i.user === STORE.currentUser); renderCountTable(); });
                     }
                 });
             };
 
-            // Close
             document.getElementById('btn-inv-close').onclick = () => { 
                 if(STORE.isScannerRunning) stopScanner(); 
                 modal.style.display = 'none'; 
@@ -404,7 +396,6 @@
                 document.body.classList.remove('tgdd-body-lock'); 
             };
             
-            // Tabs
             const tabs = modal.querySelectorAll('.inv-tab');
             tabs.forEach(t => {
                 t.onclick = () => {
@@ -422,7 +413,6 @@
             document.getElementById('btn-close-scan').onclick = stopScanner;
             document.querySelectorAll('.inv-filter-select').forEach(el => el.addEventListener('change', renderSummary));
 
-            // Edit
             document.getElementById('btn-edit-close-x').onclick = () => document.getElementById('inv-edit-modal').style.display = 'none';
             document.getElementById('btn-edit-save').onclick = () => {
                 const qty = parseInt(document.getElementById('inp-edit-qty').value) || 0;
@@ -439,7 +429,6 @@
                 }
             };
 
-            // Search
             const searchInput = document.getElementById('inp-search-sku');
             const sugBox = document.getElementById('box-suggestions');
             searchInput.addEventListener('input', (e) => {
@@ -458,7 +447,7 @@
             // 10. Load Dữ Liệu Ban Đầu
             API.getStock((data) => {
                 STORE.importData = data; renderImportTable();
-                API.getCount((cData) => { STORE.serverCountData = cData; STORE.myCountData = cData.filter(i => i.user === currentUser); renderCountTable(); });
+                API.getCount((cData) => { STORE.serverCountData = cData; STORE.myCountData = cData.filter(i => i.user === STORE.currentUser); renderCountTable(); });
             });
 
         } catch (err) {
@@ -472,7 +461,7 @@
         function renderImportTable() { const tbody = document.querySelector('#tbl-import tbody'); let html = ''; STORE.importData.slice(0, 200).forEach((item, idx) => { html += `<tr><td>${idx+1}</td><td>${item.group}</td><td style="font-weight:bold;color:#d63031">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td>${item.stock}</td></tr>`; }); tbody.innerHTML = html; }
         function renderCountTable() { const tbody = document.querySelector('#tbl-counting tbody'); let html = ''; STORE.myCountData.forEach((item, idx) => { html += `<tr data-idx="${idx}"><td style="font-weight:bold;color:#d63031">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td style="font-weight:bold;font-size:14px;color:#007bff">${item.qty}</td><td><button style="cursor:pointer" onclick="document.getElementById('btn-edit-row-${idx}').click()">Sửa</button><button id="btn-edit-row-${idx}" style="display:none"></button></td></tr>`; }); tbody.innerHTML = html; STORE.myCountData.forEach((item, idx) => { document.getElementById(`btn-edit-row-${idx}`).onclick = () => { STORE.editingItem = {...item}; document.getElementById('edit-prod-name').innerText = item.name; document.getElementById('edit-prod-sku').innerText = item.sku; document.getElementById('edit-prod-status').innerText = item.status; document.getElementById('inp-edit-qty').value = item.qty; document.getElementById('inv-edit-modal').style.display = 'flex'; document.getElementById('inp-edit-qty').focus(); }; }); }
         function renderSummary() { const aggMap = {}; STORE.serverCountData.forEach(rec => { const key = `${rec.sku}|${rec.status}`; if (!aggMap[key]) aggMap[key] = { qty: 0, details: [] }; aggMap[key].qty += (parseInt(rec.qty) || 0); aggMap[key].details.push(`${rec.user}: ${rec.qty}`); }); const fGroup = document.querySelector('.inv-filter-select[data-col="group"]').value; const fName = document.querySelector('.inv-filter-select[data-col="name"]').value; const fStatus = document.querySelector('.inv-filter-select[data-col="status"]').value; const fDiff = document.querySelector('.inv-filter-select[data-col="diff"]').value; const tbody = document.querySelector('#tbl-summary tbody'); let html = ''; STORE.importData.forEach(item => { if (fGroup !== 'all' && item.group !== fGroup) return; if (fName !== 'all' && item.name !== fName) return; if (fStatus !== 'all' && item.status !== fStatus) return; const agg = aggMap[`${item.sku}|${item.status}`] || { qty: 0, details: [] }; const diff = item.stock - agg.qty; if (fDiff === 'ok' && diff !== 0) return; if (fDiff === 'fail' && diff === 0) return; if (fDiff === 'thua' && diff >= 0) return; if (fDiff === 'thieu' && diff <= 0) return; let diffText = `<span class="st-ok">0</span>`; if (diff > 0) diffText = `<span class="st-missing">Thiếu ${diff}</span>`; else if (diff < 0) diffText = `<span class="st-surplus">Thừa ${Math.abs(diff)}</span>`; const users = [...new Set(agg.details.map(d => d.split(':')[0].trim()))].join(', '); html += `<tr style="${agg.qty===0?'background:#fff5f5':''}"><td>${item.group}</td><td style="font-weight:bold;">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td>${item.stock}</td><td style="font-weight:bold;">${agg.qty}</td><td>${diffText}</td><td title="${agg.details.join('\n')}" style="font-size:10px; cursor:help;">${users}</td></tr>`; }); tbody.innerHTML = html; }
-        function addCountItem(sku) { const stockItem = STORE.importData.find(i => i.sku === sku && i.status === STORE.currentStatus); if (!stockItem) { if(UI.showToast) UI.showToast(`⚠️ Mã ${sku} (${STORE.currentStatus}) không có trong tồn kho!`); return; } let qty = 1; if (STORE.isManualInput) { const i = prompt(`SL cho ${stockItem.name}?`, "1"); if(i===null) return; qty = parseInt(i)||0; if(qty<=0) return; } const exist = STORE.myCountData.find(i => i.sku === sku && i.status === STORE.currentStatus); if (exist) { exist.qty += qty; } else { STORE.myCountData.unshift({ user: (AUTH_STATE && AUTH_STATE.userName) || "Guest", sku: stockItem.sku, name: stockItem.name, status: stockItem.status, qty: qty, group: stockItem.group }); } renderCountTable(); if(UI.showToast) UI.showToast(`Đã thêm ${qty}: ${stockItem.name}`); }
+        function addCountItem(sku) { const stockItem = STORE.importData.find(i => i.sku === sku && i.status === STORE.currentStatus); if (!stockItem) { if(UI.showToast) UI.showToast(`⚠️ Mã ${sku} (${STORE.currentStatus}) không có trong tồn kho!`); return; } let qty = 1; if (STORE.isManualInput) { const i = prompt(`SL cho ${stockItem.name}?`, "1"); if(i===null) return; qty = parseInt(i)||0; if(qty<=0) return; } const exist = STORE.myCountData.find(i => i.sku === sku && i.status === STORE.currentStatus); if (exist) { exist.qty += qty; } else { STORE.myCountData.unshift({ user: STORE.currentUser, sku: stockItem.sku, name: stockItem.name, status: stockItem.status, qty: qty, group: stockItem.group }); } renderCountTable(); if(UI.showToast) UI.showToast(`Đã thêm ${qty}: ${stockItem.name}`); }
         function startScanner() { const overlay = document.getElementById('inv-scanner-overlay'); if(STORE.isScannerRunning) return; overlay.style.display = 'flex'; STORE.isScannerRunning = true; const html5QrCode = new Html5Qrcode("inv-reader"); STORE.scannerObj = html5QrCode; html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (txt) => { if(navigator.vibrate) navigator.vibrate(200); addCountItem(txt); stopScanner(); }, () => {}).catch(err => { alert("Lỗi Camera"); stopScanner(); }); }
         function stopScanner() { const overlay = document.getElementById('inv-scanner-overlay'); if (STORE.scannerObj) { STORE.scannerObj.stop().then(() => { STORE.scannerObj.clear(); STORE.scannerObj = null; STORE.isScannerRunning = false; overlay.style.display = 'none'; }).catch(()=>{}); } else { overlay.style.display = 'none'; STORE.isScannerRunning = false; } }
     };
