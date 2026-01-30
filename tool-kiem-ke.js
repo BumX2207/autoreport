@@ -1,8 +1,8 @@
 /* 
-   MODULE: KIỂM KÊ KHO (INVENTORY) - V2.8 (AUTO LOAD & EXPORT EXCEL)
-   - Feature: Tự động tải Stock & Count khi mở.
-   - Feature: Thêm nút Xuất Excel ở Tab Tổng hợp.
-   - Core: Giữ nguyên logic Sync an toàn của V2.7.
+   MODULE: KIỂM KÊ KHO (INVENTORY) - V2.9 (FIX AUTH DELAY)
+   - Fix: Chờ xác thực User xong mới tải dữ liệu (tránh lỗi Count trống).
+   - UI: Thêm dòng hiển thị Tên NV Kiểm kê.
+   - Core: Giữ nguyên Auto Load, Auto Sync, Export Excel.
 */
 ((context) => {
     // ===============================================================
@@ -17,7 +17,6 @@
 
     const { UI, UTILS, AUTH_STATE, CONSTANTS, GM_xmlhttpRequest } = context;
 
-    // API URL Logic
     let API_URL = "";
     try { API_URL = CONSTANTS.GSHEET.CONFIG_API; } catch(e) {}
 
@@ -25,30 +24,29 @@
     const MY_CSS = `
         #tgdd-inventory-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); z-index:2147483700; justify-content:center; align-items:center; }
         
-        /* RESPONSIVE LAYOUT */
         .inv-content { background:#fff; width:98%; max-width:1100px; height:92vh; border-radius:15px; box-shadow:0 20px 60px rgba(0,0,0,0.4); display:flex; flex-direction:column; overflow:hidden; animation: popIn 0.3s; font-family: sans-serif; position: relative; }
-        @media (max-width: 768px) {
-            .inv-content { width: 100% !important; height: 100% !important; max-width: none !important; border-radius: 0 !important; }
-        }
+        @media (max-width: 768px) { .inv-content { width: 100% !important; height: 100% !important; max-width: none !important; border-radius: 0 !important; } }
 
-        /* HEADER & TABS */
         .inv-header { display:flex; background:#f8f9fa; border-bottom:1px solid #ddd; padding:0 10px; align-items:center; justify-content:space-between; height: 50px; flex-shrink: 0; }
         .inv-title { font-weight:800; font-size:16px; color:#333; display:flex; align-items:center; gap:5px; }
         .inv-close { font-size:24px; cursor:pointer; color:#999; padding:0 15px; font-weight:bold; transition: 0.2s; } .inv-close:hover { color:red; transform: scale(1.1); }
         .inv-shop-select { padding: 5px; border-radius: 5px; border: 2px solid #007bff; font-weight: bold; color: #0056b3; outline: none; font-size: 13px; max-width: 150px; margin-left: 5px; }
         .inv-loading { font-size:11px; color:#666; font-style:italic; margin-left:5px; display:none; }
 
+        /* NEW: SUB HEADER FOR USER INFO */
+        .inv-sub-header { background:#e9ecef; padding:5px 15px; font-size:12px; color:#333; border-bottom:1px solid #ddd; display:flex; align-items:center; justify-content:space-between; font-weight:bold; }
+        .inv-user-name { color:#d63031; }
+        .inv-user-name.ready { color:#007bff; }
+
         .inv-tabs { display:flex; gap:5px; height:100%; align-items:flex-end; }
         .inv-tab { padding:10px 20px; cursor:pointer; font-weight:bold; color:#666; border-bottom:3px solid transparent; transition:0.2s; font-size:13px; white-space:nowrap; }
         .inv-tab:hover { background:#eee; }
         .inv-tab.active { color:#007bff; border-bottom:3px solid #007bff; background:white; border-radius: 5px 5px 0 0; }
 
-        /* BODY */
         .inv-body { flex:1; overflow:hidden; position:relative; background:white; }
         .inv-view { display:none; height:100%; flex-direction:column; padding:15px; box-sizing:border-box; }
         .inv-view.active { display:flex; }
 
-        /* STATUS & CONTROLS */
         .inv-status-group { display:flex; flex-wrap:wrap; gap:8px; padding:10px; background:#f1f8ff; border-radius:8px; margin-bottom:15px; border:1px solid #cce5ff; }
         .inv-radio-lbl { font-size:11px; font-weight:bold; color:#0056b3; cursor:pointer; display:flex; align-items:center; gap:5px; background:white; padding:6px 12px; border-radius:15px; border:1px solid #b8daff; transition:0.2s; }
         .inv-radio-lbl:hover { background:#e2e6ea; }
@@ -67,12 +65,11 @@
         .btn-cloud-load { background:#6f42c1; }
         .btn-sync { background:#17a2b8; }
         .btn-danger { background:#dc3545; }
-        .btn-export { background:#218838; } /* Excel Green */
+        .btn-export { background:#218838; }
 
         .inv-chk-manual { font-size:12px; font-weight:bold; color:#555; display:flex; align-items:center; gap:4px; cursor:pointer; padding:0 5px; white-space: nowrap; user-select: none; }
         .inv-chk-manual input { width:16px; height:16px; accent-color:#007bff; cursor:pointer; }
 
-        /* TABLE */
         .inv-table-wrapper { flex:1; overflow:auto; border:1px solid #eee; border-radius:8px; box-shadow:inset 0 0 10px rgba(0,0,0,0.05); }
         .inv-table { width:100%; border-collapse:collapse; font-size:12px; }
         .inv-table th { background:#f1f1f1; position:sticky; top:0; z-index:10; padding:10px; text-align:left; border-bottom:2px solid #ddd; color:#444; vertical-align: top; white-space: nowrap; }
@@ -85,7 +82,6 @@
         .st-missing { color:#dc3545; font-weight:bold; }
         .st-ok { color:#007bff; font-weight:bold; }
 
-        /* EDIT MODAL */
         #inv-edit-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2147483750; justify-content:center; align-items:center; backdrop-filter:blur(2px); }
         .inv-edit-content { background:white; width:90%; max-width:400px; border-radius:12px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.3); animation: popIn 0.2s; display:flex; flex-direction:column; }
         .inv-edit-header { display:flex; justify-content:space-between; align-items:center; font-weight:bold; font-size:16px; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px; color:#333; }
@@ -99,7 +95,6 @@
         .inv-btn-fill { background:#28a745; flex:1; justify-content:center; }
         .inv-btn-save { background:#007bff; flex:1; justify-content:center; }
 
-        /* SUGGESTIONS & SCANNER */
         .inv-suggestions { position:absolute; top:100%; left:0; width:100%; background:white; border:1px solid #ddd; border-radius:0 0 8px 8px; box-shadow:0 10px 20px rgba(0,0,0,0.2); z-index:2000; max-height:300px; overflow-y:auto; display:none; }
         .inv-sug-item { padding:10px; border-bottom:1px solid #f0f0f0; cursor:pointer; font-size:12px; }
         .inv-sug-item:hover { background:#f0f8ff; color:#007bff; }
@@ -112,11 +107,11 @@
 
     // --- 2. GLOBAL STATE ---
     let STORE = {
-        importData: [], // Dữ liệu Tồn kho
-        countData: [],  // Dữ liệu Đã kiểm (Có lịch sử)
+        importData: [],
+        countData: [],
         currentStatus: "Mới",
         currentShopId: "",
-        currentUser: "Guest",
+        currentUser: "---", // Mặc định là ---
         isScannerRunning: false,
         scannerObj: null,
         editingItem: null,
@@ -142,6 +137,13 @@
             const ind = document.getElementById('inv-loading-indicator');
             if(ind) { ind.style.display = 'inline'; ind.innerText = "Đang kết nối..."; }
             
+            // CHẶN NẾU USER CHƯA LOAD (Trừ lệnh get_stock không cần user)
+            if (params.action !== 'get_stock' && (STORE.currentUser === "---" || !STORE.currentUser)) {
+                if(ind) ind.style.display = 'none';
+                if(UI.showToast) UI.showToast("❌ Lỗi: Chưa xác định được Nhân viên!");
+                return;
+            }
+
             params.shopId = STORE.currentShopId;
             params.sheet_stock = SHEET_CONFIG.STOCK;
             params.sheet_count = SHEET_CONFIG.COUNT;
@@ -195,7 +197,6 @@
 
     // --- 4. LOGIC CHÍNH ---
     const runTool = async () => {
-        if (AUTH_STATE && AUTH_STATE.userName) STORE.currentUser = AUTH_STATE.userName;
         let userConfig = {};
         if (UTILS && typeof UTILS.getPersistentConfig === 'function') userConfig = UTILS.getPersistentConfig();
 
@@ -233,6 +234,12 @@
                         <div class="inv-tab" data-tab="tab-sum">Tổng hợp</div>
                     </div>
                     <div class="inv-close" id="btn-inv-close" title="Đóng">×</div>
+                </div>
+
+                <!-- DÒNG HIỂN THỊ USER -->
+                <div class="inv-sub-header">
+                    <span>👤 NV Kiểm kê: <span id="lbl-current-user" class="inv-user-name">Đang xác thực...</span></span>
+                    <span id="lbl-status-auth" style="font-size:10px; color:#999;"></span>
                 </div>
 
                 <div class="inv-body">
@@ -293,7 +300,6 @@
                                 </select>
                                 <button class="inv-btn btn-danger" id="btn-delete-exec" style="padding:4px 10px;">Thực hiện</button>
                             </div>
-                            <!-- NÚT XUẤT EXCEL -->
                             <button class="inv-btn btn-export" id="btn-export-excel">📤 Xuất Excel</button>
                         </div>
                         <div class="inv-table-wrapper">
@@ -350,6 +356,29 @@
             await loadScript('https://unpkg.com/html5-qrcode');
         } catch (e) { }
 
+        // --- AUTH CHECK & STARTUP ---
+        const lblUser = document.getElementById('lbl-current-user');
+        
+        const waitForUserAndLoad = () => {
+            let attempt = 0;
+            const check = setInterval(() => {
+                attempt++;
+                // Kiểm tra từ AUTH_STATE (được truyền từ parent)
+                if (AUTH_STATE && AUTH_STATE.userName && AUTH_STATE.userName !== "---") {
+                    clearInterval(check);
+                    STORE.currentUser = AUTH_STATE.userName;
+                    lblUser.innerText = STORE.currentUser;
+                    lblUser.classList.add('ready');
+                    autoLoadData(); // Chỉ load khi đã có User
+                } else if (attempt > 30) { // 15 giây
+                    clearInterval(check);
+                    lblUser.innerText = "Lỗi: Không tìm thấy User!";
+                    lblUser.style.color = "red";
+                    UI.showToast("❌ Không lấy được thông tin User. Vui lòng tải lại trang!");
+                }
+            }, 500);
+        };
+
         // --- EVENTS ---
         document.getElementById('inv-shop-select').onchange = (e) => {
             STORE.currentShopId = e.target.value;
@@ -357,7 +386,7 @@
             renderImportTable(); renderCountTable(); renderSummary();
             UI.showToast(`Đã chuyển: ${STORE.currentShopId}`);
             // Re-trigger auto load sequence when shop changes
-            autoLoadData();
+            if(STORE.currentUser !== "---") autoLoadData();
         };
 
         // LOAD STOCK CLOUD
@@ -372,12 +401,14 @@
         };
 
         document.getElementById('btn-sync-cloud').onclick = () => {
+            if (STORE.currentUser === "---") { UI.showToast("⚠️ Đang xác thực User, vui lòng chờ..."); return; }
             API.saveCount(STORE.countData, (res) => {
                 if(res.status==='success' && UI.showToast) UI.showToast("✅ Đã đồng bộ lên Cloud!");
             });
         };
 
         document.getElementById('btn-delete-exec').onclick = () => {
+            if (STORE.currentUser === "---") return;
             const mode = document.getElementById('sel-delete-mode').value;
             if(mode === 'none') return;
             if(!confirm(`⚠️ Xóa dữ liệu "${mode.toUpperCase()}" của Shop "${STORE.currentShopId}"?`)) return;
@@ -393,10 +424,10 @@
         // EXPORT EXCEL EVENT
         document.getElementById('btn-export-excel').onclick = exportToExcel;
 
-        // CLOSE BUTTON: SYNC BEFORE CLOSE
+        // CLOSE BUTTON
         document.getElementById('btn-inv-close').onclick = () => {
             if(STORE.isScannerRunning) stopScanner();
-            if(STORE.countData.length > 0) {
+            if(STORE.countData.length > 0 && STORE.currentUser !== "---") {
                 if(UI.showToast) UI.showToast("☁️ Đang lưu dữ liệu...");
                 API.saveCount(STORE.countData, () => {
                     modal.style.display = 'none';
@@ -535,22 +566,25 @@
         }
 
         function autoLoadData() {
+            // Chỉ load khi có user
+            if (STORE.currentUser === "---") return;
+
             API.getStock((data) => {
                 if(data.length > 0) {
                     STORE.importData = data;
                     renderImportTable(); updateFilters();
-                    // Nếu có tồn kho, chuyển ngay sang tab kiểm kê
+                    // Chuyển sang tab kiểm kê nếu có stock
                     modal.querySelector('.inv-tab[data-tab="tab-count"]').click();
                 } else {
-                    // Nếu không có, ở lại tab nhập liệu
                     modal.querySelector('.inv-tab[data-tab="tab-input"]').click();
                 }
 
-                // Tải tiếp dữ liệu kiểm kê (sau khi đã có stock để merge)
+                // Tải tiếp dữ liệu kiểm kê
                 API.getCount((cData) => {
+                    // Lọc theo user và map về format local
                     STORE.countData = cData.filter(i => i.user === STORE.currentUser).map(i => ({
                         ...i, history: [{ts:'Server', qty:i.qty}], totalCount: i.qty,
-                        // Quan trọng: Gán luôn Stock nếu đã tải được
+                        // Gán Stock nếu có
                         stock: (STORE.importData.find(s => s.sku === i.sku && s.status === i.status) || {}).stock || 0
                     }));
                     renderCountTable();
@@ -562,14 +596,12 @@
             if (STORE.importData.length === 0 && STORE.countData.length === 0) { UI.showToast("⚠️ Không có dữ liệu để xuất!"); return; }
             
             const dataToExport = [];
-            // Merge Stock and Count Logic similar to Summary Table
             STORE.importData.forEach(item => {
                 const counted = STORE.countData.find(c => c.sku === item.sku && c.status === item.status);
                 const qty = counted ? counted.totalCount : 0;
                 const diff = item.stock - qty;
                 dataToExport.push({ "Nhóm": item.group, "Mã SP": item.sku, "Tên Sản Phẩm": item.name, "Trạng Thái": item.status, "Tồn Kho": item.stock, "Thực Tế": qty, "Lệch": diff });
             });
-            // Handle items counted but not in stock
             STORE.countData.forEach(item => {
                 const inStock = STORE.importData.find(s => s.sku === item.sku && s.status === item.status);
                 if (!inStock) {
@@ -581,7 +613,7 @@
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.json_to_sheet(dataToExport);
             XLSX.utils.book_append_sheet(wb, ws, "TongHop");
-            XLSX.writeFile(wb, `KiemKe_${STORE.currentShopId}_${Date.now()}.xlsx`);
+            XLSX.writeFile(wb, `KiemKe_${STORE.currentShopId}_${STORE.currentUser}.xlsx`);
             UI.showToast("✅ Đã xuất file Excel!");
         }
 
@@ -612,6 +644,7 @@
         function renderImportTable() { const tbody = document.querySelector('#tbl-import tbody'); let html = ''; STORE.importData.slice(0, 200).forEach((item, idx) => { html += `<tr><td>${idx+1}</td><td>${item.group}</td><td style="font-weight:bold;color:#d63031">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td>${item.stock}</td></tr>`; }); tbody.innerHTML = html; }
         
         function addCountItem(sku) {
+            if (STORE.currentUser === "---") { UI.showToast("❌ Chờ xác thực..."); return; }
             const stockItem = STORE.importData.find(i => i.sku === sku && i.status === STORE.currentStatus);
             let itemToAdd = stockItem;
             if (!stockItem) {
@@ -631,6 +664,7 @@
         }
 
         function openEditPopup(item) {
+            if (STORE.currentUser === "---") return;
             const modal = document.getElementById('inv-edit-modal'); const list = document.getElementById('edit-history-list');
             let realItem = STORE.countData.find(i => i.sku === item.sku && i.status === item.status);
             if (!realItem) { const importItem = STORE.importData.find(i => i.sku === item.sku && i.status === item.status); if(importItem) realItem = { ...importItem, history: [], totalCount: 0 }; }
@@ -678,11 +712,11 @@
 
         // --- INIT START ---
         modal.style.display = 'flex';
-        autoLoadData(); // Auto load everything on start
+        waitForUserAndLoad();
     };
 
     return {
-        name: "Kiểm kê V1.1",
+        name: "Kiểm kê V2.9 (Auto)",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z" fill="white"/></svg>`,
         bgColor: "#6c757d",
         css: MY_CSS,
