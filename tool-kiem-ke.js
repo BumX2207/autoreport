@@ -1,8 +1,9 @@
 /* 
-   MODULE: KIỂM KÊ KHO (INVENTORY) - V4.3 (FIX VAR UNDEFINED)
+   MODULE: KIỂM KÊ KHO (INVENTORY) - V4.4 (CUSTOM SHEET & SHORT NAME)
    - Fix: Lỗi "userConfig is not defined".
-   - Fix: Chuẩn hóa biến currentUser vào STORE để tránh mất scope.
-   - Core: Giữ nguyên tính năng Cloud/Multi-Shop V4.0.
+   - Fix: Chuẩn hóa biến currentUser vào STORE.
+   - Update: Lấy tên Shop rút gọn (Short Name).
+   - Update: Chỉ định rõ tên Sheet "Inventory_Stock" và "Inventory_Count".
 */
 ((context) => {
     const UI = context.UI || {};
@@ -10,6 +11,12 @@
     const AUTH_STATE = context.AUTH_STATE || {};
     const CONSTANTS = context.CONSTANTS || {};
     const GM_xmlhttpRequest = context.GM_xmlhttpRequest;
+
+    // CẤU HÌNH TÊN SHEET CỦA BẠN Ở ĐÂY
+    const SHEET_CONFIG = {
+        STOCK: "Inventory_Stock",
+        COUNT: "Inventory_Count"
+    };
 
     let API_URL = "";
     try { API_URL = CONSTANTS.GSHEET.API_URL; } catch(e) {}
@@ -23,7 +30,7 @@
         .inv-header { display:flex; background:#f8f9fa; border-bottom:1px solid #ddd; padding:0 10px; align-items:center; justify-content:space-between; height: 50px; flex-shrink: 0; }
         .inv-title { font-weight:800; font-size:16px; color:#333; display:flex; align-items:center; gap:10px; }
         .inv-close { font-size:24px; cursor:pointer; color:#999; padding:0 15px; font-weight:bold; transition: 0.2s; } .inv-close:hover { color:red; transform: scale(1.1); }
-        .inv-shop-select { padding: 5px; border-radius: 5px; border: 2px solid #007bff; font-weight: bold; color: #0056b3; outline: none; font-size: 13px; max-width: 150px; }
+        .inv-shop-select { padding: 5px; border-radius: 5px; border: 2px solid #007bff; font-weight: bold; color: #0056b3; outline: none; font-size: 13px; max-width: 200px; }
 
         .inv-tabs { display:flex; gap:5px; height:100%; align-items:flex-end; }
         .inv-tab { padding:10px 20px; cursor:pointer; font-weight:bold; color:#666; border-bottom:3px solid transparent; transition:0.2s; font-size:13px; white-space:nowrap; }
@@ -95,7 +102,7 @@
         myCountData: [],
         currentStatus: "Mới",
         currentShopId: "",
-        currentUser: "Guest", // LƯU USER VÀO ĐÂY ĐỂ DÙNG CHUNG
+        currentUser: "Guest",
         isScannerRunning: false,
         scannerObj: null,
         editingItem: null,
@@ -113,7 +120,7 @@
         });
     };
 
-    // --- API FUNCTIONS ---
+    // --- API FUNCTIONS (CÓ CẬP NHẬT SHEET NAME) ---
     const API = {
         call: (params, cb) => {
             if(!API_URL) { if(UI.showToast) UI.showToast("❌ Chưa có API URL"); return; }
@@ -121,6 +128,9 @@
             if(ind) { ind.style.display = 'inline'; ind.innerText = "Đang kết nối..."; }
             
             params.shopId = STORE.currentShopId;
+            // Gửi thêm tên Sheet lên Server để xử lý
+            params.sheet_stock = SHEET_CONFIG.STOCK;
+            params.sheet_count = SHEET_CONFIG.COUNT;
 
             GM_xmlhttpRequest({
                 method: "POST", url: API_URL, data: JSON.stringify(params),
@@ -137,8 +147,11 @@
             if(!API_URL) return;
             const ind = document.getElementById('inv-loading-indicator');
             if(ind) ind.style.display = 'inline';
+            // Thêm tham số tên Sheet vào URL
+            const url = `${API_URL}?action=get_stock&shopId=${encodeURIComponent(STORE.currentShopId)}&sheet_stock=${encodeURIComponent(SHEET_CONFIG.STOCK)}&t=${Date.now()}`;
+            
             GM_xmlhttpRequest({
-                method: "GET", url: `${API_URL}?action=get_stock&shopId=${encodeURIComponent(STORE.currentShopId)}&t=${Date.now()}`,
+                method: "GET", url: url,
                 onload: (res) => {
                     if(ind) ind.style.display = 'none';
                     if(res.status===200) try{ cb(JSON.parse(res.responseText)); } catch(e){}
@@ -150,8 +163,11 @@
             if(!API_URL) return;
             const ind = document.getElementById('inv-loading-indicator');
             if(ind) ind.style.display = 'inline';
+            // Thêm tham số tên Sheet vào URL
+            const url = `${API_URL}?action=get_count&shopId=${encodeURIComponent(STORE.currentShopId)}&sheet_count=${encodeURIComponent(SHEET_CONFIG.COUNT)}&t=${Date.now()}`;
+            
             GM_xmlhttpRequest({
-                method: "GET", url: `${API_URL}?action=get_count&shopId=${encodeURIComponent(STORE.currentShopId)}&t=${Date.now()}`,
+                method: "GET", url: url,
                 onload: (res) => {
                     if(ind) ind.style.display = 'none';
                     if(res.status===200) try{ cb(JSON.parse(res.responseText)); } catch(e){}
@@ -165,23 +181,25 @@
     // --- MAIN EXECUTOR ---
     const runTool = async () => {
         try {
-            // 1. Tự động đóng Modal Tiện Ích (Menu) nếu đang mở
+            // 1. Tự động đóng Modal Tiện Ích
             const toolsModal = document.getElementById('tgdd-tools-modal');
             if (toolsModal) toolsModal.classList.remove('show');
 
-            // 2. Định danh User (Lưu vào STORE)
+            // 2. Định danh User
             if (AUTH_STATE && AUTH_STATE.userName) STORE.currentUser = AUTH_STATE.userName;
 
-            // 3. Lấy Config Shop an toàn (CHUẨN HÓA BIẾN THÀNH userConfig)
+            // 3. Lấy Config Shop an toàn
             let userConfig = {};
             if (UTILS && typeof UTILS.getPersistentConfig === 'function') {
                 userConfig = UTILS.getPersistentConfig();
             }
 
             const shops = [];
-            if(userConfig.shop1) shops.push({id: '1', name: userConfig.shop1});
-            if(userConfig.shop2) shops.push({id: '2', name: userConfig.shop2});
-            if(userConfig.shop3) shops.push({id: '3', name: userConfig.shop3});
+            // --- CẬP NHẬT: LẤY TÊN RÚT GỌN (SHORT NAME) ---
+            // Ưu tiên shopXShort, nếu không có thì lấy shopX (tên đầy đủ)
+            if(userConfig.shop1) shops.push({id: '1', name: userConfig.shop1Short || userConfig.shop1});
+            if(userConfig.shop2) shops.push({id: '2', name: userConfig.shop2Short || userConfig.shop2});
+            if(userConfig.shop3) shops.push({id: '3', name: userConfig.shop3Short || userConfig.shop3});
             
             if(shops.length > 0) STORE.currentShopId = shops[0].name;
             else STORE.currentShopId = "SHOP_UNK";
@@ -221,7 +239,7 @@
                         <div class="inv-view active" id="tab-input">
                             <div class="inv-controls">
                                 <label class="inv-btn btn-import">📂 Excel File <input type="file" id="inp-excel-file" accept=".xlsx, .xls" style="display:none;"></label>
-                                <button class="inv-btn btn-cloud-load" id="btn-load-stock-cloud">☁️ Tải Tồn kho Cloud</button>
+                                <button class="inv-btn btn-cloud-load" id="btn-load-stock-cloud">☁️ Tải Tồn kho (${SHEET_CONFIG.STOCK})</button>
                                 <span id="lbl-file-name" style="font-size:12px; color:#666; margin-left: auto;"></span>
                             </div>
                             <div class="inv-table-wrapper">
@@ -242,7 +260,7 @@
                                 </div>
                                 <label class="inv-chk-manual"><input type="checkbox" id="chk-manual-input"> Nhập tay</label>
                                 <button class="inv-btn btn-scan" id="btn-open-scan">📷 Scan</button>
-                                <button class="inv-btn btn-sync" id="btn-sync-cloud">☁️ Đồng bộ</button>
+                                <button class="inv-btn btn-sync" id="btn-sync-cloud">☁️ Đồng bộ (${SHEET_CONFIG.COUNT})</button>
                             </div>
                             <div class="inv-table-wrapper">
                                 <table class="inv-table" id="tbl-counting">
