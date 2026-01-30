@@ -1,9 +1,8 @@
 /* 
-   MODULE: KIỂM KÊ KHO (INVENTORY) - V2.6
-   - Fix: Mất gợi ý (Do xung đột phiên bản cũ).
-   - Fix: Nút Lưu không hoạt động (Tích hợp bản vá).
-   - Fix: Focus nhầm tab.
-   - UI: Nâng cấp Z-Index bảng gợi ý.
+   MODULE: KIỂM KÊ KHO (INVENTORY) - V2.7
+   - UI: Thay nút "Hủy bỏ" bằng nút (X) góc phải modal.
+   - Logic: Nút "Nhập đủ" hoạt động cho cả Thừa (trừ) và Thiếu (cộng).
+   - Fix: Z-Index, Save logic, Mobile Fullscreen.
 */
 ((context) => {
     const { UI, UTILS } = context;
@@ -54,7 +53,7 @@
         .st-missing { color:#dc3545; font-weight:bold; }
         .st-ok { color:#007bff; font-weight:bold; }
 
-        /* CONTROLS & SEARCH */
+        /* CONTROLS */
         .inv-controls { display:flex; gap:5px; margin-bottom:15px; align-items:center; flex-wrap: nowrap; }
         .inv-input { padding:8px; border:1px solid #ccc; border-radius:6px; font-size:14px; }
         
@@ -69,28 +68,31 @@
         .inv-chk-manual { font-size:12px; font-weight:bold; color:#555; display:flex; align-items:center; gap:4px; cursor:pointer; padding:0 5px; white-space: nowrap; user-select: none; }
         .inv-chk-manual input { width:16px; height:16px; accent-color:#007bff; cursor:pointer; }
 
-        /* SUGGESTIONS - Fix Z-Index */
+        /* SUGGESTIONS */
         .inv-suggestions { position:absolute; top:100%; left:0; width:100%; background:white; border:1px solid #ddd; border-radius:0 0 8px 8px; box-shadow:0 10px 20px rgba(0,0,0,0.2); z-index:2000; max-height:300px; overflow-y:auto; display:none; }
         .inv-sug-item { padding:10px; border-bottom:1px solid #f0f0f0; cursor:pointer; font-size:12px; }
         .inv-sug-item:hover { background:#f0f8ff; color:#007bff; }
         .inv-sug-code { font-weight:bold; color:#d63031; }
 
-        /* EDIT MODAL */
+        /* EDIT MODAL - UPDATED */
         #inv-edit-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2147483650; justify-content:center; align-items:center; backdrop-filter:blur(2px); }
-        .inv-edit-content { background:white; width:90%; max-width:400px; border-radius:12px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.3); animation: popIn 0.2s; }
-        .inv-edit-header { font-weight:bold; font-size:16px; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px; color:#333; }
+        .inv-edit-content { background:white; width:90%; max-width:400px; border-radius:12px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.3); animation: popIn 0.2s; display:flex; flex-direction:column; }
+        
+        .inv-edit-header { display:flex; justify-content:space-between; align-items:center; font-weight:bold; font-size:16px; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px; color:#333; }
+        .inv-edit-close { cursor:pointer; font-size:20px; color:#999; width:30px; height:30px; display:flex; justify-content:center; align-items:center; border-radius:50%; transition:0.2s; }
+        .inv-edit-close:hover { background:#eee; color:#333; }
+
         .inv-edit-list { max-height:200px; overflow-y:auto; border:1px solid #eee; border-radius:6px; margin-bottom:15px; }
         .inv-edit-item { display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #f9f9f9; align-items:center; font-size:13px; }
         .inv-edit-input { width:60px; padding:4px; text-align:center; border:1px solid #ccc; border-radius:4px; }
-        .inv-edit-actions { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; }
+        
+        .inv-edit-actions { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top: auto; }
         .inv-btn-del-all { background:#dc3545; flex:1; justify-content:center; }
         .inv-btn-fill { background:#28a745; flex:1; justify-content:center; }
         .inv-btn-save { background:#007bff; flex:1; justify-content:center; }
 
-        /* FILTERS */
+        /* FILTERS & SCANNER */
         .inv-filter-select { padding:4px; border:1px solid #ccc; border-radius:4px; font-size:11px; width:100%; box-sizing:border-box; margin-top:4px; }
-        
-        /* SCANNER */
         #inv-scanner-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:black; z-index:200; display:none; flex-direction:column; }
         #inv-reader { width:100%; height:100%; object-fit:cover; }
         .inv-scan-close { position:absolute; top:20px; right:20px; background:white; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; z-index:201; box-shadow:0 0 10px rgba(0,0,0,0.5); }
@@ -136,8 +138,6 @@
         if(bottomNav) bottomNav.style.display = 'none';
 
         const modalId = 'tgdd-inventory-modal';
-        
-        // CLEANUP: Xóa modal cũ nếu tồn tại để đảm bảo logic mới nhất được áp dụng
         const oldModal = document.getElementById(modalId);
         if (oldModal) oldModal.remove();
 
@@ -146,7 +146,7 @@
         modal.innerHTML = `
             <div class="inv-content">
                 <div class="inv-header">
-                    <div class="inv-title">📦 KIỂM KÊ</div>
+                    <div class="inv-title">📦 KIỂM KÊ HÀNG HÓA</div>
                     <div class="inv-tabs">
                         <div class="inv-tab active" data-tab="tab-input">Nhập liệu</div>
                         <div class="inv-tab" data-tab="tab-count">Kiểm kê</div>
@@ -156,7 +156,7 @@
                 </div>
 
                 <div class="inv-body">
-                    <!-- TAB 1: NHẬP LIỆU -->
+                    <!-- TAB 1 -->
                     <div class="inv-view active" id="tab-input">
                         <div class="inv-controls">
                             <label class="inv-btn btn-import">
@@ -173,10 +173,9 @@
                         </div>
                     </div>
 
-                    <!-- TAB 2: KIỂM KÊ -->
+                    <!-- TAB 2 -->
                     <div class="inv-view" id="tab-count">
                         <div class="inv-status-group" id="inv-status-container"></div>
-
                         <div class="inv-controls">
                             <div class="inv-search-box">
                                 <input type="text" id="inp-search-sku" class="inv-input" placeholder="Nhập tên/mã..." autocomplete="off">
@@ -190,7 +189,6 @@
                                 Quét mã
                             </button>
                         </div>
-                        
                         <div class="inv-table-wrapper">
                             <table class="inv-table" id="tbl-counting">
                                 <thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>Tồn</th><th>Đã kiểm</th><th>Lệch</th></tr></thead>
@@ -203,7 +201,7 @@
                         </div>
                     </div>
 
-                    <!-- TAB 3: TỔNG HỢP -->
+                    <!-- TAB 3 -->
                     <div class="inv-view" id="tab-sum">
                         <div class="inv-table-wrapper">
                             <table class="inv-table" id="tbl-summary">
@@ -225,10 +223,14 @@
                 </div>
             </div>
 
-            <!-- EDIT POPUP -->
+            <!-- EDIT POPUP (Updated) -->
             <div id="inv-edit-modal">
                 <div class="inv-edit-content">
-                    <div class="inv-edit-header">Điều chỉnh số lượng</div>
+                    <div class="inv-edit-header">
+                        <span>Điều chỉnh số lượng</span>
+                        <span class="inv-edit-close" id="btn-edit-close-x" title="Đóng">×</span>
+                    </div>
+                    
                     <div style="font-size:13px; margin-bottom:5px;">Sản phẩm: <b id="edit-prod-name">...</b></div>
                     <div style="font-size:12px; color:#666; margin-bottom:10px;">Mã: <span id="edit-prod-sku"></span> | Trạng thái: <span id="edit-prod-status"></span></div>
                     <div style="font-size:12px; color:blue; margin-bottom:10px;">Tồn kho: <b id="edit-prod-stock">0</b> | Đã kiểm: <b id="edit-prod-count">0</b></div>
@@ -240,19 +242,18 @@
                         <button class="inv-btn inv-btn-fill" id="btn-edit-fill" style="display:none;">⚡ Nhập đủ</button>
                         <button class="inv-btn inv-btn-save" id="btn-edit-save">Lưu</button>
                     </div>
-                    <div style="text-align:center; margin-top:10px;"><a href="#" id="btn-edit-cancel" style="font-size:12px; color:#999;">Hủy bỏ</a></div>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
 
+        // --- INIT DATA & STATUS ---
         const statusList = ["Mới", "Trưng bày", "Trưng bày bỏ mẫu", "Đã sử dụng", "Lỗi (Mới)", "Lỗi (Đã sử dụng)", "Cũ thu mua", "Mới (Giảm giá)"];
         const radioContainer = document.getElementById('inv-status-container');
         statusList.forEach((st, idx) => {
-            const checked = idx === 0 ? 'checked' : '';
             radioContainer.innerHTML += `
                 <label class="inv-radio-lbl">
-                    <input type="radio" name="inv-status-radio" value="${st}" ${checked}> ${st}
+                    <input type="radio" name="inv-status-radio" value="${st}" ${idx === 0 ? 'checked' : ''}> ${st}
                 </label>`;
         });
 
@@ -261,7 +262,7 @@
             await loadScript('https://unpkg.com/html5-qrcode');
         } catch (e) { alert("Lỗi tải thư viện!"); }
 
-        // EVENTS
+        // --- EVENTS ---
         document.getElementById('btn-inv-close').onclick = () => {
             if(STORE.isScannerRunning) stopScanner();
             modal.style.display = 'none';
@@ -275,7 +276,6 @@
                 tabs.forEach(x => x.classList.remove('active')); t.classList.add('active');
                 document.querySelectorAll('.inv-view').forEach(v => v.classList.remove('active'));
                 document.getElementById(t.dataset.tab).classList.add('active');
-                // Fix focus đúng tab
                 if (t.dataset.tab === 'tab-count') setTimeout(() => document.getElementById('inp-search-sku').focus(), 100);
                 if (t.dataset.tab === 'tab-sum') renderSummary();
             };
@@ -289,10 +289,7 @@
             };
         });
 
-        document.getElementById('chk-manual-input').onchange = (e) => {
-            STORE.isManualInput = e.target.checked;
-        };
-
+        document.getElementById('chk-manual-input').onchange = (e) => STORE.isManualInput = e.target.checked;
         document.getElementById('inp-excel-file').addEventListener('change', handleFileImport, false);
 
         const searchInput = document.getElementById('inp-search-sku');
@@ -327,12 +324,13 @@
 
         document.getElementById('btn-open-scan').onclick = startScanner;
         document.getElementById('btn-close-scan').onclick = stopScanner;
-
         document.querySelectorAll('.inv-filter-select').forEach(el => el.addEventListener('change', renderSummary));
 
-        // EDIT MODAL ACTIONS
-        document.getElementById('btn-edit-cancel').onclick = () => document.getElementById('inv-edit-modal').style.display = 'none';
-        
+        // --- EDIT MODAL EVENTS (New Logic) ---
+        // 1. Close Button (X)
+        document.getElementById('btn-edit-close-x').onclick = () => document.getElementById('inv-edit-modal').style.display = 'none';
+
+        // 2. Delete Button
         document.getElementById('btn-edit-delete').onclick = () => {
             if(confirm("Xóa sản phẩm này khỏi danh sách đã kiểm?")) {
                 STORE.countData = STORE.countData.filter(i => !(i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status));
@@ -342,35 +340,44 @@
             }
         };
 
+        // 3. Fill Button (Nhập đủ - Thừa/Thiếu)
         document.getElementById('btn-edit-fill').onclick = () => {
             const item = STORE.editingItem;
-            const missing = item.stock - item.totalCount;
-            if (missing > 0) {
-                if(confirm(`Xác nhận nhập thêm ${missing} cái để đủ tồn kho?`)) {
+            // diff: số lượng cần bù vào (nếu dương là thiếu, nếu âm là thừa)
+            const diff = item.stock - item.totalCount; 
+            
+            if (diff !== 0) {
+                const actionText = diff > 0 ? "nhập thêm" : "giảm bớt";
+                const qtyAbs = Math.abs(diff);
+
+                if(confirm(`Xác nhận ${actionText} ${qtyAbs} cái để về đúng tồn kho?`)) {
                     const nowTime = new Date().toTimeString().split(' ')[0];
                     const existIdx = STORE.countData.findIndex(i => i.sku === item.sku && i.status === item.status);
+                    
                     if (existIdx === -1) {
+                        // Chưa có -> Tạo mới (Chỉ xảy ra nếu thao tác từ tab Tổng hợp với item chưa kiểm)
                         STORE.countData.unshift({
                             ...item,
-                            history: [{ ts: nowTime, qty: missing }],
-                            totalCount: missing,
-                            counted: missing 
+                            history: [{ ts: nowTime, qty: diff }], // diff có thể âm
+                            totalCount: diff,
+                            counted: diff
                         });
                     } else {
+                        // Đã có -> Thêm vào lịch sử
                         const realItem = STORE.countData[existIdx];
-                        realItem.history.unshift({ ts: nowTime, qty: missing });
-                        realItem.totalCount += missing;
+                        realItem.history.unshift({ ts: nowTime, qty: diff });
+                        realItem.totalCount += diff; // Cộng số âm = Trừ
                     }
                     
                     document.getElementById('inv-edit-modal').style.display = 'none';
                     renderCountTable();
                     renderSummary();
-                    UI.showToast("Đã nhập đủ!");
+                    UI.showToast("Đã cập nhật số lượng!");
                 }
             }
         };
 
-        // --- FIXED SAVE BUTTON ---
+        // 4. Save Button
         document.getElementById('btn-edit-save').onclick = () => {
             const inputs = document.querySelectorAll('.inv-history-qty');
             let newHistory = [];
@@ -379,7 +386,8 @@
 
             inputs.forEach((inp, idx) => {
                 const val = parseInt(inp.value) || 0;
-                if (val > 0) {
+                // Chấp nhận số âm nếu người dùng tự nhập tay để trừ tồn
+                if (val !== 0) {
                     let currentTs = nowTime;
                     if (STORE.editingItem.history && STORE.editingItem.history[idx]) {
                         currentTs = STORE.editingItem.history[idx].ts;
@@ -413,7 +421,7 @@
             UI.showToast("Đã lưu!");
         };
 
-        // --- FUNCTIONS ---
+        // --- HELPER FUNCTIONS ---
         function normalizeStatus(raw) {
             if (!raw) return "";
             const cleanRaw = String(raw).trim();
@@ -522,9 +530,14 @@
             document.getElementById('edit-prod-count').innerText = realItem.totalCount;
 
             const btnFill = document.getElementById('btn-edit-fill');
-            if (realItem.totalCount < realItem.stock) {
+            const diff = realItem.stock - realItem.totalCount;
+
+            if (diff !== 0) {
                 btnFill.style.display = 'flex';
-                btnFill.innerText = `⚡ Nhập đủ (+${realItem.stock - realItem.totalCount})`;
+                // Nếu diff > 0 (Thiếu) -> Hiện dấu +
+                // Nếu diff < 0 (Thừa) -> Hiện dấu - (diff bản thân nó đã âm)
+                const sign = diff > 0 ? '+' : ''; 
+                btnFill.innerText = `⚡ Nhập đủ (${sign}${diff})`;
             } else {
                 btnFill.style.display = 'none';
             }
@@ -537,14 +550,14 @@
                     html += `
                         <div class="inv-edit-item">
                             <span>Lần nhập lúc ${h.ts}</span>
-                            <input type="number" class="inv-edit-input inv-history-qty" value="${h.qty}" min="0">
+                            <input type="number" class="inv-edit-input inv-history-qty" value="${h.qty}">
                         </div>`;
                 });
             }
-            // Dòng nhập mới luôn hiển thị
+            // Dòng nhập mới
             html += `<div class="inv-edit-item" style="background:#e3f2fd">
                         <span style="font-weight:bold; color:#007bff">Nhập mới:</span>
-                        <input type="number" class="inv-edit-input inv-history-qty" value="" placeholder="SL" min="1">
+                        <input type="number" class="inv-edit-input inv-history-qty" value="" placeholder="SL">
                      </div>`;
 
             list.innerHTML = html;
@@ -654,7 +667,7 @@
     };
 
     return {
-        name: "Kiểm kê V1",
+        name: "Kiểm kê V1.0",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z" fill="white"/></svg>`,
         bgColor: "#6c757d",
         css: MY_CSS,
