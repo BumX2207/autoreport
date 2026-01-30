@@ -1,8 +1,9 @@
 /* 
-   MODULE: KIỂM KÊ KHO (INVENTORY) - V2.3
-   - UI: Tối ưu layout Mobile cho ô tìm kiếm & nhập tay.
-   - UI: Đổi tên cột & Logic tính chênh lệch (Dương=Thiếu, Âm=Thừa).
-   - Fix: Bỏ viền đỏ checkbox.
+   MODULE: KIỂM KÊ KHO (INVENTORY) - V2.4
+   - UI: Mobile Fullscreen Modal.
+   - UI: Table Headers aligned top (thẳng hàng tiêu đề).
+   - UI: Nút Scan icon mã vạch + text.
+   - Logic: Filter Tên sản phẩm sort A-Z.
 */
 ((context) => {
     const { UI, UTILS } = context;
@@ -10,8 +11,15 @@
     // --- 1. CSS ---
     const MY_CSS = `
         #tgdd-inventory-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); z-index:2147483646; justify-content:center; align-items:center; }
+        
+        /* DEFAULT DESKTOP */
         .inv-content { background:#fff; width:98%; max-width:1100px; height:92vh; border-radius:15px; box-shadow:0 20px 60px rgba(0,0,0,0.4); display:flex; flex-direction:column; overflow:hidden; animation: popIn 0.3s; font-family: sans-serif; position: relative; }
         
+        /* MOBILE FULLSCREEN */
+        @media (max-width: 768px) {
+            .inv-content { width: 100% !important; height: 100% !important; max-width: none !important; border-radius: 0 !important; }
+        }
+
         /* HEADER & TABS */
         .inv-header { display:flex; background:#f8f9fa; border-bottom:1px solid #ddd; padding:0 10px; align-items:center; justify-content:space-between; height: 50px; flex-shrink: 0; }
         .inv-title { font-weight:800; font-size:16px; color:#333; display:flex; align-items:center; gap:5px; }
@@ -37,25 +45,25 @@
         /* TABLE STYLES */
         .inv-table-wrapper { flex:1; overflow:auto; border:1px solid #eee; border-radius:8px; box-shadow:inset 0 0 10px rgba(0,0,0,0.05); }
         .inv-table { width:100%; border-collapse:collapse; font-size:12px; }
-        .inv-table th { background:#f1f1f1; position:sticky; top:0; z-index:10; padding:10px; text-align:left; border-bottom:2px solid #ddd; color:#444; vertical-align: bottom; white-space: nowrap; }
+        
+        /* Updated: vertical-align: top để các tiêu đề thẳng hàng phía trên */
+        .inv-table th { background:#f1f1f1; position:sticky; top:0; z-index:10; padding:10px; text-align:left; border-bottom:2px solid #ddd; color:#444; vertical-align: top; white-space: nowrap; }
         .inv-table td { padding:8px 10px; border-bottom:1px solid #eee; color:#333; }
         .inv-table tr:hover { background:#f9f9f9; cursor: pointer; }
         .inv-table tr.highlight { background:#fff9c4; animation: highlightFade 2s forwards; }
         @keyframes highlightFade { from {background:#fff9c4;} to {background:transparent;} }
 
         /* STATUS COLORS */
-        .st-thua { color:#dc3545; font-weight:bold; } /* Thừa (Âm) -> Đỏ? Hay Xanh? Tùy quy ước, ở đây Thừa thường là cảnh báo hoặc tốt tùy ngữ cảnh. Để màu Đỏ/Cam cho nổi bật sự chênh lệch */
-        .st-thieu { color:#d63031; font-weight:bold; } /* Thiếu (Dương) -> Đỏ */
-        /* Theo yêu cầu cũ: Thừa=Xanh lá, Thiếu=Đỏ. Giữ nguyên màu sắc, chỉ đổi logic số */
-        .st-surplus { color:#28a745; font-weight:bold; } /* Thừa */
-        .st-missing { color:#dc3545; font-weight:bold; } /* Thiếu */
+        .st-thua { color:#dc3545; font-weight:bold; }
+        .st-thieu { color:#d63031; font-weight:bold; }
+        .st-surplus { color:#28a745; font-weight:bold; }
+        .st-missing { color:#dc3545; font-weight:bold; }
         .st-ok { color:#007bff; font-weight:bold; }
 
-        /* INPUTS & CONTROLS - MOBILE OPTIMIZED */
+        /* INPUTS & CONTROLS */
         .inv-controls { display:flex; gap:5px; margin-bottom:15px; align-items:center; flex-wrap: nowrap; }
         .inv-input { padding:8px; border:1px solid #ccc; border-radius:6px; font-size:14px; }
         
-        /* Search Box co giãn */
         .inv-search-box { position:relative; flex: 1; min-width: 0; } 
         #inp-search-sku { width: 100%; box-sizing: border-box; }
 
@@ -64,7 +72,6 @@
         .btn-import { background:#28a745; }
         .btn-scan { background:#343a40; }
         
-        /* MANUAL INPUT CHECKBOX - NEW STYLE */
         .inv-chk-manual { 
             font-size:12px; font-weight:bold; color:#555; 
             display:flex; align-items:center; gap:4px; cursor:pointer; 
@@ -91,7 +98,7 @@
         .inv-btn-save { background:#007bff; flex:1; justify-content:center; }
 
         /* FILTERS */
-        .inv-filter-select { padding:4px; border:1px solid #ccc; border-radius:4px; font-size:11px; width:100%; box-sizing:border-box; margin-top:2px; }
+        .inv-filter-select { padding:4px; border:1px solid #ccc; border-radius:4px; font-size:11px; width:100%; box-sizing:border-box; margin-top:4px; }
         
         /* SCANNER OVERLAY */
         #inv-scanner-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:black; z-index:200; display:none; flex-direction:column; }
@@ -135,7 +142,6 @@
 
     // --- 3. MAIN LOGIC ---
     const runTool = async () => {
-        // Hide Bottom Nav
         const bottomNav = document.getElementById('tgdd-bottom-nav');
         if(bottomNav) bottomNav.style.display = 'none';
 
@@ -187,7 +193,11 @@
                                 <label class="inv-chk-manual">
                                     <input type="checkbox" id="chk-manual-input"> Nhập tay
                                 </label>
-                                <button class="inv-btn btn-scan" id="btn-open-scan">📷</button>
+                                <!-- Updated Scan Button: Icon Barcode + Text -->
+                                <button class="inv-btn btn-scan" id="btn-open-scan">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H5V20H3V4ZM7 4H8V20H7V4ZM10 4H12V20H10V4ZM14 4H15V20H14V4ZM17 4H19V20H17V4ZM21 4H22V20H21V4Z"/></svg>
+                                    Quét mã
+                                </button>
                             </div>
                             
                             <div class="inv-table-wrapper">
@@ -251,7 +261,6 @@
             `;
             document.body.appendChild(modal);
 
-            // RENDER RADIO STATUS
             const statusList = ["Mới", "Trưng bày", "Trưng bày bỏ mẫu", "Đã sử dụng", "Lỗi (Mới)", "Lỗi (Đã sử dụng)", "Cũ thu mua", "Mới (Giảm giá)"];
             const radioContainer = document.getElementById('inv-status-container');
             statusList.forEach((st, idx) => {
@@ -345,7 +354,6 @@
                 }
             };
 
-            // NÚT NHẬP ĐỦ
             document.getElementById('btn-edit-fill').onclick = () => {
                 const item = STORE.editingItem;
                 const missing = item.stock - item.totalCount;
@@ -453,13 +461,13 @@
         }
 
         function updateFilters() {
-            // Helper: Lấy danh sách duy nhất (chưa có 'all')
+            // Helper: Lấy danh sách duy nhất
             const getUnique = (key) => [...new Set(STORE.importData.map(i => i[key]))].filter(Boolean);
             
             // Helper: Render select, luôn chèn 'all' vào đầu tiên
             const fillSelect = (col, vals) => {
                 const sel = document.querySelector(`.inv-filter-select[data-col="${col}"]`);
-                const options = ['all', ...vals]; // Chèn 'all' lên đầu danh sách đã sort
+                const options = ['all', ...vals]; 
                 if(sel) sel.innerHTML = options.map(v => `<option value="${v}">${v === 'all' ? 'Tất cả' : v}</option>`).join('');
             };
 
@@ -570,9 +578,6 @@
             const tbody = document.querySelector('#tbl-counting tbody');
             let html = '';
             STORE.countData.forEach((item, idx) => {
-                // LOGIC CHÊNH LỆCH MỚI: Tồn - Kiểm
-                // > 0 -> Thiếu
-                // < 0 -> Thừa
                 const diff = item.stock - item.totalCount;
                 let diffText = `<span class="st-ok">Đủ</span>`;
                 if (diff > 0) diffText = `<span class="st-missing">Thiếu ${diff}</span>`;
@@ -611,17 +616,15 @@
                 const countedItem = STORE.countData.find(c => c.sku === item.sku && c.status === item.status);
                 const countedVal = countedItem ? countedItem.totalCount : 0;
                 
-                // LOGIC CHÊNH LỆCH MỚI
                 const diff = item.stock - countedVal;
 
                 if (fCount === 'checked' && countedVal === 0) return;
                 if (fCount === 'unchecked' && countedVal > 0) return;
                 
-                // Logic Filter Lệch
                 if (fDiff === 'ok' && diff !== 0) return;
                 if (fDiff === 'fail' && diff === 0) return;
-                if (fDiff === 'thua' && diff >= 0) return; // Thừa là Âm -> diff < 0
-                if (fDiff === 'thieu' && diff <= 0) return; // Thiếu là Dương -> diff > 0
+                if (fDiff === 'thua' && diff >= 0) return; 
+                if (fDiff === 'thieu' && diff <= 0) return; 
 
                 let diffText = `<span class="st-ok">0</span>`;
                 if (diff > 0) diffText = `<span class="st-missing">Thiếu ${diff}</span>`;
