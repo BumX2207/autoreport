@@ -1,8 +1,6 @@
 /* 
-   MODULE: KIỂM KÊ KHO (INVENTORY) - V3.4 (TOAST NOTIFICATIONS)
-   - Loại bỏ loading indicator trên header.
-   - Thay thế bằng Toast Notification cho mọi thao tác Cloud.
-   - Cập nhật phản hồi UI mượt mà hơn.
+   MODULE: KIỂM KÊ KHO (INVENTORY) - V3.5 (FIX UI TOAST)
+   - Fix lỗi Toast thông báo bị Modal che khuất (z-index).
 */
 ((context) => {
     // ===============================================================
@@ -22,8 +20,12 @@
 
     // --- 1. CSS ---
     const MY_CSS = `
+        /* MODAL Z-INDEX: 2147483700 */
         #tgdd-inventory-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); z-index:2147483700; justify-content:center; align-items:center; }
         
+        /* FIX TOAST Z-INDEX: Phải cao hơn Modal (2147483700) */
+        #tgdd-toast-notification { z-index: 2147483705 !important; }
+
         .inv-content { background:#fff; width:98%; max-width:1100px; height:92vh; border-radius:15px; box-shadow:0 20px 60px rgba(0,0,0,0.4); display:flex; flex-direction:column; overflow:hidden; animation: popIn 0.3s; font-family: sans-serif; position: relative; }
         @media (max-width: 768px) { .inv-content { width: 100% !important; height: 100% !important; max-width: none !important; border-radius: 0 !important; } }
 
@@ -147,9 +149,8 @@
         });
     };
 
-    // --- 3. API MODULE (UPDATED WITH TOASTS) ---
+    // --- 3. API MODULE ---
     const API = {
-        // Hàm gọi chung (POST)
         call: (params, cb) => {
             if(!API_URL) { if(UI.showToast) UI.showToast("❌ Chưa có API URL."); return; }
             
@@ -176,7 +177,6 @@
             });
         },
         
-        // GET Request (Stock)
         getStock: (cb) => { 
             if(!API_URL) return;
             if(UI.showToast) UI.showToast("⏳ Đang tải Tồn kho từ Cloud...");
@@ -196,7 +196,6 @@
             API.call({action: 'save_stock', data: data, loadingMsg: "☁️ Đang lưu Tồn kho lên Cloud..."}, cb); 
         },
         
-        // GET Request (Count)
         getCount: (cb) => { 
             if(!API_URL) return;
             if(UI.showToast) UI.showToast("⏳ Đang tải dữ liệu Kiểm kê...");
@@ -226,12 +225,7 @@
             let msg = "⏳ Đang xóa dữ liệu...";
             if(mode === 'count') msg = "⏳ Đang xóa dữ liệu Kiểm kê cũ...";
             else if(mode === 'stock') msg = "⏳ Đang xóa dữ liệu Tồn kho...";
-            
-            API.call({
-                action: 'delete_data', 
-                mode: mode,
-                loadingMsg: msg
-            }, cb); 
+            API.call({action: 'delete_data', mode: mode, loadingMsg: msg}, cb); 
         }
     };
 
@@ -263,7 +257,6 @@
         modal.innerHTML = `
             <div class="inv-content">
                 <div class="inv-header">
-                    <!-- Đã bỏ Loading Indicator ở đây -->
                     <div class="inv-title">📦Kiểm kê</div>
                     <div class="inv-tabs">
                         <div class="inv-tab active" data-tab="tab-input">Nhập liệu</div>
@@ -373,7 +366,6 @@
         document.getElementById('btn-start-new').onclick = () => {
             if(confirm("Bạn có muốn XÓA DỮ LIỆU CŨ trên Cloud để bắt đầu đợt kiểm kê mới không?")) {
                 overlay.style.display = 'none'; 
-                // Toast đã được thêm trong API.deleteData
                 API.deleteData('count', (res) => {
                     if(res.status === 'success') { 
                         if(UI.showToast) UI.showToast("✅ Đã xóa dữ liệu cũ. Sẵn sàng kiểm kê mới!"); 
@@ -385,30 +377,9 @@
         };
 
         document.getElementById('inv-shop-select').onchange = (e) => { STORE.currentShopId = e.target.value; STORE.importData = []; STORE.countData = []; renderImportTable(); renderCountTable(); renderSummary(); UI.showToast(`Đã chuyển: ${STORE.currentShopId}`); overlay.style.display = 'flex'; };
-        document.getElementById('btn-load-stock-cloud').onclick = () => { 
-            API.getStock((data) => { 
-                STORE.importData = data; renderImportTable(); updateFilters(); syncStockToCountData(); renderCountTable(); renderSummary(); 
-                if(UI.showToast) UI.showToast(`✅ Đã tải ${data.length} dòng từ Cloud!`); 
-            }); 
-        };
-        document.getElementById('btn-sync-cloud').onclick = () => { 
-            if (STORE.currentUser === "---") { UI.showToast("⚠️ Đang xác thực User..."); return; } 
-            API.saveCount(STORE.countData, (res) => { if(res.status==='success' && UI.showToast) UI.showToast("✅ Đã đồng bộ lên Cloud!"); }); 
-        };
-        document.getElementById('btn-delete-exec').onclick = () => { 
-            if (STORE.currentUser === "---") return; 
-            const mode = document.getElementById('sel-delete-mode').value; 
-            if(mode === 'none') return; 
-            if(!confirm(`⚠️ Xác nhận xóa dữ liệu?`)) return; 
-            
-            API.deleteData(mode, (res) => { 
-                if(res.status === 'success') { 
-                    if(UI.showToast) UI.showToast("✅ " + res.msg); 
-                    if(mode === 'stock' || mode === 'all') { STORE.importData = []; renderImportTable(); } 
-                    if(mode === 'count' || mode === 'all') { STORE.countData = []; renderCountTable(); renderSummary(); } 
-                } 
-            }); 
-        };
+        document.getElementById('btn-load-stock-cloud').onclick = () => { API.getStock((data) => { STORE.importData = data; renderImportTable(); updateFilters(); syncStockToCountData(); renderCountTable(); renderSummary(); if(UI.showToast) UI.showToast(`✅ Đã tải ${data.length} dòng Tồn kho!`); }); };
+        document.getElementById('btn-sync-cloud').onclick = () => { if (STORE.currentUser === "---") { UI.showToast("⚠️ Đang xác thực User..."); return; } API.saveCount(STORE.countData, (res) => { if(res.status==='success' && UI.showToast) UI.showToast("✅ Đã đồng bộ lên Cloud!"); }); };
+        document.getElementById('btn-delete-exec').onclick = () => { if (STORE.currentUser === "---") return; const mode = document.getElementById('sel-delete-mode').value; if(mode === 'none') return; if(!confirm(`⚠️ Xác nhận xóa dữ liệu?`)) return; API.deleteData(mode, (res) => { if(res.status === 'success') { if(UI.showToast) UI.showToast("✅ " + res.msg); if(mode === 'stock' || mode === 'all') { STORE.importData = []; renderImportTable(); } if(mode === 'count' || mode === 'all') { STORE.countData = []; renderCountTable(); renderSummary(); } } }); };
         document.getElementById('btn-export-excel').onclick = exportToExcel;
         document.getElementById('btn-inv-close').onclick = () => { if(STORE.isScannerRunning) stopScanner(); if(STORE.countData.length > 0 && STORE.currentUser !== "---") { API.saveCount(STORE.countData, () => { modal.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; document.body.classList.remove('tgdd-body-lock'); }); } else { modal.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; document.body.classList.remove('tgdd-body-lock'); } };
 
@@ -554,13 +525,20 @@
         function startScanner() { const overlay = document.getElementById('inv-scanner-overlay'); if(STORE.isScannerRunning) return; overlay.style.display = 'flex'; STORE.isScannerRunning = true; const html5QrCode = new Html5Qrcode("inv-reader"); STORE.scannerObj = html5QrCode; html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (txt) => { if(navigator.vibrate) navigator.vibrate(200); addCountItem(txt); stopScanner(); }, () => {}).catch(err => { alert("Lỗi Camera: " + err); stopScanner(); }); }
         function stopScanner() { const overlay = document.getElementById('inv-scanner-overlay'); if (STORE.scannerObj) { STORE.scannerObj.stop().then(() => { STORE.scannerObj.clear(); STORE.scannerObj = null; STORE.isScannerRunning = false; overlay.style.display = 'none'; }).catch(() => {}); } else { overlay.style.display = 'none'; STORE.isScannerRunning = false; } }
 
+        // --- FIX Z-INDEX TOAST (ENSURE IT IS ON TOP) ---
+        const toastEl = document.getElementById('tgdd-toast-notification');
+        if (toastEl) {
+            toastEl.style.zIndex = '2147483705'; 
+            document.body.appendChild(toastEl); // Đưa xuống cuối body để chắc chắn
+        }
+
         // --- INIT START ---
         modal.style.display = 'flex';
         waitForUserAndLoad();
     };
 
     return {
-        name: "Kiểm kê V1",
+        name: "Kiểm kê V1.0",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z" fill="white"/></svg>`,
         bgColor: "#6c757d",
         css: MY_CSS,
