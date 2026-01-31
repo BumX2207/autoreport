@@ -1,19 +1,20 @@
 /* 
-   MODULE: NHẮC VIỆC (V3 - FIX Z-INDEX)
+   MODULE: NHẮC VIỆC (V4 - AUTO SYNC CLOUD)
    - Toast luôn nổi trên cùng.
+   - Tự động tải dữ liệu từ Cloud khi mở.
    - Giao diện tối ưu.
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE, GM_xmlhttpRequest } = context;
 
     const MY_CSS = `
-        /* Z-INDEX: 2147483646 (Thấp hơn Bottom Nav 1 đơn vị để tránh xung đột, nhưng cao hơn Tool Grid) */
+        /* Z-INDEX: 2147483646 */
         #tgdd-reminder-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(3px); z-index:2147483646; justify-content:center; align-items:center; }
         
         .rm-content { background:white; width:95%; max-width:450px; border-radius:15px; padding:20px; box-shadow:0 10px 40px rgba(0,0,0,0.3); animation: popIn 0.3s; font-family: sans-serif; display:flex; flex-direction:column; max-height:90vh; position: relative; }
         
         /* Header & Close Button */
-        .rm-header { font-size:18px; font-weight:bold; margin-bottom:10px; text-align:center; color:#ff9800; border-bottom:2px solid #eee; padding-bottom:10px; flex-shrink:0; }
+        .rm-header { font-size:18px; font-weight:bold; margin-bottom:10px; text-align:center; color:#ff9800; border-bottom:2px solid #eee; padding-bottom:10px; flex-shrink:0; display:flex; justify-content:center; align-items:center; gap: 8px; }
         .rm-btn-close { position:absolute; top:15px; right:15px; background:none; border:none; font-size:24px; color:#999; cursor:pointer; line-height:1; z-index:10; transition:color 0.2s; }
         .rm-btn-close:hover { color:#333; }
 
@@ -57,6 +58,10 @@
         .rm-btn-update { background:#ff9800; }
         .rm-btn-save { background:#2196f3; margin-top:10px; }
         .rm-btn:active { transform:scale(0.98); }
+        
+        /* Sync Loading Animation */
+        .rm-sync-spin { animation: spin 1s linear infinite; display: inline-block; font-size: 14px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     `;
 
     const runTool = () => {
@@ -66,7 +71,9 @@
         let currentTasks = [];
         let editingId = null;
         const userCfg = UTILS.getPersistentConfig();
+        const currentUser = AUTH_STATE.userName;
         
+        // 1. Load Local Data First (Instant UI)
         if (userCfg.reminderTask) {
             currentTasks = Array.isArray(userCfg.reminderTask) ? userCfg.reminderTask : [userCfg.reminderTask];
             currentTasks.forEach(t => { if(!t.id) t.id = Date.now() + Math.random(); });
@@ -168,6 +175,57 @@
             renderList();
         };
 
+        // --- NEW: FUNCTION TO SYNC FROM CLOUD ---
+        const syncFromCloud = () => {
+            if (!currentUser || currentUser === "---") return;
+            
+            const statusEl = document.getElementById('rm-sync-status');
+            if(statusEl) statusEl.innerHTML = '<span class="rm-sync-spin">⏳</span>'; // Icon loading
+
+            UI.showToast("⏳ Đang tải dữ liệu từ Cloud...");
+
+            GM_xmlhttpRequest({
+                method: "GET",
+                // Giả định API GET hỗ trợ params: ?user=...&type=reminder
+                url: `${CONSTANTS.GSHEET.CONFIG_API}?type=reminder&user=${encodeURIComponent(currentUser)}`,
+                onload: (res) => {
+                    try {
+                        const response = JSON.parse(res.responseText);
+                        let cloudData = null;
+
+                        // Xử lý các dạng trả về có thể của API
+                        if (response.status === 'success' && response.data) cloudData = response.data;
+                        else if (response.config) cloudData = response.config;
+                        else if (Array.isArray(response)) cloudData = response;
+
+                        if (Array.isArray(cloudData)) {
+                            // Cập nhật biến local
+                            currentTasks = cloudData;
+                            currentTasks.forEach(t => { if(!t.id) t.id = Date.now() + Math.random(); });
+                            
+                            // Lưu đè vào Config Local để lần sau mở nhanh hơn
+                            userCfg.reminderTask = currentTasks;
+                            UTILS.savePersistentConfig(userCfg);
+
+                            renderList();
+                            if(statusEl) statusEl.innerHTML = '✅';
+                            UI.showToast("✅ Đã đồng bộ dữ liệu mới nhất!");
+                        } else {
+                             if(statusEl) statusEl.innerHTML = '';
+                             // Không có dữ liệu cloud hoặc lỗi format, giữ nguyên local
+                        }
+                    } catch (e) {
+                        console.error("Sync parse error", e);
+                        if(statusEl) statusEl.innerHTML = '⚠️';
+                    }
+                },
+                onerror: () => {
+                    if(statusEl) statusEl.innerHTML = '❌';
+                    UI.showToast("Lỗi kết nối khi tải dữ liệu!");
+                }
+            });
+        };
+
         if (!modal) {
             modal = document.createElement('div');
             modal.id = modalId;
@@ -183,7 +241,8 @@
             modal.innerHTML = `
                 <div class="rm-content">
                     <button class="rm-btn-close" id="btn-rm-close" title="Đóng">×</button>
-                    <div class="rm-header">🔔 QUẢN LÝ NHẮC VIỆC</div>
+                    <!-- Thêm span status để hiển thị icon sync -->
+                    <div class="rm-header">🔔 QUẢN LÝ NHẮC VIỆC <span id="rm-sync-status" style="font-size:14px; margin-left:5px;"></span></div>
                     <div id="rm-task-list" class="rm-list-container"></div>
                     <div class="rm-form">
                         <div class="rm-row">
@@ -245,18 +304,15 @@
                 if (editingId) {
                     const idx = currentTasks.findIndex(t => t.id === editingId);
                     if(idx !== -1) currentTasks[idx] = taskObj;
-                    // FIX TOAST Ở ĐÂY:
                     UI.showToast("Đã cập nhật!");
                 } else {
                     currentTasks.push(taskObj);
-                    // FIX TOAST Ở ĐÂY:
                     UI.showToast("Đã thêm vào danh sách!");
                 }
                 resetForm();
             };
 
             document.getElementById('btn-rm-save-cloud').onclick = () => {
-                const currentUser = AUTH_STATE.userName;
                 if (!currentUser || currentUser === "---") return alert("Chưa có User!");
 
                 const btn = document.getElementById('btn-rm-save-cloud');
@@ -273,7 +329,6 @@
                         try {
                             const response = JSON.parse(res.responseText);
                             if (response.status === 'success') {
-                                // FIX TOAST Ở ĐÂY:
                                 UI.showToast("✅ Lưu thành công!");
                                 userCfg.reminderTask = currentTasks;
                                 UTILS.savePersistentConfig(userCfg);
@@ -287,16 +342,17 @@
         }
 
         resetForm();
+        renderList(); // Render local data first
         
-        // --- KEY FIX: Ép Toast nổi lên trên ---
-        // Mỗi khi mở modal, ta tìm phần tử Toast trong DOM và đưa nó xuống cuối body.
-        // Điều này đảm bảo Toast (dù z-index bằng nhau hay thấp hơn chút) sẽ được vẽ sau Modal -> Nằm trên.
+        // --- FIX Z-INDEX TOAST ---
         const toastEl = document.getElementById('tgdd-toast-notification');
-        if (toastEl) {
-            document.body.appendChild(toastEl);
-        }
+        if (toastEl) document.body.appendChild(toastEl);
 
         modal.style.display = 'flex';
+
+        // --- TRIGGER SYNC ---
+        // Gọi hàm sync ngay sau khi mở modal
+        setTimeout(syncFromCloud, 100);
     };
 
     return {
