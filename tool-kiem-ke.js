@@ -1,9 +1,8 @@
 /* 
-   MODULE: KIỂM KÊ KHO (INVENTORY) - V3.3 (UI POLISH)
-   - UI Tab 1: Layout lại Header & Nút nhập liệu.
-   - UI Tab 2: Icon Barcode, Trạng thái dạng trượt ngang (Mobile friendly).
-   - UI Tab 3: Tinh chỉnh text Droplist & Nút xóa.
-   - Core: Giữ nguyên logic V3.2.
+   MODULE: KIỂM KÊ KHO (INVENTORY) - V3.4 (TOAST NOTIFICATIONS)
+   - Loại bỏ loading indicator trên header.
+   - Thay thế bằng Toast Notification cho mọi thao tác Cloud.
+   - Cập nhật phản hồi UI mượt mà hơn.
 */
 ((context) => {
     // ===============================================================
@@ -32,8 +31,7 @@
         .inv-header { display:flex; background:#f8f9fa; border-bottom:1px solid #ddd; padding:0 10px; align-items:center; justify-content:space-between; height: 50px; flex-shrink: 0; }
         .inv-title { font-weight:800; font-size:16px; color:#333; display:flex; align-items:center; gap:5px; }
         .inv-close { font-size:24px; cursor:pointer; color:#999; padding:0 15px; font-weight:bold; transition: 0.2s; } .inv-close:hover { color:red; transform: scale(1.1); }
-        .inv-loading { font-size:11px; color:#666; font-style:italic; margin-left:5px; display:none; }
-
+        
         /* SUB HEADER (SHOP SELECT & USER) */
         .inv-sub-header { background:#e9ecef; padding:8px 15px; font-size:12px; color:#333; border-bottom:1px solid #ddd; display:flex; align-items:center; flex-wrap: wrap; gap: 10px; }
         .inv-shop-select { padding: 4px; border-radius: 4px; border: 1px solid #007bff; font-weight: bold; color: #0056b3; outline: none; font-size: 12px; max-width: 110px; }
@@ -51,7 +49,7 @@
 
         /* STATUS GROUP - SCROLLABLE MOBILE STYLE */
         .inv-status-group { display:flex; gap:8px; padding:10px 5px; background:#fff; border-bottom:1px solid #eee; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
-        .inv-status-group::-webkit-scrollbar { display: none; } /* Hide scrollbar */
+        .inv-status-group::-webkit-scrollbar { display: none; } 
         .inv-radio-lbl { flex: 0 0 auto; font-size:12px; font-weight:bold; color:#555; cursor:pointer; display:flex; align-items:center; gap:5px; background:#f1f3f5; padding:6px 12px; border-radius:20px; border:1px solid #ddd; transition:0.2s; }
         .inv-radio-lbl:hover { background:#e2e6ea; }
         .inv-radio-lbl:has(input:checked) { background:#007bff; color:white; border-color:#0056b3; box-shadow:0 2px 5px rgba(0,123,255,0.3); }
@@ -149,15 +147,16 @@
         });
     };
 
-    // --- 3. API MODULE ---
+    // --- 3. API MODULE (UPDATED WITH TOASTS) ---
     const API = {
+        // Hàm gọi chung (POST)
         call: (params, cb) => {
             if(!API_URL) { if(UI.showToast) UI.showToast("❌ Chưa có API URL."); return; }
-            const ind = document.getElementById('inv-loading-indicator');
-            if(ind) { ind.style.display = 'inline'; ind.innerText = "Đang kết nối..."; }
             
+            // Hiện Toast Loading
+            if(UI.showToast) UI.showToast(params.loadingMsg || "⏳ Đang kết nối Server...");
+
             if (params.action !== 'get_stock' && (STORE.currentUser === "---" || !STORE.currentUser)) {
-                if(ind) ind.style.display = 'none';
                 if(UI.showToast) UI.showToast("❌ Lỗi: Chưa xác định được Nhân viên!");
                 return;
             }
@@ -169,46 +168,71 @@
             GM_xmlhttpRequest({
                 method: "POST", url: API_URL, data: JSON.stringify(params),
                 onload: (res) => {
-                    if(ind) ind.style.display = 'none';
                     if (res.status === 200) {
-                        try { cb(JSON.parse(res.responseText)); } catch(e) { if(UI.showToast) UI.showToast("❌ Lỗi Server"); }
+                        try { cb(JSON.parse(res.responseText)); } catch(e) { if(UI.showToast) UI.showToast("❌ Lỗi Server (Parse Error)"); }
                     } else if(UI.showToast) UI.showToast("❌ Lỗi HTTP " + res.status);
                 },
-                onerror: () => { if(ind) ind.style.display = 'none'; if(UI.showToast) UI.showToast("❌ Mất kết nối"); }
+                onerror: () => { if(UI.showToast) UI.showToast("❌ Mất kết nối mạng!"); }
             });
         },
+        
+        // GET Request (Stock)
         getStock: (cb) => { 
             if(!API_URL) return;
-            const ind = document.getElementById('inv-loading-indicator');
-            if(ind) ind.style.display = 'inline';
+            if(UI.showToast) UI.showToast("⏳ Đang tải Tồn kho từ Cloud...");
+
             const url = `${API_URL}?action=get_stock&shopId=${encodeURIComponent(STORE.currentShopId)}&sheet_stock=${encodeURIComponent(SHEET_CONFIG.STOCK)}&t=${Date.now()}`;
             GM_xmlhttpRequest({
                 method: "GET", url: url,
                 onload: (res) => {
-                    if(ind) ind.style.display = 'none';
-                    if(res.status===200) try{ cb(JSON.parse(res.responseText)); } catch(e){}
-                }
+                    if(res.status===200) try{ cb(JSON.parse(res.responseText)); } catch(e){ if(UI.showToast) UI.showToast("❌ Lỗi tải Tồn kho"); }
+                    else if(UI.showToast) UI.showToast("❌ Lỗi HTTP Tồn kho");
+                },
+                onerror: () => { if(UI.showToast) UI.showToast("❌ Lỗi kết nối Tồn kho"); }
             });
         }, 
-        saveStock: (data, cb) => { API.call({action: 'save_stock', data: data}, cb); },
+        
+        saveStock: (data, cb) => { 
+            API.call({action: 'save_stock', data: data, loadingMsg: "☁️ Đang lưu Tồn kho lên Cloud..."}, cb); 
+        },
+        
+        // GET Request (Count)
         getCount: (cb) => { 
             if(!API_URL) return;
-            const ind = document.getElementById('inv-loading-indicator');
-            if(ind) ind.style.display = 'inline';
+            if(UI.showToast) UI.showToast("⏳ Đang tải dữ liệu Kiểm kê...");
+
             const url = `${API_URL}?action=get_count&shopId=${encodeURIComponent(STORE.currentShopId)}&sheet_count=${encodeURIComponent(SHEET_CONFIG.COUNT)}&t=${Date.now()}`;
             GM_xmlhttpRequest({
                 method: "GET", url: url,
                 onload: (res) => {
-                    if(ind) ind.style.display = 'none';
-                    if(res.status===200) try{ cb(JSON.parse(res.responseText)); } catch(e){}
-                }
+                    if(res.status===200) try{ cb(JSON.parse(res.responseText)); } catch(e){ if(UI.showToast) UI.showToast("❌ Lỗi tải Kiểm kê"); }
+                    else if(UI.showToast) UI.showToast("❌ Lỗi HTTP Kiểm kê");
+                },
+                onerror: () => { if(UI.showToast) UI.showToast("❌ Lỗi kết nối Kiểm kê"); }
             });
         },
+        
         saveCount: (data, cb) => { 
             const flatData = data.map(item => ({ sku: item.sku, name: item.name, status: item.status, group: item.group, qty: item.totalCount }));
-            API.call({action: 'save_count', user: STORE.currentUser, data: flatData}, cb); 
+            API.call({
+                action: 'save_count', 
+                user: STORE.currentUser, 
+                data: flatData,
+                loadingMsg: "☁️ Đang đồng bộ lên Cloud..."
+            }, cb); 
         },
-        deleteData: (mode, cb) => { API.call({action: 'delete_data', mode: mode}, cb); }
+        
+        deleteData: (mode, cb) => { 
+            let msg = "⏳ Đang xóa dữ liệu...";
+            if(mode === 'count') msg = "⏳ Đang xóa dữ liệu Kiểm kê cũ...";
+            else if(mode === 'stock') msg = "⏳ Đang xóa dữ liệu Tồn kho...";
+            
+            API.call({
+                action: 'delete_data', 
+                mode: mode,
+                loadingMsg: msg
+            }, cb); 
+        }
     };
 
     // --- 4. LOGIC CHÍNH ---
@@ -239,7 +263,8 @@
         modal.innerHTML = `
             <div class="inv-content">
                 <div class="inv-header">
-                    <div class="inv-title">📦Kiểm kê <span id="inv-loading-indicator" class="inv-loading">Đang tải...</span></div>
+                    <!-- Đã bỏ Loading Indicator ở đây -->
+                    <div class="inv-title">📦Kiểm kê</div>
                     <div class="inv-tabs">
                         <div class="inv-tab active" data-tab="tab-input">Nhập liệu</div>
                         <div class="inv-tab" data-tab="tab-count">Kiểm kê</div>
@@ -347,20 +372,45 @@
         document.getElementById('btn-start-load').onclick = () => { overlay.style.display = 'none'; autoLoadData(); };
         document.getElementById('btn-start-new').onclick = () => {
             if(confirm("Bạn có muốn XÓA DỮ LIỆU CŨ trên Cloud để bắt đầu đợt kiểm kê mới không?")) {
-                overlay.style.display = 'none'; if(UI.showToast) UI.showToast("⏳ Đang xóa dữ liệu cũ...");
+                overlay.style.display = 'none'; 
+                // Toast đã được thêm trong API.deleteData
                 API.deleteData('count', (res) => {
-                    if(res.status === 'success') { if(UI.showToast) UI.showToast("✅ Đã xóa dữ liệu cũ. Sẵn sàng kiểm kê mới!"); STORE.countData = []; STORE.importData = []; renderImportTable(); renderCountTable(); renderSummary(); modal.querySelector('.inv-tab[data-tab="tab-input"]').click(); } 
+                    if(res.status === 'success') { 
+                        if(UI.showToast) UI.showToast("✅ Đã xóa dữ liệu cũ. Sẵn sàng kiểm kê mới!"); 
+                        STORE.countData = []; STORE.importData = []; renderImportTable(); renderCountTable(); renderSummary(); modal.querySelector('.inv-tab[data-tab="tab-input"]').click(); 
+                    } 
                     else { if(UI.showToast) UI.showToast("❌ Lỗi xóa dữ liệu: " + res.msg); }
                 });
             } else { overlay.style.display = 'none'; STORE.countData = []; renderCountTable(); modal.querySelector('.inv-tab[data-tab="tab-input"]').click(); }
         };
 
         document.getElementById('inv-shop-select').onchange = (e) => { STORE.currentShopId = e.target.value; STORE.importData = []; STORE.countData = []; renderImportTable(); renderCountTable(); renderSummary(); UI.showToast(`Đã chuyển: ${STORE.currentShopId}`); overlay.style.display = 'flex'; };
-        document.getElementById('btn-load-stock-cloud').onclick = () => { API.getStock((data) => { STORE.importData = data; renderImportTable(); updateFilters(); syncStockToCountData(); renderCountTable(); renderSummary(); if(UI.showToast) UI.showToast(`✅ Đã tải ${data.length} dòng từ Cloud!`); }); };
-        document.getElementById('btn-sync-cloud').onclick = () => { if (STORE.currentUser === "---") { UI.showToast("⚠️ Đang xác thực User..."); return; } API.saveCount(STORE.countData, (res) => { if(res.status==='success' && UI.showToast) UI.showToast("✅ Đã đồng bộ lên Cloud!"); }); };
-        document.getElementById('btn-delete-exec').onclick = () => { if (STORE.currentUser === "---") return; const mode = document.getElementById('sel-delete-mode').value; if(mode === 'none') return; if(!confirm(`⚠️ Xác nhận xóa dữ liệu?`)) return; API.deleteData(mode, (res) => { if(res.status === 'success') { if(UI.showToast) UI.showToast("✅ " + res.msg); if(mode === 'stock' || mode === 'all') { STORE.importData = []; renderImportTable(); } if(mode === 'count' || mode === 'all') { STORE.countData = []; renderCountTable(); renderSummary(); } } }); };
+        document.getElementById('btn-load-stock-cloud').onclick = () => { 
+            API.getStock((data) => { 
+                STORE.importData = data; renderImportTable(); updateFilters(); syncStockToCountData(); renderCountTable(); renderSummary(); 
+                if(UI.showToast) UI.showToast(`✅ Đã tải ${data.length} dòng từ Cloud!`); 
+            }); 
+        };
+        document.getElementById('btn-sync-cloud').onclick = () => { 
+            if (STORE.currentUser === "---") { UI.showToast("⚠️ Đang xác thực User..."); return; } 
+            API.saveCount(STORE.countData, (res) => { if(res.status==='success' && UI.showToast) UI.showToast("✅ Đã đồng bộ lên Cloud!"); }); 
+        };
+        document.getElementById('btn-delete-exec').onclick = () => { 
+            if (STORE.currentUser === "---") return; 
+            const mode = document.getElementById('sel-delete-mode').value; 
+            if(mode === 'none') return; 
+            if(!confirm(`⚠️ Xác nhận xóa dữ liệu?`)) return; 
+            
+            API.deleteData(mode, (res) => { 
+                if(res.status === 'success') { 
+                    if(UI.showToast) UI.showToast("✅ " + res.msg); 
+                    if(mode === 'stock' || mode === 'all') { STORE.importData = []; renderImportTable(); } 
+                    if(mode === 'count' || mode === 'all') { STORE.countData = []; renderCountTable(); renderSummary(); } 
+                } 
+            }); 
+        };
         document.getElementById('btn-export-excel').onclick = exportToExcel;
-        document.getElementById('btn-inv-close').onclick = () => { if(STORE.isScannerRunning) stopScanner(); if(STORE.countData.length > 0 && STORE.currentUser !== "---") { if(UI.showToast) UI.showToast("☁️ Đang lưu dữ liệu..."); API.saveCount(STORE.countData, () => { modal.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; document.body.classList.remove('tgdd-body-lock'); }); } else { modal.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; document.body.classList.remove('tgdd-body-lock'); } };
+        document.getElementById('btn-inv-close').onclick = () => { if(STORE.isScannerRunning) stopScanner(); if(STORE.countData.length > 0 && STORE.currentUser !== "---") { API.saveCount(STORE.countData, () => { modal.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; document.body.classList.remove('tgdd-body-lock'); }); } else { modal.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; document.body.classList.remove('tgdd-body-lock'); } };
 
         const tabs = modal.querySelectorAll('.inv-tab'); tabs.forEach(t => { t.onclick = () => { tabs.forEach(x => x.classList.remove('active')); t.classList.add('active'); document.querySelectorAll('.inv-view').forEach(v => v.classList.remove('active')); document.getElementById(t.dataset.tab).classList.add('active'); if (t.dataset.tab === 'tab-count') setTimeout(() => document.getElementById('inp-search-sku').focus(), 100); if (t.dataset.tab === 'tab-sum') renderSummary(); }; });
         document.querySelectorAll('input[name="inv-status-radio"]').forEach(r => { r.onchange = (e) => { STORE.currentStatus = e.target.value; document.getElementById('inp-search-sku').value = ''; document.getElementById('box-suggestions').style.display = 'none'; }; });
@@ -403,11 +453,16 @@
         function autoLoadData() {
             if (STORE.currentUser === "---") return;
             API.getStock((data) => {
-                if(data.length > 0) { STORE.importData = data; renderImportTable(); updateFilters(); modal.querySelector('.inv-tab[data-tab="tab-count"]').click(); } 
+                if(data.length > 0) { 
+                    STORE.importData = data; renderImportTable(); updateFilters(); modal.querySelector('.inv-tab[data-tab="tab-count"]').click(); 
+                    if(UI.showToast) UI.showToast(`✅ Đã tải ${data.length} dòng Tồn kho!`);
+                } 
                 else { modal.querySelector('.inv-tab[data-tab="tab-input"]').click(); }
+                
                 API.getCount((cData) => {
                     STORE.countData = cData.filter(i => i.user === STORE.currentUser).map(i => ({ ...i, history: [{ts:'Server', qty:i.qty}], totalCount: i.qty, stock: (STORE.importData.find(s => s.sku === i.sku && s.status === i.status) || {}).stock || 0 }));
                     renderCountTable(); renderSummary(); 
+                    if(cData.length > 0 && UI.showToast) UI.showToast("✅ Đã tải dữ liệu Kiểm kê cũ!");
                 });
             });
         }
@@ -423,7 +478,7 @@
         }
 
         function normalizeStatus(raw) { if (!raw) return ""; const cleanRaw = String(raw).trim(); if (STATUS_MAP[cleanRaw]) return STATUS_MAP[cleanRaw]; for (let key in STATUS_MAP) { if (cleanRaw.includes(key) || key.includes(cleanRaw)) return STATUS_MAP[key]; } return cleanRaw; }
-        function handleFileImport(e) { const file = e.target.files[0]; if (!file) return; document.getElementById('lbl-file-name').innerText = file.name; const reader = new FileReader(); reader.onload = (evt) => { const data = new Uint8Array(evt.target.result); const workbook = XLSX.read(data, { type: 'array' }); const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 }); STORE.importData = []; for (let i = 1; i < jsonData.length; i++) { const row = jsonData[i]; if (row && row[6]) { STORE.importData.push({ group: row[4] || '', sku: String(row[6]).trim(), name: row[7] || '', status: normalizeStatus(row[8]), stock: parseInt(row[9]) || 0 }); } } renderImportTable(); updateFilters(); syncStockToCountData(); renderCountTable(); renderSummary(); UI.showToast(`✅ Đã nhập ${STORE.importData.length} dòng!`); if(STORE.importData.length > 0) { API.saveStock(STORE.importData, (res) => { if(res.status==='success') UI.showToast("☁️ Đã lưu Tồn kho lên Cloud!"); }); } }; reader.readAsArrayBuffer(file); }
+        function handleFileImport(e) { const file = e.target.files[0]; if (!file) return; document.getElementById('lbl-file-name').innerText = file.name; const reader = new FileReader(); reader.onload = (evt) => { const data = new Uint8Array(evt.target.result); const workbook = XLSX.read(data, { type: 'array' }); const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 }); STORE.importData = []; for (let i = 1; i < jsonData.length; i++) { const row = jsonData[i]; if (row && row[6]) { STORE.importData.push({ group: row[4] || '', sku: String(row[6]).trim(), name: row[7] || '', status: normalizeStatus(row[8]), stock: parseInt(row[9]) || 0 }); } } renderImportTable(); updateFilters(); syncStockToCountData(); renderCountTable(); renderSummary(); UI.showToast(`✅ Đã nhập ${STORE.importData.length} dòng!`); if(STORE.importData.length > 0) { API.saveStock(STORE.importData, (res) => { if(res.status==='success') UI.showToast("✅ Đã lưu Tồn kho lên Cloud!"); }); } }; reader.readAsArrayBuffer(file); }
         function updateFilters() { const getUnique = (key) => [...new Set(STORE.importData.map(i => i[key]))].filter(Boolean); const fillSelect = (col, vals) => { const sel = document.querySelector(`.inv-filter-select[data-col="${col}"]`); const options = ['all', ...vals]; if(sel) sel.innerHTML = options.map(v => `<option value="${v}">${v === 'all' ? 'Tất cả' : v}</option>`).join(''); }; fillSelect('status', getUnique('status')); fillSelect('group', getUnique('group')); fillSelect('name', getUnique('name').sort()); }
         function renderImportTable() { const tbody = document.querySelector('#tbl-import tbody'); let html = ''; STORE.importData.slice(0, 200).forEach((item, idx) => { html += `<tr><td>${idx+1}</td><td>${item.group}</td><td style="font-weight:bold;color:#d63031">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td>${item.stock}</td></tr>`; }); tbody.innerHTML = html; }
         
