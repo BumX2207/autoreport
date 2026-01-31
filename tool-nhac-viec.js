@@ -1,8 +1,7 @@
 /* 
-   MODULE: NHẮC VIỆC (V4 - AUTO SYNC CLOUD)
-   - Toast luôn nổi trên cùng.
-   - Tự động tải dữ liệu từ Cloud khi mở.
-   - Giao diện tối ưu.
+   MODULE: NHẮC VIỆC (V5 - PURE CLOUD)
+   - 100% Dữ liệu trên Cloud (Không lưu Local).
+   - Loading indicator nằm trong khung danh sách.
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE, GM_xmlhttpRequest } = context;
@@ -19,7 +18,7 @@
         .rm-btn-close:hover { color:#333; }
 
         /* List Area */
-        .rm-list-container { flex:1; overflow-y:auto; margin-bottom:15px; border:1px solid #eee; border-radius:8px; background:#f9f9f9; padding:5px; min-height:120px; }
+        .rm-list-container { flex:1; overflow-y:auto; margin-bottom:15px; border:1px solid #eee; border-radius:8px; background:#f9f9f9; padding:5px; min-height:150px; position:relative; }
         .rm-item { background:white; border-radius:8px; padding:10px; margin-bottom:5px; border:1px solid #e0e0e0; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 5px rgba(0,0,0,0.05); transition: background 0.2s; }
         .rm-item:hover { border-color:#ff9800; }
         .rm-item.editing { background:#fff3e0; border-color:#ff9800; }
@@ -59,8 +58,9 @@
         .rm-btn-save { background:#2196f3; margin-top:10px; }
         .rm-btn:active { transform:scale(0.98); }
         
-        /* Sync Loading Animation */
-        .rm-sync-spin { animation: spin 1s linear infinite; display: inline-block; font-size: 14px; }
+        /* Loading State in List */
+        .rm-loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #888; font-size: 13px; }
+        .rm-sync-spin { animation: spin 1s linear infinite; font-size: 24px; margin-bottom: 8px; color: #ff9800; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     `;
 
@@ -68,17 +68,12 @@
         const modalId = 'tgdd-reminder-modal';
         let modal = document.getElementById(modalId);
 
-        let currentTasks = [];
+        let currentTasks = []; // Dữ liệu chỉ lưu trên RAM
         let editingId = null;
         const userCfg = UTILS.getPersistentConfig();
         const currentUser = AUTH_STATE.userName;
-        
-        // 1. Load Local Data First (Instant UI)
-        if (userCfg.reminderTask) {
-            currentTasks = Array.isArray(userCfg.reminderTask) ? userCfg.reminderTask : [userCfg.reminderTask];
-            currentTasks.forEach(t => { if(!t.id) t.id = Date.now() + Math.random(); });
-        }
 
+        // Hàm sắp xếp
         const sortTasks = () => {
             currentTasks.sort((a, b) => {
                 const today = new Date().toISOString().split('T')[0];
@@ -89,13 +84,14 @@
             });
         };
 
+        // Render List
         const renderList = () => {
             const container = document.getElementById('rm-task-list');
             if(!container) return;
             container.innerHTML = '';
             
             if (currentTasks.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:30px; color:#999; font-size:12px;">📭 Chưa có lịch nhắc nào.<br>Thêm mới bên dưới nhé!</div>';
+                container.innerHTML = '<div style="display:flex; justify-content:center; align-items:center; height:100%; color:#999; font-size:12px; text-align:center;">📭 Cloud trống rỗng.<br>Thêm mới bên dưới nhé!</div>';
                 return;
             }
 
@@ -175,57 +171,61 @@
             renderList();
         };
 
-        // --- NEW: FUNCTION TO SYNC FROM CLOUD ---
+        // --- HÀM SYNC DỮ LIỆU TỪ CLOUD ---
         const syncFromCloud = () => {
-            if (!currentUser || currentUser === "---") return;
-            
-            const statusEl = document.getElementById('rm-sync-status');
-            if(statusEl) statusEl.innerHTML = '<span class="rm-sync-spin">⏳</span>'; // Icon loading
+            const container = document.getElementById('rm-task-list');
+            if(!container) return;
 
-            UI.showToast("⏳ Đang tải dữ liệu từ Cloud...");
+            // 1. Hiển thị Loading ngay trong khung
+            container.innerHTML = `
+                <div class="rm-loading-state">
+                    <div class="rm-sync-spin">⏳</div>
+                    <div>Đang tải dữ liệu từ Cloud...</div>
+                </div>
+            `;
+
+            if (!currentUser || currentUser === "---") {
+                container.innerHTML = '<div style="padding:20px; text-align:center; color:red;">Chưa đăng nhập User!</div>';
+                return;
+            }
 
             GM_xmlhttpRequest({
                 method: "GET",
-                // Giả định API GET hỗ trợ params: ?user=...&type=reminder
                 url: `${CONSTANTS.GSHEET.CONFIG_API}?type=reminder&user=${encodeURIComponent(currentUser)}`,
                 onload: (res) => {
                     try {
                         const response = JSON.parse(res.responseText);
                         let cloudData = null;
 
-                        // Xử lý các dạng trả về có thể của API
                         if (response.status === 'success' && response.data) cloudData = response.data;
                         else if (response.config) cloudData = response.config;
                         else if (Array.isArray(response)) cloudData = response;
 
                         if (Array.isArray(cloudData)) {
-                            // Cập nhật biến local
+                            // Cập nhật biến RAM
                             currentTasks = cloudData;
                             currentTasks.forEach(t => { if(!t.id) t.id = Date.now() + Math.random(); });
                             
-                            // Lưu đè vào Config Local để lần sau mở nhanh hơn
-                            userCfg.reminderTask = currentTasks;
-                            UTILS.savePersistentConfig(userCfg);
-
+                            // Render lại list (Loading sẽ biến mất vì innerHTML được reset trong renderList)
                             renderList();
-                            if(statusEl) statusEl.innerHTML = '✅';
-                            UI.showToast("✅ Đã đồng bộ dữ liệu mới nhất!");
+                            UI.showToast("✅ Đã tải dữ liệu Cloud!");
                         } else {
-                             if(statusEl) statusEl.innerHTML = '';
-                             // Không có dữ liệu cloud hoặc lỗi format, giữ nguyên local
+                            // Không có dữ liệu
+                            currentTasks = [];
+                            renderList();
                         }
                     } catch (e) {
                         console.error("Sync parse error", e);
-                        if(statusEl) statusEl.innerHTML = '⚠️';
+                        container.innerHTML = '<div style="padding:20px; text-align:center; color:red;">Lỗi định dạng dữ liệu!</div>';
                     }
                 },
                 onerror: () => {
-                    if(statusEl) statusEl.innerHTML = '❌';
-                    UI.showToast("Lỗi kết nối khi tải dữ liệu!");
+                    container.innerHTML = '<div style="padding:20px; text-align:center; color:red;">❌ Lỗi kết nối mạng!</div>';
                 }
             });
         };
 
+        // --- INIT UI ---
         if (!modal) {
             modal = document.createElement('div');
             modal.id = modalId;
@@ -241,8 +241,7 @@
             modal.innerHTML = `
                 <div class="rm-content">
                     <button class="rm-btn-close" id="btn-rm-close" title="Đóng">×</button>
-                    <!-- Thêm span status để hiển thị icon sync -->
-                    <div class="rm-header">🔔 QUẢN LÝ NHẮC VIỆC <span id="rm-sync-status" style="font-size:14px; margin-left:5px;"></span></div>
+                    <div class="rm-header">🔔 QUẢN LÝ NHẮC VIỆC (CLOUD)</div>
                     <div id="rm-task-list" class="rm-list-container"></div>
                     <div class="rm-form">
                         <div class="rm-row">
@@ -263,7 +262,7 @@
                         </div>
                         <button id="btn-rm-add" class="rm-btn rm-btn-add">Thêm vào danh sách</button>
                     </div>
-                    <button id="btn-rm-save-cloud" class="rm-btn rm-btn-save">☁️ LƯU LÊN SERVER</button>
+                    <button id="btn-rm-save-cloud" class="rm-btn rm-btn-save">☁️ CẬP NHẬT LÊN CLOUD</button>
                 </div>
             `;
             document.body.appendChild(modal);
@@ -304,10 +303,10 @@
                 if (editingId) {
                     const idx = currentTasks.findIndex(t => t.id === editingId);
                     if(idx !== -1) currentTasks[idx] = taskObj;
-                    UI.showToast("Đã cập nhật!");
+                    UI.showToast("Đã cập nhật (Cần lưu lên Cloud)!");
                 } else {
                     currentTasks.push(taskObj);
-                    UI.showToast("Đã thêm vào danh sách!");
+                    UI.showToast("Đã thêm (Cần lưu lên Cloud)!");
                 }
                 resetForm();
             };
@@ -317,11 +316,12 @@
 
                 const btn = document.getElementById('btn-rm-save-cloud');
                 const oldText = btn.innerText;
-                btn.innerText = "Đang lưu..."; btn.disabled = true;
+                btn.innerText = "Đang đẩy lên Cloud..."; btn.disabled = true;
 
                 GM_xmlhttpRequest({
                     method: "POST",
                     url: CONSTANTS.GSHEET.CONFIG_API,
+                    // Lưu ý: Chỉ gửi lên Cloud, không lưu vào biến userCfg nữa
                     data: JSON.stringify({ user: currentUser, type: 'reminder', config: currentTasks }),
                     headers: { "Content-Type": "application/x-www-form-urlencoded" },
                     onload: (res) => {
@@ -330,8 +330,7 @@
                             const response = JSON.parse(res.responseText);
                             if (response.status === 'success') {
                                 UI.showToast("✅ Lưu thành công!");
-                                userCfg.reminderTask = currentTasks;
-                                UTILS.savePersistentConfig(userCfg);
+                                // Không lưu Local Storage ở đây
                                 modal.style.display = 'none';
                             } else { alert("Lỗi: " + response.message); }
                         } catch (e) { alert("Lỗi phản hồi Server"); }
@@ -342,7 +341,6 @@
         }
 
         resetForm();
-        renderList(); // Render local data first
         
         // --- FIX Z-INDEX TOAST ---
         const toastEl = document.getElementById('tgdd-toast-notification');
@@ -350,9 +348,8 @@
 
         modal.style.display = 'flex';
 
-        // --- TRIGGER SYNC ---
-        // Gọi hàm sync ngay sau khi mở modal
-        setTimeout(syncFromCloud, 100);
+        // --- TRIGGER SYNC NGAY LẬP TỨC ---
+        syncFromCloud();
     };
 
     return {
