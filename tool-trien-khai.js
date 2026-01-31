@@ -1,5 +1,5 @@
 /* 
-   MODULE: AUTO TRIỂN KHAI (V2 - Updated)
+   MODULE: AUTO TRIỂN KHAI (V3 - Updated with Task Name)
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE, GM_xmlhttpRequest } = context;
@@ -12,9 +12,10 @@
         .dp-list-container { flex:1; overflow-y:auto; margin-bottom:15px; border:1px solid #eee; border-radius:8px; background:#f9f9f9; padding:5px; min-height:120px; }
         .dp-item { background:white; border-radius:8px; padding:10px; margin-bottom:5px; border:1px solid #e0e0e0; display:flex; justify-content:space-between; align-items:center; transition: background 0.2s; }
         .dp-item.editing { background:#e8f5e9; border-color:#28a745; }
-        .dp-time { font-weight:bold; color:#2e7d32; font-size:14px; }
-        .dp-text { font-size:11px; color:#555; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:200px; }
-        .dp-badge { font-size:10px; padding:2px 6px; border-radius:4px; color:white; font-weight:bold; background:#28a745; margin-right:5px; }
+        .dp-time { font-weight:bold; color:#2e7d32; font-size:14px; display:flex; align-items:center; gap: 5px; }
+        .dp-text { font-size:13px; font-weight: 600; color:#333; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:200px; margin-top: 2px;}
+        .dp-sub-text { font-size: 10px; color: #888; margin-top: 2px; }
+        .dp-badge { font-size:10px; padding:2px 6px; border-radius:4px; color:white; font-weight:bold; background:#28a745; }
         .dp-form { border-top:2px solid #eee; padding-top:10px; flex-shrink:0; background:#fff; }
         .dp-label { font-size:11px; font-weight:bold; color:#555; display:block; margin-bottom:3px; }
         .dp-input { width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; box-sizing: border-box; font-size:13px; }
@@ -58,15 +59,20 @@
                 div.className = `dp-item ${task.id === editingId ? 'editing' : ''}`;
                 const isDaily = (!task.mode || task.mode === 'daily');
                 
+                // Hiển thị tên công việc thay vì ID folder
+                // Nếu dữ liệu cũ chưa có tên thì hiển thị tạm ID
+                const displayName = task.taskName || task.folderId || 'Không tên';
+
                 div.innerHTML = `
-                    <div style="flex:1; cursor:pointer;" id="dp-item-info-${task.id}">
+                    <div style="flex:1; cursor:pointer;" id="dp-item-info-${task.id}" title="ID Folder: ${task.folderId}">
                         <div class="dp-time">
                             <span class="dp-badge" style="${task.status === 'done' && task.mode === 'once' ? 'background:#999' : ''}">
                                 ${isDaily ? 'Hàng ngày' : task.date}
                             </span>
-                            ⏰ ${task.time}
+                            <span>⏰ ${task.time}</span>
                         </div>
-                        <div class="dp-text">📂 ID: ${task.folderId}</div>
+                        <div class="dp-text">📂 ${displayName}</div>
+                        <!-- <div class="dp-sub-text">ID: ${task.folderId.substring(0, 15)}...</div> -->
                     </div>
                     <div>
                         <span class="dp-icon-btn" id="dp-edit-${task.id}">✎</span>
@@ -76,7 +82,7 @@
                 container.appendChild(div);
 
                 document.getElementById(`dp-del-${task.id}`).onclick = () => {
-                    if(confirm('Xóa lịch này? (Cần bấm LƯU LÊN SERVER để áp dụng)')) {
+                    if(confirm('Xóa lịch này? (Sau khi xóa cần bấm LƯU LÊN SERVER để áp dụng)')) {
                         currentTasks = currentTasks.filter(t => t.id !== task.id);
                         if (editingId === task.id) resetForm();
                         renderList();
@@ -91,6 +97,8 @@
             editingId = task.id;
             document.getElementById('dp-time').value = task.time;
             document.getElementById('dp-folder').value = task.folderId;
+            document.getElementById('dp-name').value = task.taskName || ''; // Load tên công việc
+            
             const isDaily = (!task.mode || task.mode === 'daily');
             document.getElementById('dp-chk-daily').checked = isDaily;
             const dateInput = document.getElementById('dp-date');
@@ -107,6 +115,7 @@
         const resetForm = () => {
             editingId = null;
             document.getElementById('dp-folder').value = '';
+            document.getElementById('dp-name').value = ''; // Reset tên công việc
             document.getElementById('dp-chk-daily').checked = true;
             document.getElementById('dp-date').disabled = true;
             document.getElementById('btn-dp-add').innerText = "Thêm mới";
@@ -119,23 +128,20 @@
             renderList(true); // Show loading
             GM_xmlhttpRequest({
                 method: "GET",
-                // Gọi API lấy dữ liệu type=deploy
                 url: `${CONSTANTS.GSHEET.CONFIG_API}?action=load&type=deploy&user=${encodeURIComponent(currentUser)}`,
                 onload: (res) => {
                     try {
                         const response = JSON.parse(res.responseText);
                         if (response.status === 'success') {
-                            // Nếu có dữ liệu thì parse, không thì rỗng
                             if (response.data && response.data !== "undefined") {
                                 currentTasks = (typeof response.data === 'string') ? JSON.parse(response.data) : response.data;
                             } else {
                                 currentTasks = [];
                             }
                             if(!Array.isArray(currentTasks)) currentTasks = [];
-                            // Chuẩn hóa ID nếu thiếu
                             currentTasks.forEach(t => { if(!t.id) t.id = Date.now() + Math.random(); });
                             
-                            // Lưu tạm vào local để backup
+                            // Backup local
                             const userCfg = UTILS.getPersistentConfig();
                             userCfg.deployTask = currentTasks;
                             UTILS.savePersistentConfig(userCfg);
@@ -163,11 +169,11 @@
         if (!modal) {
             modal = document.createElement('div');
             modal.id = modalId;
-            const userCfg = UTILS.getPersistentConfig(); // Chỉ lấy danh sách Group từ config
+            const userCfg = UTILS.getPersistentConfig();
             const groups = userCfg.lineGroups || [];
             
             let groupHtml = '';
-            if(groups.length === 0) groupHtml = '<div style="font-size:10px; color:red">Chưa cấu hình Line Group trong Settings</div>';
+            if(groups.length === 0) groupHtml = '<div style="font-size:10px; color:red">Chưa cấu hình Line Group trong Khai báo</div>';
             groups.forEach(g => {
                 groupHtml += `<label style="display:flex; align-items:center; font-size:12px; margin-bottom:4px; cursor:pointer;">
                     <input type="checkbox" class="chk-dp-group" value="${g.id}" style="margin-right:5px;"> ${g.name}
@@ -177,10 +183,11 @@
             modal.innerHTML = `
                 <div class="dp-content">
                     <button class="dp-btn-close" id="btn-dp-close">×</button>
-                    <div class="dp-header">🚀 AUTO TRIỂN KHAI (Cloud)</div>
+                    <div class="dp-header">🚀 AUTO TRIỂN KHAI</div>
                     <div id="dp-task-list" class="dp-list-container"></div>
 
                     <div class="dp-form">
+                        <!-- Hàng Ngày - Giờ -->
                         <div style="display:flex; gap:10px; margin-bottom:8px;">
                             <div style="flex:1">
                                 <label class="dp-toggle"><input type="checkbox" id="dp-chk-daily" checked> Lặp lại hàng ngày</label>
@@ -192,8 +199,17 @@
                             </div>
                         </div>
 
-                        <label class="dp-label">Google Drive Folder ID:</label>
-                        <input type="text" id="dp-folder" class="dp-input" placeholder="ID thư mục (Ảnh/Text)...">
+                        <!-- Hàng Tên công việc - ID Folder (Mới) -->
+                        <div style="display:flex; gap:10px; margin-bottom:8px;">
+                            <div style="flex:1">
+                                <label class="dp-label">Tên công việc:</label>
+                                <input type="text" id="dp-name" class="dp-input" placeholder="VD: Triển khai sáng">
+                            </div>
+                            <div style="flex:1">
+                                <label class="dp-label">Folder ID:</label>
+                                <input type="text" id="dp-folder" class="dp-input" placeholder="ID Drive folder...">
+                            </div>
+                        </div>
                         
                         <label class="dp-label">Nhóm nhận tin:</label>
                         <div class="dp-group-box">${groupHtml}</div>
@@ -214,11 +230,12 @@
             document.getElementById('btn-dp-add').onclick = () => {
                 const time = document.getElementById('dp-time').value;
                 const folderId = document.getElementById('dp-folder').value.trim();
+                const taskName = document.getElementById('dp-name').value.trim(); // Lấy tên
                 const isDaily = document.getElementById('dp-chk-daily').checked;
                 const date = document.getElementById('dp-date').value;
                 const selectedGroups = Array.from(document.querySelectorAll('.chk-dp-group:checked')).map(c => c.value);
 
-                if(!time || !folderId || selectedGroups.length === 0) return alert("Vui lòng nhập Giờ, Folder ID và chọn ít nhất 1 nhóm!");
+                if(!time || !folderId || !taskName || selectedGroups.length === 0) return alert("Vui lòng nhập đầy đủ: Tên, Giờ, ID và Nhóm!");
                 if(!isDaily && !date) return alert("Vui lòng chọn ngày!");
 
                 const taskObj = {
@@ -228,18 +245,19 @@
                     date: isDaily ? '' : date,
                     time: time,
                     folderId: folderId,
+                    taskName: taskName, // Lưu tên công việc
                     groups: selectedGroups,
-                    lastRun: '', // Reset lastRun khi sửa đổi
+                    lastRun: '',
                     status: 'pending'
                 };
 
                 if(editingId) {
                     const idx = currentTasks.findIndex(t => t.id === editingId);
                     if(idx !== -1) currentTasks[idx] = taskObj;
-                    UI.showToast("Đã cập nhật (Bấm Lưu để áp dụng)!");
+                    UI.showToast("Đã cập nhật (Bấm LƯU LÊN SERVER để áp dụng)!");
                 } else {
                     currentTasks.push(taskObj);
-                    UI.showToast("Đã thêm (Bấm Lưu để áp dụng)!");
+                    UI.showToast("Đã thêm (Bấm LƯU LÊN SERVER để áp dụng)!");
                 }
                 resetForm();
             };
@@ -274,13 +292,12 @@
         }
 
         modal.style.display = 'flex';
-        // Gọi hàm load dữ liệu ngay khi mở
         loadFromCloud();
     };
 
     return {
         name: "Auto Triển khai",
-        icon: `<svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" fill="white"/></svg>`,
+        icon: `<svg viewBox="0 0 1024 1024"><path d="M400.3 744.5c2.1-0.7 4.1-1.4 6.2-2-2 0.6-4.1 1.3-6.2 2z m0 0c2.1-0.7 4.1-1.4 6.2-2-2 0.6-4.1 1.3-6.2 2z" fill="#39393A"></path><path d="M511.8 256.6c24.4 0 44.2 19.8 44.2 44.2S536.2 345 511.8 345s-44.2-19.8-44.2-44.2 19.9-44.2 44.2-44.2m0-20c-35.5 0-64.2 28.7-64.2 64.2s28.7 64.2 64.2 64.2 64.2-28.7 64.2-64.2-28.7-64.2-64.2-64.2z" fill="#E73B37"></path><path d="M730.7 529.5c0.4-8.7 0.6-17.4 0.6-26.2 0-179.6-86.1-339.1-219.3-439.5-133.1 100.4-219.2 259.9-219.2 439.5 0 8.8 0.2 17.5 0.6 26.1-56 56-90.6 133.3-90.6 218.7 0 61.7 18 119.1 49.1 167.3 30.3-49.8 74.7-90.1 127.7-115.3 39-18.6 82.7-29 128.8-29 48.3 0 93.9 11.4 134.3 31.7 52.5 26.3 96.3 67.7 125.6 118.4 33.4-49.4 52.9-108.9 52.9-173.1 0-85.4-34.6-162.6-90.5-218.6zM351.1 383.4c9.2-37.9 22.9-74.7 40.6-109.5a502.1 502.1 0 0 1 63.6-95.9c17.4-20.6 36.4-39.9 56.8-57.5 20.4 17.6 39.4 36.9 56.8 57.5 24.8 29.5 46.2 61.8 63.6 95.9 17.7 34.8 31.4 71.6 40.6 109.5 8.7 35.8 13.5 72.7 14.2 109.9C637.4 459 577 438.9 512 438.9c-65 0-125.3 20.1-175.1 54.4 0.7-37.2 5.5-74.1 14.2-109.9z m-90.6 449.2c-9.1-27-13.7-55.5-13.7-84.4 0-35.8 7-70.6 20.8-103.2 8.4-19.8 19-38.4 31.9-55.5 9.7 61.5 29.5 119.7 57.8 172.6-36.4 17.8-69 41.6-96.8 70.5z m364.2-85.3c-0.7-0.3-1.5-0.5-2.2-0.8-0.4-0.2-0.9-0.3-1.3-0.5-0.6-0.2-1.3-0.5-1.9-0.7-0.8-0.3-1.5-0.5-2.3-0.8-0.8-0.3-1.5-0.5-2.3-0.7l-0.9-0.3c-1-0.3-2.1-0.7-3.1-1-1.2-0.4-2.4-0.7-3.5-1.1l-3-0.9c-0.2-0.1-0.4-0.1-0.7-0.2-1.1-0.3-2.3-0.7-3.4-1-1.2-0.3-2.4-0.6-3.5-0.9l-3.6-0.9-3.6-0.9c-1-0.3-2.1-0.5-3.1-0.7-1.2-0.3-2.4-0.5-3.6-0.8-1.3-0.3-2.5-0.6-3.8-0.8h-0.3c-0.9-0.2-1.9-0.4-2.8-0.6-0.4-0.1-0.7-0.1-1.1-0.2-1.1-0.2-2.2-0.4-3.4-0.6-1.2-0.2-2.4-0.4-3.6-0.7l-5.4-0.9c-0.9-0.1-1.9-0.3-2.8-0.4-0.8-0.1-1.6-0.3-2.5-0.4-2.6-0.4-5.1-0.7-7.7-1-1.2-0.1-2.3-0.3-3.5-0.4h-0.4c-0.9-0.1-1.8-0.2-2.8-0.3-1.1-0.1-2.1-0.2-3.2-0.3-1.7-0.2-3.4-0.3-5.1-0.4-0.8-0.1-1.5-0.1-2.3-0.2-0.9-0.1-1.9-0.1-2.8-0.2-0.4 0-0.8 0-1.2-0.1-1.1-0.1-2.1-0.1-3.2-0.2-0.5 0-1-0.1-1.5-0.1-1.3-0.1-2.6-0.1-3.9-0.1-0.8 0-1.5-0.1-2.3-0.1-1.2 0-2.4 0-3.5-0.1h-13.9c-2.3 0-4.6 0.1-6.9 0.2-0.9 0-1.9 0.1-2.8 0.1-0.8 0-1.5 0.1-2.3 0.1-1.4 0.1-2.8 0.2-4.1 0.3-1.4 0.1-2.7 0.2-4.1 0.3-1.4 0.1-2.7 0.2-4.1 0.4-0.6 0-1.2 0.1-1.8 0.2l-7.8 0.9c-1.1 0.1-2.1 0.3-3.2 0.4-1 0.1-2.1 0.3-3.1 0.4-3.2 0.5-6.4 0.9-9.5 1.5-0.7 0.1-1.4 0.2-2.1 0.4-0.9 0.1-1.7 0.3-2.6 0.5-1.1 0.2-2.3 0.4-3.4 0.6-0.9 0.2-1.7 0.3-2.6 0.5-0.4 0.1-0.8 0.1-1.1 0.2-0.7 0.1-1.4 0.3-2.1 0.4-1.2 0.3-2.4 0.5-3.6 0.8-1.2 0.3-2.4 0.5-3.6 0.8-0.2 0-0.4 0.1-0.6 0.1-0.5 0.1-1 0.2-1.5 0.4-1.1 0.3-2.3 0.6-3.5 0.9-1.3 0.3-2.5 0.6-3.8 1-0.4 0.1-0.9 0.2-1.4 0.4-1.3 0.4-2.7 0.7-4 1.1-1.5 0.4-3 0.9-4.6 1.3-1 0.3-2.1 0.6-3.1 1-2.1 0.6-4.1 1.3-6.2 2-0.7 0.2-1.4 0.5-2.1 0.7-15-27.5-27.4-56.4-37-86.2-11.7-36.1-19.2-73.6-22.5-111.6-0.6-6.7-1-13.3-1.3-20-0.1-1.2-0.1-2.4-0.1-3.6-0.1-1.2-0.1-2.4-0.1-3.6 0-1.2-0.1-2.4-0.1-3.6 0-1.2-0.1-2.4-0.1-3.7 18.8-14 39.2-25.8 61-35 36.1-15.3 74.5-23 114.1-23 39.6 0 78 7.8 114.1 23 21.8 9.2 42.2 20.9 61 35v0.1c0 1 0 1.9-0.1 2.9 0 1.4-0.1 2.8-0.1 4.3 0 0.7 0 1.3-0.1 2-0.1 1.8-0.1 3.5-0.2 5.3-0.3 6.7-0.8 13.3-1.3 20-3.3 38.5-11 76.5-23 113-9.7 30.3-22.3 59.4-37.6 87.1z m136.8 90.9a342.27 342.27 0 0 0-96.3-73.2c29.1-53.7 49.5-112.8 59.4-175.5 12.8 17.1 23.4 35.6 31.8 55.5 13.8 32.7 20.8 67.4 20.8 103.2 0 31-5.3 61.3-15.7 90z" fill="#39393A"></path><path d="M512 819.3c8.7 0 24.7 22.9 24.7 60.4s-16 60.4-24.7 60.4-24.7-22.9-24.7-60.4 16-60.4 24.7-60.4m0-20c-24.7 0-44.7 36-44.7 80.4 0 44.4 20 80.4 44.7 80.4s44.7-36 44.7-80.4c0-44.4-20-80.4-44.7-80.4z" fill="#E73B37" fill="white"/></svg>`,
         bgColor: "#28a745",
         css: MY_CSS,
         action: runTool
