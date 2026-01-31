@@ -91,7 +91,7 @@
             container.innerHTML = '';
             
             if (currentTasks.length === 0) {
-                container.innerHTML = '<div style="display:flex; justify-content:center; align-items:center; height:100%; color:#999; font-size:12px; text-align:center;">📭 Cloud trống rỗng.<br>Thêm mới bên dưới nhé!</div>';
+                container.innerHTML = '<div style="display:flex; justify-content:center; align-items:center; height:100%; color:#999; font-size:12px; text-align:center;">📭 Dữ liệu Cloud trống.<br>Thêm mới bên dưới nhé!</div>';
                 return;
             }
 
@@ -185,7 +185,7 @@
             `;
 
             if (!currentUser || currentUser === "---") {
-                container.innerHTML = '<div style="padding:20px; text-align:center; color:red;">Chưa đăng nhập User!</div>';
+                container.innerHTML = '<div style="padding:20px; text-align:center; color:red;">Không kiểm tra được người dùng!<br>Vui lòng F5 load lại trang và đợi load user xong rồi hãy mở tiện ích lên.</div>';
                 return;
             }
 
@@ -241,7 +241,7 @@
             modal.innerHTML = `
                 <div class="rm-content">
                     <button class="rm-btn-close" id="btn-rm-close" title="Đóng">×</button>
-                    <div class="rm-header">🔔 QUẢN LÝ NHẮC VIỆC (CLOUD)</div>
+                    <div class="rm-header">🔔 QUẢN LÝ NHẮC VIỆC</div>
                     <div id="rm-task-list" class="rm-list-container"></div>
                     <div class="rm-form">
                         <div class="rm-row">
@@ -312,11 +312,11 @@
             };
 
             document.getElementById('btn-rm-save-cloud').onclick = () => {
-                if (!currentUser || currentUser === "---") return alert("Chưa có User!");
+                if (!currentUser || currentUser === "---") return alert("Không tìm thấy user sử dụng!");
 
                 const btn = document.getElementById('btn-rm-save-cloud');
                 const oldText = btn.innerText;
-                btn.innerText = "Đang đẩy lên Cloud..."; btn.disabled = true;
+                btn.innerText = "Đang lưu lên Cloud..."; btn.disabled = true;
 
                 GM_xmlhttpRequest({
                     method: "POST",
