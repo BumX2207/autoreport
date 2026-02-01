@@ -1,7 +1,7 @@
 /* 
-   MODULE: NHẮC VIỆC (V6.1 - FIX UI & SYNC)
-   - Fix lỗi modal dài quá khổ bị che mất.
-   - Fix lỗi load dữ liệu từ Cloud (Parse đúng cấu trúc config).
+   MODULE: NHẮC VIỆC (V6.2 - FIX DEEP PARSE DATA)
+   - Fix lỗi không load được data nếu API trả về dạng Stringified JSON.
+   - UI: Có thanh cuộn, không bị tràn màn hình.
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE, GM_xmlhttpRequest } = context;
@@ -10,28 +10,27 @@
         /* Z-INDEX: 2147483646 */
         #tgdd-reminder-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(3px); z-index:2147483646; justify-content:center; align-items:center; }
         
-        /* Chỉnh lại max-height và layout */
         .rm-content { 
             background:white; width:95%; max-width:480px; border-radius:15px; padding:20px; 
             box-shadow:0 10px 40px rgba(0,0,0,0.3); animation: popIn 0.3s; 
             font-family: sans-serif; display:flex; flex-direction:column; 
-            max-height: 85vh; /* Giới hạn chiều cao tổng thể */
+            max-height: 85vh; /* Giới hạn chiều cao */
             position: relative; 
         }
         
-        /* Header & Close Button */
         .rm-header { font-size:18px; font-weight:bold; margin-bottom:10px; text-align:center; color:#ff9800; border-bottom:2px solid #eee; padding-bottom:10px; flex-shrink:0; display:flex; justify-content:center; align-items:center; gap: 8px; }
         .rm-btn-close { position:absolute; top:15px; right:15px; background:none; border:none; font-size:24px; color:#999; cursor:pointer; line-height:1; z-index:10; transition:color 0.2s; }
         .rm-btn-close:hover { color:#333; }
 
-        /* List Area - FIX SCROLL */
+        /* LIST CONTAINER - CÓ SCROLL */
         .rm-list-container { 
             flex:1; 
-            overflow-y:auto; /* Luôn hiện scroll nếu dài */
+            overflow-y:auto; 
             margin-bottom:15px; 
             border:1px solid #eee; border-radius:8px; background:#f9f9f9; padding:5px; 
             min-height:100px; 
-            max-height: 30vh; /* Giới hạn chiều cao danh sách, phần thừa sẽ cuộn */
+            /* Phần quan trọng: */
+            max-height: 30vh; 
             position:relative; 
         }
         
@@ -42,7 +41,6 @@
         .rm-item-info { flex:1; cursor:pointer; }
         .rm-time { font-weight:bold; color:#d35400; font-size:14px; display:flex; align-items:center; gap:5px; flex-wrap: wrap; }
         
-        /* Badge Styles */
         .rm-badge { font-size:10px; padding:2px 6px; border-radius:4px; color:white; font-weight:bold; text-transform:uppercase; white-space:nowrap; }
         .rm-badge-daily { background:#4caf50; } 
         .rm-badge-once { background:#607d8b; } 
@@ -51,18 +49,16 @@
         
         .rm-text { font-size:12px; color:#555; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; margin-top:3px; }
         
-        /* Action Buttons */
         .rm-actions { display:flex; align-items:center; gap:5px; }
         .rm-btn-icon { cursor:pointer; padding:5px; border-radius:5px; display:flex; align-items:center; justify-content:center; }
         .rm-btn-edit { color:#2196f3; font-size:18px; }
         .rm-btn-del { color:#e74c3c; font-size:22px; padding:0 10px; font-weight:bold; }
         .rm-btn-edit:hover, .rm-btn-del:hover { background:#eee; }
 
-        /* Form Area */
         .rm-form { border-top:2px solid #eee; padding-top:10px; flex-shrink:0; background:#fff; }
         .rm-row { display:flex; gap:10px; margin-bottom:8px; align-items: flex-end; }
         .rm-col { flex:1; }
-        .rm-col-sm { width: 130px; flex:none; }
+        .rm-col-sm { width: 80px; flex:none; }
         
         .rm-label { font-size:11px; font-weight:bold; color:#555; display:block; margin-bottom:3px; }
         .rm-input, .rm-select { width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; box-sizing: border-box; font-size:13px; height: 34px; }
@@ -78,7 +74,6 @@
         .rm-btn-save { background:#2196f3; margin-top:10px; }
         .rm-btn:active { transform:scale(0.98); }
         
-        /* Loading State */
         .rm-loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #888; font-size: 13px; }
         .rm-sync-spin { animation: spin 1s linear infinite; font-size: 24px; margin-bottom: 8px; color: #ff9800; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -108,7 +103,8 @@
                 return;
             }
 
-            currentTasks.sort((a, b) => a.time.localeCompare(b.time));
+            // Sắp xếp: Theo giờ
+            currentTasks.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 
             currentTasks.forEach((task) => {
                 const div = document.createElement('div');
@@ -118,7 +114,7 @@
                 switch (task.mode) {
                     case 'daily': badgeHtml = `<span class="rm-badge rm-badge-daily">Hàng ngày</span>`; break;
                     case 'weekly': badgeHtml = `<span class="rm-badge rm-badge-weekly">Mỗi ${WEEKDAYS[task.weekday] || 'Tuần'}</span>`; break;
-                    case 'monthly': badgeHtml = `<span class="rm-badge rm-badge-monthly">Ngày ${task.dayOfMonth} hàng tháng</span>`; break;
+                    case 'monthly': badgeHtml = `<span class="rm-badge rm-badge-monthly">Ngày ${task.dayOfMonth}</span>`; break;
                     default: badgeHtml = `<span class="rm-badge rm-badge-once">${task.date || '??'}</span>`; break;
                 }
                 
@@ -200,7 +196,38 @@
             renderList();
         };
 
-        // --- HÀM SYNC DỮ LIỆU TỪ CLOUD (ĐÃ FIX) ---
+        // --- HÀM TRÍCH XUẤT MẢNG THÔNG MINH (Deep Parse) ---
+        const smartExtractArray = (input) => {
+            if (!input) return null;
+            
+            // 1. Nếu nó đã là mảng thì trả về luôn
+            if (Array.isArray(input)) return input;
+
+            // 2. Nếu nó là string, thử parse JSON
+            if (typeof input === 'string') {
+                try {
+                    const parsed = JSON.parse(input);
+                    if (Array.isArray(parsed)) return parsed;
+                    // Nếu parse xong ra Object, thì đệ quy tiếp
+                    return smartExtractArray(parsed);
+                } catch (e) { return null; }
+            }
+            
+            // 3. Nếu nó là Object, tìm trong key 'config' hoặc 'data'
+            if (typeof input === 'object') {
+                if (input.config) {
+                    const res = smartExtractArray(input.config);
+                    if (res) return res;
+                }
+                if (input.data) {
+                    const res = smartExtractArray(input.data);
+                    if (res) return res;
+                }
+            }
+            return null;
+        };
+
+        // --- SYNC FUNCTION ---
         const syncFromCloud = () => {
             const container = document.getElementById('rm-task-list');
             if(!container) return;
@@ -222,36 +249,30 @@
                 url: `${CONSTANTS.GSHEET.CONFIG_API}?type=reminder&user=${encodeURIComponent(currentUser)}`,
                 onload: (res) => {
                     try {
-                        console.log("Cloud Res:", res.responseText); // Debug Log
+                        console.log("Raw Response:", res.responseText); // Để debug
                         const response = JSON.parse(res.responseText);
-                        let finalTasks = [];
-
-                        // LOGIC PHÂN TÍCH DỮ LIỆU (QUAN TRỌNG)
-                        if (response.status === 'success' && response.data) {
-                            // Trường hợp 1: API trả về { status: success, data: { config: [...] } }
-                            const payload = response.data;
-                            if (Array.isArray(payload)) finalTasks = payload; 
-                            else if (payload.config && Array.isArray(payload.config)) finalTasks = payload.config;
-                        } else if (response.config && Array.isArray(response.config)) {
-                            // Trường hợp 2: API trả về trực tiếp { user:..., config: [...] }
-                            finalTasks = response.config;
-                        } else if (Array.isArray(response)) {
-                            // Trường hợp 3: API trả về trực tiếp mảng [...]
-                            finalTasks = response;
-                        }
-
-                        currentTasks = finalTasks;
                         
-                        // Fix dữ liệu cũ nếu thiếu ID hoặc Mode
-                        currentTasks.forEach(t => { 
-                            if(!t.id) t.id = Date.now() + Math.random(); 
-                            if(!t.mode) t.mode = (t.date) ? 'once' : 'daily';
-                        });
+                        // SỬ DỤNG HÀM SMART EXTRACT
+                        const extractedData = smartExtractArray(response);
 
-                        renderList();
-                        UI.showToast(`✅ Đã tải ${currentTasks.length} lịch nhắc!`);
+                        if (extractedData && Array.isArray(extractedData)) {
+                            currentTasks = extractedData;
+                            
+                            // Vá lỗi dữ liệu thiếu
+                            currentTasks.forEach(t => { 
+                                if(!t.id) t.id = Date.now() + Math.random(); 
+                                if(!t.mode) t.mode = (t.date) ? 'once' : 'daily';
+                            });
+
+                            renderList();
+                            UI.showToast(`✅ Đã tải ${currentTasks.length} lịch nhắc!`);
+                        } else {
+                            // Không tìm thấy mảng nào hợp lệ
+                            currentTasks = [];
+                            renderList();
+                        }
                     } catch (e) {
-                        console.error("Sync error", e);
+                        console.error("Sync Error:", e);
                         container.innerHTML = '<div style="padding:20px; text-align:center; color:red;">Lỗi cấu trúc dữ liệu!</div>';
                     }
                 },
@@ -297,12 +318,10 @@
                         </div>
 
                         <div class="rm-row" id="input-container">
-                            <!-- DATE (ONCE) -->
                             <div class="rm-col rm-hidden" id="input-box-date">
                                 <label class="rm-label">Ngày gửi:</label>
                                 <input type="date" id="rm-date" class="rm-input">
                             </div>
-                            <!-- WEEKLY -->
                             <div class="rm-col rm-hidden" id="input-box-weekly">
                                 <label class="rm-label">Chọn thứ:</label>
                                 <select id="rm-weekday" class="rm-select">
@@ -315,7 +334,6 @@
                                     <option value="0">Chủ nhật</option>
                                 </select>
                             </div>
-                            <!-- MONTHLY -->
                             <div class="rm-col rm-hidden" id="input-box-monthly">
                                 <label class="rm-label">Ngày trong tháng (1-31):</label>
                                 <input type="number" id="rm-monthday" class="rm-input" min="1" max="31" placeholder="VD: 15">
@@ -393,7 +411,7 @@
                 GM_xmlhttpRequest({
                     method: "POST",
                     url: CONSTANTS.GSHEET.CONFIG_API,
-                    // LƯU Ý: Ở đây ta gửi config là một mảng object
+                    // Lưu dữ liệu là JSON Array đã được Stringify
                     data: JSON.stringify({ user: currentUser, type: 'reminder', config: currentTasks }),
                     headers: { "Content-Type": "application/x-www-form-urlencoded" },
                     onload: (res) => {
