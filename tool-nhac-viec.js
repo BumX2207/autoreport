@@ -62,7 +62,7 @@
         .rm-form { border-top:2px solid #eee; padding-top:10px; flex-shrink:0; background:#fff; }
         .rm-row { display:flex; gap:10px; margin-bottom:8px; align-items: flex-end; }
         .rm-col { flex:1; }
-        .rm-col-sm { width: 80px; flex:none; }
+        .rm-col-sm { width: 130px; flex:none; }
         
         .rm-label { font-size:11px; font-weight:bold; color:#555; display:block; margin-bottom:3px; }
         .rm-input, .rm-select { width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; box-sizing: border-box; font-size:13px; height: 34px; }
