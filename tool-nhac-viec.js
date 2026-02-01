@@ -31,7 +31,7 @@
             margin-bottom:15px; 
             border:1px solid #eee; border-radius:8px; background:#f9f9f9; padding:5px; 
             min-height:100px; 
-            max-height: 50vh; /* Giới hạn chiều cao danh sách, phần thừa sẽ cuộn */
+            max-height: 30vh; /* Giới hạn chiều cao danh sách, phần thừa sẽ cuộn */
             position:relative; 
         }
         
