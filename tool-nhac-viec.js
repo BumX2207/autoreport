@@ -1,7 +1,7 @@
 /* 
-   MODULE: NHẮC VIỆC (V5 - PURE CLOUD)
-   - 100% Dữ liệu trên Cloud (Không lưu Local).
-   - Loading indicator nằm trong khung danh sách.
+   MODULE: NHẮC VIỆC (V6 - ADVANCED RECURRING)
+   - 100% Dữ liệu trên Cloud.
+   - Hỗ trợ: Một lần, Hàng ngày, Hàng tuần, Hàng tháng.
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE, GM_xmlhttpRequest } = context;
@@ -10,7 +10,7 @@
         /* Z-INDEX: 2147483646 */
         #tgdd-reminder-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(3px); z-index:2147483646; justify-content:center; align-items:center; }
         
-        .rm-content { background:white; width:95%; max-width:450px; border-radius:15px; padding:20px; box-shadow:0 10px 40px rgba(0,0,0,0.3); animation: popIn 0.3s; font-family: sans-serif; display:flex; flex-direction:column; max-height:90vh; position: relative; }
+        .rm-content { background:white; width:95%; max-width:480px; border-radius:15px; padding:20px; box-shadow:0 10px 40px rgba(0,0,0,0.3); animation: popIn 0.3s; font-family: sans-serif; display:flex; flex-direction:column; max-height:90vh; position: relative; }
         
         /* Header & Close Button */
         .rm-header { font-size:18px; font-weight:bold; margin-bottom:10px; text-align:center; color:#ff9800; border-bottom:2px solid #eee; padding-bottom:10px; flex-shrink:0; display:flex; justify-content:center; align-items:center; gap: 8px; }
@@ -24,10 +24,14 @@
         .rm-item.editing { background:#fff3e0; border-color:#ff9800; }
         
         .rm-item-info { flex:1; cursor:pointer; }
-        .rm-time { font-weight:bold; color:#d35400; font-size:14px; display:flex; align-items:center; gap:5px; }
-        .rm-badge { font-size:10px; padding:2px 6px; border-radius:4px; color:white; font-weight:bold; }
-        .rm-badge-daily { background:#4caf50; }
-        .rm-badge-once { background:#2196f3; }
+        .rm-time { font-weight:bold; color:#d35400; font-size:14px; display:flex; align-items:center; gap:5px; flex-wrap: wrap; }
+        
+        /* Badge Styles */
+        .rm-badge { font-size:10px; padding:2px 6px; border-radius:4px; color:white; font-weight:bold; text-transform:uppercase; white-space:nowrap; }
+        .rm-badge-daily { background:#4caf50; } /* Green */
+        .rm-badge-once { background:#607d8b; } /* Grey/Blue */
+        .rm-badge-weekly { background:#2196f3; } /* Blue */
+        .rm-badge-monthly { background:#9c27b0; } /* Purple */
         
         .rm-text { font-size:12px; color:#555; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; margin-top:3px; }
         
@@ -40,17 +44,18 @@
 
         /* Form Area */
         .rm-form { border-top:2px solid #eee; padding-top:10px; flex-shrink:0; background:#fff; }
-        .rm-row { display:flex; gap:10px; margin-bottom:8px; }
+        .rm-row { display:flex; gap:10px; margin-bottom:8px; align-items: flex-end; }
         .rm-col { flex:1; }
+        .rm-col-sm { width: 80px; flex:none; }
         
         .rm-label { font-size:11px; font-weight:bold; color:#555; display:block; margin-bottom:3px; }
-        .rm-input { width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; box-sizing: border-box; font-size:13px; }
-        .rm-input:focus { border-color:#ff9800; outline:none; }
+        .rm-input, .rm-select { width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; box-sizing: border-box; font-size:13px; height: 34px; }
+        .rm-input:focus, .rm-select:focus { border-color:#ff9800; outline:none; }
         
         .rm-group-box { max-height:60px; overflow-y:auto; border:1px solid #eee; border-radius:6px; padding:5px; background:#fff; }
         
-        .rm-toggle { display:flex; align-items:center; gap:5px; cursor:pointer; font-size:12px; font-weight:bold; color:#4caf50; margin-bottom:5px; }
-        .rm-toggle input { width:16px; height:16px; accent-color:#4caf50; }
+        /* Dynamic Input Visibility */
+        .rm-hidden { display: none !important; }
 
         .rm-btn { width:100%; padding:10px; border:none; color:white; font-weight:bold; border-radius:8px; cursor:pointer; margin-top:5px; transition: 0.2s; }
         .rm-btn-add { background:#4caf50; }
@@ -68,23 +73,17 @@
         const modalId = 'tgdd-reminder-modal';
         let modal = document.getElementById(modalId);
 
-        let currentTasks = []; // Dữ liệu chỉ lưu trên RAM
+        let currentTasks = [];
         let editingId = null;
         const userCfg = UTILS.getPersistentConfig();
         const currentUser = AUTH_STATE.userName;
 
-        // Hàm sắp xếp
-        const sortTasks = () => {
-            currentTasks.sort((a, b) => {
-                const today = new Date().toISOString().split('T')[0];
-                const dateA = (a.mode === 'daily' || !a.mode) ? today : a.date;
-                const dateB = (b.mode === 'daily' || !b.mode) ? today : b.date;
-                if (dateA !== dateB) return dateA.localeCompare(dateB);
-                return a.time.localeCompare(b.time);
-            });
+        const WEEKDAYS = {
+            "1": "Thứ 2", "2": "Thứ 3", "3": "Thứ 4", "4": "Thứ 5", 
+            "5": "Thứ 6", "6": "Thứ 7", "0": "Chủ nhật"
         };
 
-        // Render List
+        // --- HÀM RENDER ---
         const renderList = () => {
             const container = document.getElementById('rm-task-list');
             if(!container) return;
@@ -95,15 +94,35 @@
                 return;
             }
 
-            sortTasks();
+            // Sắp xếp đơn giản: Theo giờ, sau đó theo ID
+            currentTasks.sort((a, b) => a.time.localeCompare(b.time));
 
             currentTasks.forEach((task) => {
                 const div = document.createElement('div');
                 div.className = `rm-item ${task.id === editingId ? 'editing' : ''}`;
                 
-                const isDaily = (!task.mode || task.mode === 'daily');
-                const badgeHtml = isDaily ? `<span class="rm-badge rm-badge-daily">Hàng ngày</span>` : `<span class="rm-badge rm-badge-once">${task.date || '??'}</span>`;
-                const opacityStyle = (task.status === 'completed') ? 'opacity: 0.5; text-decoration: line-through;' : '';
+                // Xử lý Badge và Text hiển thị chế độ
+                let badgeHtml = '';
+                let infoText = '';
+
+                switch (task.mode) {
+                    case 'daily':
+                        badgeHtml = `<span class="rm-badge rm-badge-daily">Hàng ngày</span>`;
+                        break;
+                    case 'weekly':
+                        badgeHtml = `<span class="rm-badge rm-badge-weekly">Mỗi ${WEEKDAYS[task.weekday]}</span>`;
+                        break;
+                    case 'monthly':
+                        badgeHtml = `<span class="rm-badge rm-badge-monthly">Ngày ${task.dayOfMonth} hàng tháng</span>`;
+                        break;
+                    default: // 'once' or undefined
+                        badgeHtml = `<span class="rm-badge rm-badge-once">${task.date || '??'}</span>`;
+                        break;
+                }
+                
+                // Mờ đi nếu là "Một lần" và đã hoàn thành
+                const isCompleted = (task.mode === 'once' && task.status === 'completed');
+                const opacityStyle = isCompleted ? 'opacity: 0.5; text-decoration: line-through;' : '';
 
                 div.innerHTML = `
                     <div class="rm-item-info" onclick="document.getElementById('btn-edit-${task.id}').click()" style="${opacityStyle}">
@@ -133,18 +152,33 @@
             });
         };
 
+        const updateFormMode = (mode) => {
+            // Ẩn tất cả input điều kiện trước
+            document.getElementById('input-box-date').classList.add('rm-hidden');
+            document.getElementById('input-box-weekly').classList.add('rm-hidden');
+            document.getElementById('input-box-monthly').classList.add('rm-hidden');
+
+            // Hiện input tương ứng
+            if (mode === 'once') document.getElementById('input-box-date').classList.remove('rm-hidden');
+            else if (mode === 'weekly') document.getElementById('input-box-weekly').classList.remove('rm-hidden');
+            else if (mode === 'monthly') document.getElementById('input-box-monthly').classList.remove('rm-hidden');
+            // 'daily' không cần input thêm
+        };
+
         const loadToForm = (task) => {
             editingId = task.id;
+            const mode = task.mode || 'once';
+            
+            document.getElementById('rm-mode').value = mode;
+            updateFormMode(mode);
+
             document.getElementById('rm-time').value = task.time;
             document.getElementById('rm-msg').value = task.msg;
-            
-            const isDaily = (!task.mode || task.mode === 'daily');
-            const chkDaily = document.getElementById('chk-daily');
-            const dateInput = document.getElementById('rm-date');
-            
-            chkDaily.checked = isDaily;
-            dateInput.disabled = isDaily;
-            dateInput.value = isDaily ? '' : (task.date || '');
+
+            // Load dữ liệu tùy theo mode
+            if (task.date) document.getElementById('rm-date').value = task.date;
+            if (task.weekday !== undefined) document.getElementById('rm-weekday').value = task.weekday;
+            if (task.dayOfMonth) document.getElementById('rm-monthday').value = task.dayOfMonth;
 
             document.querySelectorAll('.chk-rm-new-group').forEach(chk => {
                 chk.checked = (task.groups || []).includes(chk.value);
@@ -160,9 +194,15 @@
         const resetForm = () => {
             editingId = null;
             document.getElementById('rm-msg').value = '';
-            document.getElementById('chk-daily').checked = true;
-            document.getElementById('rm-date').disabled = true;
+            document.getElementById('rm-time').value = '';
+            
+            // Default về Daily cho tiện
+            document.getElementById('rm-mode').value = 'daily';
+            updateFormMode('daily');
+
             document.getElementById('rm-date').value = '';
+            document.getElementById('rm-weekday').value = '1'; // Thứ 2
+            document.getElementById('rm-monthday').value = '1';
             
             const btnAdd = document.getElementById('btn-rm-add');
             btnAdd.innerText = "Thêm vào danh sách";
@@ -171,12 +211,11 @@
             renderList();
         };
 
-        // --- HÀM SYNC DỮ LIỆU TỪ CLOUD ---
+        // --- SYNC FROM CLOUD ---
         const syncFromCloud = () => {
             const container = document.getElementById('rm-task-list');
             if(!container) return;
 
-            // 1. Hiển thị Loading ngay trong khung
             container.innerHTML = `
                 <div class="rm-loading-state">
                     <div class="rm-sync-spin">⏳</div>
@@ -185,7 +224,7 @@
             `;
 
             if (!currentUser || currentUser === "---") {
-                container.innerHTML = '<div style="padding:20px; text-align:center; color:red;">Không kiểm tra được người dùng!<br>Vui lòng F5 load lại trang và đợi load user xong rồi hãy mở tiện ích lên.</div>';
+                container.innerHTML = '<div style="padding:20px; text-align:center; color:red;">Chưa xác định User! F5 lại trang.</div>';
                 return;
             }
 
@@ -202,25 +241,26 @@
                         else if (Array.isArray(response)) cloudData = response;
 
                         if (Array.isArray(cloudData)) {
-                            // Cập nhật biến RAM
                             currentTasks = cloudData;
-                            currentTasks.forEach(t => { if(!t.id) t.id = Date.now() + Math.random(); });
-                            
-                            // Render lại list (Loading sẽ biến mất vì innerHTML được reset trong renderList)
+                            // Fix ID cũ
+                            currentTasks.forEach(t => { 
+                                if(!t.id) t.id = Date.now() + Math.random(); 
+                                // Backward compatibility
+                                if(!t.mode) t.mode = (t.date) ? 'once' : 'daily';
+                            });
                             renderList();
                             UI.showToast("✅ Đã tải dữ liệu Cloud!");
                         } else {
-                            // Không có dữ liệu
                             currentTasks = [];
                             renderList();
                         }
                     } catch (e) {
-                        console.error("Sync parse error", e);
-                        container.innerHTML = '<div style="padding:20px; text-align:center; color:red;">Lỗi định dạng dữ liệu!</div>';
+                        console.error("Sync error", e);
+                        container.innerHTML = '<div style="padding:20px; text-align:center; color:red;">Lỗi dữ liệu!</div>';
                     }
                 },
                 onerror: () => {
-                    container.innerHTML = '<div style="padding:20px; text-align:center; color:red;">❌ Lỗi kết nối mạng!</div>';
+                    container.innerHTML = '<div style="padding:20px; text-align:center; color:red;">❌ Lỗi kết nối!</div>';
                 }
             });
         };
@@ -241,21 +281,56 @@
             modal.innerHTML = `
                 <div class="rm-content">
                     <button class="rm-btn-close" id="btn-rm-close" title="Đóng">×</button>
-                    <div class="rm-header">🔔 QUẢN LÝ NHẮC VIỆC</div>
+                    <div class="rm-header">🔔 QUẢN LÝ NHẮC VIỆC (V6)</div>
                     <div id="rm-task-list" class="rm-list-container"></div>
                     <div class="rm-form">
                         <div class="rm-row">
                             <div class="rm-col">
-                                <label class="rm-toggle"><input type="checkbox" id="chk-daily" checked> Lặp lại hàng ngày</label>
-                                <input type="date" id="rm-date" class="rm-input" disabled>
+                                <label class="rm-label">Chế độ lặp:</label>
+                                <select id="rm-mode" class="rm-select">
+                                    <option value="once">Một lần (Theo ngày)</option>
+                                    <option value="daily">Hàng ngày</option>
+                                    <option value="weekly">Hàng tuần</option>
+                                    <option value="monthly">Hàng tháng</option>
+                                </select>
                             </div>
-                            <div class="rm-col">
+                            <div class="rm-col-sm">
                                 <label class="rm-label">Giờ gửi:</label>
                                 <input type="time" id="rm-time" class="rm-input">
                             </div>
                         </div>
+
+                        <!-- INPUTS ĐỘNG TÙY THEO CHẾ ĐỘ -->
+                        <div class="rm-row" id="input-container">
+                            <!-- DATE (ONCE) -->
+                            <div class="rm-col rm-hidden" id="input-box-date">
+                                <label class="rm-label">Ngày gửi:</label>
+                                <input type="date" id="rm-date" class="rm-input">
+                            </div>
+                            
+                            <!-- WEEKLY -->
+                            <div class="rm-col rm-hidden" id="input-box-weekly">
+                                <label class="rm-label">Chọn thứ:</label>
+                                <select id="rm-weekday" class="rm-select">
+                                    <option value="1">Thứ 2</option>
+                                    <option value="2">Thứ 3</option>
+                                    <option value="3">Thứ 4</option>
+                                    <option value="4">Thứ 5</option>
+                                    <option value="5">Thứ 6</option>
+                                    <option value="6">Thứ 7</option>
+                                    <option value="0">Chủ nhật</option>
+                                </select>
+                            </div>
+
+                            <!-- MONTHLY -->
+                            <div class="rm-col rm-hidden" id="input-box-monthly">
+                                <label class="rm-label">Ngày trong tháng (1-31):</label>
+                                <input type="number" id="rm-monthday" class="rm-input" min="1" max="31" placeholder="VD: 15">
+                            </div>
+                        </div>
+
                         <div class="rm-row">
-                            <div class="rm-col"><label class="rm-label">Nội dung:</label><input type="text" id="rm-msg" class="rm-input" placeholder="Nhập nội dung..."></div>
+                            <div class="rm-col"><label class="rm-label">Nội dung:</label><input type="text" id="rm-msg" class="rm-input" placeholder="Nhập nội dung nhắc nhở..."></div>
                         </div>
                         <div class="rm-row">
                             <div class="rm-col"><label class="rm-label">Nhóm nhận tin:</label><div class="rm-group-box">${groupHtml}</div></div>
@@ -269,35 +344,46 @@
 
             document.getElementById('btn-rm-close').onclick = () => { modal.style.display = 'none'; };
 
-            document.getElementById('chk-daily').onchange = (e) => {
-                const dateInput = document.getElementById('rm-date');
-                dateInput.disabled = e.target.checked;
-                if(e.target.checked) dateInput.value = '';
-                else { const d = new Date(); dateInput.value = d.toISOString().split('T')[0]; }
+            // Xử lý sự kiện đổi Mode
+            document.getElementById('rm-mode').onchange = (e) => {
+                updateFormMode(e.target.value);
             };
 
+            // ADD / UPDATE LOGIC
             document.getElementById('btn-rm-add').onclick = () => {
+                const mode = document.getElementById('rm-mode').value;
                 const time = document.getElementById('rm-time').value;
                 const msg = document.getElementById('rm-msg').value.trim();
-                const isDaily = document.getElementById('chk-daily').checked;
-                const date = document.getElementById('rm-date').value;
                 const selectedGroups = Array.from(document.querySelectorAll('.chk-rm-new-group:checked')).map(c => c.value);
 
                 if(!time) return alert("Vui lòng chọn giờ!");
-                if(!isDaily && !date) return alert("Vui lòng chọn ngày!");
                 if(!msg) return alert("Vui lòng nhập nội dung!");
                 if(selectedGroups.length === 0) return alert("Vui lòng chọn nhóm!");
+
+                // Validate riêng từng mode
+                let extraData = {};
+                if (mode === 'once') {
+                    const date = document.getElementById('rm-date').value;
+                    if(!date) return alert("Vui lòng chọn ngày!");
+                    extraData.date = date;
+                } else if (mode === 'weekly') {
+                    extraData.weekday = document.getElementById('rm-weekday').value; // String "0"-"6"
+                } else if (mode === 'monthly') {
+                    const d = parseInt(document.getElementById('rm-monthday').value);
+                    if(!d || d < 1 || d > 31) return alert("Ngày trong tháng không hợp lệ (1-31)!");
+                    extraData.dayOfMonth = d;
+                }
 
                 const taskObj = {
                     id: editingId || Date.now(),
                     isActive: true,
-                    mode: isDaily ? 'daily' : 'once',
-                    date: isDaily ? '' : date,
+                    mode: mode,
                     time: time,
                     msg: msg,
                     groups: selectedGroups,
                     lastRun: '',
-                    status: 'pending'
+                    status: 'pending',
+                    ...extraData // Spread các dữ liệu phụ (date, weekday, dayOfMonth) vào object
                 };
 
                 if (editingId) {
@@ -321,7 +407,6 @@
                 GM_xmlhttpRequest({
                     method: "POST",
                     url: CONSTANTS.GSHEET.CONFIG_API,
-                    // Lưu ý: Chỉ gửi lên Cloud, không lưu vào biến userCfg nữa
                     data: JSON.stringify({ user: currentUser, type: 'reminder', config: currentTasks }),
                     headers: { "Content-Type": "application/x-www-form-urlencoded" },
                     onload: (res) => {
@@ -330,7 +415,6 @@
                             const response = JSON.parse(res.responseText);
                             if (response.status === 'success') {
                                 UI.showToast("✅ Lưu thành công!");
-                                // Không lưu Local Storage ở đây
                                 modal.style.display = 'none';
                             } else { alert("Lỗi: " + response.message); }
                         } catch (e) { alert("Lỗi phản hồi Server"); }
@@ -342,20 +426,17 @@
 
         resetForm();
         
-        // --- FIX Z-INDEX TOAST ---
         const toastEl = document.getElementById('tgdd-toast-notification');
         if (toastEl) document.body.appendChild(toastEl);
 
         modal.style.display = 'flex';
-
-        // --- TRIGGER SYNC NGAY LẬP TỨC ---
         syncFromCloud();
     };
 
     return {
         name: "Nhắc việc",
         icon: `<svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" fill="white"/></svg>`,
-        bgColor: "#ff9800",
+        bgColor: "#9c27b0",
         css: MY_CSS,
         action: runTool
     };
