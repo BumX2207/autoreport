@@ -113,7 +113,7 @@
                 let badgeHtml = '';
                 switch (task.mode) {
                     case 'daily': badgeHtml = `<span class="rm-badge rm-badge-daily">Hàng ngày</span>`; break;
-                    case 'weekly': badgeHtml = `<span class="rm-badge rm-badge-weekly">Mỗi ${WEEKDAYS[task.weekday] || 'Tuần'}</span>`; break;
+                    case 'weekly': badgeHtml = `<span class="rm-badge rm-badge-weekly">${WEEKDAYS[task.weekday] hàng tuần || 'Tuần'}</span>`; break;
                     case 'monthly': badgeHtml = `<span class="rm-badge rm-badge-monthly">Ngày ${task.dayOfMonth}</span>`; break;
                     default: badgeHtml = `<span class="rm-badge rm-badge-once">${task.date || '??'}</span>`; break;
                 }
