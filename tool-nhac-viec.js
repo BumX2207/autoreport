@@ -14,7 +14,7 @@
             background:white; width:95%; max-width:480px; border-radius:15px; padding:20px; 
             box-shadow:0 10px 40px rgba(0,0,0,0.3); animation: popIn 0.3s; 
             font-family: sans-serif; display:flex; flex-direction:column; 
-            max-height: 85vh; /* Giới hạn chiều cao */
+            max-height: 80vh; /* Giới hạn chiều cao */
             position: relative; 
         }
         
@@ -114,7 +114,7 @@
                 switch (task.mode) {
                     case 'daily': badgeHtml = `<span class="rm-badge rm-badge-daily">Hàng ngày</span>`; break;
                     case 'weekly': badgeHtml = `<span class="rm-badge rm-badge-weekly">${WEEKDAYS[task.weekday] +' hàng tuần' || 'Tuần'}</span>`; break;
-                    case 'monthly': badgeHtml = `<span class="rm-badge rm-badge-monthly">Ngày ${task.dayOfMonth}</span>`; break;
+                    case 'monthly': badgeHtml = `<span class="rm-badge rm-badge-monthly">Ngày ${task.dayOfMonth} +' hàng tháng'</span>`; break;
                     default: badgeHtml = `<span class="rm-badge rm-badge-once">${task.date || '??'}</span>`; break;
                 }
                 
