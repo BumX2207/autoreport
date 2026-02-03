@@ -368,16 +368,16 @@
 
                 let extraData = {};
                 if (mode === 'once') {
-                    const date = document.getElementById('rm-date').value;
-                    if(!date) return alert("Vui lòng chọn ngày!");
-                    extraData.date = date;
-                } else if (mode === 'weekly') {
-                    extraData.weekday = document.getElementById('rm-weekday').value;
-                } else if (mode === 'monthly') {
-                    const d = parseInt(document.getElementById('rm-monthday').value);
-                    if(!d || d < 1 || d > 31) return alert("Ngày trong tháng không hợp lệ!");
-                    extraData.dayOfMonth = d;
-                }
+                      const date = document.getElementById('rm-date').value;
+                      if(!date) return alert("Vui lòng chọn ngày!");
+                      extraData.date = date;
+                  } else if (mode === 'weekly') {
+                      extraData.weekday = parseInt(document.getElementById('rm-weekday').value); 
+                  } else if (mode === 'monthly') {
+                      const d = parseInt(document.getElementById('rm-monthday').value);
+                      if(!d || d < 1 || d > 31) return alert("Ngày trong tháng không hợp lệ!");
+                      extraData.dayOfMonth = d;
+                  }
 
                 const taskObj = {
                     id: editingId || Date.now(),
