@@ -1,8 +1,8 @@
 /* 
-   MODULE: NHẮC VIỆC (V6.3 - FIX EDIT BUG & ID TYPE)
-   - Fix lỗi Edit không ăn (do sai kiểu dữ liệu ID).
-   - Fix lỗi Task hàng ngày/Một lần không chạy sau khi sửa.
-   - UI: Có thanh cuộn, không bị tràn màn hình.
+   MODULE: NHẮC VIỆC (V6.4 - FINAL FIX ID & UPDATE LOGIC)
+   - Fix triệt để lỗi Edit sinh ra task mới (Duplicate).
+   - Chuẩn hóa 100% ID dạng String để tránh lỗi tìm kiếm.
+   - Logic Update: Tìm đúng Index và ghi đè, không push bừa bãi.
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE, GM_xmlhttpRequest } = context;
@@ -31,7 +31,7 @@
         
         .rm-item { background:white; border-radius:8px; padding:10px; margin-bottom:5px; border:1px solid #e0e0e0; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 5px rgba(0,0,0,0.05); transition: background 0.2s; }
         .rm-item:hover { border-color:#ff9800; }
-        .rm-item.editing { background:#fff3e0; border-color:#ff9800; }
+        .rm-item.editing { background:#fff3e0; border-color:#ff9800; transform: scale(0.99); border-width: 2px; }
         
         .rm-item-info { flex:1; cursor:pointer; }
         .rm-time { font-weight:bold; color:#d35400; font-size:14px; display:flex; align-items:center; gap:5px; flex-wrap: wrap; }
@@ -79,7 +79,7 @@
         let modal = document.getElementById(modalId);
 
         let currentTasks = [];
-        let editingId = null; // Luôn lưu dạng String để so sánh chính xác
+        let editingId = null; // Biến này sẽ lưu ID dạng String
         const userCfg = UTILS.getPersistentConfig();
         const currentUser = AUTH_STATE.userName;
 
@@ -103,7 +103,7 @@
 
             currentTasks.forEach((task) => {
                 const div = document.createElement('div');
-                // So sánh ID dạng string để highlight đúng dòng đang sửa
+                // So sánh ID dạng String để highlight chính xác
                 div.className = `rm-item ${String(task.id) === String(editingId) ? 'editing' : ''}`;
                 
                 let badgeHtml = '';
@@ -156,7 +156,7 @@
         };
 
         const loadToForm = (task) => {
-            // QUAN TRỌNG: Lưu ID dạng String để tránh lỗi type mismatch
+            // QUAN TRỌNG: Lưu ID dạng String
             editingId = String(task.id);
             
             const mode = task.mode || 'once';
@@ -174,8 +174,10 @@
             });
 
             const btnAdd = document.getElementById('btn-rm-add');
-            btnAdd.innerText = "Cập nhật thay đổi";
+            btnAdd.innerText = "Lưu thay đổi";
             btnAdd.className = "rm-btn rm-btn-update";
+            
+            // Render lại để hiện highlight màu vàng
             renderList();
         };
 
@@ -192,7 +194,7 @@
             document.querySelectorAll('.chk-rm-new-group').forEach(chk => chk.checked = false);
 
             const btnAdd = document.getElementById('btn-rm-add');
-            btnAdd.innerText = "Thêm vào danh sách";
+            btnAdd.innerText = "Thêm mới";
             btnAdd.className = "rm-btn rm-btn-add";
             renderList();
         };
@@ -247,14 +249,15 @@
                         if (extractedData && Array.isArray(extractedData)) {
                             currentTasks = extractedData;
                             
-                            // CHUẨN HÓA DỮ LIỆU ĐẦU VÀO
+                            // --- BƯỚC CHUẨN HÓA QUAN TRỌNG ---
+                            // Duyệt qua tất cả và ép ID thành String ngay lập tức
                             currentTasks.forEach(t => { 
-                                // Ép ID về String ngay từ đầu
                                 if(!t.id) t.id = String(Date.now() + Math.random());
                                 else t.id = String(t.id); 
 
                                 if(!t.mode) t.mode = (t.date) ? 'once' : 'daily';
                             });
+                            // ---------------------------------
 
                             renderList();
                             UI.showToast(`✅ Đã tải ${currentTasks.length} lịch nhắc!`);
@@ -336,7 +339,7 @@
                         <div class="rm-row">
                             <div class="rm-col"><label class="rm-label">Nhóm nhận tin:</label><div class="rm-group-box">${groupHtml}</div></div>
                         </div>
-                        <button id="btn-rm-add" class="rm-btn rm-btn-add">Thêm vào danh sách</button>
+                        <button id="btn-rm-add" class="rm-btn rm-btn-add">Thêm mới</button>
                     </div>
                     <button id="btn-rm-save-cloud" class="rm-btn rm-btn-save">☁️ CẬP NHẬT LÊN CLOUD</button>
                 </div>
@@ -346,6 +349,7 @@
             document.getElementById('btn-rm-close').onclick = () => { modal.style.display = 'none'; };
             document.getElementById('rm-mode').onchange = (e) => { updateFormMode(e.target.value); };
 
+            // --- SỬA LẠI LOGIC NÚT THÊM/LƯU ---
             document.getElementById('btn-rm-add').onclick = () => {
                 const mode = document.getElementById('rm-mode').value;
                 const time = document.getElementById('rm-time').value;
@@ -369,38 +373,50 @@
                       extraData.dayOfMonth = d;
                   }
 
-                // Nếu đang Edit thì giữ ID cũ, nếu không tạo ID mới (String)
-                const newId = editingId ? String(editingId) : String(Date.now() + Math.random());
-
-                const taskObj = {
-                    id: newId,
-                    isActive: true,
-                    mode: mode,
-                    time: time,
-                    msg: msg,
-                    groups: selectedGroups,
-                    // Quan trọng: Reset lastRun để Bot có thể chạy lại ngay nếu test trong ngày
-                    lastRun: '', 
-                    status: 'pending',
-                    ...extraData
-                };
-
+                // NẾU ĐANG CÓ editingId (TỨC LÀ ĐANG SỬA)
                 if (editingId) {
-                    // FIX: So sánh String với String để tìm đúng task cũ
                     const idx = currentTasks.findIndex(t => String(t.id) === String(editingId));
-                    
-                    if(idx !== -1) {
-                        currentTasks[idx] = taskObj;
-                        UI.showToast("Đã cập nhật (Cần lưu lên Cloud)!");
+                    if (idx !== -1) {
+                        // Cập nhật đè lên phần tử cũ
+                        currentTasks[idx] = {
+                            ...currentTasks[idx], // Giữ lại các thuộc tính cũ nếu có
+                            mode: mode,
+                            time: time,
+                            msg: msg,
+                            groups: selectedGroups,
+                            lastRun: '',      // Reset lastRun để Bot có thể chạy lại
+                            status: 'pending', // Reset trạng thái về pending
+                            ...extraData
+                        };
+                        UI.showToast("Đã cập nhật công việc (Hãy lưu lên Cloud)!");
                     } else {
-                        // Trường hợp hiếm: có ID edit nhưng không tìm thấy trong mảng -> Coi như thêm mới
-                        currentTasks.push(taskObj);
-                        UI.showToast("Không tìm thấy task cũ, đã thêm mới!");
+                        // Trường hợp hi hữu: Có ID nhưng không tìm thấy trong mảng -> Coi như thêm mới
+                        alert("Không tìm thấy công việc gốc! Đã thêm mới.");
+                        const newId = String(Date.now());
+                        currentTasks.push({
+                            id: newId, isActive: true, mode: mode, time: time, msg: msg, 
+                            groups: selectedGroups, lastRun: '', status: 'pending', ...extraData
+                        });
                     }
-                } else {
-                    currentTasks.push(taskObj);
-                    UI.showToast("Đã thêm (Cần lưu lên Cloud)!");
+                } 
+                // NẾU KHÔNG CÓ editingId (THÊM MỚI)
+                else {
+                    const newId = String(Date.now());
+                    currentTasks.push({
+                        id: newId,
+                        isActive: true,
+                        mode: mode,
+                        time: time,
+                        msg: msg,
+                        groups: selectedGroups,
+                        lastRun: '',
+                        status: 'pending',
+                        ...extraData
+                    });
+                    UI.showToast("Đã thêm mới (Hãy lưu lên Cloud)!");
                 }
+
+                // Reset form sau khi xử lý xong
                 resetForm();
             };
 
