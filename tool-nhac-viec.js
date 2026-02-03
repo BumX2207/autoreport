@@ -1,6 +1,7 @@
 /* 
-   MODULE: NHẮC VIỆC (V6.2 - FIX DEEP PARSE DATA)
-   - Fix lỗi không load được data nếu API trả về dạng Stringified JSON.
+   MODULE: NHẮC VIỆC (V6.3 - FIX EDIT BUG & ID TYPE)
+   - Fix lỗi Edit không ăn (do sai kiểu dữ liệu ID).
+   - Fix lỗi Task hàng ngày/Một lần không chạy sau khi sửa.
    - UI: Có thanh cuộn, không bị tràn màn hình.
 */
 ((context) => {
@@ -14,7 +15,7 @@
             background:white; width:95%; max-width:480px; border-radius:15px; padding:20px; 
             box-shadow:0 10px 40px rgba(0,0,0,0.3); animation: popIn 0.3s; 
             font-family: sans-serif; display:flex; flex-direction:column; 
-            max-height: 80vh; /* Giới hạn chiều cao */
+            max-height: 80vh; 
             position: relative; 
         }
         
@@ -22,16 +23,10 @@
         .rm-btn-close { position:absolute; top:15px; right:15px; background:none; border:none; font-size:24px; color:#999; cursor:pointer; line-height:1; z-index:10; transition:color 0.2s; }
         .rm-btn-close:hover { color:#333; }
 
-        /* LIST CONTAINER - CÓ SCROLL */
         .rm-list-container { 
-            flex:1; 
-            overflow-y:auto; 
-            margin-bottom:15px; 
+            flex:1; overflow-y:auto; margin-bottom:15px; 
             border:1px solid #eee; border-radius:8px; background:#f9f9f9; padding:5px; 
-            min-height:100px; 
-            /* Phần quan trọng: */
-            max-height: 30vh; 
-            position:relative; 
+            min-height:100px; max-height: 30vh; position:relative; 
         }
         
         .rm-item { background:white; border-radius:8px; padding:10px; margin-bottom:5px; border:1px solid #e0e0e0; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 5px rgba(0,0,0,0.05); transition: background 0.2s; }
@@ -84,7 +79,7 @@
         let modal = document.getElementById(modalId);
 
         let currentTasks = [];
-        let editingId = null;
+        let editingId = null; // Luôn lưu dạng String để so sánh chính xác
         const userCfg = UTILS.getPersistentConfig();
         const currentUser = AUTH_STATE.userName;
 
@@ -108,13 +103,14 @@
 
             currentTasks.forEach((task) => {
                 const div = document.createElement('div');
-                div.className = `rm-item ${task.id === editingId ? 'editing' : ''}`;
+                // So sánh ID dạng string để highlight đúng dòng đang sửa
+                div.className = `rm-item ${String(task.id) === String(editingId) ? 'editing' : ''}`;
                 
                 let badgeHtml = '';
                 switch (task.mode) {
                     case 'daily': badgeHtml = `<span class="rm-badge rm-badge-daily">Hàng ngày</span>`; break;
-                    case 'weekly': badgeHtml = `<span class="rm-badge rm-badge-weekly">${WEEKDAYS[task.weekday] +' hàng tuần' || 'Tuần'}</span>`; break;
-                    case 'monthly': badgeHtml = `<span class="rm-badge rm-badge-monthly">Ngày ${task.dayOfMonth} hàng tháng</span>`; break;
+                    case 'weekly': badgeHtml = `<span class="rm-badge rm-badge-weekly">${WEEKDAYS[task.weekday] || 'Hàng tuần'}</span>`; break;
+                    case 'monthly': badgeHtml = `<span class="rm-badge rm-badge-monthly">Ngày ${task.dayOfMonth || '?'} hàng tháng</span>`; break;
                     default: badgeHtml = `<span class="rm-badge rm-badge-once">${task.date || '??'}</span>`; break;
                 }
                 
@@ -136,8 +132,9 @@
                 div.querySelector('.rm-btn-del').onclick = (e) => {
                     e.stopPropagation();
                     if(confirm('Bạn muốn xóa lịch nhắc này?')) {
-                        currentTasks = currentTasks.filter(t => t.id !== task.id);
-                        if (editingId === task.id) resetForm();
+                        // Lọc bỏ ID (So sánh String)
+                        currentTasks = currentTasks.filter(t => String(t.id) !== String(task.id));
+                        if (String(editingId) === String(task.id)) resetForm();
                         renderList();
                     }
                 };
@@ -159,7 +156,9 @@
         };
 
         const loadToForm = (task) => {
-            editingId = task.id;
+            // QUAN TRỌNG: Lưu ID dạng String để tránh lỗi type mismatch
+            editingId = String(task.id);
+            
             const mode = task.mode || 'once';
             document.getElementById('rm-mode').value = mode;
             updateFormMode(mode);
@@ -190,30 +189,24 @@
             document.getElementById('rm-weekday').value = '1';
             document.getElementById('rm-monthday').value = '1';
             
+            document.querySelectorAll('.chk-rm-new-group').forEach(chk => chk.checked = false);
+
             const btnAdd = document.getElementById('btn-rm-add');
             btnAdd.innerText = "Thêm vào danh sách";
             btnAdd.className = "rm-btn rm-btn-add";
             renderList();
         };
 
-        // --- HÀM TRÍCH XUẤT MẢNG THÔNG MINH (Deep Parse) ---
         const smartExtractArray = (input) => {
             if (!input) return null;
-            
-            // 1. Nếu nó đã là mảng thì trả về luôn
             if (Array.isArray(input)) return input;
-
-            // 2. Nếu nó là string, thử parse JSON
             if (typeof input === 'string') {
                 try {
                     const parsed = JSON.parse(input);
                     if (Array.isArray(parsed)) return parsed;
-                    // Nếu parse xong ra Object, thì đệ quy tiếp
                     return smartExtractArray(parsed);
                 } catch (e) { return null; }
             }
-            
-            // 3. Nếu nó là Object, tìm trong key 'config' hoặc 'data'
             if (typeof input === 'object') {
                 if (input.config) {
                     const res = smartExtractArray(input.config);
@@ -227,7 +220,6 @@
             return null;
         };
 
-        // --- SYNC FUNCTION ---
         const syncFromCloud = () => {
             const container = document.getElementById('rm-task-list');
             if(!container) return;
@@ -249,25 +241,24 @@
                 url: `${CONSTANTS.GSHEET.CONFIG_API}?type=reminder&user=${encodeURIComponent(currentUser)}`,
                 onload: (res) => {
                     try {
-                        console.log("Raw Response:", res.responseText); // Để debug
                         const response = JSON.parse(res.responseText);
-                        
-                        // SỬ DỤNG HÀM SMART EXTRACT
                         const extractedData = smartExtractArray(response);
 
                         if (extractedData && Array.isArray(extractedData)) {
                             currentTasks = extractedData;
                             
-                            // Vá lỗi dữ liệu thiếu
+                            // CHUẨN HÓA DỮ LIỆU ĐẦU VÀO
                             currentTasks.forEach(t => { 
-                                if(!t.id) t.id = Date.now() + Math.random(); 
+                                // Ép ID về String ngay từ đầu
+                                if(!t.id) t.id = String(Date.now() + Math.random());
+                                else t.id = String(t.id); 
+
                                 if(!t.mode) t.mode = (t.date) ? 'once' : 'daily';
                             });
 
                             renderList();
                             UI.showToast(`✅ Đã tải ${currentTasks.length} lịch nhắc!`);
                         } else {
-                            // Không tìm thấy mảng nào hợp lệ
                             currentTasks = [];
                             renderList();
                         }
@@ -282,7 +273,6 @@
             });
         };
 
-        // --- INIT UI ---
         if (!modal) {
             modal = document.createElement('div');
             modal.id = modalId;
@@ -379,22 +369,34 @@
                       extraData.dayOfMonth = d;
                   }
 
+                // Nếu đang Edit thì giữ ID cũ, nếu không tạo ID mới (String)
+                const newId = editingId ? String(editingId) : String(Date.now() + Math.random());
+
                 const taskObj = {
-                    id: editingId || Date.now(),
+                    id: newId,
                     isActive: true,
                     mode: mode,
                     time: time,
                     msg: msg,
                     groups: selectedGroups,
-                    lastRun: '',
+                    // Quan trọng: Reset lastRun để Bot có thể chạy lại ngay nếu test trong ngày
+                    lastRun: '', 
                     status: 'pending',
                     ...extraData
                 };
 
                 if (editingId) {
-                    const idx = currentTasks.findIndex(t => t.id === editingId);
-                    if(idx !== -1) currentTasks[idx] = taskObj;
-                    UI.showToast("Đã cập nhật (Cần lưu lên Cloud)!");
+                    // FIX: So sánh String với String để tìm đúng task cũ
+                    const idx = currentTasks.findIndex(t => String(t.id) === String(editingId));
+                    
+                    if(idx !== -1) {
+                        currentTasks[idx] = taskObj;
+                        UI.showToast("Đã cập nhật (Cần lưu lên Cloud)!");
+                    } else {
+                        // Trường hợp hiếm: có ID edit nhưng không tìm thấy trong mảng -> Coi như thêm mới
+                        currentTasks.push(taskObj);
+                        UI.showToast("Không tìm thấy task cũ, đã thêm mới!");
+                    }
                 } else {
                     currentTasks.push(taskObj);
                     UI.showToast("Đã thêm (Cần lưu lên Cloud)!");
@@ -411,7 +413,7 @@
                 GM_xmlhttpRequest({
                     method: "POST",
                     url: CONSTANTS.GSHEET.CONFIG_API,
-                    // Lưu dữ liệu là JSON Array đã được Stringify
+                    // Lưu dữ liệu
                     data: JSON.stringify({ user: currentUser, type: 'reminder', config: currentTasks }),
                     headers: { "Content-Type": "application/x-www-form-urlencoded" },
                     onload: (res) => {
