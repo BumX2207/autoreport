@@ -1,7 +1,8 @@
 /* 
-   MODULE: KIỂM KÊ KHO (INVENTORY) - V5.2 (FIX FLOW & FORMAT)
-   - Flow: Load User -> Check Config ID -> (Có: Hiện Overlay) / (Không: Chuyển Tab nhập liệu).
-   - Format: Phân cách hàng ngàn cho số lượng.
+   MODULE: KIỂM KÊ KHO (INVENTORY) - V6.0 (BLACK OVERLAY CONFIG)
+   - Overlay đen khi khởi động.
+   - Kiểm tra ID -> Có: Hiện Input(Locked)+Edit+Buttons | Không: Hiện Input(Open)+Save.
+   - Format số lượng.
 */
 ((context) => {
     // ===============================================================
@@ -47,10 +48,25 @@
         .inv-view { display:none; height:100%; flex-direction:column; padding:15px; box-sizing:border-box; }
         .inv-view.active { display:flex; }
 
-        /* CONFIG ROW */
-        .inv-config-row { display: flex; gap: 10px; align-items: center; background: #fff3cd; padding: 10px; border-radius: 8px; border: 1px dashed #ffc107; margin-bottom: 15px; }
-        #inp-custom-sheet-id { flex: 1; font-size: 13px; font-family: monospace; color: #333; transition: 0.3s; }
-        #inp-custom-sheet-id:disabled { background: #e9ecef; color: #6c757d; cursor: not-allowed; border: 1px solid #eee; }
+        /* OVERLAYS - BLACK STYLE */
+        #inv-startup-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:2005; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:15px; animation:fadeIn 0.3s; color: white; }
+        .inv-startup-title { font-size:20px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:1px; }
+        .inv-startup-status { font-size:14px; color:#ccc; font-style:italic; margin-bottom:10px; }
+        
+        /* Config Box on Overlay */
+        .inv-startup-config-box { display: flex; gap: 10px; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; border: 1px solid #444; width: 80%; max-width: 400px; align-items: center; }
+        #inp-startup-sheet-id { flex: 1; padding: 10px; border-radius: 5px; border: none; font-family: monospace; font-size: 13px; color: #333; }
+        #inp-startup-sheet-id:disabled { background: #e9ecef; color: #555; cursor: not-allowed; }
+        #btn-startup-save-id { padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: 0.2s; }
+        .btn-mode-save { background: #28a745; color: white; } .btn-mode-save:hover { background: #218838; }
+        .btn-mode-edit { background: #ffc107; color: #333; } .btn-mode-edit:hover { background: #e0a800; }
+
+        /* Action Buttons on Overlay */
+        #startup-actions { display:none; flex-direction:column; gap:15px; width:100%; align-items:center; margin-top:10px; animation: popIn 0.3s; }
+        .inv-startup-btn { padding:15px 30px; border:none; border-radius:30px; font-size:15px; font-weight:bold; cursor:pointer; width:80%; max-width:300px; transition:0.2s; box-shadow:0 4px 15px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; gap:10px; }
+        .inv-startup-btn:active { transform:scale(0.95); }
+        .btn-start-load { background:linear-gradient(135deg, #007bff, #0056b3); color:white; }
+        .btn-start-new { background:linear-gradient(135deg, #17a2b8, #117a8b); color:white; }
 
         /* CONTROLS */
         .inv-controls { display:flex; gap:10px; margin-bottom:15px; align-items:center; flex-wrap: nowrap; position: relative; }
@@ -75,7 +91,7 @@
         
         .inv-btn { padding:8px 12px; border:none; border-radius:6px; font-weight:bold; color:white; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s; white-space:nowrap; font-size: 13px; height: 36px; }
         .inv-btn:active { transform:scale(0.95); }
-        .btn-import { background:#28a745; } .btn-scan { background:#343a40; } .btn-cloud-load { background:#6f42c1; } .btn-sync { background:#17a2b8; } .btn-danger { background:#dc3545; } .btn-export { background:#218838; } .btn-config-save { background: #fd7e14; }
+        .btn-import { background:#28a745; } .btn-scan { background:#343a40; } .btn-cloud-load { background:#6f42c1; } .btn-sync { background:#17a2b8; } .btn-danger { background:#dc3545; } .btn-export { background:#218838; }
         
         /* SEARCH SUGGESTIONS */
         .inv-suggestions { position:absolute; top:100%; left:0; width:100%; background:white; border:1px solid #ddd; border-radius:0 0 8px 8px; box-shadow:0 10px 20px rgba(0,0,0,0.2); z-index:2000; max-height:300px; overflow-y:auto; display:none; }
@@ -83,14 +99,6 @@
         .inv-sug-item:hover { background:#f0f8ff; color:#007bff; }
         .inv-sug-code { font-weight:bold; color:#d63031; }
         .inv-sug-sub { font-size:11px; color:#666; font-style: italic; }
-
-        /* OVERLAYS */
-        #inv-startup-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.98); z-index:2005; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:20px; animation:fadeIn 0.5s; }
-        .inv-startup-title { font-size:24px; font-weight:800; color:#333; margin-bottom:10px; text-align:center; }
-        .inv-startup-btn { padding:15px 25px; border:none; border-radius:10px; font-size:16px; font-weight:bold; cursor:pointer; width:80%; max-width:300px; transition:0.2s; box-shadow:0 5px 15px rgba(0,0,0,0.1); display:flex; align-items:center; justify-content:center; gap:10px; }
-        .inv-startup-btn:active { transform:scale(0.95); }
-        .btn-start-load { background:linear-gradient(135deg, #007bff, #0056b3); color:white; }
-        .btn-start-new { background:linear-gradient(135deg, #28a745, #218838); color:white; }
 
         #inv-edit-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2147483750; justify-content:center; align-items:center; backdrop-filter:blur(2px); }
         .inv-edit-content { background:white; width:90%; max-width:400px; border-radius:12px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.3); animation: popIn 0.2s; display:flex; flex-direction:column; }
@@ -283,7 +291,7 @@
         modal.innerHTML = `
             <div class="inv-content">
                 <div class="inv-header">
-                    <div class="inv-title">📦Kiểm kê V5.2 (STRICT)</div>
+                    <div class="inv-title">📦Kiểm kê V6.0</div>
                     <div class="inv-tabs">
                         <div class="inv-tab active" data-tab="tab-input">Nhập liệu</div>
                         <div class="inv-tab" data-tab="tab-count">Kiểm kê</div>
@@ -300,30 +308,32 @@
                 </div>
 
                 <div class="inv-body">
-                    <!-- STARTUP OVERLAY -->
+                    <!-- STARTUP OVERLAY - BLACK -->
                     <div id="inv-startup-overlay" style="display:none;">
-                        <div class="inv-startup-title">Bạn muốn làm gì?</div>
-                        <span class="inv-startup-user" id="lbl-startup-user">Đang tải cấu hình...</span>
-                        <div style="font-size:12px;color:#d63031;margin-bottom:10px;font-weight:bold;text-align:center;padding:0 20px;" id="lbl-startup-sheet-notice"></div>
-                        <div id="startup-actions" style="display:none; width:100%; flex-direction:column; align-items:center; gap:10px;">
-                            <button class="inv-startup-btn btn-start-load" id="btn-start-load">📥 Tiếp tục kỳ kiểm kê cũ</button>
-                            <button class="inv-startup-btn btn-start-new" id="btn-start-new">🆕 Tạo kỳ kiểm kê mới</button>
+                        <div class="inv-startup-title">HỆ THỐNG KIỂM KÊ</div>
+                        <div id="lbl-startup-status" class="inv-startup-status">Đang kết nối dữ liệu...</div>
+                        <div id="lbl-startup-user" style="color:#2196F3; font-weight:bold; margin-bottom:15px;">User: ...</div>
+                        
+                        <!-- CONFIG INPUT ON OVERLAY -->
+                        <div class="inv-startup-config-box">
+                            <input type="text" id="inp-startup-sheet-id" placeholder="Nhập ID Sheet Google kiểm kê..." autocomplete="off">
+                            <button id="btn-startup-save-id" class="btn-mode-save">Lưu</button>
+                        </div>
+                        <div style="font-size:11px; color:#888;">* ID file Google Sheet của riêng bạn</div>
+
+                        <!-- ACTION BUTTONS -->
+                        <div id="startup-actions" style="display:none;">
+                            <button class="inv-startup-btn btn-start-load" id="btn-start-load">📥 Tiếp tục kỳ cũ</button>
+                            <button class="inv-startup-btn btn-start-new" id="btn-start-new">🆕 Bắt đầu kỳ mới</button>
                         </div>
                     </div>
 
-                    <!-- TAB 1 -->
+                    <!-- TAB 1: NHẬP LIỆU (Đã xóa config ID) -->
                     <div class="inv-view active" id="tab-input">
-                        <!-- CONFIG ROW: ID SHEET (MOVED TOP FOR VISIBILITY) -->
-                        <div class="inv-config-row">
-                            <input type="text" id="inp-custom-sheet-id" class="inv-input" placeholder="🔴 BẮT BUỘC: Nhập ID Google Sheet riêng..." autocomplete="off">
-                            <button class="inv-btn btn-config-save" id="btn-save-sheet-id">Lưu ID</button>
-                        </div>
-
                         <div class="inv-controls tab1-controls">
                             <label class="inv-btn btn-import">📂 Nhập Excel<input type="file" id="inp-excel-file" accept=".xlsx, .xls" style="display:none;"></label>
                             <button class="inv-btn btn-cloud-load" id="btn-load-stock-cloud">☁️ Tải tồn kho</button>
                         </div>
-
                         <div style="padding:0 10px 10px; font-size:12px; color:#666;" id="lbl-file-name">Chưa có dữ liệu</div>
                         <div class="inv-table-wrapper"><table class="inv-table" id="tbl-import"><thead><tr><th>#</th><th>Nhóm</th><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>Tồn kho</th></tr></thead><tbody></tbody></table></div>
                     </div>
@@ -383,47 +393,46 @@
         const lblUser = document.getElementById('lbl-current-user');
         const overlay = document.getElementById('inv-startup-overlay');
         const lblStartUser = document.getElementById('lbl-startup-user');
-        const lblSheetNotice = document.getElementById('lbl-startup-sheet-notice');
+        const lblStatus = document.getElementById('lbl-startup-status');
         const startupActions = document.getElementById('startup-actions');
 
-        // *** FIX BUG: Fetch User Config Correctly ***
-        const fetchUserConfig = () => {
-            lblStartUser.innerText = "Đang kiểm tra ID Sheet...";
-            
-            // Gọi API kiểm tra ID trong file config gốc
-            API.getUserSheetId((res) => {
-                const inp = document.getElementById('inp-custom-sheet-id');
-                const btn = document.getElementById('btn-save-sheet-id');
+        const inpSheetId = document.getElementById('inp-startup-sheet-id');
+        const btnSaveId = document.getElementById('btn-startup-save-id');
 
+        // *** LOGIC KIỂM TRA CONFIG ***
+        const fetchUserConfig = () => {
+            lblStatus.innerText = "⏳ Đang kiểm tra cấu hình...";
+            lblStatus.style.color = "#FFC107";
+            
+            API.getUserSheetId((res) => {
                 if (res.status === 'success' && res.sheet_id) {
-                    // CASE A: ID TỒN TẠI
+                    // CÓ ID: Hiển thị chế độ ĐÃ KẾT NỐI
                     STORE.customSheetId = res.sheet_id;
                     
-                    // Cập nhật UI
-                    inp.value = res.sheet_id;
-                    inp.disabled = true;
-                    btn.innerText = "Chỉnh sửa";
+                    inpSheetId.value = res.sheet_id;
+                    inpSheetId.disabled = true;
                     
-                    // Hiện Overlay Startup
-                    lblSheetNotice.innerText = "✅ Đang kết nối File Sheet Riêng";
-                    lblStartUser.innerText = "User: " + STORE.currentUser;
-                    startupActions.style.display = 'flex'; 
-                    overlay.style.display = 'flex'; // Đảm bảo overlay hiện
+                    btnSaveId.innerText = "Sửa";
+                    btnSaveId.className = "btn-mode-edit"; // Màu vàng
+                    
+                    lblStatus.innerText = "✅ Đã kết nối File Sheet";
+                    lblStatus.style.color = "#4CAF50";
+                    
+                    startupActions.style.display = 'flex'; // Hiện nút Tiếp tục/Mới
                 } else {
-                    // CASE B: ID KHÔNG TỒN TẠI
+                    // KHÔNG ID: Hiển thị chế độ NHẬP ID
                     STORE.customSheetId = "";
-                    inp.disabled = false;
-                    btn.innerText = "Lưu ID";
+                    inpSheetId.value = "";
+                    inpSheetId.disabled = false;
                     
-                    // Ẩn Overlay ngay lập tức
-                    overlay.style.display = 'none';
+                    btnSaveId.innerText = "Lưu";
+                    btnSaveId.className = "btn-mode-save"; // Màu xanh
                     
-                    // Chuyển sang Tab Nhập liệu và Focus vào ô nhập ID
-                    modal.querySelector('.inv-tab[data-tab="tab-input"]').click();
-                    setTimeout(() => {
-                        inp.focus();
-                        if(UI.showToast) UI.showToast("⚠️ Vui lòng khai báo ID Sheet để bắt đầu!");
-                    }, 500);
+                    lblStatus.innerText = "⚠️ Chưa khai báo File Sheet";
+                    lblStatus.style.color = "#FF5722";
+                    
+                    startupActions.style.display = 'none'; // Ẩn nút chức năng
+                    inpSheetId.focus();
                 }
             });
         };
@@ -438,31 +447,75 @@
                     lblUser.innerText = STORE.currentUser; 
                     lblUser.classList.add('ready'); 
                     
-                    // Bắt đầu quy trình kiểm tra ID
+                    lblStartUser.innerText = "User: " + STORE.currentUser;
                     fetchUserConfig(); 
-                } else if (attempt > 30) { clearInterval(check); lblUser.innerText = "Lỗi: Không tìm thấy User!"; lblUser.style.color = "red"; UI.showToast("❌ Không lấy được thông tin User!"); }
+                } else if (attempt > 30) { clearInterval(check); lblUser.innerText = "Lỗi User!"; UI.showToast("❌ Không lấy được thông tin User!"); }
             }, 500);
         };
 
         // --- EVENTS ---
         document.getElementById('btn-start-load').onclick = () => { 
-            if(!STORE.customSheetId) { alert("BẮT BUỘC phải có ID Sheet!"); return; }
+            if(!STORE.customSheetId) return;
             overlay.style.display = 'none'; 
             autoLoadData(); 
         };
         
         document.getElementById('btn-start-new').onclick = () => {
-            if(!STORE.customSheetId) { alert("BẮT BUỘC phải có ID Sheet!"); return; }
-            if(confirm(`Bạn có muốn TẠO KỲ KIỂM KÊ MỚI không?\n\nDữ liệu trên File Sheet Riêng sẽ bị XÓA HẾT để bắt đầu mới.`)) {
+            if(!STORE.customSheetId) return;
+            if(confirm(`TẠO KỲ KIỂM KÊ MỚI?\n\nDữ liệu cũ sẽ bị XÓA HẾT.`)) {
                 overlay.style.display = 'none'; 
                 API.deleteData('all', (res) => {
                     if(res.status === 'success') { 
-                        if(UI.showToast) UI.showToast(`✅ Đã reset dữ liệu trên File Sheet Riêng.`); 
+                        UI.showToast(`✅ Đã reset dữ liệu.`); 
                         STORE.countData = []; STORE.importData = []; 
                         renderImportTable(); renderCountTable(); renderSummary(); 
                         modal.querySelector('.inv-tab[data-tab="tab-input"]').click(); 
                     } 
-                    else { if(UI.showToast) UI.showToast("❌ Lỗi xóa dữ liệu: " + res.msg); }
+                    else { UI.showToast("❌ Lỗi: " + res.msg); }
+                });
+            }
+        };
+
+        // SỰ KIỆN NÚT LƯU / SỬA TRÊN OVERLAY
+        btnSaveId.onclick = function() {
+            const currentMode = this.innerText; // "Lưu" hoặc "Sửa"
+            
+            if(currentMode === "Sửa") {
+                // Chuyển sang chế độ nhập liệu
+                inpSheetId.disabled = false;
+                inpSheetId.focus();
+                this.innerText = "Lưu";
+                this.className = "btn-mode-save";
+                startupActions.style.display = 'none'; // Ẩn nút chức năng khi đang sửa
+            } else {
+                // Chế độ LƯU
+                const val = inpSheetId.value.trim();
+                if(!val) { UI.showToast("❌ Vui lòng nhập ID!"); return; }
+                
+                lblStatus.innerText = "⏳ Đang lưu ID...";
+                
+                API.saveUserSheetId(val, (res) => {
+                    if(res.status === 'success') {
+                        STORE.customSheetId = val;
+                        inpSheetId.disabled = true;
+                        this.innerText = "Sửa";
+                        this.className = "btn-mode-edit";
+                        
+                        lblStatus.innerText = "⏳ Đang khởi tạo Sheet...";
+                        
+                        API.initCustomSheet(val, (initRes) => {
+                            if(initRes.status === 'success') {
+                                lblStatus.innerText = "✅ Kết nối thành công!";
+                                lblStatus.style.color = "#4CAF50";
+                                startupActions.style.display = 'flex'; // Hiện lại nút chức năng
+                            } else {
+                                lblStatus.innerText = "⚠️ Lỗi tạo Sheet: " + initRes.msg;
+                            }
+                        });
+
+                    } else {
+                        lblStatus.innerText = "❌ Lỗi lưu ID: " + res.msg;
+                    }
                 });
             }
         };
@@ -472,62 +525,23 @@
             STORE.importData = []; STORE.countData = []; 
             renderImportTable(); renderCountTable(); renderSummary(); 
             UI.showToast(`Đã chuyển: ${STORE.currentShopId}`); 
+            // Khi đổi shop, hiển thị lại overlay để check config lại (nếu cần) hoặc chỉ cần load lại data
             overlay.style.display = 'flex'; 
             fetchUserConfig();
         };
 
-        document.getElementById('btn-save-sheet-id').onclick = function() {
-            const inp = document.getElementById('inp-custom-sheet-id');
-            const currentMode = this.innerText;
-            
-            if(currentMode === "Chỉnh sửa") {
-                if(confirm("Bạn có chắc muốn đổi file Google Sheet khác?")) {
-                    inp.disabled = false;
-                    inp.focus();
-                    this.innerText = "Lưu ID";
-                }
-            } else {
-                const val = inp.value.trim();
-                if(!val) { UI.showToast("❌ Vui lòng nhập ID!"); return; }
-                
-                API.saveUserSheetId(val, (res) => {
-                    if(res.status === 'success') {
-                        STORE.customSheetId = val;
-                        inp.disabled = true;
-                        this.innerText = "Chỉnh sửa";
-                        UI.showToast("✅ Đã lưu ID vào hệ thống!");
-                        
-                        // Sau khi lưu xong, tự động kiểm tra/tạo sheet và reload lại flow startup
-                        API.initCustomSheet(val, (initRes) => {
-                            if(initRes.status === 'success') {
-                                UI.showToast("✅ Đã kiểm tra/tạo sheet thành công!");
-                                // Gọi lại fetchUserConfig để hiện Overlay đúng quy trình
-                                fetchUserConfig();
-                            } else {
-                                UI.showToast("⚠️ Có thể chưa tạo được Sheet: " + initRes.msg);
-                            }
-                        });
-
-                    } else {
-                        UI.showToast("❌ Lỗi lưu ID: " + res.msg);
-                    }
-                });
-            }
-        };
-
         document.getElementById('btn-load-stock-cloud').onclick = () => { 
-            if(!STORE.customSheetId) { UI.showToast("⛔ Chưa có ID Sheet! Vui lòng nhập ở trên."); return; }
+            if(!STORE.customSheetId) { UI.showToast("⛔ Lỗi ID Sheet"); return; }
             API.getStock((data) => { STORE.importData = data; renderImportTable(); updateFilters(); syncStockToCountData(); renderCountTable(); renderSummary(); if(UI.showToast) UI.showToast(`✅ Đã tải ${data.length} dòng Tồn kho!`); }); 
         };
         document.getElementById('btn-sync-cloud').onclick = () => { 
-            if(!STORE.customSheetId) { UI.showToast("⛔ Chưa có ID Sheet!"); return; }
-            if (STORE.currentUser === "---") { UI.showToast("⚠️ Đang xác thực User..."); return; } 
+            if(!STORE.customSheetId) { UI.showToast("⛔ Lỗi ID Sheet"); return; }
             API.saveCount(STORE.countData, (res) => { if(res.status==='success' && UI.showToast) UI.showToast("✅ Đã đồng bộ lên Cloud!"); }); 
         };
         document.getElementById('btn-delete-exec').onclick = () => { 
-            if(!STORE.customSheetId) { UI.showToast("⛔ Chưa có ID Sheet!"); return; }
+            if(!STORE.customSheetId) return;
             if (STORE.currentUser === "---") return; 
-            const mode = document.getElementById('sel-delete-mode').value; if(mode === 'none') return; if(!confirm(`⚠️ Xác nhận xóa dữ liệu trên file Sheet Riêng?`)) return; 
+            const mode = document.getElementById('sel-delete-mode').value; if(mode === 'none') return; if(!confirm(`⚠️ Xác nhận xóa dữ liệu?`)) return; 
             API.deleteData(mode, (res) => { if(res.status === 'success') { if(UI.showToast) UI.showToast("✅ " + res.msg); if(mode === 'stock' || mode === 'all') { STORE.importData = []; renderImportTable(); } if(mode === 'count' || mode === 'all') { STORE.countData = []; renderCountTable(); renderSummary(); } } }); 
         };
         document.getElementById('btn-export-excel').onclick = exportToExcel;
@@ -538,7 +552,7 @@
         document.getElementById('chk-manual-input').onchange = (e) => STORE.isManualInput = e.target.checked;
         document.getElementById('inp-excel-file').addEventListener('change', handleFileImport, false);
 
-        // --- SEARCH & TABLE RENDER (WITH FORMAT) ---
+        // --- SEARCH & TABLE RENDER ---
         const searchInput = document.getElementById('inp-search-sku');
         const sugBox = document.getElementById('box-suggestions');
         searchInput.addEventListener('input', (e) => {
@@ -561,12 +575,11 @@
         document.querySelectorAll('.inv-filter-select').forEach(el => el.addEventListener('change', renderSummary));
         document.getElementById('btn-edit-close-x').onclick = () => document.getElementById('inv-edit-modal').style.display = 'none';
         
-        // ... (Edit modal buttons events kept same as before) ...
         document.getElementById('btn-edit-delete').onclick = () => { if(confirm("Xóa sản phẩm này?")) { STORE.countData = STORE.countData.filter(i => !(i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status)); document.getElementById('inv-edit-modal').style.display = 'none'; renderCountTable(); renderSummary(); UI.showToast("Đã xóa sản phẩm!"); triggerAutoSync(); } };
         document.getElementById('btn-edit-fill').onclick = () => { const item = STORE.editingItem; const diff = item.stock - item.totalCount; if (diff !== 0) { if(confirm(`Xác nhận bù ${Math.abs(diff)} cái?`)) { const nowTime = new Date().toTimeString().split(' ')[0]; const existIdx = STORE.countData.findIndex(i => i.sku === item.sku && i.status === item.status); if (existIdx === -1) { STORE.countData.unshift({ ...item, history: [{ ts: nowTime, qty: diff }], totalCount: diff, counted: diff }); } else { const realItem = STORE.countData[existIdx]; realItem.history.unshift({ ts: nowTime, qty: diff }); realItem.totalCount += diff; } document.getElementById('inv-edit-modal').style.display = 'none'; renderCountTable(); renderSummary(); UI.showToast("Đã cập nhật!"); triggerAutoSync(); } } };
         document.getElementById('btn-edit-save').onclick = () => { const inputs = document.querySelectorAll('.inv-history-qty'); let newHistory = []; let newTotal = 0; const nowTime = new Date().toTimeString().split(' ')[0]; inputs.forEach((inp, idx) => { const val = parseInt(inp.value) || 0; if (val !== 0) { let currentTs = nowTime; if (STORE.editingItem.history && STORE.editingItem.history[idx]) currentTs = STORE.editingItem.history[idx].ts; newHistory.push({ ts: currentTs, qty: val }); newTotal += val; } }); if (newTotal === 0) { if(confirm("Số lượng bằng 0. Xóa?")) STORE.countData = STORE.countData.filter(i => !(i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status)); else return; } else { const existIdx = STORE.countData.findIndex(i => i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status); if (existIdx !== -1) { STORE.countData[existIdx].history = newHistory; STORE.countData[existIdx].totalCount = newTotal; } else { STORE.countData.unshift({ ...STORE.editingItem, history: newHistory, totalCount: newTotal }); } } document.getElementById('inv-edit-modal').style.display = 'none'; renderCountTable(); renderSummary(); UI.showToast("Đã lưu thay đổi!"); triggerAutoSync(); };
 
-        // --- FUNCTIONS (Render Tables with Format) ---
+        // --- FUNCTIONS ---
         function triggerAutoSync() { if(!STORE.customSheetId) return; STORE.syncCounter++; if (STORE.syncCounter >= 5) { STORE.syncCounter = 0; API.saveCount(STORE.countData, () => { console.log("Auto synced"); }); } }
         function syncStockToCountData() { if (STORE.importData.length === 0) return; STORE.countData.forEach(cItem => { const stockItem = STORE.importData.find(s => s.sku === cItem.sku && s.status === cItem.status); if (stockItem) { cItem.stock = stockItem.stock; cItem.group = stockItem.group; } }); }
         
@@ -592,7 +605,7 @@
             });
         }
 
-        // Export Excel (No change)
+        // Export Excel
         function exportToExcel() {
             if (STORE.importData.length === 0 && STORE.countData.length === 0) { UI.showToast("⚠️ Không có dữ liệu để xuất!"); return; }
             const dataToExport = [];
@@ -608,7 +621,7 @@
         function handleFileImport(e) { 
             const file = e.target.files[0]; 
             if (!file) return; 
-            if(!STORE.customSheetId) { alert("⛔ BẮT BUỘC: Bạn chưa cấu hình ID Google Sheet!\nVui lòng nhập ID và ấn Lưu trước khi tải lên."); e.target.value = ''; return; }
+            if(!STORE.customSheetId) { alert("⛔ Lỗi: Mất kết nối ID Sheet!"); return; }
             document.getElementById('lbl-file-name').innerText = file.name; 
             const reader = new FileReader(); 
             reader.onload = (evt) => { 
@@ -628,7 +641,7 @@
         function renderImportTable() { const tbody = document.querySelector('#tbl-import tbody'); let html = ''; STORE.importData.slice(0, 200).forEach((item, idx) => { html += `<tr><td>${idx+1}</td><td>${item.group}</td><td style="font-weight:bold;color:#d63031">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td>${item.stock}</td></tr>`; }); tbody.innerHTML = html; }
         
         function addCountItem(sku, specificStatus) {
-            if(!STORE.customSheetId) { UI.showToast("⛔ BẮT BUỘC: Nhập ID Sheet trước!"); return; }
+            if(!STORE.customSheetId) { UI.showToast("⛔ Lỗi ID Sheet"); return; }
             if (STORE.currentUser === "---") { UI.showToast("❌ Chờ xác thực..."); return; }
             let stockItem;
             if (specificStatus) stockItem = STORE.importData.find(i => i.sku === sku && i.status === specificStatus);
@@ -715,7 +728,7 @@
     };
 
     return {
-        name: "Kiểm kê V5.2",
+        name: "Kiểm kê V6.0",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z" fill="white"/></svg>`,
         bgColor: "#6c757d",
         css: MY_CSS,
