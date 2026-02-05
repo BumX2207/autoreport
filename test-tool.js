@@ -1,8 +1,7 @@
 /* 
-   MODULE: KIỂM KÊ KHO (INVENTORY) - V5.0 (CLOUD CONFIG & AUTO SHEET INIT)
-   - Lưu ID Sheet riêng vào file Config gốc (Server).
-   - Tự động tạo sheet Inventory_Count/Stock trên file mới.
-   - Định dạng số lượng tồn kho (phân cách ngàn).
+   MODULE: KIỂM KÊ KHO (INVENTORY) - V5.1 (STRICT MODE: REQUIRE SHEET ID)
+   - BẮT BUỘC: Phải có ID Sheet riêng mới cho dùng.
+   - Chặn toàn bộ hành động nếu chưa cấu hình ID.
 */
 ((context) => {
     // ===============================================================
@@ -51,7 +50,7 @@
         .inv-view.active { display:flex; }
 
         /* CONFIG ROW */
-        .inv-config-row { display: flex; gap: 10px; align-items: center; background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px dashed #ccc; margin-bottom: 15px; }
+        .inv-config-row { display: flex; gap: 10px; align-items: center; background: #fff3cd; padding: 10px; border-radius: 8px; border: 1px dashed #ffc107; margin-bottom: 15px; }
         #inp-custom-sheet-id { flex: 1; font-size: 13px; font-family: monospace; color: #333; transition: 0.3s; }
         #inp-custom-sheet-id:disabled { background: #e9ecef; color: #6c757d; cursor: not-allowed; border: 1px solid #eee; }
 
@@ -125,7 +124,7 @@
         editingItem: null,
         isManualInput: false,
         syncCounter: 0,
-        customSheetId: "" // Stores ID retrieved from Cloud
+        customSheetId: "" 
     };
 
     const STATUS_MAP = { "1-Mới": "Mới", "3-Trưng bày": "Trưng bày", "7-Trưng bày (bỏ mẫu)": "Trưng bày bỏ mẫu", "2-Đã sử dụng": "Đã sử dụng", "5-Lỗi (Mới)": "Lỗi (Mới)", "6Lỗi (ĐSD)": "Lỗi (Đã sử dụng)", "6-Lỗi (ĐSD)": "Lỗi (Đã sử dụng)", "7-Cũ thu mua": "Cũ thu mua", "8-Mới (Giảm giá)": "Mới (Giảm giá)" };
@@ -160,7 +159,7 @@
             params.sheet_stock = SHEET_CONFIG.STOCK;
             params.sheet_count = SHEET_CONFIG.COUNT;
 
-            // QUAN TRỌNG: Nếu đã có ID riêng, gửi kèm để Server chuyển hướng xử lý sang file đó
+            // QUAN TRỌNG: Gửi ID riêng. Nếu không có (trừ trường hợp config), Server sẽ chặn.
             if (STORE.customSheetId && !params.forceMainConfig) {
                 params.custom_spreadsheet_id = STORE.customSheetId;
             }
@@ -200,20 +199,18 @@
         initCustomSheet: (sheetId, cb) => {
             API.call({
                 action: 'init_custom_sheet',
-                target_id: sheetId, // ID của file mới cần tạo tab
+                target_id: sheetId, 
                 loadingMsg: "⚙️ Đang khởi tạo các Sheet..."
             }, cb);
         },
 
         getStock: (cb) => { 
             if(!API_URL) return;
+            if(!STORE.customSheetId) { UI.showToast("⛔ BẮT BUỘC: Nhập ID Sheet trước!"); return; }
             if(UI.showToast) UI.showToast("⏳ Đang tải Tồn kho...");
 
             let url = `${API_URL}?action=get_stock&shopId=${encodeURIComponent(STORE.currentShopId)}&sheet_stock=${encodeURIComponent(SHEET_CONFIG.STOCK)}&t=${Date.now()}`;
-            // Gửi kèm Custom ID nếu có
-            if (STORE.customSheetId) {
-                url += `&custom_spreadsheet_id=${encodeURIComponent(STORE.customSheetId)}`;
-            }
+            url += `&custom_spreadsheet_id=${encodeURIComponent(STORE.customSheetId)}`;
 
             GM_xmlhttpRequest({
                 method: "GET", url: url,
@@ -226,17 +223,17 @@
         }, 
         
         saveStock: (data, cb) => { 
+            if(!STORE.customSheetId) { UI.showToast("⛔ BẮT BUỘC: Nhập ID Sheet trước!"); return; }
             API.call({action: 'save_stock', data: data, loadingMsg: "☁️ Đang lưu Tồn kho..."}, cb); 
         },
         
         getCount: (cb) => { 
             if(!API_URL) return;
+            if(!STORE.customSheetId) { UI.showToast("⛔ BẮT BUỘC: Nhập ID Sheet trước!"); return; }
             if(UI.showToast) UI.showToast("⏳ Đang tải dữ liệu Kiểm kê...");
 
             let url = `${API_URL}?action=get_count&shopId=${encodeURIComponent(STORE.currentShopId)}&sheet_count=${encodeURIComponent(SHEET_CONFIG.COUNT)}&t=${Date.now()}`;
-            if (STORE.customSheetId) {
-                url += `&custom_spreadsheet_id=${encodeURIComponent(STORE.customSheetId)}`;
-            }
+            url += `&custom_spreadsheet_id=${encodeURIComponent(STORE.customSheetId)}`;
 
             GM_xmlhttpRequest({
                 method: "GET", url: url,
@@ -249,6 +246,7 @@
         },
         
         saveCount: (data, cb) => { 
+            if(!STORE.customSheetId) { UI.showToast("⛔ BẮT BUỘC: Nhập ID Sheet trước!"); return; }
             const flatData = data.map(item => ({ sku: item.sku, name: item.name, status: item.status, group: item.group, qty: item.totalCount }));
             API.call({
                 action: 'save_count', 
@@ -259,6 +257,7 @@
         },
         
         deleteData: (mode, cb) => { 
+            if(!STORE.customSheetId) { UI.showToast("⛔ BẮT BUỘC: Nhập ID Sheet trước!"); return; }
             let msg = "⏳ Đang xóa dữ liệu...";
             if(mode === 'count') msg = "⏳ Đang xóa dữ liệu Kiểm kê cũ...";
             else if(mode === 'stock') msg = "⏳ Đang xóa dữ liệu Tồn kho...";
@@ -294,7 +293,7 @@
         modal.innerHTML = `
             <div class="inv-content">
                 <div class="inv-header">
-                    <div class="inv-title">📦Kiểm kê V5</div>
+                    <div class="inv-title">📦Kiểm kê V5.1 (STRICT)</div>
                     <div class="inv-tabs">
                         <div class="inv-tab active" data-tab="tab-input">Nhập liệu</div>
                         <div class="inv-tab" data-tab="tab-count">Kiểm kê</div>
@@ -315,7 +314,7 @@
                     <div id="inv-startup-overlay" style="display:none;">
                         <div class="inv-startup-title">Bạn muốn làm gì?</div>
                         <span class="inv-startup-user" id="lbl-startup-user">Đang tải cấu hình...</span>
-                        <div style="font-size:12px;color:#d63031;margin-bottom:10px;font-weight:bold;" id="lbl-startup-sheet-notice"></div>
+                        <div style="font-size:12px;color:#d63031;margin-bottom:10px;font-weight:bold;text-align:center;padding:0 20px;" id="lbl-startup-sheet-notice"></div>
                         <div id="startup-actions" style="display:none; width:100%; flex-direction:column; align-items:center; gap:10px;">
                             <button class="inv-startup-btn btn-start-load" id="btn-start-load">📥 Tiếp tục kỳ kiểm kê cũ</button>
                             <button class="inv-startup-btn btn-start-new" id="btn-start-new">🆕 Tạo kỳ kiểm kê mới</button>
@@ -324,15 +323,15 @@
 
                     <!-- TAB 1 -->
                     <div class="inv-view active" id="tab-input">
+                        <!-- CONFIG ROW: ID SHEET (MOVED TOP FOR VISIBILITY) -->
+                        <div class="inv-config-row">
+                            <input type="text" id="inp-custom-sheet-id" class="inv-input" placeholder="🔴 BẮT BUỘC: Nhập ID Google Sheet riêng..." autocomplete="off">
+                            <button class="inv-btn btn-config-save" id="btn-save-sheet-id">Lưu ID</button>
+                        </div>
+
                         <div class="inv-controls tab1-controls">
                             <label class="inv-btn btn-import">📂 Nhập Excel<input type="file" id="inp-excel-file" accept=".xlsx, .xls" style="display:none;"></label>
                             <button class="inv-btn btn-cloud-load" id="btn-load-stock-cloud">☁️ Tải tồn kho</button>
-                        </div>
-                        
-                        <!-- CONFIG ROW: ID SHEET -->
-                        <div class="inv-config-row">
-                            <input type="text" id="inp-custom-sheet-id" class="inv-input" placeholder="Nhập ID Google Sheet riêng để bắt đầu..." autocomplete="off">
-                            <button class="inv-btn btn-config-save" id="btn-save-sheet-id">Lưu ID</button>
                         </div>
 
                         <div style="padding:0 10px 10px; font-size:12px; color:#666;" id="lbl-file-name">Chưa có dữ liệu</div>
@@ -414,17 +413,20 @@
                     
                     lblSheetNotice.innerText = "✅ Đang kết nối File Sheet Riêng";
                     lblStartUser.innerText = "User: " + STORE.currentUser;
-                    startupActions.style.display = 'flex'; // Hiện nút chọn Load/New
+                    startupActions.style.display = 'flex'; // Hiện nút chọn Load/New (Chỉ hiện khi đã có ID)
                 } else {
                     STORE.customSheetId = "";
                     inp.disabled = false;
                     btn.innerText = "Lưu ID";
                     
-                    lblSheetNotice.innerText = "⚠️ Chưa cấu hình ID Sheet. Vui lòng nhập ID để bắt đầu.";
+                    lblSheetNotice.innerHTML = "⛔ <b>CHƯA CẤU HÌNH ID SHEET!</b><br>Vui lòng tắt bảng này và nhập ID Sheet ở mục 'Nhập liệu' để bắt đầu.";
                     lblStartUser.innerText = "User: " + STORE.currentUser;
                     
-                    // Nếu chưa có ID thì tắt overlay để người dùng nhập
-                    setTimeout(() => { overlay.style.display = 'none'; }, 1500);
+                    // Ẩn actions vì chưa có ID
+                    startupActions.style.display = 'none';
+                    
+                    // Cho phép tắt overlay để người dùng nhập ID
+                    setTimeout(() => { overlay.style.display = 'none'; }, 2500);
                 }
             });
         };
@@ -445,11 +447,15 @@
         };
 
         // --- EVENTS ---
-        document.getElementById('btn-start-load').onclick = () => { overlay.style.display = 'none'; autoLoadData(); };
+        document.getElementById('btn-start-load').onclick = () => { 
+            if(!STORE.customSheetId) { alert("BẮT BUỘC phải có ID Sheet!"); return; }
+            overlay.style.display = 'none'; 
+            autoLoadData(); 
+        };
         
         // LOGIC "KIỂM KÊ MỚI" - Xóa dữ liệu cũ trên Sheet Riêng
         document.getElementById('btn-start-new').onclick = () => {
-            if(!STORE.customSheetId) { UI.showToast("⚠️ Chưa có ID Sheet!"); return; }
+            if(!STORE.customSheetId) { alert("BẮT BUỘC phải có ID Sheet!"); return; }
             if(confirm(`Bạn có muốn TẠO KỲ KIỂM KÊ MỚI không?\n\nDữ liệu trên File Sheet Riêng sẽ bị XÓA HẾT để bắt đầu mới.`)) {
                 overlay.style.display = 'none'; 
                 // Gọi API xóa dữ liệu 'all' trên file custom
@@ -470,9 +476,6 @@
             STORE.importData = []; STORE.countData = []; 
             renderImportTable(); renderCountTable(); renderSummary(); 
             UI.showToast(`Đã chuyển: ${STORE.currentShopId}`); 
-            // Khi đổi shop, không cần load lại ID vì ID gắn theo User (cột F) chứ không theo Shop ở file config
-            // Nhưng nếu logic của bạn là mỗi shop 1 file thì cần sửa logic server. 
-            // Ở đây giữ logic: User -> 1 ID File.
             overlay.style.display = 'flex'; 
             fetchUserConfig();
         };
@@ -519,11 +522,23 @@
             }
         };
 
-        document.getElementById('btn-load-stock-cloud').onclick = () => { API.getStock((data) => { STORE.importData = data; renderImportTable(); updateFilters(); syncStockToCountData(); renderCountTable(); renderSummary(); if(UI.showToast) UI.showToast(`✅ Đã tải ${data.length} dòng Tồn kho!`); }); };
-        document.getElementById('btn-sync-cloud').onclick = () => { if (STORE.currentUser === "---") { UI.showToast("⚠️ Đang xác thực User..."); return; } API.saveCount(STORE.countData, (res) => { if(res.status==='success' && UI.showToast) UI.showToast("✅ Đã đồng bộ lên Cloud!"); }); };
-        document.getElementById('btn-delete-exec').onclick = () => { if (STORE.currentUser === "---") return; const mode = document.getElementById('sel-delete-mode').value; if(mode === 'none') return; if(!confirm(`⚠️ Xác nhận xóa dữ liệu trên file Sheet Riêng?`)) return; API.deleteData(mode, (res) => { if(res.status === 'success') { if(UI.showToast) UI.showToast("✅ " + res.msg); if(mode === 'stock' || mode === 'all') { STORE.importData = []; renderImportTable(); } if(mode === 'count' || mode === 'all') { STORE.countData = []; renderCountTable(); renderSummary(); } } }); };
+        document.getElementById('btn-load-stock-cloud').onclick = () => { 
+            if(!STORE.customSheetId) { UI.showToast("⛔ Chưa có ID Sheet! Vui lòng nhập ở trên."); return; }
+            API.getStock((data) => { STORE.importData = data; renderImportTable(); updateFilters(); syncStockToCountData(); renderCountTable(); renderSummary(); if(UI.showToast) UI.showToast(`✅ Đã tải ${data.length} dòng Tồn kho!`); }); 
+        };
+        document.getElementById('btn-sync-cloud').onclick = () => { 
+            if(!STORE.customSheetId) { UI.showToast("⛔ Chưa có ID Sheet!"); return; }
+            if (STORE.currentUser === "---") { UI.showToast("⚠️ Đang xác thực User..."); return; } 
+            API.saveCount(STORE.countData, (res) => { if(res.status==='success' && UI.showToast) UI.showToast("✅ Đã đồng bộ lên Cloud!"); }); 
+        };
+        document.getElementById('btn-delete-exec').onclick = () => { 
+            if(!STORE.customSheetId) { UI.showToast("⛔ Chưa có ID Sheet!"); return; }
+            if (STORE.currentUser === "---") return; 
+            const mode = document.getElementById('sel-delete-mode').value; if(mode === 'none') return; if(!confirm(`⚠️ Xác nhận xóa dữ liệu trên file Sheet Riêng?`)) return; 
+            API.deleteData(mode, (res) => { if(res.status === 'success') { if(UI.showToast) UI.showToast("✅ " + res.msg); if(mode === 'stock' || mode === 'all') { STORE.importData = []; renderImportTable(); } if(mode === 'count' || mode === 'all') { STORE.countData = []; renderCountTable(); renderSummary(); } } }); 
+        };
         document.getElementById('btn-export-excel').onclick = exportToExcel;
-        document.getElementById('btn-inv-close').onclick = () => { if(STORE.isScannerRunning) stopScanner(); if(STORE.countData.length > 0 && STORE.currentUser !== "---") { API.saveCount(STORE.countData, () => { modal.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; document.body.classList.remove('tgdd-body-lock'); }); } else { modal.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; document.body.classList.remove('tgdd-body-lock'); } };
+        document.getElementById('btn-inv-close').onclick = () => { if(STORE.isScannerRunning) stopScanner(); if(STORE.countData.length > 0 && STORE.currentUser !== "---" && STORE.customSheetId) { API.saveCount(STORE.countData, () => { modal.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; document.body.classList.remove('tgdd-body-lock'); }); } else { modal.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; document.body.classList.remove('tgdd-body-lock'); } };
 
         const tabs = modal.querySelectorAll('.inv-tab'); tabs.forEach(t => { t.onclick = () => { tabs.forEach(x => x.classList.remove('active')); t.classList.add('active'); document.querySelectorAll('.inv-view').forEach(v => v.classList.remove('active')); document.getElementById(t.dataset.tab).classList.add('active'); if (t.dataset.tab === 'tab-count') setTimeout(() => document.getElementById('inp-search-sku').focus(), 100); if (t.dataset.tab === 'tab-sum') renderSummary(); }; });
         document.querySelectorAll('input[name="inv-status-radio"]').forEach(r => { r.onchange = (e) => { STORE.currentStatus = e.target.value; document.getElementById('inp-search-sku').value = ''; document.getElementById('box-suggestions').style.display = 'none'; }; });
@@ -561,12 +576,16 @@
         document.getElementById('btn-edit-save').onclick = () => { const inputs = document.querySelectorAll('.inv-history-qty'); let newHistory = []; let newTotal = 0; const nowTime = new Date().toTimeString().split(' ')[0]; inputs.forEach((inp, idx) => { const val = parseInt(inp.value) || 0; if (val !== 0) { let currentTs = nowTime; if (STORE.editingItem.history && STORE.editingItem.history[idx]) currentTs = STORE.editingItem.history[idx].ts; newHistory.push({ ts: currentTs, qty: val }); newTotal += val; } }); if (newTotal === 0) { if(confirm("Số lượng bằng 0. Xóa?")) STORE.countData = STORE.countData.filter(i => !(i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status)); else return; } else { const existIdx = STORE.countData.findIndex(i => i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status); if (existIdx !== -1) { STORE.countData[existIdx].history = newHistory; STORE.countData[existIdx].totalCount = newTotal; } else { STORE.countData.unshift({ ...STORE.editingItem, history: newHistory, totalCount: newTotal }); } } document.getElementById('inv-edit-modal').style.display = 'none'; renderCountTable(); renderSummary(); UI.showToast("Đã lưu thay đổi!"); triggerAutoSync(); };
 
         // --- FUNCTIONS ---
-        function triggerAutoSync() { STORE.syncCounter++; if (STORE.syncCounter >= 5) { STORE.syncCounter = 0; API.saveCount(STORE.countData, () => { console.log("Auto synced"); }); } }
+        function triggerAutoSync() { 
+            if(!STORE.customSheetId) return;
+            STORE.syncCounter++; if (STORE.syncCounter >= 5) { STORE.syncCounter = 0; API.saveCount(STORE.countData, () => { console.log("Auto synced"); }); } 
+        }
         function syncStockToCountData() { if (STORE.importData.length === 0) return; STORE.countData.forEach(cItem => { const stockItem = STORE.importData.find(s => s.sku === cItem.sku && s.status === cItem.status); if (stockItem) { cItem.stock = stockItem.stock; cItem.group = stockItem.group; } }); }
         
         function autoLoadData() {
             if (STORE.currentUser === "---") return;
-            if (!STORE.customSheetId) { UI.showToast("⚠️ Chưa có file Sheet!"); return; }
+            // CHECK STRICT
+            if (!STORE.customSheetId) { UI.showToast("⛔ BẮT BUỘC: Nhập ID Sheet trước!"); return; }
 
             API.getStock((data) => {
                 if(data.length > 0) { 
@@ -602,9 +621,9 @@
             const file = e.target.files[0]; 
             if (!file) return; 
             
-            // Check if we have custom sheet id
+            // CHECK STRICT: Nếu không có custom ID -> Chặn
             if(!STORE.customSheetId) {
-                alert("Bạn chưa cấu hình ID Google Sheet! Vui lòng nhập ID trước khi tải lên.");
+                alert("⛔ BẮT BUỘC: Bạn chưa cấu hình ID Google Sheet!\nVui lòng nhập ID và ấn Lưu trước khi tải lên.");
                 e.target.value = ''; // Reset file input
                 return;
             }
@@ -640,6 +659,7 @@
         function renderImportTable() { const tbody = document.querySelector('#tbl-import tbody'); let html = ''; STORE.importData.slice(0, 200).forEach((item, idx) => { html += `<tr><td>${idx+1}</td><td>${item.group}</td><td style="font-weight:bold;color:#d63031">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td>${item.stock}</td></tr>`; }); tbody.innerHTML = html; }
         
         function addCountItem(sku, specificStatus) {
+            if(!STORE.customSheetId) { UI.showToast("⛔ BẮT BUỘC: Nhập ID Sheet trước!"); return; }
             if (STORE.currentUser === "---") { UI.showToast("❌ Chờ xác thực..."); return; }
             let stockItem;
             if (specificStatus) stockItem = STORE.importData.find(i => i.sku === sku && i.status === specificStatus);
@@ -724,7 +744,7 @@
     };
 
     return {
-        name: "Kiểm kê V5",
+        name: "Kiểm kê V5.1",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z" fill="white"/></svg>`,
         bgColor: "#6c757d",
         css: MY_CSS,
