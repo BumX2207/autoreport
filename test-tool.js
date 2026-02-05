@@ -1,8 +1,7 @@
 /* 
-   MODULE: KIỂM KÊ KHO (INVENTORY) - V6.0 (BLACK OVERLAY CONFIG)
-   - Overlay đen khi khởi động.
-   - Kiểm tra ID -> Có: Hiện Input(Locked)+Edit+Buttons | Không: Hiện Input(Open)+Save.
-   - Format số lượng.
+   MODULE: KIỂM KÊ KHO (INVENTORY) - V6.1 (FIX STARTUP OVERLAY)
+   - Fix lỗi: Overlay đen hiển thị ngay lập tức khi mở tool.
+   - Logic: Kiểm tra ID -> Có ID (Hiện nút Tiếp tục) | Chưa ID (Hiện ô nhập liệu trên Overlay).
 */
 ((context) => {
     // ===============================================================
@@ -49,13 +48,14 @@
         .inv-view.active { display:flex; }
 
         /* OVERLAYS - BLACK STYLE */
+        /* FIX: display:flex mặc định để hiện ngay khi mở */
         #inv-startup-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:2005; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:15px; animation:fadeIn 0.3s; color: white; }
         .inv-startup-title { font-size:20px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:1px; }
         .inv-startup-status { font-size:14px; color:#ccc; font-style:italic; margin-bottom:10px; }
         
         /* Config Box on Overlay */
         .inv-startup-config-box { display: flex; gap: 10px; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; border: 1px solid #444; width: 80%; max-width: 400px; align-items: center; }
-        #inp-startup-sheet-id { flex: 1; padding: 10px; border-radius: 5px; border: none; font-family: monospace; font-size: 13px; color: #333; }
+        #inp-startup-sheet-id { flex: 1; padding: 10px; border-radius: 5px; border: none; font-family: monospace; font-size: 13px; color: #333; outline:none; }
         #inp-startup-sheet-id:disabled { background: #e9ecef; color: #555; cursor: not-allowed; }
         #btn-startup-save-id { padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: 0.2s; }
         .btn-mode-save { background: #28a745; color: white; } .btn-mode-save:hover { background: #218838; }
@@ -291,7 +291,7 @@
         modal.innerHTML = `
             <div class="inv-content">
                 <div class="inv-header">
-                    <div class="inv-title">📦Kiểm kê V6.0</div>
+                    <div class="inv-title">📦Kiểm kê V6.1</div>
                     <div class="inv-tabs">
                         <div class="inv-tab active" data-tab="tab-input">Nhập liệu</div>
                         <div class="inv-tab" data-tab="tab-count">Kiểm kê</div>
@@ -308,8 +308,8 @@
                 </div>
 
                 <div class="inv-body">
-                    <!-- STARTUP OVERLAY - BLACK -->
-                    <div id="inv-startup-overlay" style="display:none;">
+                    <!-- STARTUP OVERLAY - BLACK (Mặc định hiện) -->
+                    <div id="inv-startup-overlay" style="display:flex;">
                         <div class="inv-startup-title">HỆ THỐNG KIỂM KÊ</div>
                         <div id="lbl-startup-status" class="inv-startup-status">Đang kết nối dữ liệu...</div>
                         <div id="lbl-startup-user" style="color:#2196F3; font-weight:bold; margin-bottom:15px;">User: ...</div>
@@ -410,7 +410,7 @@
                     STORE.customSheetId = res.sheet_id;
                     
                     inpSheetId.value = res.sheet_id;
-                    inpSheetId.disabled = true;
+                    inpSheetId.disabled = true; // KHÓA INPUT
                     
                     btnSaveId.innerText = "Sửa";
                     btnSaveId.className = "btn-mode-edit"; // Màu vàng
@@ -418,12 +418,12 @@
                     lblStatus.innerText = "✅ Đã kết nối File Sheet";
                     lblStatus.style.color = "#4CAF50";
                     
-                    startupActions.style.display = 'flex'; // Hiện nút Tiếp tục/Mới
+                    startupActions.style.display = 'flex'; // HIỆN NÚT CHỨC NĂNG
                 } else {
                     // KHÔNG ID: Hiển thị chế độ NHẬP ID
                     STORE.customSheetId = "";
                     inpSheetId.value = "";
-                    inpSheetId.disabled = false;
+                    inpSheetId.disabled = false; // MỞ INPUT
                     
                     btnSaveId.innerText = "Lưu";
                     btnSaveId.className = "btn-mode-save"; // Màu xanh
@@ -431,7 +431,7 @@
                     lblStatus.innerText = "⚠️ Chưa khai báo File Sheet";
                     lblStatus.style.color = "#FF5722";
                     
-                    startupActions.style.display = 'none'; // Ẩn nút chức năng
+                    startupActions.style.display = 'none'; // ẨN NÚT CHỨC NĂNG
                     inpSheetId.focus();
                 }
             });
@@ -728,7 +728,7 @@
     };
 
     return {
-        name: "Kiểm kê V6.0",
+        name: "Kiểm kê V6.1",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z" fill="white"/></svg>`,
         bgColor: "#6c757d",
         css: MY_CSS,
