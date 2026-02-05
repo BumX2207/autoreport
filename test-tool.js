@@ -348,7 +348,7 @@
                             <button class="inv-btn btn-scan" id="btn-open-scan">📷</button>
                             <button class="inv-btn btn-sync" id="btn-sync-cloud">☁️ Đồng bộ</button>
                         </div>
-                        <div class="inv-table-wrapper"><table class="inv-table" id="tbl-counting"><thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>Tồn</th><th>Đã kiểm</th><th>Lệch</th></tr></thead><tbody></tbody></table></div>
+                        <div class="inv-table-wrapper"><table class="inv-table" id="tbl-counting"><thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>Tồn</th><th>Đã kiểm</th><th>Chênh lệch</th></tr></thead><tbody></tbody></table></div>
                         <div id="inv-scanner-overlay"><div class="inv-scan-close" id="btn-close-scan">×</div><div id="inv-reader"></div></div>
                     </div>
                     <!-- TAB 3 -->
@@ -704,10 +704,26 @@
             STORE.countData.forEach((item, idx) => {
                 const stockVal = item.stock || 0;
                 const diff = stockVal - item.totalCount;
+                
+                // Format phần chênh lệch
                 let diffText = `<span class="st-ok">Đủ</span>`;
-                if (stockVal > 0) { if (diff > 0) diffText = `<span class="st-missing">Thiếu ${diff}</span>`; else if (diff < 0) diffText = `<span class="st-surplus">Thừa ${Math.abs(diff)}</span>`; } 
-                else if (stockVal === 0 && item.totalCount > 0) { diffText = `<span class="st-surplus">Thừa ${item.totalCount}</span>`; }
-                html += `<tr class="${idx===0?'highlight':''}" onclick="document.getElementById('edit-trigger-${idx}').click()"><td style="font-weight:bold;color:#d63031">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td>${stockVal}</td><td style="font-weight:bold;font-size:14px;color:#007bff">${item.totalCount}</td><td>${diffText}</td><td style="display:none"><button id="edit-trigger-${idx}"></button></td></tr>`;
+                if (stockVal > 0) { 
+                    if (diff > 0) diffText = `<span class="st-missing">Thiếu ${formatNumber(diff)}</span>`; 
+                    else if (diff < 0) diffText = `<span class="st-surplus">Thừa ${formatNumber(Math.abs(diff))}</span>`; 
+                } 
+                else if (stockVal === 0 && item.totalCount > 0) { 
+                    diffText = `<span class="st-surplus">Thừa ${formatNumber(item.totalCount)}</span>`; 
+                }
+                
+                html += `<tr class="${idx===0?'highlight':''}" onclick="document.getElementById('edit-trigger-${idx}').click()">
+                    <td style="font-weight:bold;color:#d63031">${item.sku}</td>
+                    <td>${item.name}</td>
+                    <td>${item.status}</td>
+                    <td>${formatNumber(stockVal)}</td> <!-- Format Tồn -->
+                    <td style="font-weight:bold;font-size:14px;color:#007bff">${formatNumber(item.totalCount)}</td> <!-- Format Đã kiểm -->
+                    <td>${diffText}</td>
+                    <td style="display:none"><button id="edit-trigger-${idx}"></button></td>
+                </tr>`;
             });
             tbody.innerHTML = html;
             STORE.countData.forEach((item, idx) => { document.getElementById(`edit-trigger-${idx}`).onclick = () => openEditPopup(item); });
@@ -715,15 +731,32 @@
         function renderSummary() {
             const fGroup = document.querySelector('.inv-filter-select[data-col="group"]').value; const fName = document.querySelector('.inv-filter-select[data-col="name"]').value; const fStatus = document.querySelector('.inv-filter-select[data-col="status"]').value; const fCount = document.querySelector('.inv-filter-select[data-col="count"]').value; const fDiff = document.querySelector('.inv-filter-select[data-col="diff"]').value;
             const tbody = document.querySelector('#tbl-summary tbody'); let html = '';
+            
             STORE.importData.forEach((item, idx) => {
                 if (fGroup !== 'all' && item.group !== fGroup) return; if (fName !== 'all' && item.name !== fName) return; if (fStatus !== 'all' && item.status !== fStatus) return;
+                
                 const countedItem = STORE.countData.find(c => c.sku === item.sku && c.status === item.status);
                 const countedVal = countedItem ? countedItem.totalCount : 0;
                 const diff = item.stock - countedVal;
+                
                 if (fCount === 'checked' && countedVal === 0) return; if (fCount === 'unchecked' && countedVal > 0) return; 
                 if (fDiff === 'ok' && diff !== 0) return; if (fDiff === 'thua' && diff >= 0) return; if (fDiff === 'thieu' && diff <= 0) return;
-                let diffText = `<span class="st-ok">0</span>`; if (diff > 0) diffText = `<span class="st-missing">Thiếu ${diff}</span>`; else if (diff < 0) diffText = `<span class="st-surplus">Thừa ${Math.abs(diff)}</span>`;
-                html += `<tr style="${countedVal === 0 ? 'background:#fff5f5;' : ''}" onclick="document.getElementById('sum-edit-${idx}').click()"><td>${item.group}</td><td style="font-weight:bold;">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td>${item.stock}</td><td style="font-weight:bold;">${countedVal}</td><td>${diffText}</td><td style="display:none"><button id="sum-edit-${idx}"></button></td></tr>`;
+                
+                // Format phần chênh lệch
+                let diffText = `<span class="st-ok">0</span>`; 
+                if (diff > 0) diffText = `<span class="st-missing">Thiếu ${formatNumber(diff)}</span>`; 
+                else if (diff < 0) diffText = `<span class="st-surplus">Thừa ${formatNumber(Math.abs(diff))}</span>`;
+
+                html += `<tr style="${countedVal === 0 ? 'background:#fff5f5;' : ''}" onclick="document.getElementById('sum-edit-${idx}').click()">
+                    <td>${item.group}</td>
+                    <td style="font-weight:bold;">${item.sku}</td>
+                    <td>${item.name}</td>
+                    <td>${item.status}</td>
+                    <td>${formatNumber(item.stock)}</td> <!-- Format Tồn -->
+                    <td style="font-weight:bold;">${formatNumber(countedVal)}</td> <!-- Format Kiểm được -->
+                    <td>${diffText}</td>
+                    <td style="display:none"><button id="sum-edit-${idx}"></button></td>
+                </tr>`;
             });
             tbody.innerHTML = html;
             STORE.importData.forEach((item, idx) => { const btn = document.getElementById(`sum-edit-${idx}`); if(btn) btn.onclick = () => openEditPopup(item); });
