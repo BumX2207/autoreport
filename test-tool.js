@@ -1,8 +1,8 @@
 /* 
-   MODULE: KIỂM KÊ KHO (INVENTORY) - V4.0 (CUSTOM SHEET & FORMAT NUMBER)
-   - Fix lỗi Toast thông báo bị Modal che khuất (z-index).
-   - Thêm cấu hình Google Sheet ID riêng.
-   - Format số lượng tồn kho (phân cách ngàn).
+   MODULE: KIỂM KÊ KHO (INVENTORY) - V5.0 (CLOUD CONFIG & AUTO SHEET INIT)
+   - Lưu ID Sheet riêng vào file Config gốc (Server).
+   - Tự động tạo sheet Inventory_Count/Stock trên file mới.
+   - Định dạng số lượng tồn kho (phân cách ngàn).
 */
 ((context) => {
     // ===============================================================
@@ -22,10 +22,8 @@
 
     // --- 1. CSS ---
     const MY_CSS = `
-        /* MODAL Z-INDEX: 2147483700 */
+        /* MODAL Z-INDEX */
         #tgdd-inventory-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); z-index:2147483700; justify-content:center; align-items:center; }
-        
-        /* FIX TOAST Z-INDEX: Phải cao hơn Modal (2147483700) */
         #tgdd-toast-notification { z-index: 2147483705 !important; }
 
         .inv-content { background:#fff; width:98%; max-width:1100px; height:92vh; border-radius:15px; box-shadow:0 20px 60px rgba(0,0,0,0.4); display:flex; flex-direction:column; overflow:hidden; animation: popIn 0.3s; font-family: sans-serif; position: relative; }
@@ -36,12 +34,13 @@
         .inv-title { font-weight:800; font-size:16px; color:#333; display:flex; align-items:center; gap:5px; }
         .inv-close { font-size:24px; cursor:pointer; color:#999; padding:0 15px; font-weight:bold; transition: 0.2s; } .inv-close:hover { color:red; transform: scale(1.1); }
         
-        /* SUB HEADER (SHOP SELECT & USER) */
+        /* SUB HEADER */
         .inv-sub-header { background:#e9ecef; padding:8px 15px; font-size:12px; color:#333; border-bottom:1px solid #ddd; display:flex; align-items:center; flex-wrap: wrap; gap: 10px; }
         .inv-shop-select { padding: 4px; border-radius: 4px; border: 1px solid #007bff; font-weight: bold; color: #0056b3; outline: none; font-size: 12px; max-width: 110px; }
         .inv-user-info { display:flex; align-items:center; gap:5px; white-space: nowrap; margin-left: auto; }
         .inv-user-name { color:#d63031; font-weight:bold; } .inv-user-name.ready { color:#007bff; }
 
+        /* TABS */
         .inv-tabs { display:flex; gap:5px; height:100%; align-items:flex-end; }
         .inv-tab { padding:10px 20px; cursor:pointer; font-weight:bold; color:#666; border-bottom:3px solid transparent; transition:0.2s; font-size:13px; white-space:nowrap; }
         .inv-tab:hover { background:#eee; }
@@ -51,7 +50,18 @@
         .inv-view { display:none; height:100%; flex-direction:column; padding:15px; box-sizing:border-box; }
         .inv-view.active { display:flex; }
 
-        /* STATUS GROUP - SCROLLABLE MOBILE STYLE */
+        /* CONFIG ROW */
+        .inv-config-row { display: flex; gap: 10px; align-items: center; background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px dashed #ccc; margin-bottom: 15px; }
+        #inp-custom-sheet-id { flex: 1; font-size: 13px; font-family: monospace; color: #333; transition: 0.3s; }
+        #inp-custom-sheet-id:disabled { background: #e9ecef; color: #6c757d; cursor: not-allowed; border: 1px solid #eee; }
+
+        /* CONTROLS */
+        .inv-controls { display:flex; gap:10px; margin-bottom:15px; align-items:center; flex-wrap: nowrap; position: relative; }
+        .inv-input { padding:8px; border:1px solid #ccc; border-radius:6px; font-size:14px; }
+        .inv-search-box { position:relative; flex: 1; min-width: 0; } 
+        #inp-search-sku { width: 100%; box-sizing: border-box; }
+
+        /* STATUS & TABLE */
         .inv-status-group { display:flex; gap:8px; padding:10px 5px; background:#fff; border-bottom:1px solid #eee; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
         .inv-status-group::-webkit-scrollbar { display: none; } 
         .inv-radio-lbl { flex: 0 0 auto; font-size:12px; font-weight:bold; color:#555; cursor:pointer; display:flex; align-items:center; gap:5px; background:#f1f3f5; padding:6px 12px; border-radius:20px; border:1px solid #ddd; transition:0.2s; }
@@ -59,77 +69,48 @@
         .inv-radio-lbl:has(input:checked) { background:#007bff; color:white; border-color:#0056b3; box-shadow:0 2px 5px rgba(0,123,255,0.3); }
         .inv-radio-lbl input { display:none; }
 
-        /* CONTROLS ROW */
-        .inv-controls { display:flex; gap:10px; margin-bottom:15px; align-items:center; flex-wrap: nowrap; position: relative; }
-        .inv-input { padding:8px; border:1px solid #ccc; border-radius:6px; font-size:14px; }
-        .inv-search-box { position:relative; flex: 1; min-width: 0; } 
-        #inp-search-sku { width: 100%; box-sizing: border-box; }
-
-        /* TAB 1 SPECIFIC */
-        .tab1-controls { justify-content: space-between; }
-        .tab1-left { display: flex; gap: 10px; align-items: center; }
-        .tab1-right { display: flex; gap: 10px; align-items: center; }
-        
-        /* TAB 1 CONFIG SHEET ID */
-        .inv-config-row { display: flex; gap: 10px; align-items: center; background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px dashed #ccc; margin-bottom: 15px; }
-        #inp-custom-sheet-id { flex: 1; font-size: 13px; font-family: monospace; color: #333; }
-        #inp-custom-sheet-id:disabled { background: #e9ecef; color: #6c757d; cursor: not-allowed; border-color: #dee2e6; }
-
-        /* BUTTONS */
-        .inv-btn { padding:8px 12px; border:none; border-radius:6px; font-weight:bold; color:white; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s; white-space:nowrap; font-size: 13px; height: 36px; }
-        .inv-btn:active { transform:scale(0.95); }
-        .btn-import { background:#28a745; } .btn-scan { background:#343a40; } .btn-cloud-load { background:#6f42c1; } .btn-sync { background:#17a2b8; } .btn-danger { background:#dc3545; } .btn-export { background:#218838; }
-        .btn-config-save { background: #fd7e14; }
-        
-        .inv-chk-manual { font-size:12px; font-weight:bold; color:#555; display:flex; align-items:center; gap:4px; cursor:pointer; padding:0 5px; white-space: nowrap; user-select: none; }
-        .inv-chk-manual input { width:16px; height:16px; accent-color:#007bff; cursor:pointer; }
-
-        /* TABLES */
         .inv-table-wrapper { flex:1; overflow:auto; border:1px solid #eee; border-radius:8px; box-shadow:inset 0 0 10px rgba(0,0,0,0.05); }
         .inv-table { width:100%; border-collapse:collapse; font-size:12px; }
         .inv-table th { background:#f1f1f1; position:sticky; top:0; z-index:10; padding:10px; text-align:left; border-bottom:2px solid #ddd; color:#444; vertical-align: top; white-space: nowrap; }
         .inv-table td { padding:8px 10px; border-bottom:1px solid #eee; color:#333; }
         .inv-table tr:hover { background:#f9f9f9; cursor: pointer; }
         .inv-table tr.highlight { background:#fff9c4; animation: highlightFade 2s forwards; }
-        @keyframes highlightFade { from {background:#fff9c4;} to {background:transparent;} }
-
-        .st-surplus { color:#28a745; font-weight:bold; } .st-missing { color:#dc3545; font-weight:bold; } .st-ok { color:#007bff; font-weight:bold; }
-
-        /* SUGGESTIONS & MOBILE FIX */
+        
+        .inv-btn { padding:8px 12px; border:none; border-radius:6px; font-weight:bold; color:white; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s; white-space:nowrap; font-size: 13px; height: 36px; }
+        .inv-btn:active { transform:scale(0.95); }
+        .btn-import { background:#28a745; } .btn-scan { background:#343a40; } .btn-cloud-load { background:#6f42c1; } .btn-sync { background:#17a2b8; } .btn-danger { background:#dc3545; } .btn-export { background:#218838; } .btn-config-save { background: #fd7e14; }
+        
+        /* SEARCH SUGGESTIONS */
         .inv-suggestions { position:absolute; top:100%; left:0; width:100%; background:white; border:1px solid #ddd; border-radius:0 0 8px 8px; box-shadow:0 10px 20px rgba(0,0,0,0.2); z-index:2000; max-height:300px; overflow-y:auto; display:none; }
-        @media (max-width: 768px) {
-            .inv-search-box { position: static; } 
-            .inv-suggestions { width: 100%; left: 0; top: 100%; } 
-        }
         .inv-sug-item { padding:8px 10px; border-bottom:1px solid #f0f0f0; cursor:pointer; font-size:13px; line-height: 1.4; }
         .inv-sug-item:hover { background:#f0f8ff; color:#007bff; }
         .inv-sug-code { font-weight:bold; color:#d63031; }
         .inv-sug-sub { font-size:11px; color:#666; font-style: italic; }
 
-        /* MODALS */
-        #inv-edit-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2147483750; justify-content:center; align-items:center; backdrop-filter:blur(2px); }
-        .inv-edit-content { background:white; width:90%; max-width:400px; border-radius:12px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.3); animation: popIn 0.2s; display:flex; flex-direction:column; }
-        .inv-edit-header { display:flex; justify-content:space-between; align-items:center; font-weight:bold; font-size:16px; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px; color:#333; }
-        .inv-edit-close { cursor:pointer; font-size:20px; color:#999; width:30px; height:30px; display:flex; justify-content:center; align-items:center; border-radius:50%; transition:0.2s; }
-        .inv-edit-close:hover { background:#eee; color:#333; }
-        .inv-edit-list { max-height:200px; overflow-y:auto; border:1px solid #eee; border-radius:6px; margin-bottom:15px; }
-        .inv-edit-item { display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #f9f9f9; align-items:center; font-size:13px; }
-        .inv-edit-input { width:60px; padding:4px; text-align:center; border:1px solid #ccc; border-radius:4px; }
-        .inv-edit-actions { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top: auto; }
-        .inv-btn-del-all { background:#dc3545; flex:1; justify-content:center; } .inv-btn-fill { background:#28a745; flex:1; justify-content:center; } .inv-btn-save { background:#007bff; flex:1; justify-content:center; }
-
-        .inv-filter-select { padding:4px; border:1px solid #ccc; border-radius:4px; font-size:11px; width:100%; box-sizing:border-box; margin-top:4px; }
-        #inv-scanner-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:black; z-index:200; display:none; flex-direction:column; }
-        #inv-reader { width:100%; height:100%; object-fit:cover; }
-        .inv-scan-close { position:absolute; top:20px; right:20px; background:white; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; z-index:201; box-shadow:0 0 10px rgba(0,0,0,0.5); }
-
-        #inv-startup-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.95); z-index:2005; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:20px; animation:fadeIn 0.5s; }
+        /* OVERLAYS */
+        #inv-startup-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.98); z-index:2005; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:20px; animation:fadeIn 0.5s; }
         .inv-startup-title { font-size:24px; font-weight:800; color:#333; margin-bottom:10px; text-align:center; }
         .inv-startup-btn { padding:15px 25px; border:none; border-radius:10px; font-size:16px; font-weight:bold; cursor:pointer; width:80%; max-width:300px; transition:0.2s; box-shadow:0 5px 15px rgba(0,0,0,0.1); display:flex; align-items:center; justify-content:center; gap:10px; }
         .inv-startup-btn:active { transform:scale(0.95); }
         .btn-start-load { background:linear-gradient(135deg, #007bff, #0056b3); color:white; }
         .btn-start-new { background:linear-gradient(135deg, #28a745, #218838); color:white; }
-        .inv-startup-user { font-size:14px; color:#666; font-style:italic; }
+
+        #inv-edit-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2147483750; justify-content:center; align-items:center; backdrop-filter:blur(2px); }
+        .inv-edit-content { background:white; width:90%; max-width:400px; border-radius:12px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.3); animation: popIn 0.2s; display:flex; flex-direction:column; }
+        .inv-chk-manual { font-size:12px; font-weight:bold; color:#555; display:flex; align-items:center; gap:4px; cursor:pointer; padding:0 5px; white-space: nowrap; user-select: none; }
+        .inv-chk-manual input { width:16px; height:16px; accent-color:#007bff; cursor:pointer; }
+        
+        .inv-edit-list { max-height:200px; overflow-y:auto; border:1px solid #eee; border-radius:6px; margin-bottom:15px; }
+        .inv-edit-item { display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #f9f9f9; align-items:center; font-size:13px; }
+        .inv-edit-input { width:60px; padding:4px; text-align:center; border:1px solid #ccc; border-radius:4px; }
+        .inv-edit-actions { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top: auto; }
+        .inv-btn-del-all { background:#dc3545; flex:1; justify-content:center; } .inv-btn-fill { background:#28a745; flex:1; justify-content:center; } .inv-btn-save { background:#007bff; flex:1; justify-content:center; }
+        
+        #inv-scanner-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:black; z-index:200; display:none; flex-direction:column; }
+        #inv-reader { width:100%; height:100%; object-fit:cover; }
+        .inv-scan-close { position:absolute; top:20px; right:20px; background:white; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; z-index:201; box-shadow:0 0 10px rgba(0,0,0,0.5); }
+        
+        .st-surplus { color:#28a745; font-weight:bold; } .st-missing { color:#dc3545; font-weight:bold; } .st-ok { color:#007bff; font-weight:bold; }
     `;
 
     // --- 2. GLOBAL STATE ---
@@ -144,7 +125,7 @@
         editingItem: null,
         isManualInput: false,
         syncCounter: 0,
-        customSheetId: "" // New: Store custom sheet ID
+        customSheetId: "" // Stores ID retrieved from Cloud
     };
 
     const STATUS_MAP = { "1-Mới": "Mới", "3-Trưng bày": "Trưng bày", "7-Trưng bày (bỏ mẫu)": "Trưng bày bỏ mẫu", "2-Đã sử dụng": "Đã sử dụng", "5-Lỗi (Mới)": "Lỗi (Mới)", "6Lỗi (ĐSD)": "Lỗi (Đã sử dụng)", "6-Lỗi (ĐSD)": "Lỗi (Đã sử dụng)", "7-Cũ thu mua": "Cũ thu mua", "8-Mới (Giảm giá)": "Mới (Giảm giá)" };
@@ -158,19 +139,19 @@
         });
     };
 
+    // Format number with thousand separator
     const formatNumber = (num) => {
         return new Intl.NumberFormat('vi-VN').format(num);
     };
 
     // --- 3. API MODULE ---
     const API = {
+        // Base call function
         call: (params, cb) => {
             if(!API_URL) { if(UI.showToast) UI.showToast("❌ Chưa có API URL."); return; }
-            
-            // Hiện Toast Loading
             if(params.loadingMsg && UI.showToast) UI.showToast(params.loadingMsg);
 
-            if (params.action !== 'get_stock' && (STORE.currentUser === "---" || !STORE.currentUser)) {
+            if (params.action !== 'get_stock' && !params.action.includes('user_sheet_id') && (STORE.currentUser === "---" || !STORE.currentUser)) {
                 if(UI.showToast) UI.showToast("❌ Lỗi: Chưa xác định được Nhân viên!");
                 return;
             }
@@ -179,8 +160,8 @@
             params.sheet_stock = SHEET_CONFIG.STOCK;
             params.sheet_count = SHEET_CONFIG.COUNT;
 
-            // NEW: Inject Custom Sheet ID if present
-            if (STORE.customSheetId) {
+            // QUAN TRỌNG: Nếu đã có ID riêng, gửi kèm để Server chuyển hướng xử lý sang file đó
+            if (STORE.customSheetId && !params.forceMainConfig) {
                 params.custom_spreadsheet_id = STORE.customSheetId;
             }
 
@@ -195,14 +176,41 @@
             });
         },
         
+        // 1. Lấy ID Sheet riêng của User từ file Config gốc
+        getUserSheetId: (cb) => {
+            API.call({
+                action: 'get_user_sheet_id',
+                user: STORE.currentUser,
+                forceMainConfig: true // Bắt buộc đọc từ file Config gốc
+            }, cb);
+        },
+
+        // 2. Lưu ID Sheet riêng vào file Config gốc (cột F)
+        saveUserSheetId: (sheetId, cb) => {
+            API.call({
+                action: 'save_user_sheet_id',
+                user: STORE.currentUser,
+                new_sheet_id: sheetId,
+                forceMainConfig: true,
+                loadingMsg: "💾 Đang lưu cấu hình..."
+            }, cb);
+        },
+
+        // 3. Khởi tạo Sheet (Tạo tab) trên file mới
+        initCustomSheet: (sheetId, cb) => {
+            API.call({
+                action: 'init_custom_sheet',
+                target_id: sheetId, // ID của file mới cần tạo tab
+                loadingMsg: "⚙️ Đang khởi tạo các Sheet..."
+            }, cb);
+        },
+
         getStock: (cb) => { 
             if(!API_URL) return;
-            if(UI.showToast) UI.showToast("⏳ Đang tải Tồn kho từ Cloud...");
+            if(UI.showToast) UI.showToast("⏳ Đang tải Tồn kho...");
 
-            // Modify GET url to include custom id if needed, though usually GETs are messy with body, 
-            // but the original code uses GET for get_stock. We need to append param.
             let url = `${API_URL}?action=get_stock&shopId=${encodeURIComponent(STORE.currentShopId)}&sheet_stock=${encodeURIComponent(SHEET_CONFIG.STOCK)}&t=${Date.now()}`;
-            
+            // Gửi kèm Custom ID nếu có
             if (STORE.customSheetId) {
                 url += `&custom_spreadsheet_id=${encodeURIComponent(STORE.customSheetId)}`;
             }
@@ -218,7 +226,7 @@
         }, 
         
         saveStock: (data, cb) => { 
-            API.call({action: 'save_stock', data: data, loadingMsg: "☁️ Đang lưu Tồn kho lên Cloud..."}, cb); 
+            API.call({action: 'save_stock', data: data, loadingMsg: "☁️ Đang lưu Tồn kho..."}, cb); 
         },
         
         getCount: (cb) => { 
@@ -226,7 +234,6 @@
             if(UI.showToast) UI.showToast("⏳ Đang tải dữ liệu Kiểm kê...");
 
             let url = `${API_URL}?action=get_count&shopId=${encodeURIComponent(STORE.currentShopId)}&sheet_count=${encodeURIComponent(SHEET_CONFIG.COUNT)}&t=${Date.now()}`;
-            
             if (STORE.customSheetId) {
                 url += `&custom_spreadsheet_id=${encodeURIComponent(STORE.customSheetId)}`;
             }
@@ -247,7 +254,7 @@
                 action: 'save_count', 
                 user: STORE.currentUser, 
                 data: flatData,
-                loadingMsg: "☁️ Đang đồng bộ lên Cloud..."
+                loadingMsg: "☁️ Đang đồng bộ..."
             }, cb); 
         },
         
@@ -287,7 +294,7 @@
         modal.innerHTML = `
             <div class="inv-content">
                 <div class="inv-header">
-                    <div class="inv-title">📦Kiểm kê</div>
+                    <div class="inv-title">📦Kiểm kê V5</div>
                     <div class="inv-tabs">
                         <div class="inv-tab active" data-tab="tab-input">Nhập liệu</div>
                         <div class="inv-tab" data-tab="tab-count">Kiểm kê</div>
@@ -300,7 +307,6 @@
                     <select id="inv-shop-select" class="inv-shop-select">${shopOpts}</select>
                     <div class="inv-user-info">
                         👤 NV: <span id="lbl-current-user" class="inv-user-name">...</span>
-                        <span id="lbl-status-auth" style="font-size:10px; color:#999;"></span>
                     </div>
                 </div>
 
@@ -308,10 +314,12 @@
                     <!-- STARTUP OVERLAY -->
                     <div id="inv-startup-overlay" style="display:none;">
                         <div class="inv-startup-title">Bạn muốn làm gì?</div>
-                        <span class="inv-startup-user" id="lbl-startup-user">User: ...</span>
-                        <div style="font-size:12px;color:#d63031;margin-bottom:10px;" id="lbl-startup-sheet-notice"></div>
-                        <button class="inv-startup-btn btn-start-load" id="btn-start-load">📥 Tiếp tục kỳ kiểm kê cũ</button>
-                        <button class="inv-startup-btn btn-start-new" id="btn-start-new">🆕 Tạo kỳ kiểm kê mới</button>
+                        <span class="inv-startup-user" id="lbl-startup-user">Đang tải cấu hình...</span>
+                        <div style="font-size:12px;color:#d63031;margin-bottom:10px;font-weight:bold;" id="lbl-startup-sheet-notice"></div>
+                        <div id="startup-actions" style="display:none; width:100%; flex-direction:column; align-items:center; gap:10px;">
+                            <button class="inv-startup-btn btn-start-load" id="btn-start-load">📥 Tiếp tục kỳ kiểm kê cũ</button>
+                            <button class="inv-startup-btn btn-start-new" id="btn-start-new">🆕 Tạo kỳ kiểm kê mới</button>
+                        </div>
                     </div>
 
                     <!-- TAB 1 -->
@@ -321,9 +329,9 @@
                             <button class="inv-btn btn-cloud-load" id="btn-load-stock-cloud">☁️ Tải tồn kho</button>
                         </div>
                         
-                        <!-- NEW CONFIG ROW -->
+                        <!-- CONFIG ROW: ID SHEET -->
                         <div class="inv-config-row">
-                            <input type="text" id="inp-custom-sheet-id" class="inv-input" placeholder="Nhập ID Google Sheet riêng (để tránh trùng lặp)..." autocomplete="off">
+                            <input type="text" id="inp-custom-sheet-id" class="inv-input" placeholder="Nhập ID Google Sheet riêng để bắt đầu..." autocomplete="off">
                             <button class="inv-btn btn-config-save" id="btn-save-sheet-id">Lưu ID</button>
                         </div>
 
@@ -338,9 +346,7 @@
                         <div class="inv-controls">
                             <div class="inv-search-box"><input type="text" id="inp-search-sku" class="inv-input" placeholder="Nhập tên/mã..." autocomplete="off"><div class="inv-suggestions" id="box-suggestions"></div></div>
                             <label class="inv-chk-manual"><input type="checkbox" id="chk-manual-input"> Nhập tay</label>
-                            <button class="inv-btn btn-scan" id="btn-open-scan">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M3 5h2v14H3V5zm4 0h2v14H7V5zm4 0h2v14h-2V5zm4 0h2v14h-2V5zm4 0h2v14h-2V5z"/></svg>
-                            </button>
+                            <button class="inv-btn btn-scan" id="btn-open-scan">📷</button>
                             <button class="inv-btn btn-sync" id="btn-sync-cloud">☁️ Đồng bộ</button>
                         </div>
                         <div class="inv-table-wrapper"><table class="inv-table" id="tbl-counting"><thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>Tồn</th><th>Đã kiểm</th><th>Lệch</th></tr></thead><tbody></tbody></table></div>
@@ -389,22 +395,38 @@
         const overlay = document.getElementById('inv-startup-overlay');
         const lblStartUser = document.getElementById('lbl-startup-user');
         const lblSheetNotice = document.getElementById('lbl-startup-sheet-notice');
+        const startupActions = document.getElementById('startup-actions');
 
-        const loadCustomSheetId = () => {
-            const savedId = localStorage.getItem(`INV_SHEET_${STORE.currentShopId}`) || "";
-            STORE.customSheetId = savedId;
-            const inp = document.getElementById('inp-custom-sheet-id');
-            const btn = document.getElementById('btn-save-sheet-id');
-            inp.value = savedId;
-            if(savedId) {
-                inp.disabled = true;
-                btn.innerText = "Chỉnh sửa";
-                lblSheetNotice.innerText = "⚠️ Đang sử dụng File Sheet Riêng";
-            } else {
-                inp.disabled = false;
-                btn.innerText = "Lưu ID";
-                lblSheetNotice.innerText = "";
-            }
+        const fetchUserConfig = () => {
+            lblStartUser.innerText = "Đang tìm cấu hình Sheet...";
+            // Gọi API lấy ID Sheet từ file Config gốc
+            API.getUserSheetId((res) => {
+                const inp = document.getElementById('inp-custom-sheet-id');
+                const btn = document.getElementById('btn-save-sheet-id');
+
+                if (res.status === 'success' && res.sheet_id) {
+                    STORE.customSheetId = res.sheet_id;
+                    
+                    // Cập nhật UI Input
+                    inp.value = res.sheet_id;
+                    inp.disabled = true;
+                    btn.innerText = "Chỉnh sửa";
+                    
+                    lblSheetNotice.innerText = "✅ Đang kết nối File Sheet Riêng";
+                    lblStartUser.innerText = "User: " + STORE.currentUser;
+                    startupActions.style.display = 'flex'; // Hiện nút chọn Load/New
+                } else {
+                    STORE.customSheetId = "";
+                    inp.disabled = false;
+                    btn.innerText = "Lưu ID";
+                    
+                    lblSheetNotice.innerText = "⚠️ Chưa cấu hình ID Sheet. Vui lòng nhập ID để bắt đầu.";
+                    lblStartUser.innerText = "User: " + STORE.currentUser;
+                    
+                    // Nếu chưa có ID thì tắt overlay để người dùng nhập
+                    setTimeout(() => { overlay.style.display = 'none'; }, 1500);
+                }
+            });
         };
 
         const waitForUserAndLoad = () => {
@@ -415,10 +437,9 @@
                     clearInterval(check); 
                     STORE.currentUser = AUTH_STATE.userName; 
                     lblUser.innerText = STORE.currentUser; 
-                    lblStartUser.innerText = "User: " + STORE.currentUser; 
                     lblUser.classList.add('ready'); 
-                    loadCustomSheetId(); // Load Sheet ID config
                     overlay.style.display = 'flex';
+                    fetchUserConfig(); // Bắt đầu lấy Config từ Server
                 } else if (attempt > 30) { clearInterval(check); lblUser.innerText = "Lỗi: Không tìm thấy User!"; lblUser.style.color = "red"; UI.showToast("❌ Không lấy được thông tin User!"); }
             }, 500);
         };
@@ -426,15 +447,15 @@
         // --- EVENTS ---
         document.getElementById('btn-start-load').onclick = () => { overlay.style.display = 'none'; autoLoadData(); };
         
-        // LOGIC "KIỂM KÊ MỚI" - Xóa dữ liệu cũ trên Sheet đã chọn
+        // LOGIC "KIỂM KÊ MỚI" - Xóa dữ liệu cũ trên Sheet Riêng
         document.getElementById('btn-start-new').onclick = () => {
-            const targetName = STORE.customSheetId ? "File Sheet Riêng" : "Hệ thống";
-            if(confirm(`Bạn có muốn TẠO KỲ KIỂM KÊ MỚI không?\n\nDữ liệu trên ${targetName} sẽ bị XÓA HẾT để bắt đầu mới.`)) {
+            if(!STORE.customSheetId) { UI.showToast("⚠️ Chưa có ID Sheet!"); return; }
+            if(confirm(`Bạn có muốn TẠO KỲ KIỂM KÊ MỚI không?\n\nDữ liệu trên File Sheet Riêng sẽ bị XÓA HẾT để bắt đầu mới.`)) {
                 overlay.style.display = 'none'; 
-                // Gọi API xóa dữ liệu 'all' để reset cả stock và count trên sheet
+                // Gọi API xóa dữ liệu 'all' trên file custom
                 API.deleteData('all', (res) => {
                     if(res.status === 'success') { 
-                        if(UI.showToast) UI.showToast(`✅ Đã reset dữ liệu trên ${targetName}.`); 
+                        if(UI.showToast) UI.showToast(`✅ Đã reset dữ liệu trên File Sheet Riêng.`); 
                         STORE.countData = []; STORE.importData = []; 
                         renderImportTable(); renderCountTable(); renderSummary(); 
                         modal.querySelector('.inv-tab[data-tab="tab-input"]').click(); 
@@ -449,35 +470,58 @@
             STORE.importData = []; STORE.countData = []; 
             renderImportTable(); renderCountTable(); renderSummary(); 
             UI.showToast(`Đã chuyển: ${STORE.currentShopId}`); 
-            loadCustomSheetId(); // Load lại ID Sheet khi đổi shop
+            // Khi đổi shop, không cần load lại ID vì ID gắn theo User (cột F) chứ không theo Shop ở file config
+            // Nhưng nếu logic của bạn là mỗi shop 1 file thì cần sửa logic server. 
+            // Ở đây giữ logic: User -> 1 ID File.
             overlay.style.display = 'flex'; 
+            fetchUserConfig();
         };
 
         // EVENT SAVE/EDIT SHEET ID
         document.getElementById('btn-save-sheet-id').onclick = function() {
             const inp = document.getElementById('inp-custom-sheet-id');
             const currentMode = this.innerText;
+            
             if(currentMode === "Chỉnh sửa") {
-                // Chuyển sang chế độ sửa
-                inp.disabled = false;
-                inp.focus();
-                this.innerText = "Lưu ID";
+                if(confirm("Bạn có chắc muốn đổi file Google Sheet khác?")) {
+                    inp.disabled = false;
+                    inp.focus();
+                    this.innerText = "Lưu ID";
+                }
             } else {
-                // Lưu ID
+                // LƯU ID
                 const val = inp.value.trim();
-                localStorage.setItem(`INV_SHEET_${STORE.currentShopId}`, val);
-                STORE.customSheetId = val;
-                inp.disabled = true;
-                this.innerText = "Chỉnh sửa";
-                UI.showToast("✅ Đã lưu ID Sheet kiểm kê riêng!");
-                if(val) lblSheetNotice.innerText = "⚠️ Đang sử dụng File Sheet Riêng";
-                else lblSheetNotice.innerText = "";
+                if(!val) { UI.showToast("❌ Vui lòng nhập ID!"); return; }
+                
+                // 1. Lưu ID vào file Config Gốc (Cột F)
+                API.saveUserSheetId(val, (res) => {
+                    if(res.status === 'success') {
+                        STORE.customSheetId = val;
+                        inp.disabled = true;
+                        this.innerText = "Chỉnh sửa";
+                        UI.showToast("✅ Đã lưu ID vào hệ thống!");
+                        lblSheetNotice.innerText = "✅ Đang kết nối File Sheet Riêng";
+                        
+                        // 2. Khởi tạo Sheet trên file mới (nếu chưa có)
+                        API.initCustomSheet(val, (initRes) => {
+                            if(initRes.status === 'success') {
+                                UI.showToast("✅ Đã kiểm tra/tạo sheet thành công!");
+                                startupActions.style.display = 'flex'; // Đã sẵn sàng
+                            } else {
+                                UI.showToast("⚠️ Có thể chưa tạo được Sheet: " + initRes.msg);
+                            }
+                        });
+
+                    } else {
+                        UI.showToast("❌ Lỗi lưu ID: " + res.msg);
+                    }
+                });
             }
         };
 
         document.getElementById('btn-load-stock-cloud').onclick = () => { API.getStock((data) => { STORE.importData = data; renderImportTable(); updateFilters(); syncStockToCountData(); renderCountTable(); renderSummary(); if(UI.showToast) UI.showToast(`✅ Đã tải ${data.length} dòng Tồn kho!`); }); };
         document.getElementById('btn-sync-cloud').onclick = () => { if (STORE.currentUser === "---") { UI.showToast("⚠️ Đang xác thực User..."); return; } API.saveCount(STORE.countData, (res) => { if(res.status==='success' && UI.showToast) UI.showToast("✅ Đã đồng bộ lên Cloud!"); }); };
-        document.getElementById('btn-delete-exec').onclick = () => { if (STORE.currentUser === "---") return; const mode = document.getElementById('sel-delete-mode').value; if(mode === 'none') return; if(!confirm(`⚠️ Xác nhận xóa dữ liệu?`)) return; API.deleteData(mode, (res) => { if(res.status === 'success') { if(UI.showToast) UI.showToast("✅ " + res.msg); if(mode === 'stock' || mode === 'all') { STORE.importData = []; renderImportTable(); } if(mode === 'count' || mode === 'all') { STORE.countData = []; renderCountTable(); renderSummary(); } } }); };
+        document.getElementById('btn-delete-exec').onclick = () => { if (STORE.currentUser === "---") return; const mode = document.getElementById('sel-delete-mode').value; if(mode === 'none') return; if(!confirm(`⚠️ Xác nhận xóa dữ liệu trên file Sheet Riêng?`)) return; API.deleteData(mode, (res) => { if(res.status === 'success') { if(UI.showToast) UI.showToast("✅ " + res.msg); if(mode === 'stock' || mode === 'all') { STORE.importData = []; renderImportTable(); } if(mode === 'count' || mode === 'all') { STORE.countData = []; renderCountTable(); renderSummary(); } } }); };
         document.getElementById('btn-export-excel').onclick = exportToExcel;
         document.getElementById('btn-inv-close').onclick = () => { if(STORE.isScannerRunning) stopScanner(); if(STORE.countData.length > 0 && STORE.currentUser !== "---") { API.saveCount(STORE.countData, () => { modal.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; document.body.classList.remove('tgdd-body-lock'); }); } else { modal.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; document.body.classList.remove('tgdd-body-lock'); } };
 
@@ -498,6 +542,7 @@
                 return statusMatch && textMatch;
             }).slice(0, 10);
             if (matches.length > 0) {
+                // FORMAT NUMBER ADDED HERE
                 sugBox.innerHTML = matches.map(item => `<div class="inv-sug-item" data-sku="${item.sku}" data-status="${item.status}"><div><span class="inv-sug-code">${item.sku}</span> - ${item.name}</div><div class="inv-sug-sub">Trạng thái: ${item.status} | Tồn: ${formatNumber(item.stock)}</div></div>`).join('');
                 sugBox.style.display = 'block';
                 sugBox.querySelectorAll('.inv-sug-item').forEach(el => { el.onclick = () => { addCountItem(el.dataset.sku, el.dataset.status); searchInput.value = ''; sugBox.style.display = 'none'; searchInput.focus(); }; });
@@ -521,17 +566,22 @@
         
         function autoLoadData() {
             if (STORE.currentUser === "---") return;
+            if (!STORE.customSheetId) { UI.showToast("⚠️ Chưa có file Sheet!"); return; }
+
             API.getStock((data) => {
                 if(data.length > 0) { 
                     STORE.importData = data; renderImportTable(); updateFilters(); modal.querySelector('.inv-tab[data-tab="tab-count"]').click(); 
-                    if(UI.showToast) UI.showToast(`✅ Đã tải ${data.length} dòng Tồn kho!`);
+                    if(UI.showToast) UI.showToast(`✅ Đã tải ${data.length} dòng Tồn kho từ Sheet riêng!`);
                 } 
-                else { modal.querySelector('.inv-tab[data-tab="tab-input"]').click(); }
+                else { 
+                    UI.showToast("⚠️ Sheet tồn kho trống hoặc chưa có dữ liệu.");
+                    modal.querySelector('.inv-tab[data-tab="tab-input"]').click(); 
+                }
                 
                 API.getCount((cData) => {
                     STORE.countData = cData.filter(i => i.user === STORE.currentUser).map(i => ({ ...i, history: [{ts:'Server', qty:i.qty}], totalCount: i.qty, stock: (STORE.importData.find(s => s.sku === i.sku && s.status === i.status) || {}).stock || 0 }));
                     renderCountTable(); renderSummary(); 
-                    if(cData.length > 0 && UI.showToast) UI.showToast("✅ Đã tải dữ liệu Kiểm kê cũ!");
+                    if(cData.length > 0 && UI.showToast) UI.showToast("✅ Đã tải dữ liệu Kiểm kê cũ từ Sheet riêng!");
                 });
             });
         }
@@ -547,7 +597,45 @@
         }
 
         function normalizeStatus(raw) { if (!raw) return ""; const cleanRaw = String(raw).trim(); if (STATUS_MAP[cleanRaw]) return STATUS_MAP[cleanRaw]; for (let key in STATUS_MAP) { if (cleanRaw.includes(key) || key.includes(cleanRaw)) return STATUS_MAP[key]; } return cleanRaw; }
-        function handleFileImport(e) { const file = e.target.files[0]; if (!file) return; document.getElementById('lbl-file-name').innerText = file.name; const reader = new FileReader(); reader.onload = (evt) => { const data = new Uint8Array(evt.target.result); const workbook = XLSX.read(data, { type: 'array' }); const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 }); STORE.importData = []; for (let i = 1; i < jsonData.length; i++) { const row = jsonData[i]; if (row && row[6]) { STORE.importData.push({ group: row[4] || '', sku: String(row[6]).trim(), name: row[7] || '', status: normalizeStatus(row[8]), stock: parseInt(row[9]) || 0 }); } } renderImportTable(); updateFilters(); syncStockToCountData(); renderCountTable(); renderSummary(); UI.showToast(`✅ Đã nhập ${STORE.importData.length} dòng!`); if(STORE.importData.length > 0) { API.saveStock(STORE.importData, (res) => { if(res.status==='success') UI.showToast("✅ Đã lưu Tồn kho lên Cloud!"); }); } }; reader.readAsArrayBuffer(file); }
+        
+        function handleFileImport(e) { 
+            const file = e.target.files[0]; 
+            if (!file) return; 
+            
+            // Check if we have custom sheet id
+            if(!STORE.customSheetId) {
+                alert("Bạn chưa cấu hình ID Google Sheet! Vui lòng nhập ID trước khi tải lên.");
+                e.target.value = ''; // Reset file input
+                return;
+            }
+
+            document.getElementById('lbl-file-name').innerText = file.name; 
+            const reader = new FileReader(); 
+            reader.onload = (evt) => { 
+                const data = new Uint8Array(evt.target.result); 
+                const workbook = XLSX.read(data, { type: 'array' }); 
+                const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 }); 
+                STORE.importData = []; 
+                for (let i = 1; i < jsonData.length; i++) { 
+                    const row = jsonData[i]; 
+                    if (row && row[6]) { 
+                        STORE.importData.push({ group: row[4] || '', sku: String(row[6]).trim(), name: row[7] || '', status: normalizeStatus(row[8]), stock: parseInt(row[9]) || 0 }); 
+                    } 
+                } 
+                renderImportTable(); updateFilters(); syncStockToCountData(); renderCountTable(); renderSummary(); 
+                UI.showToast(`✅ Đã nhập ${STORE.importData.length} dòng!`); 
+                
+                if(STORE.importData.length > 0) { 
+                    // SAVE TO CUSTOM CLOUD
+                    API.saveStock(STORE.importData, (res) => { 
+                        if(res.status==='success') UI.showToast("✅ Đã lưu Tồn kho lên File Sheet Riêng!"); 
+                        else UI.showToast("❌ Lỗi lưu: " + res.msg);
+                    }); 
+                } 
+            }; 
+            reader.readAsArrayBuffer(file); 
+        }
+
         function updateFilters() { const getUnique = (key) => [...new Set(STORE.importData.map(i => i[key]))].filter(Boolean); const fillSelect = (col, vals) => { const sel = document.querySelector(`.inv-filter-select[data-col="${col}"]`); const options = ['all', ...vals]; if(sel) sel.innerHTML = options.map(v => `<option value="${v}">${v === 'all' ? 'Tất cả' : v}</option>`).join(''); }; fillSelect('status', getUnique('status')); fillSelect('group', getUnique('group')); fillSelect('name', getUnique('name').sort()); }
         function renderImportTable() { const tbody = document.querySelector('#tbl-import tbody'); let html = ''; STORE.importData.slice(0, 200).forEach((item, idx) => { html += `<tr><td>${idx+1}</td><td>${item.group}</td><td style="font-weight:bold;color:#d63031">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td>${item.stock}</td></tr>`; }); tbody.innerHTML = html; }
         
@@ -636,7 +724,7 @@
     };
 
     return {
-        name: "Test Kiểm kê",
+        name: "Kiểm kê V5",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z" fill="white"/></svg>`,
         bgColor: "#6c757d",
         css: MY_CSS,
