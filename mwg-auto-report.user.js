@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Auto BI 6.6
+// @name         Auto BI 6.7
 // @namespace    http://tampermonkey.net/
-// @version      6.6
+// @version      6.7
 // @description  Tool báo cáo tự động cho quản lý MWG.
 // @author       42060
 // @match        https://bi.thegioididong.com/*
