@@ -154,6 +154,16 @@
     // LOGIC CHÍNH
     // ===============================================================
     const runTool = () => {
+
+       const ALLOWED_USERS = ["User1", "User2"]; // <--- Điền user vào đây
+        const currentUser = AUTH_STATE?.userName || "---";
+        if (ALLOWED_USERS.length > 0) {
+            const isAllowed = ALLOWED_USERS.some(u => u.trim().toLowerCase() === currentUser.trim().toLowerCase());
+            if (!isAllowed) {
+                if (UI.showToast) UI.showToast(`⛔ Bạn (${currentUser}) chưa được cấp quyền!`);
+                return; // Ngắt code ngay lập tức
+            }
+        }
         // State
         const QUANTITIES = [1, 2, 4, 6, 8];
         let state = {
