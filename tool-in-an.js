@@ -1,10 +1,11 @@
 /* 
-   MODULE: IN ẤN (PRINT TOOL) - V2 (GRID A4 EDITION)
-   - Layout: Horizontal List + A4 Preview.
-   - Logic: Grid System (1, 2, 4, 6, 8 items/page).
-   - Edit: Direct on canvas + Auto Sync text.
+   MODULE: IN ẤN (PRINT TOOL) - V2.1 (FIX UI & Z-INDEX)
+   - Fix 1: Ẩn/Hiện Bottom Nav khi Mở/Đóng.
+   - Fix 2: Tăng Z-Index cao hơn Modal tiện ích chính.
 */
 ((context) => {
+    const { UI, AUTH_STATE } = context;
+
     // ===============================================================
     // CẤU HÌNH TEMPLATE
     // ===============================================================
@@ -49,7 +50,9 @@
     // CSS STYLE
     // ===============================================================
     const MY_CSS = `
-        #tgdd-print-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; font-family: sans-serif; flex-direction:column; }
+        /* FIX Z-INDEX: Tăng lên cực cao để đè Modal tiện ích */
+        #tgdd-print-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2147483800; font-family: sans-serif; flex-direction:column; }
+        
         .pr-content { background:#e9ecef; width:100%; height:100%; display:flex; flex-direction:column; overflow:hidden; }
 
         /* HEADER & TOOLBAR */
@@ -79,7 +82,6 @@
         .pr-body { flex:1; overflow:auto; display:flex; justify-content:center; padding:20px; background:#555; }
         
         /* A4 PAGE SIMULATION */
-        /* Kích thước A4 trên màn hình (Scale tương đối để dễ nhìn) */
         .pr-a4-page { 
             width: 794px; /* ~21cm @ 96dpi */
             height: 1123px; /* ~29.7cm @ 96dpi */
@@ -88,12 +90,11 @@
             margin-bottom: 50px;
             position: relative;
             overflow: hidden;
-            /* Default grid is flex center for Qty=1 */
             display: flex; 
         }
 
         /* GRID SYSTEM LAYOUTS */
-        .pr-grid-1 { justify-content:center; align-items:center; padding:0 15px; } /* Qty 1: Center + Padding */
+        .pr-grid-1 { justify-content:center; align-items:center; padding:0 15px; } 
         
         .pr-grid-2 { display:grid !important; grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
         .pr-grid-4 { display:grid !important; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
@@ -130,23 +131,22 @@
             body * { visibility: hidden; }
             #tgdd-print-modal, #tgdd-print-modal * { visibility: visible; }
             
-            #tgdd-print-modal { position:absolute; left:0; top:0; background:white; width:100%; height:100%; z-index:99999; display:block !important; }
+            #tgdd-print-modal { position:absolute; left:0; top:0; background:white; width:100%; height:100%; z-index:2147483800; display:block !important; }
             .pr-header { display:none !important; }
             .pr-body { padding:0; background:white; overflow:visible; display:block; }
             .pr-a4-page { 
-                width: 100%; height: 100%; /* Fill A4 paper */
+                width: 100%; height: 100%; 
                 box-shadow: none; margin:0; 
                 transform: none !important;
             }
-            .pr-cell { border:none !important; } /* Ẩn viền lưới */
+            .pr-cell { border:none !important; } 
             .pr-input-div { border:none !important; background:transparent !important; }
             .pr-canvas-wrapper { box-shadow:none; }
         }
 
-        /* MOBILE RESPONSIVE FOR UI */
         @media (max-width: 600px) {
-            .pr-a4-page { transform-origin: top left; transform: scale(0.45); margin-bottom: -500px; margin-right: -400px; } /* Thu nhỏ A4 trên màn hình đt */
-            .pr-title span { display:none; } /* Ẩn chữ tiêu đề nếu chật */
+            .pr-a4-page { transform-origin: top left; transform: scale(0.45); margin-bottom: -500px; margin-right: -400px; }
+            .pr-title span { display:none; } 
         }
     `;
 
@@ -154,20 +154,25 @@
     // LOGIC CHÍNH
     // ===============================================================
     const runTool = () => {
-
-       const ALLOWED_USERS = ["42060 - Ngô Hữu Thọ"]; // <--- Điền user vào đây
+        // --- 1. CHECK PERMISSION ---
+        const ALLOWED_USERS = ["42060 - Ngô Hữu Thọ"]; 
         const currentUser = AUTH_STATE?.userName || "---";
         if (ALLOWED_USERS.length > 0) {
             const isAllowed = ALLOWED_USERS.some(u => u.trim().toLowerCase() === currentUser.trim().toLowerCase());
             if (!isAllowed) {
                 if (UI.showToast) UI.showToast(`⛔ Người dùng: ${currentUser} chưa được cấp quyền!`);
-                return; // Ngắt code ngay lập tức
+                return;
             }
         }
+
+        // --- 2. HIDE BOTTOM NAV (FIX UI) ---
+        const bottomNav = document.getElementById('tgdd-bottom-nav');
+        if(bottomNav) bottomNav.style.display = 'none';
+
         // State
         const QUANTITIES = [1, 2, 4, 6, 8];
         let state = {
-            qtyIdx: 0, // Bắt đầu ở mức 1 (index 0)
+            qtyIdx: 0,
             tpl: TEMPLATES[0]
         };
 
@@ -201,7 +206,7 @@
             `;
             document.body.appendChild(modal);
 
-            // 1. Render Template List
+            // Render Template List
             const listEl = $('pr-list');
             TEMPLATES.forEach(tpl => {
                 const item = document.createElement('div');
@@ -217,12 +222,16 @@
                 listEl.appendChild(item);
             });
 
-            // 2. Button Events
-            $('btn-pr-close').onclick = () => { modal.style.display = 'none'; };
+            // Button Events
+            $('btn-pr-close').onclick = () => { 
+                modal.style.display = 'none'; 
+                // --- SHOW BOTTOM NAV BACK (FIX UI) ---
+                if(bottomNav) bottomNav.style.display = 'flex';
+            };
             $('btn-pr-exec').onclick = () => { window.print(); };
             
             $('btn-pr-qty').onclick = () => {
-                state.qtyIdx = (state.qtyIdx + 1) % QUANTITIES.length; // Cycle 0->1->2->3->4->0
+                state.qtyIdx = (state.qtyIdx + 1) % QUANTITIES.length;
                 const qty = QUANTITIES[state.qtyIdx];
                 $('btn-pr-qty').innerText = `SL: ${qty}`;
                 renderGrid();
@@ -239,44 +248,35 @@
             a4.className = `pr-a4-page pr-grid-${qty}`;
             a4.innerHTML = '';
 
-            // Tính toán kích thước ô lưới để Scale ảnh cho vừa
-            // A4 px approx: 794 x 1123
             let cellW, cellH;
-            if (qty === 1) { cellW = 794 - 30; cellH = 1123 - 30; } // Trừ padding 15px mỗi bên
+            if (qty === 1) { cellW = 794 - 30; cellH = 1123 - 30; } 
             else if (qty === 2) { cellW = 794; cellH = 1123 / 2; }
             else if (qty === 4) { cellW = 794 / 2; cellH = 1123 / 2; }
             else if (qty === 6) { cellW = 794 / 2; cellH = 1123 / 3; }
-            else { cellW = 794 / 2; cellH = 1123 / 4; } // Qty 8
+            else { cellW = 794 / 2; cellH = 1123 / 4; } 
 
-            // Loop tạo các ô
             for (let i = 0; i < qty; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'pr-cell';
                 
-                // Tạo wrapper chứa ảnh và input
                 const wrapper = document.createElement('div');
                 wrapper.className = 'pr-canvas-wrapper';
                 wrapper.style.width = tpl.width + 'px';
                 wrapper.style.height = tpl.height + 'px';
                 
-                // Tính tỉ lệ Scale
-                const scaleX = (cellW - 4) / tpl.width; // -4px trừ hao border
+                const scaleX = (cellW - 4) / tpl.width; 
                 const scaleY = (cellH - 4) / tpl.height;
-                const scale = Math.min(scaleX, scaleY, 1); // Không phóng to quá 100% nếu ảnh nhỏ
+                const scale = Math.min(scaleX, scaleY, 1); 
                 
                 wrapper.style.transform = `scale(${scale})`;
-
-                // Render Background
                 wrapper.innerHTML = `<img src="${tpl.bg}" class="pr-bg-img">`;
 
-                // Render Inputs
                 tpl.inputs.forEach((inp, fieldIdx) => {
                     const div = document.createElement('div');
                     div.className = 'pr-input-div';
-                    div.contentEditable = true; // Cho phép sửa trực tiếp
+                    div.contentEditable = true; 
                     div.spellcheck = false;
                     
-                    // Style
                     div.style.left = inp.x + 'px';
                     div.style.top = inp.y + 'px';
                     div.style.width = inp.w + 'px';
@@ -286,22 +286,17 @@
                     div.style.textDecoration = inp.decoration || 'none';
                     if(inp.align) div.style.justifyContent = inp.align;
 
-                    // Giá trị mặc định
                     div.innerText = inp.val;
 
-                    // SYNC LOGIC: Khi sửa ô này, tìm các ô tương ứng ở tem khác sửa theo
                     div.oninput = (e) => {
                         const newVal = e.target.innerText;
-                        // Cập nhật tất cả các input có cùng fieldIdx trong DOM
                         const allInputs = document.querySelectorAll(`.inp-field-${fieldIdx}`);
                         allInputs.forEach(item => {
                             if (item !== e.target) item.innerText = newVal;
                         });
                     };
                     
-                    // Đánh dấu class để biết nó thuộc trường nào (cho việc Sync)
                     div.classList.add(`inp-field-${fieldIdx}`);
-
                     wrapper.appendChild(div);
                 });
 
@@ -311,7 +306,7 @@
         };
 
         modal.style.display = 'flex';
-        renderGrid(); // Init first render
+        renderGrid(); 
     };
 
     return {
