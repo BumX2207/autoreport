@@ -154,17 +154,6 @@
     // LOGIC CHÍNH
     // ===============================================================
     const runTool = () => {
-        // --- 1. CHECK PERMISSION ---
-        const ALLOWED_USERS = ["42060 - Ngô Hữu Thọ"]; 
-        const currentUser = AUTH_STATE?.userName || "---";
-        if (ALLOWED_USERS.length > 0) {
-            const isAllowed = ALLOWED_USERS.some(u => u.trim().toLowerCase() === currentUser.trim().toLowerCase());
-            if (!isAllowed) {
-                if (UI.showToast) UI.showToast(`⛔ Người dùng: ${currentUser} chưa được cấp quyền!`);
-                return;
-            }
-        }
-
         // --- 2. HIDE BOTTOM NAV (FIX UI) ---
         const bottomNav = document.getElementById('tgdd-bottom-nav');
         if(bottomNav) bottomNav.style.display = 'none';
