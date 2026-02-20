@@ -1,7 +1,7 @@
 /* 
-   MODULE: KIỂM KÊ KHO (INVENTORY) - V6.1 (FIX STARTUP OVERLAY)
-   - Fix lỗi: Overlay đen hiển thị ngay lập tức khi mở tool.
-   - Logic: Kiểm tra ID -> Có ID (Hiện nút Tiếp tục) | Chưa ID (Hiện ô nhập liệu trên Overlay).
+   MODULE: KIỂM KÊ KHO
+   - Fix lỗi thông báo "undefined" khi xóa dữ liệu.
+   - Giữ nguyên các tính năng Overlay đen, Check ID v6.1.
 */
 ((context) => {
     // ===============================================================
@@ -48,7 +48,6 @@
         .inv-view.active { display:flex; }
 
         /* OVERLAYS - BLACK STYLE */
-        /* FIX: display:flex mặc định để hiện ngay khi mở */
         #inv-startup-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:2005; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:15px; animation:fadeIn 0.3s; color: white; }
         .inv-startup-title { font-size:20px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:1px; }
         .inv-startup-status { font-size:14px; color:#ccc; font-style:italic; margin-bottom:10px; }
@@ -291,7 +290,7 @@
         modal.innerHTML = `
             <div class="inv-content">
                 <div class="inv-header">
-                    <div class="inv-title">📦Kiểm kê V6.1</div>
+                    <div class="inv-title">📦Kiểm kê V1.0</div>
                     <div class="inv-tabs">
                         <div class="inv-tab active" data-tab="tab-input">Nhập liệu</div>
                         <div class="inv-tab" data-tab="tab-count">Kiểm kê</div>
@@ -410,7 +409,7 @@
                     STORE.customSheetId = res.sheet_id;
                     
                     inpSheetId.value = res.sheet_id;
-                    inpSheetId.disabled = true; // KHÓA INPUT
+                    inpSheetId.disabled = true;
                     
                     btnSaveId.innerText = "Sửa";
                     btnSaveId.className = "btn-mode-edit"; // Màu vàng
@@ -418,12 +417,12 @@
                     lblStatus.innerText = "✅ Đã kết nối File Sheet";
                     lblStatus.style.color = "#4CAF50";
                     
-                    startupActions.style.display = 'flex'; // HIỆN NÚT CHỨC NĂNG
+                    startupActions.style.display = 'flex'; // Hiện nút Tiếp tục/Mới
                 } else {
                     // KHÔNG ID: Hiển thị chế độ NHẬP ID
                     STORE.customSheetId = "";
                     inpSheetId.value = "";
-                    inpSheetId.disabled = false; // MỞ INPUT
+                    inpSheetId.disabled = false;
                     
                     btnSaveId.innerText = "Lưu";
                     btnSaveId.className = "btn-mode-save"; // Màu xanh
@@ -431,7 +430,7 @@
                     lblStatus.innerText = "⚠️ Chưa khai báo File Sheet";
                     lblStatus.style.color = "#FF5722";
                     
-                    startupActions.style.display = 'none'; // ẨN NÚT CHỨC NĂNG
+                    startupActions.style.display = 'none'; // Ẩn nút chức năng
                     inpSheetId.focus();
                 }
             });
@@ -538,12 +537,38 @@
             if(!STORE.customSheetId) { UI.showToast("⛔ Lỗi ID Sheet"); return; }
             API.saveCount(STORE.countData, (res) => { if(res.status==='success' && UI.showToast) UI.showToast("✅ Đã đồng bộ lên Cloud!"); }); 
         };
+        
+        // --- SỬA NÚT XÓA DỮ LIỆU (FIX LỖI UNDEFINED) ---
         document.getElementById('btn-delete-exec').onclick = () => { 
-            if(!STORE.customSheetId) return;
+            if(!STORE.customSheetId) { UI.showToast("⛔ Chưa có ID Sheet!"); return; }
             if (STORE.currentUser === "---") return; 
-            const mode = document.getElementById('sel-delete-mode').value; if(mode === 'none') return; if(!confirm(`⚠️ Xác nhận xóa dữ liệu?`)) return; 
-            API.deleteData(mode, (res) => { if(res.status === 'success') { if(UI.showToast) UI.showToast("✅ " + res.msg); if(mode === 'stock' || mode === 'all') { STORE.importData = []; renderImportTable(); } if(mode === 'count' || mode === 'all') { STORE.countData = []; renderCountTable(); renderSummary(); } } }); 
+            
+            const mode = document.getElementById('sel-delete-mode').value; 
+            if(mode === 'none') return; 
+            
+            if(!confirm(`⚠️ Xác nhận xóa dữ liệu trên file Sheet Riêng?`)) return; 
+            
+            API.deleteData(mode, (res) => { 
+                if(res.status === 'success') { 
+                    // FIX: Nếu server không gửi msg về thì tự điền thông báo
+                    const msg = res.msg || "Đã xóa dữ liệu thành công!";
+                    if(UI.showToast) UI.showToast("✅ " + msg); 
+                    
+                    if(mode === 'stock' || mode === 'all') { 
+                        STORE.importData = []; 
+                        renderImportTable(); 
+                    } 
+                    if(mode === 'count' || mode === 'all') { 
+                        STORE.countData = []; 
+                        renderCountTable(); 
+                        renderSummary(); 
+                    } 
+                } else {
+                    if(UI.showToast) UI.showToast("❌ Lỗi: " + (res.message || "Không xác định"));
+                }
+            }); 
         };
+
         document.getElementById('btn-export-excel').onclick = exportToExcel;
         document.getElementById('btn-inv-close').onclick = () => { if(STORE.isScannerRunning) stopScanner(); if(STORE.countData.length > 0 && STORE.currentUser !== "---" && STORE.customSheetId) { API.saveCount(STORE.countData, () => { modal.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; document.body.classList.remove('tgdd-body-lock'); }); } else { modal.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; document.body.classList.remove('tgdd-body-lock'); } };
 
