@@ -1,7 +1,6 @@
 /* 
    MODULE: KIỂM KÊ KHO
-   - Fix lỗi thông báo "undefined" khi xóa dữ liệu.
-   - Giữ nguyên các tính năng Overlay đen, Check ID v6.1.
+   
 */
 ((context) => {
     // ===============================================================
