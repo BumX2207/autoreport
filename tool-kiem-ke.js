@@ -324,7 +324,7 @@
                         <div id="startup-actions" style="display:none;">
                             <button class="inv-startup-btn btn-start-load" id="btn-start-load">📥 Tiếp tục kỳ cũ</button>
                             <button class="inv-startup-btn btn-start-new" id="btn-start-new">🆕 Bắt đầu kỳ mới</button>
-                            <button class="inv-startup-btn btn-tut" id="btn-tut>🔶 Hướng dẫn</button>
+                            <button class="inv-startup-btn btn-tut" id="btn-tut">🔶 Hướng dẫn</button>
                         </div>
                     </div>
 
