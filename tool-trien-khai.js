@@ -1,5 +1,5 @@
 /* 
-   MODULE: AUTO TRIỂN KHAI (V3 - Updated with Task Name)
+   MODULE: AUTO TRIỂN KHAI
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE, GM_xmlhttpRequest } = context;
@@ -58,9 +58,6 @@
                 const div = document.createElement('div');
                 div.className = `dp-item ${task.id === editingId ? 'editing' : ''}`;
                 const isDaily = (!task.mode || task.mode === 'daily');
-                
-                // Hiển thị tên công việc thay vì ID folder
-                // Nếu dữ liệu cũ chưa có tên thì hiển thị tạm ID
                 const displayName = task.taskName || task.folderId || 'Không tên';
 
                 div.innerHTML = `
@@ -72,7 +69,6 @@
                             <span>⏰ ${task.time}</span>
                         </div>
                         <div class="dp-text">📂 ${displayName}</div>
-                        <!-- <div class="dp-sub-text">ID: ${task.folderId.substring(0, 15)}...</div> -->
                     </div>
                     <div>
                         <span class="dp-icon-btn" id="dp-edit-${task.id}">✎</span>
@@ -97,7 +93,7 @@
             editingId = task.id;
             document.getElementById('dp-time').value = task.time;
             document.getElementById('dp-folder').value = task.folderId;
-            document.getElementById('dp-name').value = task.taskName || ''; // Load tên công việc
+            document.getElementById('dp-name').value = task.taskName || '';
             
             const isDaily = (!task.mode || task.mode === 'daily');
             document.getElementById('dp-chk-daily').checked = isDaily;
@@ -115,7 +111,7 @@
         const resetForm = () => {
             editingId = null;
             document.getElementById('dp-folder').value = '';
-            document.getElementById('dp-name').value = ''; // Reset tên công việc
+            document.getElementById('dp-name').value = '';
             document.getElementById('dp-chk-daily').checked = true;
             document.getElementById('dp-date').disabled = true;
             document.getElementById('btn-dp-add').innerText = "Thêm mới";
@@ -125,7 +121,7 @@
 
         // --- HÀM LOAD DỮ LIỆU TỪ SERVER ---
         const loadFromCloud = () => {
-            renderList(true); // Show loading
+            renderList(true);
             GM_xmlhttpRequest({
                 method: "GET",
                 url: `${CONSTANTS.GSHEET.CONFIG_API}?action=load&type=deploy&user=${encodeURIComponent(currentUser)}`,
@@ -139,9 +135,19 @@
                                 currentTasks = [];
                             }
                             if(!Array.isArray(currentTasks)) currentTasks = [];
-                            currentTasks.forEach(t => { if(!t.id) t.id = Date.now() + Math.random(); });
                             
-                            // Backup local
+                            // ========================================================
+                            // FIX LỖI: Reset trạng thái cho Daily Task tại đây
+                            // ========================================================
+                            currentTasks.forEach(t => { 
+                                if(!t.id) t.id = Date.now() + Math.random();
+                                // Nếu là Daily và đang ở trạng thái 'done' -> Đưa về 'pending' để chạy tiếp
+                                if((!t.mode || t.mode === 'daily') && t.status === 'done') {
+                                    t.status = 'pending';
+                                }
+                            });
+                            // ========================================================
+
                             const userCfg = UTILS.getPersistentConfig();
                             userCfg.deployTask = currentTasks;
                             UTILS.savePersistentConfig(userCfg);
@@ -187,7 +193,6 @@
                     <div id="dp-task-list" class="dp-list-container"></div>
 
                     <div class="dp-form">
-                        <!-- Hàng Ngày - Giờ -->
                         <div style="display:flex; gap:10px; margin-bottom:8px;">
                             <div style="flex:1">
                                 <label class="dp-toggle"><input type="checkbox" id="dp-chk-daily" checked> Lặp lại hàng ngày</label>
@@ -199,7 +204,6 @@
                             </div>
                         </div>
 
-                        <!-- Hàng Tên công việc - ID Folder (Mới) -->
                         <div style="display:flex; gap:10px; margin-bottom:8px;">
                             <div style="flex:1">
                                 <label class="dp-label">Tên công việc:</label>
@@ -226,11 +230,10 @@
                 document.getElementById('dp-date').disabled = e.target.checked;
             };
 
-            // Nút Thêm/Sửa
             document.getElementById('btn-dp-add').onclick = () => {
                 const time = document.getElementById('dp-time').value;
                 const folderId = document.getElementById('dp-folder').value.trim();
-                const taskName = document.getElementById('dp-name').value.trim(); // Lấy tên
+                const taskName = document.getElementById('dp-name').value.trim();
                 const isDaily = document.getElementById('dp-chk-daily').checked;
                 const date = document.getElementById('dp-date').value;
                 const selectedGroups = Array.from(document.querySelectorAll('.chk-dp-group:checked')).map(c => c.value);
@@ -245,10 +248,10 @@
                     date: isDaily ? '' : date,
                     time: time,
                     folderId: folderId,
-                    taskName: taskName, // Lưu tên công việc
+                    taskName: taskName,
                     groups: selectedGroups,
                     lastRun: '',
-                    status: 'pending'
+                    status: 'pending' // Thêm mới luôn là pending
                 };
 
                 if(editingId) {
@@ -262,10 +265,18 @@
                 resetForm();
             };
 
-            // Nút Lưu lên Server
             document.getElementById('btn-dp-save').onclick = () => {
                 const btn = document.getElementById('btn-dp-save');
                 btn.innerText = "Đang lưu..."; btn.disabled = true;
+
+                // ========================================================
+                // FIX LỖI: Trước khi lưu, đảm bảo Daily tasks không bị 'done'
+                // ========================================================
+                currentTasks.forEach(t => {
+                    if ((!t.mode || t.mode === 'daily') && t.status === 'done') {
+                        t.status = 'pending';
+                    }
+                });
 
                 GM_xmlhttpRequest({
                     method: "POST",
@@ -278,7 +289,6 @@
                             const response = JSON.parse(res.responseText);
                             if (response.status === 'success') {
                                 UI.showToast("✅ Lưu thành công!");
-                                // Cập nhật local
                                 const userCfg = UTILS.getPersistentConfig();
                                 userCfg.deployTask = currentTasks;
                                 UTILS.savePersistentConfig(userCfg);
