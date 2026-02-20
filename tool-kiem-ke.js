@@ -66,6 +66,7 @@
         .inv-startup-btn:active { transform:scale(0.95); }
         .btn-start-load { background:linear-gradient(135deg, #007bff, #0056b3); color:white; }
         .btn-start-new { background:linear-gradient(135deg, #17a2b8, #117a8b); color:white; }
+        .btn-tut { background:linear-gradient(135deg, #10a2b1, #127a9b); color:white; }
 
         /* CONTROLS */
         .inv-controls { display:flex; gap:10px; margin-bottom:15px; align-items:center; flex-wrap: nowrap; position: relative; }
@@ -324,6 +325,7 @@
                         <div id="startup-actions" style="display:none;">
                             <button class="inv-startup-btn btn-start-load" id="btn-start-load">📥 Tiếp tục kỳ cũ</button>
                             <button class="inv-startup-btn btn-start-new" id="btn-start-new">🆕 Bắt đầu kỳ mới</button>
+                            <button class="inv-startup-btn btn-tut" id="btn-tut>🔶 Hướng dẫn</button>
                         </div>
                     </div>
 
@@ -474,6 +476,10 @@
                 });
             }
         };
+
+       document.getElementById('btn-tut').onclick = function() {
+             window.open('#', '_blank');
+         };
 
         // SỰ KIỆN NÚT LƯU / SỬA TRÊN OVERLAY
         btnSaveId.onclick = function() {
