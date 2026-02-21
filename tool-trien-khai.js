@@ -31,6 +31,16 @@
     const runTool = () => {
         const modalId = 'tgdd-deploy-tool-modal';
         let modal = document.getElementById(modalId);
+        
+        // ========================================================
+        // FIX LỖI: Cần xóa Modal (DOM) cũ nếu có để tạo lại.
+        // Tránh lỗi dính context (closure) khiến nút LƯU bị gán 
+        // nhầm với editingId của lần mở tool trước đó.
+        // ========================================================
+        if (modal) {
+            modal.remove();
+        }
+
         let currentTasks = [];
         let editingId = null;
         const currentUser = AUTH_STATE.userName;
@@ -136,17 +146,12 @@
                             }
                             if(!Array.isArray(currentTasks)) currentTasks = [];
                             
-                            // ========================================================
-                            // FIX LỖI: Reset trạng thái cho Daily Task tại đây
-                            // ========================================================
                             currentTasks.forEach(t => { 
                                 if(!t.id) t.id = Date.now() + Math.random();
-                                // Nếu là Daily và đang ở trạng thái 'done' -> Đưa về 'pending' để chạy tiếp
                                 if((!t.mode || t.mode === 'daily') && t.status === 'done') {
                                     t.status = 'pending';
                                 }
                             });
-                            // ========================================================
 
                             const userCfg = UTILS.getPersistentConfig();
                             userCfg.deployTask = currentTasks;
@@ -172,134 +177,138 @@
         };
 
         // --- KHỞI TẠO MODAL ---
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = modalId;
-            const userCfg = UTILS.getPersistentConfig();
-            const groups = userCfg.lineGroups || [];
-            
-            let groupHtml = '';
-            if(groups.length === 0) groupHtml = '<div style="font-size:10px; color:red">Chưa cấu hình Line Group trong Khai báo</div>';
-            groups.forEach(g => {
-                groupHtml += `<label style="display:flex; align-items:center; font-size:12px; margin-bottom:4px; cursor:pointer;">
-                    <input type="checkbox" class="chk-dp-group" value="${g.id}" style="margin-right:5px;"> ${g.name}
-                </label>`;
+        modal = document.createElement('div');
+        modal.id = modalId;
+        const userCfg = UTILS.getPersistentConfig();
+        const groups = userCfg.lineGroups || [];
+        
+        let groupHtml = '';
+        if(groups.length === 0) groupHtml = '<div style="font-size:10px; color:red">Chưa cấu hình Line Group trong Khai báo</div>';
+        groups.forEach(g => {
+            groupHtml += `<label style="display:flex; align-items:center; font-size:12px; margin-bottom:4px; cursor:pointer;">
+                <input type="checkbox" class="chk-dp-group" value="${g.id}" style="margin-right:5px;"> ${g.name}
+            </label>`;
+        });
+
+        modal.innerHTML = `
+            <div class="dp-content">
+                <button class="dp-btn-close" id="btn-dp-close">×</button>
+                <div class="dp-header">🚀 AUTO TRIỂN KHAI</div>
+                <div id="dp-task-list" class="dp-list-container"></div>
+
+                <div class="dp-form">
+                    <div style="display:flex; gap:10px; margin-bottom:8px;">
+                        <div style="flex:1">
+                            <label class="dp-toggle"><input type="checkbox" id="dp-chk-daily" checked> Lặp lại hàng ngày</label>
+                            <input type="date" id="dp-date" class="dp-input" disabled>
+                        </div>
+                        <div style="flex:1">
+                            <label class="dp-label">Giờ gửi:</label>
+                            <input type="time" id="dp-time" class="dp-input">
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:10px; margin-bottom:8px;">
+                        <div style="flex:1">
+                            <label class="dp-label">Tên công việc:</label>
+                            <input type="text" id="dp-name" class="dp-input" placeholder="VD: Triển khai sáng">
+                        </div>
+                        <div style="flex:1">
+                            <label class="dp-label">Folder ID:</label>
+                            <input type="text" id="dp-folder" class="dp-input" placeholder="ID Drive folder...">
+                        </div>
+                    </div>
+                    
+                    <label class="dp-label">Nhóm nhận tin:</label>
+                    <div class="dp-group-box">${groupHtml}</div>
+
+                    <button id="btn-dp-add" class="dp-btn dp-btn-add">Thêm mới</button>
+                </div>
+                <button id="btn-dp-save" class="dp-btn dp-btn-save">☁️ LƯU LÊN SERVER</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('btn-dp-close').onclick = () => { modal.style.display = 'none'; };
+        document.getElementById('dp-chk-daily').onchange = (e) => {
+            document.getElementById('dp-date').disabled = e.target.checked;
+        };
+
+        document.getElementById('btn-dp-add').onclick = () => {
+            const time = document.getElementById('dp-time').value;
+            const folderId = document.getElementById('dp-folder').value.trim();
+            const taskName = document.getElementById('dp-name').value.trim();
+            const isDaily = document.getElementById('dp-chk-daily').checked;
+            const date = document.getElementById('dp-date').value;
+            const selectedGroups = Array.from(document.querySelectorAll('.chk-dp-group:checked')).map(c => c.value);
+
+            if(!time || !folderId || !taskName || selectedGroups.length === 0) return alert("Vui lòng nhập đầy đủ: Tên, Giờ, ID và Nhóm!");
+            if(!isDaily && !date) return alert("Vui lòng chọn ngày!");
+
+            const taskObj = {
+                id: editingId || Date.now(),
+                isActive: true,
+                mode: isDaily ? 'daily' : 'once',
+                date: isDaily ? '' : date,
+                time: time,
+                folderId: folderId,
+                taskName: taskName,
+                groups: selectedGroups,
+                lastRun: '',
+                status: 'pending' // Thêm mới luôn là pending
+            };
+
+            if(editingId) {
+                // ========================================================
+                // FIX LỖI: Cần dùng String() bọc lại để phòng trường hợp ID 
+                // load từ trên mảng cũ xuống là String, còn editingId là Number
+                // ========================================================
+                const idx = currentTasks.findIndex(t => String(t.id) === String(editingId));
+                
+                if(idx !== -1) {
+                    currentTasks[idx] = taskObj;
+                } else {
+                    currentTasks.push(taskObj); // Dự phòng lỗi bất ngờ
+                }
+                UI.showToast("Đã cập nhật (Bấm LƯU LÊN SERVER để áp dụng)!");
+            } else {
+                currentTasks.push(taskObj);
+                UI.showToast("Đã thêm (Bấm LƯU LÊN SERVER để áp dụng)!");
+            }
+            resetForm();
+        };
+
+        document.getElementById('btn-dp-save').onclick = () => {
+            const btn = document.getElementById('btn-dp-save');
+            btn.innerText = "Đang lưu..."; btn.disabled = true;
+
+            currentTasks.forEach(t => {
+                if ((!t.mode || t.mode === 'daily') && t.status === 'done') {
+                    t.status = 'pending';
+                }
             });
 
-            modal.innerHTML = `
-                <div class="dp-content">
-                    <button class="dp-btn-close" id="btn-dp-close">×</button>
-                    <div class="dp-header">🚀 AUTO TRIỂN KHAI</div>
-                    <div id="dp-task-list" class="dp-list-container"></div>
-
-                    <div class="dp-form">
-                        <div style="display:flex; gap:10px; margin-bottom:8px;">
-                            <div style="flex:1">
-                                <label class="dp-toggle"><input type="checkbox" id="dp-chk-daily" checked> Lặp lại hàng ngày</label>
-                                <input type="date" id="dp-date" class="dp-input" disabled>
-                            </div>
-                            <div style="flex:1">
-                                <label class="dp-label">Giờ gửi:</label>
-                                <input type="time" id="dp-time" class="dp-input">
-                            </div>
-                        </div>
-
-                        <div style="display:flex; gap:10px; margin-bottom:8px;">
-                            <div style="flex:1">
-                                <label class="dp-label">Tên công việc:</label>
-                                <input type="text" id="dp-name" class="dp-input" placeholder="VD: Triển khai sáng">
-                            </div>
-                            <div style="flex:1">
-                                <label class="dp-label">Folder ID:</label>
-                                <input type="text" id="dp-folder" class="dp-input" placeholder="ID Drive folder...">
-                            </div>
-                        </div>
-                        
-                        <label class="dp-label">Nhóm nhận tin:</label>
-                        <div class="dp-group-box">${groupHtml}</div>
-
-                        <button id="btn-dp-add" class="dp-btn dp-btn-add">Thêm mới</button>
-                    </div>
-                    <button id="btn-dp-save" class="dp-btn dp-btn-save">☁️ LƯU LÊN SERVER</button>
-                </div>
-            `;
-            document.body.appendChild(modal);
-
-            document.getElementById('btn-dp-close').onclick = () => { modal.style.display = 'none'; };
-            document.getElementById('dp-chk-daily').onchange = (e) => {
-                document.getElementById('dp-date').disabled = e.target.checked;
-            };
-
-            document.getElementById('btn-dp-add').onclick = () => {
-                const time = document.getElementById('dp-time').value;
-                const folderId = document.getElementById('dp-folder').value.trim();
-                const taskName = document.getElementById('dp-name').value.trim();
-                const isDaily = document.getElementById('dp-chk-daily').checked;
-                const date = document.getElementById('dp-date').value;
-                const selectedGroups = Array.from(document.querySelectorAll('.chk-dp-group:checked')).map(c => c.value);
-
-                if(!time || !folderId || !taskName || selectedGroups.length === 0) return alert("Vui lòng nhập đầy đủ: Tên, Giờ, ID và Nhóm!");
-                if(!isDaily && !date) return alert("Vui lòng chọn ngày!");
-
-                const taskObj = {
-                    id: editingId || Date.now(),
-                    isActive: true,
-                    mode: isDaily ? 'daily' : 'once',
-                    date: isDaily ? '' : date,
-                    time: time,
-                    folderId: folderId,
-                    taskName: taskName,
-                    groups: selectedGroups,
-                    lastRun: '',
-                    status: 'pending' // Thêm mới luôn là pending
-                };
-
-                if(editingId) {
-                    const idx = currentTasks.findIndex(t => t.id === editingId);
-                    if(idx !== -1) currentTasks[idx] = taskObj;
-                    UI.showToast("Đã cập nhật (Bấm LƯU LÊN SERVER để áp dụng)!");
-                } else {
-                    currentTasks.push(taskObj);
-                    UI.showToast("Đã thêm (Bấm LƯU LÊN SERVER để áp dụng)!");
-                }
-                resetForm();
-            };
-
-            document.getElementById('btn-dp-save').onclick = () => {
-                const btn = document.getElementById('btn-dp-save');
-                btn.innerText = "Đang lưu..."; btn.disabled = true;
-
-                // ========================================================
-                // FIX LỖI: Trước khi lưu, đảm bảo Daily tasks không bị 'done'
-                // ========================================================
-                currentTasks.forEach(t => {
-                    if ((!t.mode || t.mode === 'daily') && t.status === 'done') {
-                        t.status = 'pending';
-                    }
-                });
-
-                GM_xmlhttpRequest({
-                    method: "POST",
-                    url: CONSTANTS.GSHEET.CONFIG_API,
-                    data: JSON.stringify({ user: currentUser, type: 'deploy', config: currentTasks }), 
-                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                    onload: (res) => {
-                        btn.innerText = "☁️ LƯU LÊN SERVER"; btn.disabled = false;
-                        try {
-                            const response = JSON.parse(res.responseText);
-                            if (response.status === 'success') {
-                                UI.showToast("✅ Lưu thành công!");
-                                const userCfg = UTILS.getPersistentConfig();
-                                userCfg.deployTask = currentTasks;
-                                UTILS.savePersistentConfig(userCfg);
-                                modal.style.display = 'none';
-                            } else { alert("Lỗi: " + response.message); }
-                        } catch (e) { alert("Lỗi phản hồi Server"); }
-                    },
-                    onerror: () => { btn.disabled = false; alert("Lỗi kết nối!"); }
-                });
-            };
-        }
+            GM_xmlhttpRequest({
+                method: "POST",
+                url: CONSTANTS.GSHEET.CONFIG_API,
+                data: JSON.stringify({ user: currentUser, type: 'deploy', config: currentTasks }), 
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                onload: (res) => {
+                    btn.innerText = "☁️ LƯU LÊN SERVER"; btn.disabled = false;
+                    try {
+                        const response = JSON.parse(res.responseText);
+                        if (response.status === 'success') {
+                            UI.showToast("✅ Lưu thành công!");
+                            const userCfg = UTILS.getPersistentConfig();
+                            userCfg.deployTask = currentTasks;
+                            UTILS.savePersistentConfig(userCfg);
+                            modal.style.display = 'none';
+                        } else { alert("Lỗi: " + response.message); }
+                    } catch (e) { alert("Lỗi phản hồi Server"); }
+                },
+                onerror: () => { btn.disabled = false; alert("Lỗi kết nối!"); }
+            });
+        };
 
         modal.style.display = 'flex';
         loadFromCloud();
