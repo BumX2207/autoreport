@@ -1,5 +1,9 @@
 /* 
-   MODULE: NHẮC VIỆC V6.5
+   MODULE: NHẮC VIỆC (V6.5 - FINAL BUG FIX)
+   - Fix triệt để lỗi Edit sinh ra task mới (Duplicate).
+   - Clean Object: Xóa sạch rác (date, weekday, dayOfMonth) của mode cũ khi update.
+   - Chống trùng ID bằng Math.random và Set.
+   - Block UI chống Double Click gây push nhầm.
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE, GM_xmlhttpRequest } = context;
@@ -437,4 +441,4 @@
         css: MY_CSS,
         action: runTool
     };
-})(context);
+})
