@@ -1,9 +1,7 @@
 /* 
-   MODULE: NHẮC VIỆC (V6.5 - FINAL BUG FIX)
-   - Fix triệt để lỗi Edit sinh ra task mới (Duplicate).
-   - Clean Object: Xóa sạch rác (date, weekday, dayOfMonth) của mode cũ khi update.
-   - Chống trùng ID bằng Math.random và Set.
-   - Block UI chống Double Click gây push nhầm.
+   MODULE: NHẮC VIỆC (V6.6 - FINAL CLEAN ZOMBIE CLOSURE)
+   - Fix triệt để lỗi "Zombie Closure" gây sinh task mới khi mở tool nhiều lần.
+   - Clean Object cũ. Chống trùng ID. Block Double Click.
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE, GM_xmlhttpRequest } = context;
@@ -56,6 +54,12 @@
     const runTool = () => {
         const modalId = 'tgdd-reminder-modal';
         let modal = document.getElementById(modalId);
+
+        // --- BƯỚC FIX QUAN TRỌNG NHẤT ---
+        // Phá hủy modal cũ nếu đã tồn tại để tránh dính "Zombie Closure" (sự kiện của lần chạy cũ)
+        if (modal) {
+            modal.remove();
+        }
 
         let currentTasks = [];
         let editingId = null; 
@@ -140,7 +144,6 @@
             document.getElementById('rm-time').value = task.time;
             document.getElementById('rm-msg').value = task.msg;
 
-            // Xóa sạch form trước khi điền dữ liệu để tránh dính rác UI
             document.getElementById('rm-date').value = '';
             document.getElementById('rm-weekday').value = '1';
             document.getElementById('rm-monthday').value = '';
@@ -226,7 +229,6 @@
                             currentTasks = extractedData;
                             const idSet = new Set();
                             
-                            // Cập nhật: Fix triệt để ID trùng lặp từ Cloud bằng Set và Random
                             currentTasks.forEach(t => { 
                                 let idStr = t.id ? String(t.id) : '';
                                 if(!idStr || idSet.has(idStr)) {
@@ -255,177 +257,174 @@
             });
         };
 
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = modalId;
-            
-            const groups = userCfg.lineGroups || [];
-            let groupHtml = groups.length === 0 ? '<div style="color:red; font-size:11px;">Chưa có nhóm Line!</div>' : '';
-            groups.forEach(g => {
-                groupHtml += `<label style="display:flex; align-items:center; font-size:12px; margin-bottom:4px; cursor:pointer;">
-                    <input type="checkbox" class="chk-rm-new-group" value="${g.id}" style="margin-right:5px;"> ${g.name}
-                </label>`;
-            });
+        // Render cấu trúc khung mới
+        modal = document.createElement('div');
+        modal.id = modalId;
+        
+        const groups = userCfg.lineGroups || [];
+        let groupHtml = groups.length === 0 ? '<div style="color:red; font-size:11px;">Chưa có nhóm Line!</div>' : '';
+        groups.forEach(g => {
+            groupHtml += `<label style="display:flex; align-items:center; font-size:12px; margin-bottom:4px; cursor:pointer;">
+                <input type="checkbox" class="chk-rm-new-group" value="${g.id}" style="margin-right:5px;"> ${g.name}
+            </label>`;
+        });
 
-            modal.innerHTML = `
-                <div class="rm-content">
-                    <button class="rm-btn-close" id="btn-rm-close" title="Đóng">×</button>
-                    <div class="rm-header">🔔 QUẢN LÝ NHẮC VIỆC</div>
-                    <div id="rm-task-list" class="rm-list-container"></div>
-                    <div class="rm-form">
-                        <div class="rm-row">
-                            <div class="rm-col">
-                                <label class="rm-label">Chế độ lặp:</label>
-                                <select id="rm-mode" class="rm-select">
-                                    <option value="once">Một lần (Theo ngày)</option>
-                                    <option value="daily">Hàng ngày</option>
-                                    <option value="weekly">Hàng tuần</option>
-                                    <option value="monthly">Hàng tháng</option>
-                                </select>
-                            </div>
-                            <div class="rm-col-sm">
-                                <label class="rm-label">Giờ gửi:</label>
-                                <input type="time" id="rm-time" class="rm-input">
-                            </div>
+        modal.innerHTML = `
+            <div class="rm-content">
+                <button class="rm-btn-close" id="btn-rm-close" title="Đóng">×</button>
+                <div class="rm-header">🔔 QUẢN LÝ NHẮC VIỆC</div>
+                <div id="rm-task-list" class="rm-list-container"></div>
+                <div class="rm-form">
+                    <div class="rm-row">
+                        <div class="rm-col">
+                            <label class="rm-label">Chế độ lặp:</label>
+                            <select id="rm-mode" class="rm-select">
+                                <option value="once">Một lần (Theo ngày)</option>
+                                <option value="daily">Hàng ngày</option>
+                                <option value="weekly">Hàng tuần</option>
+                                <option value="monthly">Hàng tháng</option>
+                            </select>
                         </div>
-
-                        <div class="rm-row" id="input-container">
-                            <div class="rm-col rm-hidden" id="input-box-date">
-                                <label class="rm-label">Ngày gửi:</label>
-                                <input type="date" id="rm-date" class="rm-input">
-                            </div>
-                            <div class="rm-col rm-hidden" id="input-box-weekly">
-                                <label class="rm-label">Chọn thứ:</label>
-                                <select id="rm-weekday" class="rm-select">
-                                    <option value="1">Thứ 2</option>
-                                    <option value="2">Thứ 3</option>
-                                    <option value="3">Thứ 4</option>
-                                    <option value="4">Thứ 5</option>
-                                    <option value="5">Thứ 6</option>
-                                    <option value="6">Thứ 7</option>
-                                    <option value="0">Chủ nhật</option>
-                                </select>
-                            </div>
-                            <div class="rm-col rm-hidden" id="input-box-monthly">
-                                <label class="rm-label">Ngày trong tháng (1-31):</label>
-                                <input type="number" id="rm-monthday" class="rm-input" min="1" max="31" placeholder="VD: 15">
-                            </div>
+                        <div class="rm-col-sm">
+                            <label class="rm-label">Giờ gửi:</label>
+                            <input type="time" id="rm-time" class="rm-input">
                         </div>
-
-                        <div class="rm-row">
-                            <div class="rm-col"><label class="rm-label">Nội dung:</label><input type="text" id="rm-msg" class="rm-input" placeholder="Nhập nội dung nhắc nhở..."></div>
-                        </div>
-                        <div class="rm-row">
-                            <div class="rm-col"><label class="rm-label">Nhóm nhận tin:</label><div class="rm-group-box">${groupHtml}</div></div>
-                        </div>
-                        <button id="btn-rm-add" class="rm-btn rm-btn-add">Thêm mới</button>
                     </div>
-                    <button id="btn-rm-save-cloud" class="rm-btn rm-btn-save">☁️ CẬP NHẬT LÊN CLOUD</button>
+
+                    <div class="rm-row" id="input-container">
+                        <div class="rm-col rm-hidden" id="input-box-date">
+                            <label class="rm-label">Ngày gửi:</label>
+                            <input type="date" id="rm-date" class="rm-input">
+                        </div>
+                        <div class="rm-col rm-hidden" id="input-box-weekly">
+                            <label class="rm-label">Chọn thứ:</label>
+                            <select id="rm-weekday" class="rm-select">
+                                <option value="1">Thứ 2</option>
+                                <option value="2">Thứ 3</option>
+                                <option value="3">Thứ 4</option>
+                                <option value="4">Thứ 5</option>
+                                <option value="5">Thứ 6</option>
+                                <option value="6">Thứ 7</option>
+                                <option value="0">Chủ nhật</option>
+                            </select>
+                        </div>
+                        <div class="rm-col rm-hidden" id="input-box-monthly">
+                            <label class="rm-label">Ngày trong tháng (1-31):</label>
+                            <input type="number" id="rm-monthday" class="rm-input" min="1" max="31" placeholder="VD: 15">
+                        </div>
+                    </div>
+
+                    <div class="rm-row">
+                        <div class="rm-col"><label class="rm-label">Nội dung:</label><input type="text" id="rm-msg" class="rm-input" placeholder="Nhập nội dung nhắc nhở..."></div>
+                    </div>
+                    <div class="rm-row">
+                        <div class="rm-col"><label class="rm-label">Nhóm nhận tin:</label><div class="rm-group-box">${groupHtml}</div></div>
+                    </div>
+                    <button id="btn-rm-add" class="rm-btn rm-btn-add">Thêm mới</button>
                 </div>
-            `;
-            document.body.appendChild(modal);
+                <button id="btn-rm-save-cloud" class="rm-btn rm-btn-save">☁️ CẬP NHẬT LÊN CLOUD</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
 
-            document.getElementById('btn-rm-close').onclick = () => { modal.style.display = 'none'; };
-            document.getElementById('rm-mode').onchange = (e) => { updateFormMode(e.target.value); };
+        document.getElementById('btn-rm-close').onclick = () => { modal.style.display = 'none'; };
+        document.getElementById('rm-mode').onchange = (e) => { updateFormMode(e.target.value); };
 
-            // --- LOGIC LƯU TASK HOÀN THIỆN ---
-            document.getElementById('btn-rm-add').onclick = () => {
-                const btnAction = document.getElementById('btn-rm-add');
-                if (btnAction.disabled) return; 
-                
-                const mode = document.getElementById('rm-mode').value;
-                const time = document.getElementById('rm-time').value;
-                const msg = document.getElementById('rm-msg').value.trim();
-                const selectedGroups = Array.from(document.querySelectorAll('.chk-rm-new-group:checked')).map(c => c.value);
+        document.getElementById('btn-rm-add').onclick = () => {
+            const btnAction = document.getElementById('btn-rm-add');
+            if (btnAction.disabled) return; 
+            
+            const mode = document.getElementById('rm-mode').value;
+            const time = document.getElementById('rm-time').value;
+            const msg = document.getElementById('rm-msg').value.trim();
+            const selectedGroups = Array.from(document.querySelectorAll('.chk-rm-new-group:checked')).map(c => c.value);
 
-                if(!time) return alert("Vui lòng chọn giờ!");
-                if(!msg) return alert("Vui lòng nhập nội dung!");
-                if(selectedGroups.length === 0) return alert("Vui lòng chọn nhóm!");
+            if(!time) return alert("Vui lòng chọn giờ!");
+            if(!msg) return alert("Vui lòng nhập nội dung!");
+            if(selectedGroups.length === 0) return alert("Vui lòng chọn nhóm!");
 
-                let extraData = {};
-                if (mode === 'once') {
-                    const date = document.getElementById('rm-date').value;
-                    if(!date) return alert("Vui lòng chọn ngày!");
-                    extraData.date = date;
-                } else if (mode === 'weekly') {
-                    extraData.weekday = parseInt(document.getElementById('rm-weekday').value); 
-                } else if (mode === 'monthly') {
-                    const d = parseInt(document.getElementById('rm-monthday').value);
-                    if(!d || d < 1 || d > 31) return alert("Ngày trong tháng không hợp lệ!");
-                    extraData.dayOfMonth = d;
-                }
+            let extraData = {};
+            if (mode === 'once') {
+                const date = document.getElementById('rm-date').value;
+                if(!date) return alert("Vui lòng chọn ngày!");
+                extraData.date = date;
+            } else if (mode === 'weekly') {
+                extraData.weekday = parseInt(document.getElementById('rm-weekday').value); 
+            } else if (mode === 'monthly') {
+                const d = parseInt(document.getElementById('rm-monthday').value);
+                if(!d || d < 1 || d > 31) return alert("Ngày trong tháng không hợp lệ!");
+                extraData.dayOfMonth = d;
+            }
 
-                btnAction.disabled = true; // Khóa UI
+            btnAction.disabled = true;
 
-                if (editingId) {
-                    const idx = currentTasks.findIndex(t => String(t.id) === String(editingId));
-                    if (idx !== -1) {
-                        // BƯỚC QUAN TRỌNG: Làm sạch object cũ để không bị lọt field (tránh xung đột logic)
-                        let updatedTask = { ...currentTasks[idx] };
-                        
-                        delete updatedTask.date;
-                        delete updatedTask.weekday;
-                        delete updatedTask.dayOfMonth;
+            if (editingId) {
+                const idx = currentTasks.findIndex(t => String(t.id) === String(editingId));
+                if (idx !== -1) {
+                    let updatedTask = { ...currentTasks[idx] };
+                    
+                    delete updatedTask.date;
+                    delete updatedTask.weekday;
+                    delete updatedTask.dayOfMonth;
 
-                        updatedTask = {
-                            ...updatedTask,
-                            mode: mode,
-                            time: time,
-                            msg: msg,
-                            groups: selectedGroups,
-                            lastRun: '',      
-                            status: 'pending', 
-                            ...extraData // Chỉ gộp field hợp chuẩn của Mode này
-                        };
+                    updatedTask = {
+                        ...updatedTask,
+                        mode: mode,
+                        time: time,
+                        msg: msg,
+                        groups: selectedGroups,
+                        lastRun: '',      
+                        status: 'pending', 
+                        ...extraData 
+                    };
 
-                        currentTasks[idx] = updatedTask;
-                        UI.showToast("Đã cập nhật công việc (Hãy lưu lên Cloud)!");
-                    } else {
-                        alert("Không tìm thấy công việc gốc! Đã thêm mới.");
-                        currentTasks.push({
-                            id: String(Date.now() + '-' + Math.floor(Math.random()*1000)), 
-                            isActive: true, mode: mode, time: time, msg: msg, 
-                            groups: selectedGroups, lastRun: '', status: 'pending', ...extraData
-                        });
-                    }
+                    currentTasks[idx] = updatedTask;
+                    UI.showToast("Đã cập nhật công việc (Hãy lưu lên Cloud)!");
                 } else {
+                    alert("Không tìm thấy công việc gốc! Đã thêm mới.");
                     currentTasks.push({
-                        id: String(Date.now() + '-' + Math.floor(Math.random()*1000)),
+                        id: String(Date.now() + '-' + Math.floor(Math.random()*1000)), 
                         isActive: true, mode: mode, time: time, msg: msg, 
                         groups: selectedGroups, lastRun: '', status: 'pending', ...extraData
                     });
-                    UI.showToast("Đã thêm mới (Hãy lưu lên Cloud)!");
                 }
-
-                resetForm();
-                setTimeout(() => { btnAction.disabled = false; }, 300); // Mở khóa lại nút sau khi đã render xong
-            };
-
-            document.getElementById('btn-rm-save-cloud').onclick = () => {
-                if (!currentUser || currentUser === "---") return alert("Không tìm thấy user sử dụng!");
-                const btn = document.getElementById('btn-rm-save-cloud');
-                const oldText = btn.innerText;
-                btn.innerText = "Đang lưu lên Cloud..."; btn.disabled = true;
-
-                GM_xmlhttpRequest({
-                    method: "POST",
-                    url: CONSTANTS.GSHEET.CONFIG_API,
-                    data: JSON.stringify({ user: currentUser, type: 'reminder', config: currentTasks }),
-                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                    onload: (res) => {
-                        btn.innerText = oldText; btn.disabled = false;
-                        try {
-                            const response = JSON.parse(res.responseText);
-                            if (response.status === 'success') {
-                                UI.showToast("✅ Lưu thành công!");
-                                modal.style.display = 'none';
-                            } else { alert("Lỗi Server: " + response.message); }
-                        } catch (e) { alert("Lỗi phản hồi Server"); }
-                    },
-                    onerror: () => { btn.innerText = oldText; btn.disabled = false; alert("Lỗi kết nối!"); }
+            } else {
+                currentTasks.push({
+                    id: String(Date.now() + '-' + Math.floor(Math.random()*1000)),
+                    isActive: true, mode: mode, time: time, msg: msg, 
+                    groups: selectedGroups, lastRun: '', status: 'pending', ...extraData
                 });
-            };
-        }
+                UI.showToast("Đã thêm mới (Hãy lưu lên Cloud)!");
+            }
+
+            resetForm();
+            setTimeout(() => { btnAction.disabled = false; }, 300);
+        };
+
+        document.getElementById('btn-rm-save-cloud').onclick = () => {
+            if (!currentUser || currentUser === "---") return alert("Không tìm thấy user sử dụng!");
+            const btn = document.getElementById('btn-rm-save-cloud');
+            const oldText = btn.innerText;
+            btn.innerText = "Đang lưu lên Cloud..."; btn.disabled = true;
+
+            GM_xmlhttpRequest({
+                method: "POST",
+                url: CONSTANTS.GSHEET.CONFIG_API,
+                data: JSON.stringify({ user: currentUser, type: 'reminder', config: currentTasks }),
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                onload: (res) => {
+                    btn.innerText = oldText; btn.disabled = false;
+                    try {
+                        const response = JSON.parse(res.responseText);
+                        if (response.status === 'success') {
+                            UI.showToast("✅ Lưu thành công!");
+                            modal.style.display = 'none';
+                        } else { alert("Lỗi Server: " + response.message); }
+                    } catch (e) { alert("Lỗi phản hồi Server"); }
+                },
+                onerror: () => { btn.innerText = oldText; btn.disabled = false; alert("Lỗi kết nối!"); }
+            });
+        };
 
         resetForm();
         const toastEl = document.getElementById('tgdd-toast-notification');
