@@ -1,6 +1,7 @@
 /* 
-   MODULE: NHẮC VIỆC (V6.6 - FINAL CLEAN ZOMBIE CLOSURE)
-   - Fix triệt để lỗi "Zombie Closure" gây sinh task mới khi mở tool nhiều lần.
+   MODULE: NHẮC VIỆC (V6.7 - FIX CACHE & SYNC BUG)
+   - Fix triệt để lỗi "Zombie Closure" gây sinh task mới.
+   - FIX: Vô hiệu hóa Cache của trình duyệt (Browser Cache) khi Sync để luôn lấy data mới nhất.
    - Clean Object cũ. Chống trùng ID. Block Double Click.
 */
 ((context) => {
@@ -55,8 +56,7 @@
         const modalId = 'tgdd-reminder-modal';
         let modal = document.getElementById(modalId);
 
-        // --- BƯỚC FIX QUAN TRỌNG NHẤT ---
-        // Phá hủy modal cũ nếu đã tồn tại để tránh dính "Zombie Closure" (sự kiện của lần chạy cũ)
+        // Phá hủy modal cũ nếu đã tồn tại để tránh dính "Zombie Closure"
         if (modal) {
             modal.remove();
         }
@@ -217,9 +217,17 @@
                 return;
             }
 
+            // [UPDATE V6.7]: Thêm tham số &nocache=Date.now() để phá Cache của trình duyệt
+            const cacheBuster = new Date().getTime();
+            
             GM_xmlhttpRequest({
                 method: "GET",
-                url: `${CONSTANTS.GSHEET.CONFIG_API}?type=reminder&user=${encodeURIComponent(currentUser)}`,
+                url: `${CONSTANTS.GSHEET.CONFIG_API}?type=reminder&user=${encodeURIComponent(currentUser)}&nocache=${cacheBuster}`,
+                headers: {
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                    "Pragma": "no-cache",
+                    "Expires": "0"
+                },
                 onload: (res) => {
                     try {
                         const response = JSON.parse(res.responseText);
@@ -241,7 +249,7 @@
                             });
 
                             renderList();
-                            UI.showToast(`✅ Đã tải ${currentTasks.length} lịch nhắc!`);
+                            UI.showToast(`✅ Đã tải ${currentTasks.length} lịch nhắc từ Server!`);
                         } else {
                             currentTasks = [];
                             renderList();
