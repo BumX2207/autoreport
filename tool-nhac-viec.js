@@ -168,7 +168,7 @@
             updateFormMode('daily');
             document.getElementById('rm-date').value = '';
             document.getElementById('rm-weekday').value = '1';
-            document.getElementById('rm-monthday').value = ''; // Empty thay vì '1'
+            document.getElementById('rm-monthday').value = ''; 
             
             document.querySelectorAll('.chk-rm-new-group').forEach(chk => chk.checked = false);
 
@@ -331,7 +331,7 @@
             // --- LOGIC LƯU TASK HOÀN THIỆN ---
             document.getElementById('btn-rm-add').onclick = () => {
                 const btnAction = document.getElementById('btn-rm-add');
-                if (btnAction.disabled) return; // Chống click đúp sinh ra duplicate task
+                if (btnAction.disabled) return; 
                 
                 const mode = document.getElementById('rm-mode').value;
                 const time = document.getElementById('rm-time').value;
