@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Auto BI 7.2
+// @name         AutoBI 7.2
 // @namespace    http://tampermonkey.net/
 // @version      7.2
 // @description  Tool báo cáo tự động cho quản lý MWG.
