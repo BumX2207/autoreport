@@ -1,8 +1,5 @@
 /* 
-   MODULE: NHẮC VIỆC (V6.4 - FINAL FIX ID & UPDATE LOGIC)
-   - Fix triệt để lỗi Edit sinh ra task mới (Duplicate).
-   - Chuẩn hóa 100% ID dạng String để tránh lỗi tìm kiếm.
-   - Logic Update: Tìm đúng Index và ghi đè, không push bừa bãi.
+   MODULE: NHẮC VIỆC V6.5
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE, GM_xmlhttpRequest } = context;
@@ -11,64 +8,42 @@
         /* Z-INDEX: 2147483646 */
         #tgdd-reminder-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(3px); z-index:2147483646; justify-content:center; align-items:center; }
         
-        .rm-content { 
-            background:white; width:95%; max-width:480px; border-radius:15px; padding:20px; 
-            box-shadow:0 10px 40px rgba(0,0,0,0.3); animation: popIn 0.3s; 
-            font-family: sans-serif; display:flex; flex-direction:column; 
-            max-height: 80vh; 
-            position: relative; 
-        }
-        
+        .rm-content { background:white; width:95%; max-width:480px; border-radius:15px; padding:20px; box-shadow:0 10px 40px rgba(0,0,0,0.3); animation: popIn 0.3s; font-family: sans-serif; display:flex; flex-direction:column; max-height: 80vh; position: relative; }
         .rm-header { font-size:18px; font-weight:bold; margin-bottom:10px; text-align:center; color:#ff9800; border-bottom:2px solid #eee; padding-bottom:10px; flex-shrink:0; display:flex; justify-content:center; align-items:center; gap: 8px; }
         .rm-btn-close { position:absolute; top:15px; right:15px; background:none; border:none; font-size:24px; color:#999; cursor:pointer; line-height:1; z-index:10; transition:color 0.2s; }
         .rm-btn-close:hover { color:#333; }
-
-        .rm-list-container { 
-            flex:1; overflow-y:auto; margin-bottom:15px; 
-            border:1px solid #eee; border-radius:8px; background:#f9f9f9; padding:5px; 
-            min-height:100px; max-height: 30vh; position:relative; 
-        }
-        
+        .rm-list-container { flex:1; overflow-y:auto; margin-bottom:15px; border:1px solid #eee; border-radius:8px; background:#f9f9f9; padding:5px; min-height:100px; max-height: 30vh; position:relative; }
         .rm-item { background:white; border-radius:8px; padding:10px; margin-bottom:5px; border:1px solid #e0e0e0; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 5px rgba(0,0,0,0.05); transition: background 0.2s; }
         .rm-item:hover { border-color:#ff9800; }
         .rm-item.editing { background:#fff3e0; border-color:#ff9800; transform: scale(0.99); border-width: 2px; }
-        
         .rm-item-info { flex:1; cursor:pointer; }
         .rm-time { font-weight:bold; color:#d35400; font-size:14px; display:flex; align-items:center; gap:5px; flex-wrap: wrap; }
-        
         .rm-badge { font-size:10px; padding:2px 6px; border-radius:4px; color:white; font-weight:bold; text-transform:uppercase; white-space:nowrap; }
         .rm-badge-daily { background:#4caf50; } 
         .rm-badge-once { background:#607d8b; } 
         .rm-badge-weekly { background:#2196f3; } 
         .rm-badge-monthly { background:#9c27b0; } 
-        
         .rm-text { font-size:12px; color:#555; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; margin-top:3px; }
-        
         .rm-actions { display:flex; align-items:center; gap:5px; }
         .rm-btn-icon { cursor:pointer; padding:5px; border-radius:5px; display:flex; align-items:center; justify-content:center; }
         .rm-btn-edit { color:#2196f3; font-size:18px; }
         .rm-btn-del { color:#e74c3c; font-size:22px; padding:0 10px; font-weight:bold; }
         .rm-btn-edit:hover, .rm-btn-del:hover { background:#eee; }
-
         .rm-form { border-top:2px solid #eee; padding-top:10px; flex-shrink:0; background:#fff; }
         .rm-row { display:flex; gap:10px; margin-bottom:8px; align-items: flex-end; }
         .rm-col { flex:1; }
         .rm-col-sm { width: 130px; flex:none; }
-        
         .rm-label { font-size:11px; font-weight:bold; color:#555; display:block; margin-bottom:3px; }
         .rm-input, .rm-select { width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; box-sizing: border-box; font-size:13px; height: 34px; }
         .rm-input:focus, .rm-select:focus { border-color:#ff9800; outline:none; }
-        
         .rm-group-box { max-height:60px; overflow-y:auto; border:1px solid #eee; border-radius:6px; padding:5px; background:#fff; }
-        
         .rm-hidden { display: none !important; }
-
         .rm-btn { width:100%; padding:10px; border:none; color:white; font-weight:bold; border-radius:8px; cursor:pointer; margin-top:5px; transition: 0.2s; }
         .rm-btn-add { background:#4caf50; }
         .rm-btn-update { background:#ff9800; }
         .rm-btn-save { background:#2196f3; margin-top:10px; }
         .rm-btn:active { transform:scale(0.98); }
-        
+        .rm-btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .rm-loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #888; font-size: 13px; }
         .rm-sync-spin { animation: spin 1s linear infinite; font-size: 24px; margin-bottom: 8px; color: #ff9800; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -79,7 +54,7 @@
         let modal = document.getElementById(modalId);
 
         let currentTasks = [];
-        let editingId = null; // Biến này sẽ lưu ID dạng String
+        let editingId = null; 
         const userCfg = UTILS.getPersistentConfig();
         const currentUser = AUTH_STATE.userName;
 
@@ -98,12 +73,10 @@
                 return;
             }
 
-            // Sắp xếp: Theo giờ
             currentTasks.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 
             currentTasks.forEach((task) => {
                 const div = document.createElement('div');
-                // So sánh ID dạng String để highlight chính xác
                 div.className = `rm-item ${String(task.id) === String(editingId) ? 'editing' : ''}`;
                 
                 let badgeHtml = '';
@@ -132,7 +105,6 @@
                 div.querySelector('.rm-btn-del').onclick = (e) => {
                     e.stopPropagation();
                     if(confirm('Bạn muốn xóa lịch nhắc này?')) {
-                        // Lọc bỏ ID (So sánh String)
                         currentTasks = currentTasks.filter(t => String(t.id) !== String(task.id));
                         if (String(editingId) === String(task.id)) resetForm();
                         renderList();
@@ -156,7 +128,6 @@
         };
 
         const loadToForm = (task) => {
-            // QUAN TRỌNG: Lưu ID dạng String
             editingId = String(task.id);
             
             const mode = task.mode || 'once';
@@ -164,6 +135,11 @@
             updateFormMode(mode);
             document.getElementById('rm-time').value = task.time;
             document.getElementById('rm-msg').value = task.msg;
+
+            // Xóa sạch form trước khi điền dữ liệu để tránh dính rác UI
+            document.getElementById('rm-date').value = '';
+            document.getElementById('rm-weekday').value = '1';
+            document.getElementById('rm-monthday').value = '';
 
             if (task.date) document.getElementById('rm-date').value = task.date;
             if (task.weekday !== undefined) document.getElementById('rm-weekday').value = task.weekday;
@@ -177,7 +153,6 @@
             btnAdd.innerText = "Lưu thay đổi";
             btnAdd.className = "rm-btn rm-btn-update";
             
-            // Render lại để hiện highlight màu vàng
             renderList();
         };
 
@@ -189,7 +164,7 @@
             updateFormMode('daily');
             document.getElementById('rm-date').value = '';
             document.getElementById('rm-weekday').value = '1';
-            document.getElementById('rm-monthday').value = '1';
+            document.getElementById('rm-monthday').value = ''; // Empty thay vì '1'
             
             document.querySelectorAll('.chk-rm-new-group').forEach(chk => chk.checked = false);
 
@@ -227,10 +202,7 @@
             if(!container) return;
 
             container.innerHTML = `
-                <div class="rm-loading-state">
-                    <div class="rm-sync-spin">⏳</div>
-                    <div>Đang tải dữ liệu từ Cloud...</div>
-                </div>
+                <div class="rm-loading-state"><div class="rm-sync-spin">⏳</div><div>Đang tải dữ liệu từ Cloud...</div></div>
             `;
 
             if (!currentUser || currentUser === "---") {
@@ -248,16 +220,19 @@
 
                         if (extractedData && Array.isArray(extractedData)) {
                             currentTasks = extractedData;
+                            const idSet = new Set();
                             
-                            // --- BƯỚC CHUẨN HÓA QUAN TRỌNG ---
-                            // Duyệt qua tất cả và ép ID thành String ngay lập tức
+                            // Cập nhật: Fix triệt để ID trùng lặp từ Cloud bằng Set và Random
                             currentTasks.forEach(t => { 
-                                if(!t.id) t.id = String(Date.now() + Math.random());
-                                else t.id = String(t.id); 
+                                let idStr = t.id ? String(t.id) : '';
+                                if(!idStr || idSet.has(idStr)) {
+                                    idStr = String(Date.now() + '-' + Math.floor(Math.random() * 10000));
+                                    t.id = idStr;
+                                }
+                                idSet.add(idStr);
 
                                 if(!t.mode) t.mode = (t.date) ? 'once' : 'daily';
                             });
-                            // ---------------------------------
 
                             renderList();
                             UI.showToast(`✅ Đã tải ${currentTasks.length} lịch nhắc!`);
@@ -349,8 +324,11 @@
             document.getElementById('btn-rm-close').onclick = () => { modal.style.display = 'none'; };
             document.getElementById('rm-mode').onchange = (e) => { updateFormMode(e.target.value); };
 
-            // --- SỬA LẠI LOGIC NÚT THÊM/LƯU ---
+            // --- LOGIC LƯU TASK HOÀN THIỆN ---
             document.getElementById('btn-rm-add').onclick = () => {
+                const btnAction = document.getElementById('btn-rm-add');
+                if (btnAction.disabled) return; // Chống click đúp sinh ra duplicate task
+                
                 const mode = document.getElementById('rm-mode').value;
                 const time = document.getElementById('rm-time').value;
                 const msg = document.getElementById('rm-msg').value.trim();
@@ -362,62 +340,61 @@
 
                 let extraData = {};
                 if (mode === 'once') {
-                      const date = document.getElementById('rm-date').value;
-                      if(!date) return alert("Vui lòng chọn ngày!");
-                      extraData.date = date;
-                  } else if (mode === 'weekly') {
-                      extraData.weekday = parseInt(document.getElementById('rm-weekday').value); 
-                  } else if (mode === 'monthly') {
-                      const d = parseInt(document.getElementById('rm-monthday').value);
-                      if(!d || d < 1 || d > 31) return alert("Ngày trong tháng không hợp lệ!");
-                      extraData.dayOfMonth = d;
-                  }
+                    const date = document.getElementById('rm-date').value;
+                    if(!date) return alert("Vui lòng chọn ngày!");
+                    extraData.date = date;
+                } else if (mode === 'weekly') {
+                    extraData.weekday = parseInt(document.getElementById('rm-weekday').value); 
+                } else if (mode === 'monthly') {
+                    const d = parseInt(document.getElementById('rm-monthday').value);
+                    if(!d || d < 1 || d > 31) return alert("Ngày trong tháng không hợp lệ!");
+                    extraData.dayOfMonth = d;
+                }
 
-                // NẾU ĐANG CÓ editingId (TỨC LÀ ĐANG SỬA)
+                btnAction.disabled = true; // Khóa UI
+
                 if (editingId) {
                     const idx = currentTasks.findIndex(t => String(t.id) === String(editingId));
                     if (idx !== -1) {
-                        // Cập nhật đè lên phần tử cũ
-                        currentTasks[idx] = {
-                            ...currentTasks[idx], // Giữ lại các thuộc tính cũ nếu có
+                        // BƯỚC QUAN TRỌNG: Làm sạch object cũ để không bị lọt field (tránh xung đột logic)
+                        let updatedTask = { ...currentTasks[idx] };
+                        
+                        delete updatedTask.date;
+                        delete updatedTask.weekday;
+                        delete updatedTask.dayOfMonth;
+
+                        updatedTask = {
+                            ...updatedTask,
                             mode: mode,
                             time: time,
                             msg: msg,
                             groups: selectedGroups,
-                            lastRun: '',      // Reset lastRun để Bot có thể chạy lại
-                            status: 'pending', // Reset trạng thái về pending
-                            ...extraData
+                            lastRun: '',      
+                            status: 'pending', 
+                            ...extraData // Chỉ gộp field hợp chuẩn của Mode này
                         };
+
+                        currentTasks[idx] = updatedTask;
                         UI.showToast("Đã cập nhật công việc (Hãy lưu lên Cloud)!");
                     } else {
-                        // Trường hợp hi hữu: Có ID nhưng không tìm thấy trong mảng -> Coi như thêm mới
                         alert("Không tìm thấy công việc gốc! Đã thêm mới.");
-                        const newId = String(Date.now());
                         currentTasks.push({
-                            id: newId, isActive: true, mode: mode, time: time, msg: msg, 
+                            id: String(Date.now() + '-' + Math.floor(Math.random()*1000)), 
+                            isActive: true, mode: mode, time: time, msg: msg, 
                             groups: selectedGroups, lastRun: '', status: 'pending', ...extraData
                         });
                     }
-                } 
-                // NẾU KHÔNG CÓ editingId (THÊM MỚI)
-                else {
-                    const newId = String(Date.now());
+                } else {
                     currentTasks.push({
-                        id: newId,
-                        isActive: true,
-                        mode: mode,
-                        time: time,
-                        msg: msg,
-                        groups: selectedGroups,
-                        lastRun: '',
-                        status: 'pending',
-                        ...extraData
+                        id: String(Date.now() + '-' + Math.floor(Math.random()*1000)),
+                        isActive: true, mode: mode, time: time, msg: msg, 
+                        groups: selectedGroups, lastRun: '', status: 'pending', ...extraData
                     });
                     UI.showToast("Đã thêm mới (Hãy lưu lên Cloud)!");
                 }
 
-                // Reset form sau khi xử lý xong
                 resetForm();
+                setTimeout(() => { btnAction.disabled = false; }, 300); // Mở khóa lại nút sau khi đã render xong
             };
 
             document.getElementById('btn-rm-save-cloud').onclick = () => {
@@ -429,7 +406,6 @@
                 GM_xmlhttpRequest({
                     method: "POST",
                     url: CONSTANTS.GSHEET.CONFIG_API,
-                    // Lưu dữ liệu
                     data: JSON.stringify({ user: currentUser, type: 'reminder', config: currentTasks }),
                     headers: { "Content-Type": "application/x-www-form-urlencoded" },
                     onload: (res) => {
@@ -461,4 +437,4 @@
         css: MY_CSS,
         action: runTool
     };
-})
+})(context);
