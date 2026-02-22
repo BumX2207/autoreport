@@ -32,11 +32,18 @@
         const modalId = 'tgdd-deploy-tool-modal';
         let modal = document.getElementById(modalId);
         
-        // ========================================================
-        // FIX LỖI: Cần xóa Modal (DOM) cũ nếu có để tạo lại.
-        // Tránh lỗi dính context (closure) khiến nút LƯU bị gán 
-        // nhầm với editingId của lần mở tool trước đó.
-        // ========================================================
+        // --- LOGIC ẨN/HIỆN BOTTOM NAV ---
+        const toggleBottomNav = (show) => {
+            const bottomNav = document.getElementById('tgdd-bottom-nav');
+            if (bottomNav) {
+                if (show) {
+                    bottomNav.classList.add('show-nav'); // Hiện lại (trượt lên)
+                } else {
+                    bottomNav.classList.remove('show-nav'); // Ẩn đi (trượt xuống)
+                }
+            }
+        };
+
         if (modal) {
             modal.remove();
         }
@@ -229,7 +236,12 @@
         `;
         document.body.appendChild(modal);
 
-        document.getElementById('btn-dp-close').onclick = () => { modal.style.display = 'none'; };
+        // --- SỰ KIỆN ĐÓNG MODAL (Nút X) ---
+        document.getElementById('btn-dp-close').onclick = () => { 
+            modal.style.display = 'none'; 
+            toggleBottomNav(true); // Hiện lại Nav
+        };
+        
         document.getElementById('dp-chk-daily').onchange = (e) => {
             document.getElementById('dp-date').disabled = e.target.checked;
         };
@@ -255,20 +267,15 @@
                 taskName: taskName,
                 groups: selectedGroups,
                 lastRun: '',
-                status: 'pending' // Thêm mới luôn là pending
+                status: 'pending' 
             };
 
             if(editingId) {
-                // ========================================================
-                // FIX LỖI: Cần dùng String() bọc lại để phòng trường hợp ID 
-                // load từ trên mảng cũ xuống là String, còn editingId là Number
-                // ========================================================
                 const idx = currentTasks.findIndex(t => String(t.id) === String(editingId));
-                
                 if(idx !== -1) {
                     currentTasks[idx] = taskObj;
                 } else {
-                    currentTasks.push(taskObj); // Dự phòng lỗi bất ngờ
+                    currentTasks.push(taskObj); 
                 }
                 UI.showToast("Đã cập nhật (Bấm LƯU LÊN SERVER để áp dụng)!");
             } else {
@@ -302,7 +309,9 @@
                             const userCfg = UTILS.getPersistentConfig();
                             userCfg.deployTask = currentTasks;
                             UTILS.savePersistentConfig(userCfg);
+                            
                             modal.style.display = 'none';
+                            toggleBottomNav(true); // Hiện lại Nav khi lưu xong và đóng modal
                         } else { alert("Lỗi: " + response.message); }
                     } catch (e) { alert("Lỗi phản hồi Server"); }
                 },
@@ -311,6 +320,7 @@
         };
 
         modal.style.display = 'flex';
+        toggleBottomNav(false); // Ẩn Nav ngay khi mở modal
         loadFromCloud();
     };
 
