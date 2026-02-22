@@ -1,17 +1,10 @@
 /* 
-   MODULE: IN ẤN (PRINT TOOL) - V3.0 (HTML FILES BY QUANTITY)
-   - Gom nhóm template qua đuôi link (-1, -4, -6...)
-   - Popup chọn số lượng khi click.
-   - Layout chuẩn A4 + Padding 10px an toàn.
-   - Thumnail fit toàn bộ khung.
+   MODULE: IN ẤN (PRINT TOOL) - V4.0 (HTML2CANVAS - SNAPSHOT TO PRINT)
+   - Chụp ảnh khung A4 trước khi in để đảm bảo không sai lệch layout 100% trên mọi thiết bị.
 */
 ((context) => {
     const { UI, AUTH_STATE } = context;
 
-    // ===============================================================
-    // CẤU HÌNH DANH SÁCH LINK FILE HTML TỪ GITHUB
-    // (Thêm tất cả các link của bạn vào đây, tool sẽ tự động gom nhóm)
-    // ===============================================================
     const TEMPLATE_URLS = [
         'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan-1.html',
         'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan-2.html',
@@ -24,11 +17,9 @@
     // CSS STYLE
     // ===============================================================
     const MY_CSS = `
-        /* FIX Z-INDEX */
         #tgdd-print-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2147483800; font-family: sans-serif; flex-direction:column; }
         .pr-content { background:#e9ecef; width:100%; height:100%; display:flex; flex-direction:column; overflow:hidden; position: relative; }
 
-        /* HEADER */
         .pr-header { background:white; padding:10px; border-bottom:1px solid #ddd; display:flex; flex-direction:column; gap:10px; flex-shrink:0; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; }
         .pr-top-bar { display:flex; align-items:center; justify-content:space-between; }
         .pr-title { font-size:16px; font-weight:bold; color:#2c3e50; display:flex; align-items:center; gap:5px; }
@@ -40,7 +31,6 @@
         .pr-btn:hover { filter:brightness(1.1); }
         .pr-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* DANH SÁCH TEMPLATE NGANG */
         .pr-list-scroll { display:flex; overflow-x:auto; gap:10px; padding-bottom:5px; scrollbar-width: thin; }
         .pr-list-scroll::-webkit-scrollbar { height: 4px; }
         .pr-list-scroll::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
@@ -52,13 +42,12 @@
         
         .pr-loading { text-align: center; padding: 20px; color: white; font-size: 16px; margin: auto; }
 
-        /* KHU VỰC IN & A4 PAGE */
         .pr-body { flex:1; overflow:auto; display:flex; justify-content:center; padding:20px; background:#555; }
         
-        /* LAYOUT A4 CHUẨN HIỂN THỊ MÀN HÌNH */
+        /* KHUNG A4 TRÊN MÀN HÌNH */
         .pr-a4-page { 
-            width: 790px; 
-            height: 1120px; 
+            width: 794px; 
+            height: 1123px; 
             background: white; 
             box-shadow: 0 0 20px rgba(0,0,0,0.5); 
             margin-bottom: 50px; 
@@ -83,7 +72,9 @@
         .pr-input-div:hover { border-color:rgba(0,0,0,0.2); background:rgba(255,255,255,0.2); }
         .pr-input-div:focus { border-color:#007bff; background:rgba(255,255,255,0.8); z-index:10; }
 
-        /* POPUP CHỌN SỐ LƯỢNG */
+        /* KHUNG ẢNH CHỤP ẨN TRÊN MÀN HÌNH */
+        #pr-print-image-wrap { display: none; }
+
         .pr-qty-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:50; backdrop-filter:blur(2px); }
         .pr-qty-box { background:white; padding:20px 25px; border-radius:10px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.3); animation: pop 0.2s ease-out; }
         @keyframes pop { from{ transform:scale(0.8); opacity:0; } to{ transform:scale(1); opacity:1; } }
@@ -94,50 +85,34 @@
         .pr-qty-btn.pr-qty-active { background:#3498db; color:white; }
 
         /* =========================================================
-           MEDIA PRINT (ÉP CHUẨN A4 KHI IN)
+           MEDIA PRINT (ÉP CHUẨN A4 BẰNG BỨC ẢNH SNAPSHOT)
            ========================================================= */
         @media print {
-            /* 1. Ép khổ A4 và xóa lề mặc định của trình duyệt */
-            @page { 
-                size: A4 portrait; 
-                margin: 0 !important; 
-            }
-            
-            /* 2. Ẩn web gốc, chỉ hiện khung in */
+            @page { size: A4 portrait; margin: 0 !important; }
             body * { visibility: hidden !important; }
             #tgdd-print-modal, #tgdd-print-modal * { visibility: visible !important; }
             
-            #tgdd-print-modal { 
-                position:absolute; left:0; top:0; background:white; 
-                width:100vw !important; height:100vh !important; 
-                z-index:2147483800; display:block !important; margin:0; padding:0;
-            }
+            #tgdd-print-modal { position:absolute; left:0; top:0; background:white; width:100vw !important; height:100vh !important; z-index:2147483800; display:block !important; margin:0; padding:0; }
             .pr-header, .pr-qty-overlay { display:none !important; }
             
-            .pr-body { 
-                padding:0 !important; margin:0 !important; 
-                background:white !important; display:block !important; 
-            }
+            /* 1. Ẩn toàn bộ khung HTML chỉnh sửa đi */
+            .pr-body { display: none !important; }
 
-            /* 3. Đưa khung A4 về kích thước milimet thực tế của giấy */
-            .pr-a4-page { 
-                width: 790px !important; 
-                height: 1120px !important;
-                box-sizing: border-box; !important;
+            /* 2. Bật khung hiển thị ảnh chụp lên, ép vừa đúng tờ giấy A4 */
+            #pr-print-image-wrap { 
+                display: flex !important; 
+                justify-content: center;
+                align-items: center;
+                width: 210mm !important; 
+                height: 297mm !important; 
                 margin: 0 auto !important; 
-                padding: 10px !important; 
-                box-shadow: none !important; 
-                transform: none !important;
-                page-break-after: avoid !important;
-                page-break-before: avoid !important;
-                overflow: hidden !important;
+                background: white;
             }
-            
-            .pr-input-div { border:none !important; background:transparent !important; }
-
-            /* Tự động xóa các viền đứt đoạn (nếu bạn có vẽ trong file github) để bản in sạch sẽ */
-            div[style*="dashed"], div[style*="dotted"], .pr-cell {
-                border: none !important;
+            #pr-print-image { 
+                width: 100%; 
+                height: 100%; 
+                object-fit: contain; /* Ép ảnh vừa khít không méo */
+                display: block;
             }
         }
         
@@ -155,14 +130,13 @@
         if(bottomNav) bottomNav.style.display = 'none';
 
         let state = {
-            groupedTemplates: {}, // Lưu data theo dạng gom nhóm
+            groupedTemplates: {},
             activeBaseUrl: null,
             activeQty: null
         };
 
         const $ = (id) => document.getElementById(id);
 
-        // 1. Dựng UI
         let modal = $('tgdd-print-modal');
         if (!modal) {
             modal = document.createElement('div');
@@ -171,7 +145,7 @@
                 <div class="pr-content">
                     <div class="pr-header">
                         <div class="pr-top-bar">
-                            <div class="pr-title">🖨️ <span>IN ẤN</span></div>
+                            <div class="pr-title">🖨️ <span>IN ẤN TỰ ĐỘNG</span></div>
                             <div class="pr-actions">
                                 <button class="pr-btn pr-btn-print" id="btn-pr-exec" disabled>🖨️ IN NGAY</button>
                                 <button class="pr-btn pr-btn-close" id="btn-pr-close">×</button>
@@ -180,12 +154,16 @@
                         <div class="pr-list-scroll" id="pr-list"></div>
                     </div>
                     
-                    <!-- Vùng hiển thị A4 -->
                     <div class="pr-body" id="pr-body-wrap">
-                        <div class="pr-loading" id="pr-loading">Đang tải các mẫu in ...</div>
+                        <div class="pr-loading" id="pr-loading">Đang tải cấu trúc từ Github...</div>
+                        <div id="pr-a4" class="pr-a4-page" style="display:none;"></div>
                     </div>
 
-                    <!-- Overlay Popup Chọn Số Lượng -->
+                    <!-- KHUNG CHỨA ẢNH CHỤP DÀNH RIÊNG CHO LÚC IN -->
+                    <div id="pr-print-image-wrap">
+                        <img id="pr-print-image" src="" />
+                    </div>
+
                     <div class="pr-qty-overlay" id="pr-qty-overlay">
                         <div class="pr-qty-box">
                             <div class="pr-qty-title" id="pr-qty-title">Chọn Layout In</div>
@@ -201,7 +179,6 @@
                 if(bottomNav) bottomNav.style.display = 'flex';
             };
             
-            // Bấm ra ngoài popup để đóng
             $('pr-qty-overlay').onclick = (e) => {
                 if(e.target.id === 'pr-qty-overlay') $('pr-qty-overlay').style.display = 'none';
             };
@@ -209,12 +186,10 @@
 
         modal.style.display = 'flex';
         
-        // 2. FETCH VÀ GOM NHÓM TEMPLATE
         if(Object.keys(state.groupedTemplates).length === 0) {
             try {
                 const fetchPromises = TEMPLATE_URLS.map(url => 
                     fetch(`${url}?t=${Date.now()}`).then(res => res.text()).then(htmlText => {
-                        // Tách baseUrl và số lượng từ link (VD: the-thanh-toan-4.html -> base: the-thanh-toan, qty: 4)
                         const match = url.match(/(.*?)-(\d+)\.html(\?.*)?$/);
                         if (!match) return;
                         const baseUrl = match[1];
@@ -229,14 +204,10 @@
                                     baseUrl: baseUrl,
                                     name: setupEl.getAttribute('data-name') || 'Mẫu chưa đặt tên',
                                     bg: setupEl.getAttribute('data-bg') || '',
-                                    variants: {} // Chứa các bản in 1, 2, 4, 6...
+                                    variants: {} 
                                 };
                             }
-                            
-                            // Lưu nội dung của layout theo số lượng
                             state.groupedTemplates[baseUrl].variants[qty] = setupEl.innerHTML;
-
-                            // Ưu tiên lấy Tên và Hình Nền của file "-1.html" làm đại diện
                             if (qty === 1) {
                                 state.groupedTemplates[baseUrl].name = setupEl.getAttribute('data-name') || state.groupedTemplates[baseUrl].name;
                                 state.groupedTemplates[baseUrl].bg = setupEl.getAttribute('data-bg') || state.groupedTemplates[baseUrl].bg;
@@ -244,31 +215,27 @@
                         }
                     })
                 );
-                
                 await Promise.all(fetchPromises);
             } catch(e) {
-                $('pr-loading').innerText = "Lỗi tải mẫu in!";
+                $('pr-loading').innerText = "Lỗi khi tải mẫu HTML!";
                 return;
             }
         }
 
         const groups = Object.values(state.groupedTemplates);
         if(groups.length === 0) {
-            $('pr-loading').innerText = "Không tìm thấy cấu hình <div id='template-setup'> hợp lệ ở các link cung cấp!";
+            $('pr-loading').innerText = "Không tìm thấy cấu hình <div id='template-setup'> hợp lệ!";
             return;
         }
 
-        // 3. THIẾT LẬP MẶC ĐỊNH
-        // Chọn nhóm đầu tiên, mặc định ưu tiên hiển thị bản in "-1" (nếu không có bản 1 thì lấy bản nhỏ nhất)
         state.activeBaseUrl = groups[0].baseUrl;
         const availableQtys = Object.keys(groups[0].variants).map(Number).sort((a,b) => a-b);
         state.activeQty = availableQtys.includes(1) ? 1 : availableQtys[0];
         
-        const bodyWrap = $('pr-body-wrap');
-        bodyWrap.innerHTML = `<div id="pr-a4" class="pr-a4-page"></div>`;
+        $('pr-loading').style.display = 'none';
+        $('pr-a4').style.display = 'block';
         $('btn-pr-exec').disabled = false;
 
-        // 4. RENDER THANH MENU (THUMBNAILS)
         const renderMenuList = () => {
             const listEl = $('pr-list');
             listEl.innerHTML = ''; 
@@ -278,21 +245,16 @@
                 item.className = 'pr-tpl-item';
                 if(group.baseUrl === state.activeBaseUrl) item.classList.add('active');
                 
-                // Hiển thị tên và bg của mẫu đại diện (-1)
                 item.innerHTML = `<img src="${group.bg}" class="pr-tpl-img"><div class="pr-tpl-name">${group.name}</div>`;
                 
-                // KHI CLICK VÀO TEMPLATE
                 item.onclick = () => {
                     const variantsKeys = Object.keys(group.variants).map(Number).sort((a,b) => a-b);
-                    
-                    // Nếu mẫu này chỉ có đúng 1 bản in -> Load luôn, không cần hỏi
                     if(variantsKeys.length === 1) {
                         state.activeBaseUrl = group.baseUrl;
                         state.activeQty = variantsKeys[0];
-                        renderMenuList(); // update active class
+                        renderMenuList(); 
                         renderA4();
                     } else {
-                        // Nếu có nhiều bản (-1, -4, -6) -> Bật Popup chọn số lượng
                         showQtyPopup(group, variantsKeys);
                     }
                 };
@@ -300,7 +262,6 @@
             });
         };
 
-        // Hàm bật Popup
         const showQtyPopup = (group, variantsKeys) => {
             $('pr-qty-title').innerText = `Chọn Layout In: ${group.name}`;
             const btnContainer = $('pr-qty-btns');
@@ -312,7 +273,7 @@
                 if(group.baseUrl === state.activeBaseUrl && state.activeQty === q) {
                     btn.classList.add('pr-qty-active');
                 }
-                btn.innerText = `Số lượng: ${q}`;
+                btn.innerText = `Bản ${q} tem`;
                 
                 btn.onclick = () => {
                     state.activeBaseUrl = group.baseUrl;
@@ -323,19 +284,14 @@
                 };
                 btnContainer.appendChild(btn);
             });
-            
             $('pr-qty-overlay').style.display = 'flex';
         };
 
-        // 5. RENDER NỘI DUNG VÀO GIẤY A4
         const renderA4 = () => {
             const a4 = $('pr-a4');
             const htmlContent = state.groupedTemplates[state.activeBaseUrl].variants[state.activeQty];
-            
-            // Nạp toàn bộ HTML của bạn vào trang A4 (Bao gồm cả padding 10px đã set ở CSS)
             a4.innerHTML = htmlContent;
 
-            // Bật tính năng gõ chữ cho các ô bạn đã gắn class "pr-input-div" (Không còn đồng bộ chéo data-sync)
             const inputs = a4.querySelectorAll('.pr-input-div');
             inputs.forEach(div => {
                 div.contentEditable = true; 
@@ -343,16 +299,62 @@
             });
         };
 
-        // Bấm IN NGAY
-        $('btn-pr-exec').onclick = () => { window.print(); };
+        // =======================================================
+        // THUẬT TOÁN CHỤP ẢNH MÀN HÌNH TRƯỚC KHI IN
+        // =======================================================
+        $('btn-pr-exec').onclick = async () => { 
+            const btn = $('btn-pr-exec');
+            const originalText = btn.innerText;
+            btn.innerText = '⏳ ĐANG TẠO BẢN IN...';
+            btn.disabled = true;
 
-        // Lần đầu chạy
+            try {
+                // 1. Tải thư viện html2canvas vào trình duyệt nếu chưa có
+                if (typeof html2canvas === 'undefined') {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
+                }
+
+                // 2. Bỏ chọn (blur) các ô text đang gõ để mất con trỏ nhấp nháy trên ảnh
+                if(document.activeElement) document.activeElement.blur();
+
+                // 3. Tiến hành chụp ảnh (Scale x2 để ảnh nét căng khi in ra giấy)
+                const a4 = $('pr-a4');
+                const canvas = await html2canvas(a4, {
+                    scale: 2, 
+                    useCORS: true, // Cho phép load ảnh từ domain khác (Github)
+                    backgroundColor: '#ffffff',
+                    logging: false
+                });
+
+                // 4. Gắn ảnh chụp được vào thẻ <img id="pr-print-image">
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                $('pr-print-image').src = dataUrl;
+
+                // 5. Gọi lệnh In của trình duyệt
+                window.print();
+
+            } catch (err) {
+                console.error(err);
+                alert("Lỗi khi tạo ảnh in: Đảm bảo ảnh nền của bạn được host ở nơi hỗ trợ CORS (như Github)!");
+            } finally {
+                // 6. Khôi phục lại nút bấm
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        };
+
         renderMenuList();
         renderA4(); 
     };
 
     return {
-        name: "In ấn",
+        name: "In ấn Pro V4",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 12v2H8v-2h8zm2-2v-2H6v2H4v-4c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v4h-2z" fill="white"/></svg>`,
         bgColor: "#e17055",
         css: MY_CSS,
