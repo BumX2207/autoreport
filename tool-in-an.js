@@ -170,7 +170,7 @@
                 <div class="pr-content">
                     <div class="pr-header">
                         <div class="pr-top-bar">
-                            <div class="pr-title">🖨️ <span>IN ẤN TỰ ĐỘNG</span></div>
+                            <div class="pr-title">🖨️ <span>IN ẤN</span></div>
                             <div class="pr-actions">
                                 <button class="pr-btn pr-btn-print" id="btn-pr-exec" disabled>🖨️ IN NGAY</button>
                                 <button class="pr-btn pr-btn-close" id="btn-pr-close">×</button>
@@ -181,7 +181,7 @@
                     
                     <!-- Vùng hiển thị A4 -->
                     <div class="pr-body" id="pr-body-wrap">
-                        <div class="pr-loading" id="pr-loading">Đang tải cấu trúc từ Github...</div>
+                        <div class="pr-loading" id="pr-loading">Đang tải các mẫu in ...</div>
                     </div>
 
                     <!-- Overlay Popup Chọn Số Lượng -->
@@ -246,7 +246,7 @@
                 
                 await Promise.all(fetchPromises);
             } catch(e) {
-                $('pr-loading').innerText = "Lỗi khi tải mẫu HTML!";
+                $('pr-loading').innerText = "Lỗi tải mẫu in!";
                 return;
             }
         }
@@ -311,7 +311,7 @@
                 if(group.baseUrl === state.activeBaseUrl && state.activeQty === q) {
                     btn.classList.add('pr-qty-active');
                 }
-                btn.innerText = `Bản ${q} tem`;
+                btn.innerText = `Số lượng: ${q}`;
                 
                 btn.onclick = () => {
                     state.activeBaseUrl = group.baseUrl;
