@@ -198,8 +198,8 @@
                 </div>
 
                 <div class="nt-footer">
-                    <button class="nt-btn nt-btn-clear" id="btn-nt-reset">🗑 Xóa TB</button>
-                    <button class="nt-btn nt-btn-send" id="btn-nt-send">🚀 CẬP NHẬT (CỘT G)</button>
+                    <button class="nt-btn nt-btn-clear" id="btn-nt-reset">🗑 Xóa thông báo</button>
+                    <button class="nt-btn nt-btn-send" id="btn-nt-send">🚀 CẬP NHẬT</button>
                 </div>
             </div>
         `;
