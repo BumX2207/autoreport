@@ -68,7 +68,7 @@
             const container = document.getElementById('nt-list-body');
             if(container) container.innerHTML = '<div class="nt-loader"><div class="nt-spin"></div> Đang tải danh sách nhân viên...</div>';
 
-            const url = `https://docs.google.com/spreadsheets/d/${CONSTANTS.GSHEET.DATA.ID}/export?format=csv&gid=${CONSTANTS.GSHEET.DATA.GID}`;
+            const url = `https://docs.google.com/spreadsheets/d/${CONSTANTS.GSHEET.AUTH.ID}/export?format=csv&gid=${CONSTANTS.GSHEET.AUTH.GID}`;
             
             GM_xmlhttpRequest({
                 method: "GET", url: url,
