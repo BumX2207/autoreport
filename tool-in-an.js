@@ -122,7 +122,7 @@
             /* 3. Đưa khung A4 về kích thước milimet thực tế của giấy */
             .pr-a4-page { 
                 width: 210mm !important; 
-                height: 296mm !important; /* Dùng 296mm thay vì 297mm để trừ hao 1mm chống nhảy trang */
+                height: 295mm !important; /* Dùng 295mm thay vì 297mm để trừ hao 2mm chống nhảy trang */
                 margin: 0 auto !important; 
                 padding: 10px !important; 
                 box-shadow: none !important; 
