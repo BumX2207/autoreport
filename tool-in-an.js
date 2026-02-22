@@ -57,8 +57,8 @@
         
         /* LAYOUT A4 CHUẨN HIỂN THỊ MÀN HÌNH */
         .pr-a4-page { 
-            width: 794px; 
-            height: 1123px; 
+            width: 790px; 
+            height: 1120px; 
             background: white; 
             box-shadow: 0 0 20px rgba(0,0,0,0.5); 
             margin-bottom: 50px; 
@@ -121,8 +121,9 @@
 
             /* 3. Đưa khung A4 về kích thước milimet thực tế của giấy */
             .pr-a4-page { 
-                width: 210mm !important; 
-                height: 295mm !important; /* Dùng 295mm thay vì 297mm để trừ hao 2mm chống nhảy trang */
+                width: 790px !important; 
+                height: 1120px !important;
+                box-sizing: border-box; !important;
                 margin: 0 auto !important; 
                 padding: 10px !important; 
                 box-shadow: none !important; 
