@@ -66,7 +66,7 @@
         // --- HÀM LOAD DỮ LIỆU TỪ SHEET (CỘT B và CỘT G) ---
         const loadUsers = () => {
             const container = document.getElementById('nt-list-body');
-            if(container) container.innerHTML = '<div class="nt-loader"><div class="nt-spin"></div> Đang tải danh sách nhân viên...</div>';
+            if(container) container.innerHTML = '<div class="nt-loader"><div class="nt-spin"></div> Đang tải danh sách người dùng...</div>';
 
             const url = `https://docs.google.com/spreadsheets/d/${CONSTANTS.GSHEET.AUTH.ID}/export?format=csv&gid=${CONSTANTS.GSHEET.AUTH.GID}`;
             
@@ -125,7 +125,7 @@
             container.innerHTML = '';
 
             if(userList.length === 0) {
-                container.innerHTML = '<div class="nt-loader">Không tìm thấy nhân viên nào trong Cột B.</div>';
+                container.innerHTML = '<div class="nt-loader">Không tìm thấy người dùng nào.</div>';
                 return;
             }
 
@@ -181,11 +181,11 @@
                 <div class="nt-body">
                     <div class="nt-input-area">
                         <label style="font-weight:bold; color:#333; display:block; margin-bottom:5px;">Nội dung tin nhắn:</label>
-                        <textarea id="nt-msg-input" class="nt-textarea" placeholder="Nhập thông báo muốn gửi (VD: Họp gấp lúc 14h, Chốt số ngay...)"></textarea>
+                        <textarea id="nt-msg-input" class="nt-textarea" placeholder="Nhập thông báo muốn gửi..."></textarea>
                     </div>
 
                     <div class="nt-list-header">
-                        <span>Danh sách nhân viên (Cột B)</span>
+                        <span>Danh sách người dùng</span>
                         <div style="display:flex; gap:10px;">
                             <button class="nt-btn-reload" id="btn-nt-select-all">Chọn tất cả</button>
                             <button class="nt-btn-reload" id="btn-nt-reload">🔄 Tải lại</button>
