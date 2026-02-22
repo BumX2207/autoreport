@@ -47,7 +47,6 @@
         
         .pr-tpl-item { min-width:100px; width:100px; cursor:pointer; border:2px solid transparent; border-radius:6px; overflow:hidden; background:white; position:relative; }
         .pr-tpl-item.active { border-color:#007bff; box-shadow:0 0 0 2px rgba(0,123,255,0.2); }
-        /* Fix Thumbnail: object-fit: contain để không bị cắt xén */
         .pr-tpl-img { width:100%; height:60px; object-fit:contain; display:block; background:#f8f9fa; padding:2px; box-sizing:border-box; }
         .pr-tpl-name { font-size:10px; padding:4px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#333; font-weight:bold; }
         
@@ -56,7 +55,7 @@
         /* KHU VỰC IN & A4 PAGE */
         .pr-body { flex:1; overflow:auto; display:flex; justify-content:center; padding:20px; background:#555; }
         
-        /* LAYOUT A4 CHUẨN + PADDING 10px */
+        /* LAYOUT A4 CHUẨN HIỂN THỊ MÀN HÌNH */
         .pr-a4-page { 
             width: 794px; 
             height: 1123px; 
@@ -65,11 +64,10 @@
             margin-bottom: 50px; 
             position: relative; 
             box-sizing: border-box; 
-            padding: 10px; /* CÁCH LỀ AN TOÀN TRÁNH SÁT MÉP IN */
+            padding: 10px; 
             overflow: hidden;
         }
 
-        /* INPUT DIV CLASSES */
         .pr-input-div { 
             position:absolute; 
             background:transparent; 
@@ -95,17 +93,53 @@
         .pr-qty-btn:hover { background:#d0d0d0; }
         .pr-qty-btn.pr-qty-active { background:#3498db; color:white; }
 
+        /* =========================================================
+           MEDIA PRINT (ÉP CHUẨN A4 KHI IN)
+           ========================================================= */
         @media print {
-            @page { size: A4; margin: 0; }
-            body * { visibility: hidden; }
-            #tgdd-print-modal, #tgdd-print-modal * { visibility: visible; }
-            #tgdd-print-modal { position:absolute; left:0; top:0; background:white; width:100%; height:100%; z-index:2147483800; display:block !important; }
+            /* 1. Ép khổ A4 và xóa lề mặc định của trình duyệt */
+            @page { 
+                size: A4 portrait; 
+                margin: 0 !important; 
+            }
+            
+            /* 2. Ẩn web gốc, chỉ hiện khung in */
+            body * { visibility: hidden !important; }
+            #tgdd-print-modal, #tgdd-print-modal * { visibility: visible !important; }
+            
+            #tgdd-print-modal { 
+                position:absolute; left:0; top:0; background:white; 
+                width:100vw !important; height:100vh !important; 
+                z-index:2147483800; display:block !important; margin:0; padding:0;
+            }
             .pr-header, .pr-qty-overlay { display:none !important; }
-            .pr-body { padding:0; background:white; overflow:visible; display:block; }
-            /* Giữ nguyên padding 10px khi in */
-            .pr-a4-page { width: 100%; height: 100%; box-shadow: none; margin:0; transform: none !important; }
+            
+            .pr-body { 
+                padding:0 !important; margin:0 !important; 
+                background:white !important; display:block !important; 
+            }
+
+            /* 3. Đưa khung A4 về kích thước milimet thực tế của giấy */
+            .pr-a4-page { 
+                width: 210mm !important; 
+                height: 296mm !important; /* Dùng 296mm thay vì 297mm để trừ hao 1mm chống nhảy trang */
+                margin: 0 auto !important; 
+                padding: 10px !important; 
+                box-shadow: none !important; 
+                transform: none !important;
+                page-break-after: avoid !important;
+                page-break-before: avoid !important;
+                overflow: hidden !important;
+            }
+            
             .pr-input-div { border:none !important; background:transparent !important; }
+
+            /* Tự động xóa các viền đứt đoạn (nếu bạn có vẽ trong file github) để bản in sạch sẽ */
+            div[style*="dashed"], div[style*="dotted"], .pr-cell {
+                border: none !important;
+            }
         }
+        
         @media (max-width: 600px) {
             .pr-a4-page { transform-origin: top left; transform: scale(0.45); margin-bottom: -500px; margin-right: -400px; }
             .pr-title span { display:none; } 
@@ -317,7 +351,7 @@
     };
 
     return {
-        name: "In ấn Pro V3",
+        name: "In ấn",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 12v2H8v-2h8zm2-2v-2H6v2H4v-4c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v4h-2z" fill="white"/></svg>`,
         bgColor: "#e17055",
         css: MY_CSS,
