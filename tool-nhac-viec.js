@@ -1,8 +1,9 @@
 /* 
-   MODULE: NHẮC VIỆC (V6.7 - FIX CACHE & SYNC BUG)
+   MODULE: NHẮC VIỆC (V6.7 - FIX CACHE & SYNC BUG + AUTO HIDE NAV)
    - Fix triệt để lỗi "Zombie Closure" gây sinh task mới.
    - FIX: Vô hiệu hóa Cache của trình duyệt (Browser Cache) khi Sync để luôn lấy data mới nhất.
    - Clean Object cũ. Chống trùng ID. Block Double Click.
+   - Tự động ẩn Bottom Nav khi mở tool.
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE, GM_xmlhttpRequest } = context;
@@ -55,6 +56,18 @@
     const runTool = () => {
         const modalId = 'tgdd-reminder-modal';
         let modal = document.getElementById(modalId);
+
+        // --- LOGIC ẨN/HIỆN BOTTOM NAV ---
+        const toggleBottomNav = (show) => {
+            const bottomNav = document.getElementById('tgdd-bottom-nav');
+            if (bottomNav) {
+                if (show) {
+                    bottomNav.classList.add('show-nav'); // Hiện lại (trượt lên)
+                } else {
+                    bottomNav.classList.remove('show-nav'); // Ẩn đi (trượt xuống)
+                }
+            }
+        };
 
         // Phá hủy modal cũ nếu đã tồn tại để tránh dính "Zombie Closure"
         if (modal) {
@@ -335,7 +348,12 @@
         `;
         document.body.appendChild(modal);
 
-        document.getElementById('btn-rm-close').onclick = () => { modal.style.display = 'none'; };
+        // --- SỰ KIỆN ĐÓNG MODAL (Nút X) ---
+        document.getElementById('btn-rm-close').onclick = () => { 
+            modal.style.display = 'none';
+            toggleBottomNav(true); // Hiện lại Nav 
+        };
+
         document.getElementById('rm-mode').onchange = (e) => { updateFormMode(e.target.value); };
 
         document.getElementById('btn-rm-add').onclick = () => {
@@ -427,6 +445,7 @@
                         if (response.status === 'success') {
                             UI.showToast("✅ Lưu thành công!");
                             modal.style.display = 'none';
+                            toggleBottomNav(true); // Hiện lại Nav khi lưu xong
                         } else { alert("Lỗi Server: " + response.message); }
                     } catch (e) { alert("Lỗi phản hồi Server"); }
                 },
@@ -437,7 +456,9 @@
         resetForm();
         const toastEl = document.getElementById('tgdd-toast-notification');
         if (toastEl) document.body.appendChild(toastEl);
+        
         modal.style.display = 'flex';
+        toggleBottomNav(false); // Ẩn Nav ngay khi mở modal
         syncFromCloud();
     };
 
