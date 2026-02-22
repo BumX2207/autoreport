@@ -1,27 +1,18 @@
 /* 
-   MODULE: IN ẤN 
+   MODULE: IN ẤN (PRINT TOOL) - V2.4 (FIX AUTO-SCALE & ROTATE)
+   - Tự động xoay tem 90 độ nếu lấp đầy giấy tốt hơn (khắc phục lỗi không tràn cạnh).
 */
 ((context) => {
     const { UI, AUTH_STATE } = context;
 
-    // ===============================================================
-    // CẤU HÌNH DANH SÁCH LINK FILE HTML TỪ GITHUB
-    // (Đổi sang link .html của bạn)
-    // ===============================================================
     const TEMPLATE_URLS = [
         'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan.html',
-        // Thêm các link .html khác vào đây
     ];
 
-    // ===============================================================
-    // CSS STYLE
-    // ===============================================================
     const MY_CSS = `
-        /* FIX Z-INDEX */
         #tgdd-print-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2147483800; font-family: sans-serif; flex-direction:column; }
         .pr-content { background:#e9ecef; width:100%; height:100%; display:flex; flex-direction:column; overflow:hidden; }
 
-        /* HEADER */
         .pr-header { background:white; padding:10px; border-bottom:1px solid #ddd; display:flex; flex-direction:column; gap:10px; flex-shrink:0; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .pr-top-bar { display:flex; align-items:center; justify-content:space-between; }
         .pr-title { font-size:16px; font-weight:bold; color:#2c3e50; display:flex; align-items:center; gap:5px; }
@@ -57,10 +48,9 @@
         .pr-cell { border:1px dashed #eee; display:flex; justify-content:center; align-items:center; overflow:hidden; position:relative; }
         .pr-cell:hover { border-color:blue; }
 
-        .pr-canvas-wrapper { position:relative; transform-origin: center center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .pr-canvas-wrapper { position:relative; transform-origin: center center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: transform 0.2s ease; }
         .pr-bg-img { width:100%; height:100%; display:block; pointer-events:none; }
         
-        /* INPUT DIV CLASSES */
         .pr-input-div { 
             position:absolute; 
             background:transparent; 
@@ -94,9 +84,6 @@
         }
     `;
 
-    // ===============================================================
-    // LOGIC CHÍNH
-    // ===============================================================
     const runTool = async () => {
         const bottomNav = document.getElementById('tgdd-bottom-nav');
         if(bottomNav) bottomNav.style.display = 'none';
@@ -142,7 +129,6 @@
 
         modal.style.display = 'flex';
         
-        // FETCH FILE HTML TỪ GITHUB
         if(state.templates.length === 0) {
             try {
                 const fetchPromises = TEMPLATE_URLS.map(url => 
@@ -152,10 +138,9 @@
                 const filesContent = await Promise.all(fetchPromises);
                 const parser = new DOMParser();
 
-                // Quét qua từng file HTML lấy về
                 filesContent.forEach(htmlText => {
                     const doc = parser.parseFromString(htmlText, 'text/html');
-                    const setupEl = doc.getElementById('template-setup'); // Tìm thẻ div cấu hình
+                    const setupEl = doc.getElementById('template-setup'); 
                     
                     if (setupEl) {
                         state.templates.push({
@@ -164,7 +149,7 @@
                             bg: setupEl.getAttribute('data-bg'),
                             width: parseInt(setupEl.getAttribute('data-width') || 600),
                             height: parseInt(setupEl.getAttribute('data-height') || 800),
-                            htmlContent: setupEl.innerHTML // Lấy tất cả các thẻ <div> input bên trong
+                            htmlContent: setupEl.innerHTML 
                         });
                     }
                 });
@@ -188,7 +173,6 @@
         $('btn-pr-qty').disabled = false;
         $('btn-pr-exec').disabled = false;
 
-        // Render Menu Chọn Mẫu
         const listEl = $('pr-list');
         listEl.innerHTML = ''; 
         state.templates.forEach(tpl => {
@@ -212,7 +196,6 @@
             renderGrid();
         };
 
-        // Render Hệ thống Canvas
         const renderGrid = () => {
             const a4 = $('pr-a4');
             const qty = QUANTITIES[state.qtyIdx];
@@ -222,6 +205,7 @@
             a4.innerHTML = '';
 
             let cellW, cellH;
+            // Tính toán kích thước của từng ô (cell) trên giấy A4
             if (qty === 1) { cellW = 794 - 30; cellH = 1123 - 30; } 
             else if (qty === 2) { cellW = 794; cellH = 1123 / 2; }
             else if (qty === 4) { cellW = 794 / 2; cellH = 1123 / 2; }
@@ -237,20 +221,35 @@
                 wrapper.style.width = tpl.width + 'px';
                 wrapper.style.height = tpl.height + 'px';
                 
-                const scaleX = (cellW - 4) / tpl.width; 
-                const scaleY = (cellH - 4) / tpl.height;
-                wrapper.style.transform = `scale(${Math.min(scaleX, scaleY, 1)})`;
+                // =======================================================
+                // THUẬT TOÁN FIX TRÀN CẠNH (TỰ ĐỘNG XOAY THÔNG MINH)
+                // =======================================================
                 
-                // CHÈN NỘI DUNG HTML CỦA TEMPLATE VÀO BẢN IN
+                // 1. Tính độ Zoom tối đa nếu giữ nguyên chiều ngang
+                const scaleNormalX = (cellW - 10) / tpl.width; 
+                const scaleNormalY = (cellH - 10) / tpl.height;
+                const scaleNormal = Math.min(scaleNormalX, scaleNormalY); 
+                
+                // 2. Tính độ Zoom tối đa nếu xoay ngang tem 90 độ
+                const scaleRotateX = (cellW - 10) / tpl.height;
+                const scaleRotateY = (cellH - 10) / tpl.width;
+                const scaleRotate = Math.min(scaleRotateX, scaleRotateY);
+
+                // 3. Quyết định: Cách nào giúp tem in to hơn (tràn viền hơn)?
+                if (scaleRotate > scaleNormal && qty > 1) {
+                    wrapper.style.transform = `scale(${scaleRotate}) rotate(90deg)`;
+                } else {
+                    wrapper.style.transform = `scale(${scaleNormal})`;
+                }
+                // =======================================================
+                
                 wrapper.innerHTML = `<img src="${tpl.bg}" class="pr-bg-img">` + tpl.htmlContent;
 
-                // TÌM TẤT CẢ CÁC THẺ VÀ BẬT TÍNH NĂNG CHỈNH SỬA
                 const inputs = wrapper.querySelectorAll('.pr-input-div');
                 inputs.forEach(div => {
                     div.contentEditable = true; 
                     div.spellcheck = false;
 
-                    // Tính năng đồng bộ chữ khi người dùng nhập liệu (Áp dụng cho mọi ô có data-sync giống nhau)
                     div.oninput = (e) => {
                         const syncKey = div.getAttribute('data-sync');
                         if(syncKey) {
@@ -272,7 +271,7 @@
     };
 
     return {
-        name: "In ấn",
+        name: "In ấn Pro HTML",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 12v2H8v-2h8zm2-2v-2H6v2H4v-4c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v4h-2z" fill="white"/></svg>`,
         bgColor: "#e17055",
         css: MY_CSS,
