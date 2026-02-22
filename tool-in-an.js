@@ -1,36 +1,31 @@
 /* 
-   MODULE: IN ẤN (PRINT TOOL) - V2.2 (DYNAMIC GITHUB TEMPLATES)
-   - Tải template động từ Github Raw.
-   - Giữ nguyên Fix UI & Z-INDEX.
+   MODULE: IN ẤN 
 */
 ((context) => {
     const { UI, AUTH_STATE } = context;
 
     // ===============================================================
-    // CẤU HÌNH DANH SÁCH LINK TEMPLATE TỪ GITHUB
-    // (Thêm các link .js raw của bạn vào đây)
+    // CẤU HÌNH DANH SÁCH LINK FILE HTML TỪ GITHUB
+    // (Đổi sang link .html của bạn)
     // ===============================================================
     const TEMPLATE_URLS = [
-        'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan.js',
-        // 'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/tem-tet.js',
-        // 'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/tem-giam-gia.js'
+        'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan.html',
+        // Thêm các link .html khác vào đây
     ];
 
     // ===============================================================
     // CSS STYLE
     // ===============================================================
     const MY_CSS = `
-        /* FIX Z-INDEX: Tăng lên cực cao để đè Modal tiện ích */
+        /* FIX Z-INDEX */
         #tgdd-print-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2147483800; font-family: sans-serif; flex-direction:column; }
-        
         .pr-content { background:#e9ecef; width:100%; height:100%; display:flex; flex-direction:column; overflow:hidden; }
 
-        /* HEADER & TOOLBAR */
+        /* HEADER */
         .pr-header { background:white; padding:10px; border-bottom:1px solid #ddd; display:flex; flex-direction:column; gap:10px; flex-shrink:0; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .pr-top-bar { display:flex; align-items:center; justify-content:space-between; }
         .pr-title { font-size:16px; font-weight:bold; color:#2c3e50; display:flex; align-items:center; gap:5px; }
         
-        /* ACTION BUTTONS IN HEADER */
         .pr-actions { display:flex; gap:8px; align-items:center; }
         .pr-btn { border:none; border-radius:4px; padding:6px 12px; font-weight:bold; cursor:pointer; font-size:13px; display:flex; align-items:center; gap:5px; transition:0.2s; }
         .pr-btn-qty { background:#3498db; color:white; min-width:80px; justify-content:center; }
@@ -39,7 +34,6 @@
         .pr-btn:hover { filter:brightness(1.1); }
         .pr-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* HORIZONTAL TEMPLATE LIST */
         .pr-list-scroll { display:flex; overflow-x:auto; gap:10px; padding-bottom:5px; scrollbar-width: thin; }
         .pr-list-scroll::-webkit-scrollbar { height: 4px; }
         .pr-list-scroll::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
@@ -49,41 +43,24 @@
         .pr-tpl-img { width:100%; height:60px; object-fit:cover; display:block; }
         .pr-tpl-name { font-size:10px; padding:4px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#333; }
         
-        /* LOADING STATE */
         .pr-loading { text-align: center; padding: 20px; color: white; font-size: 16px; margin: auto; }
 
-        /* MAIN PREVIEW AREA (A4) */
         .pr-body { flex:1; overflow:auto; display:flex; justify-content:center; padding:20px; background:#555; }
-        
-        /* A4 PAGE SIMULATION */
-        .pr-a4-page { 
-            width: 794px; /* ~21cm @ 96dpi */
-            height: 1123px; /* ~29.7cm @ 96dpi */
-            background: white;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            margin-bottom: 50px;
-            position: relative;
-            overflow: hidden;
-            display: flex; 
-        }
+        .pr-a4-page { width: 794px; height: 1123px; background: white; box-shadow: 0 0 20px rgba(0,0,0,0.5); margin-bottom: 50px; position: relative; overflow: hidden; display: flex; }
 
-        /* GRID SYSTEM LAYOUTS */
         .pr-grid-1 { justify-content:center; align-items:center; padding:0 15px; } 
-        
         .pr-grid-2 { display:grid !important; grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
         .pr-grid-4 { display:grid !important; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
         .pr-grid-6 { display:grid !important; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
         .pr-grid-8 { display:grid !important; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr 1fr; }
 
-        /* GRID CELL & SCALING WRAPPER */
         .pr-cell { border:1px dashed #eee; display:flex; justify-content:center; align-items:center; overflow:hidden; position:relative; }
         .pr-cell:hover { border-color:blue; }
 
-        /* CONTENT INSIDE CELL */
         .pr-canvas-wrapper { position:relative; transform-origin: center center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .pr-bg-img { width:100%; height:100%; display:block; pointer-events:none; }
         
-        /* INPUTS ON CANVAS */
+        /* INPUT DIV CLASSES */
         .pr-input-div { 
             position:absolute; 
             background:transparent; 
@@ -99,25 +76,18 @@
         .pr-input-div:hover { border-color:rgba(0,0,0,0.2); background:rgba(255,255,255,0.2); }
         .pr-input-div:focus { border-color:#007bff; background:rgba(255,255,255,0.8); z-index:10; }
 
-        /* PRINT MEDIA QUERY */
         @media print {
             @page { size: A4; margin: 0; }
             body * { visibility: hidden; }
             #tgdd-print-modal, #tgdd-print-modal * { visibility: visible; }
-            
             #tgdd-print-modal { position:absolute; left:0; top:0; background:white; width:100%; height:100%; z-index:2147483800; display:block !important; }
             .pr-header { display:none !important; }
             .pr-body { padding:0; background:white; overflow:visible; display:block; }
-            .pr-a4-page { 
-                width: 100%; height: 100%; 
-                box-shadow: none; margin:0; 
-                transform: none !important;
-            }
+            .pr-a4-page { width: 100%; height: 100%; box-shadow: none; margin:0; transform: none !important; }
             .pr-cell { border:none !important; } 
             .pr-input-div { border:none !important; background:transparent !important; }
             .pr-canvas-wrapper { box-shadow:none; }
         }
-
         @media (max-width: 600px) {
             .pr-a4-page { transform-origin: top left; transform: scale(0.45); margin-bottom: -500px; margin-right: -400px; }
             .pr-title span { display:none; } 
@@ -135,12 +105,11 @@
         let state = {
             qtyIdx: 0,
             tpl: null,
-            templates: [] // Sẽ chứa data load từ github
+            templates: [] 
         };
 
         const $ = (id) => document.getElementById(id);
 
-        // 1. Dựng UI khung Modal trước
         let modal = $('tgdd-print-modal');
         if (!modal) {
             modal = document.createElement('div');
@@ -159,13 +128,12 @@
                         <div class="pr-list-scroll" id="pr-list"></div>
                     </div>
                     <div class="pr-body" id="pr-body-wrap">
-                        <div class="pr-loading" id="pr-loading">Đang tải danh sách mẫu in từ hệ thống...</div>
+                        <div class="pr-loading" id="pr-loading">Đang tải cấu trúc HTML từ Github...</div>
                     </div>
                 </div>
             `;
             document.body.appendChild(modal);
 
-            // Nút đóng modal
             $('btn-pr-close').onclick = () => { 
                 modal.style.display = 'none'; 
                 if(bottomNav) bottomNav.style.display = 'flex';
@@ -174,55 +142,55 @@
 
         modal.style.display = 'flex';
         
-        // NẾU CHƯA LOAD TEMPLATE BAO GIỜ THÌ GỌI API GITHUB
+        // FETCH FILE HTML TỪ GITHUB
         if(state.templates.length === 0) {
             try {
-                // Fetch song song tất cả các link
                 const fetchPromises = TEMPLATE_URLS.map(url => 
-                    // Thêm cache-buster để đảm bảo mỗi lần sửa file Github nó lấy bản mới nhất ngay lập tức
                     fetch(`${url}?t=${Date.now()}`).then(res => res.text())
                 );
                 
                 const filesContent = await Promise.all(fetchPromises);
-                
-                // Biên dịch Text thành JavaScript Object
-                filesContent.forEach(text => {
-                    try {
-                        const tplObj = new Function('return ' + text)();
-                        if(tplObj && tplObj.id) {
-                            state.templates.push(tplObj);
-                        }
-                    } catch(err) {
-                        console.error("Lỗi parse file template:", err);
+                const parser = new DOMParser();
+
+                // Quét qua từng file HTML lấy về
+                filesContent.forEach(htmlText => {
+                    const doc = parser.parseFromString(htmlText, 'text/html');
+                    const setupEl = doc.getElementById('template-setup'); // Tìm thẻ div cấu hình
+                    
+                    if (setupEl) {
+                        state.templates.push({
+                            id: setupEl.getAttribute('data-id'),
+                            name: setupEl.getAttribute('data-name'),
+                            bg: setupEl.getAttribute('data-bg'),
+                            width: parseInt(setupEl.getAttribute('data-width') || 600),
+                            height: parseInt(setupEl.getAttribute('data-height') || 800),
+                            htmlContent: setupEl.innerHTML // Lấy tất cả các thẻ <div> input bên trong
+                        });
                     }
                 });
 
             } catch(e) {
-                $('pr-loading').innerText = "Lỗi khi tải mẫu in. Vui lòng kiểm tra lại kết nối mạng!";
+                $('pr-loading').innerText = "Lỗi khi tải mẫu HTML!";
                 return;
             }
         }
 
-        // Xử lý khi không có mẫu nào hợp lệ
         if(state.templates.length === 0) {
-            $('pr-loading').innerText = "Không tìm thấy mẫu in nào!";
+            $('pr-loading').innerText = "Không tìm thấy cấu hình <div id='template-setup'> hợp lệ!";
             return;
         }
 
-        // 2. Dữ liệu đã load xong, render ra UI
-        state.tpl = state.templates[0]; // Chọn mẫu đầu tiên làm mặc định
+        state.tpl = state.templates[0]; 
         
-        // Xóa loading, tạo layout in
         const bodyWrap = $('pr-body-wrap');
         bodyWrap.innerHTML = `<div id="pr-a4" class="pr-a4-page pr-grid-1"></div>`;
         
-        // Mở khoá các nút
         $('btn-pr-qty').disabled = false;
         $('btn-pr-exec').disabled = false;
 
-        // Render danh sách template ở top bar
+        // Render Menu Chọn Mẫu
         const listEl = $('pr-list');
-        listEl.innerHTML = ''; // Clear cũ nếu có
+        listEl.innerHTML = ''; 
         state.templates.forEach(tpl => {
             const item = document.createElement('div');
             item.className = 'pr-tpl-item';
@@ -237,22 +205,19 @@
             listEl.appendChild(item);
         });
 
-        // Gắn lại sự kiện cho các nút in
         $('btn-pr-exec').onclick = () => { window.print(); };
         $('btn-pr-qty').onclick = () => {
             state.qtyIdx = (state.qtyIdx + 1) % QUANTITIES.length;
-            const qty = QUANTITIES[state.qtyIdx];
-            $('btn-pr-qty').innerText = `SL: ${qty}`;
+            $('btn-pr-qty').innerText = `SL: ${QUANTITIES[state.qtyIdx]}`;
             renderGrid();
         };
 
-        // Render Grid System
+        // Render Hệ thống Canvas
         const renderGrid = () => {
             const a4 = $('pr-a4');
             const qty = QUANTITIES[state.qtyIdx];
             const tpl = state.tpl;
 
-            // Reset classes
             a4.className = `pr-a4-page pr-grid-${qty}`;
             a4.innerHTML = '';
 
@@ -274,38 +239,28 @@
                 
                 const scaleX = (cellW - 4) / tpl.width; 
                 const scaleY = (cellH - 4) / tpl.height;
-                const scale = Math.min(scaleX, scaleY, 1); 
+                wrapper.style.transform = `scale(${Math.min(scaleX, scaleY, 1)})`;
                 
-                wrapper.style.transform = `scale(${scale})`;
-                wrapper.innerHTML = `<img src="${tpl.bg}" class="pr-bg-img">`;
+                // CHÈN NỘI DUNG HTML CỦA TEMPLATE VÀO BẢN IN
+                wrapper.innerHTML = `<img src="${tpl.bg}" class="pr-bg-img">` + tpl.htmlContent;
 
-                tpl.inputs.forEach((inp, fieldIdx) => {
-                    const div = document.createElement('div');
-                    div.className = 'pr-input-div';
+                // TÌM TẤT CẢ CÁC THẺ VÀ BẬT TÍNH NĂNG CHỈNH SỬA
+                const inputs = wrapper.querySelectorAll('.pr-input-div');
+                inputs.forEach(div => {
                     div.contentEditable = true; 
                     div.spellcheck = false;
-                    
-                    div.style.left = inp.x + 'px';
-                    div.style.top = inp.y + 'px';
-                    div.style.width = inp.w + 'px';
-                    div.style.fontSize = (inp.size || 14) + 'px';
-                    div.style.color = inp.color || '#000';
-                    div.style.fontWeight = inp.bold ? 'bold' : 'normal';
-                    div.style.textDecoration = inp.decoration || 'none';
-                    if(inp.align) div.style.justifyContent = inp.align;
 
-                    div.innerText = inp.val;
-
+                    // Tính năng đồng bộ chữ khi người dùng nhập liệu (Áp dụng cho mọi ô có data-sync giống nhau)
                     div.oninput = (e) => {
-                        const newVal = e.target.innerText;
-                        const allInputs = document.querySelectorAll(`.inp-field-${fieldIdx}`);
-                        allInputs.forEach(item => {
-                            if (item !== e.target) item.innerText = newVal;
-                        });
+                        const syncKey = div.getAttribute('data-sync');
+                        if(syncKey) {
+                            const newVal = e.target.innerText;
+                            const allSameInputs = document.querySelectorAll(`.pr-input-div[data-sync="${syncKey}"]`);
+                            allSameInputs.forEach(item => {
+                                if (item !== e.target) item.innerText = newVal;
+                            });
+                        }
                     };
-                    
-                    div.classList.add(`inp-field-${fieldIdx}`);
-                    wrapper.appendChild(div);
                 });
 
                 cell.appendChild(wrapper);
@@ -317,7 +272,7 @@
     };
 
     return {
-        name: "In ấn Pro",
+        name: "In ấn",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 12v2H8v-2h8zm2-2v-2H6v2H4v-4c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v4h-2z" fill="white"/></svg>`,
         bgColor: "#e17055",
         css: MY_CSS,
