@@ -1,49 +1,19 @@
 /* 
-   MODULE: IN ẤN (PRINT TOOL) - V2.1 (FIX UI & Z-INDEX)
-   - Fix 1: Ẩn/Hiện Bottom Nav khi Mở/Đóng.
-   - Fix 2: Tăng Z-Index cao hơn Modal tiện ích chính.
+   MODULE: IN ẤN (PRINT TOOL) - V2.2 (DYNAMIC GITHUB TEMPLATES)
+   - Tải template động từ Github Raw.
+   - Giữ nguyên Fix UI & Z-INDEX.
 */
 ((context) => {
     const { UI, AUTH_STATE } = context;
 
     // ===============================================================
-    // CẤU HÌNH TEMPLATE
+    // CẤU HÌNH DANH SÁCH LINK TEMPLATE TỪ GITHUB
+    // (Thêm các link .js raw của bạn vào đây)
     // ===============================================================
-    const TEMPLATES = [
-        {
-            id: 'tet-1',
-            name: '🧧 Tem Tết 2025',
-            bg: 'https://admintnb.com/wp-content/uploads/2025/11/sticker3.png', 
-            width: 800, height: 600,
-            inputs: [
-                { label: 'Tiêu đề', x: 250, y: 150, w: 300, size: 40, color: '#d63031', bold: true, val: 'CHÚC MỪNG NĂM MỚI', align: 'center' },
-                { label: 'Lời chúc', x: 100, y: 300, w: 600, size: 20, color: '#333', val: 'An khang thịnh vượng - Vạn sự như ý', align: 'center' },
-                { label: 'Tên Shop', x: 200, y: 450, w: 400, size: 25, color: '#0984e3', bold: true, val: 'Thế Giới Di Động', align: 'center' }
-            ]
-        },
-        {
-            id: 'gg-1',
-            name: '🔥 Tem Giảm Giá',
-            bg: 'https://admintnb.com/wp-content/uploads/2025/11/sticker3.png', 
-            width: 600, height: 800,
-            inputs: [
-                { label: 'Tên SP', x: 50, y: 100, w: 500, size: 30, color: '#000', bold: true, val: 'Samsung Galaxy S24 Ultra' },
-                { label: 'Giá cũ', x: 50, y: 200, w: 500, size: 25, color: '#666', decoration: 'line-through', val: '30.000.000đ' },
-                { label: 'Giá mới', x: 50, y: 300, w: 500, size: 60, color: '#d63031', bold: true, val: '25.990.000đ' },
-                { label: 'Note', x: 50, y: 600, w: 500, size: 18, color: '#333', val: '*Áp dụng đến hết 30/02' }
-            ]
-        },
-        {
-            id: 'tk-qr',
-            name: '💳 Tem QR',
-            bg: 'https://admintnb.com/wp-content/uploads/2026/01/Tet-1.png', 
-            width: 700, height: 500,
-            inputs: [
-                { label: 'Bank', x: 50, y: 50, w: 600, size: 24, color: '#2ecc71', bold: true, val: 'VIETCOMBANK' },
-                { label: 'STK', x: 50, y: 100, w: 600, size: 40, color: '#000', bold: true, val: '9999.8888.6666' },
-                { label: 'Tên', x: 50, y: 160, w: 600, size: 24, color: '#333', val: 'NGUYEN VAN A' }
-            ]
-        }
+    const TEMPLATE_URLS = [
+        'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan.js',
+        // 'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/tem-tet.js',
+        // 'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/tem-giam-gia.js'
     ];
 
     // ===============================================================
@@ -67,6 +37,7 @@
         .pr-btn-print { background:#27ae60; color:white; }
         .pr-btn-close { background:#fab1a0; color:#d63031; width:30px; height:30px; padding:0; justify-content:center; font-size:20px; }
         .pr-btn:hover { filter:brightness(1.1); }
+        .pr-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
         /* HORIZONTAL TEMPLATE LIST */
         .pr-list-scroll { display:flex; overflow-x:auto; gap:10px; padding-bottom:5px; scrollbar-width: thin; }
@@ -77,6 +48,9 @@
         .pr-tpl-item.active { border-color:#007bff; box-shadow:0 0 0 2px rgba(0,123,255,0.2); }
         .pr-tpl-img { width:100%; height:60px; object-fit:cover; display:block; }
         .pr-tpl-name { font-size:10px; padding:4px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#333; }
+        
+        /* LOADING STATE */
+        .pr-loading { text-align: center; padding: 20px; color: white; font-size: 16px; margin: auto; }
 
         /* MAIN PREVIEW AREA (A4) */
         .pr-body { flex:1; overflow:auto; display:flex; justify-content:center; padding:20px; background:#555; }
@@ -153,22 +127,20 @@
     // ===============================================================
     // LOGIC CHÍNH
     // ===============================================================
-    const runTool = () => {
-        // --- 2. HIDE BOTTOM NAV (FIX UI) ---
+    const runTool = async () => {
         const bottomNav = document.getElementById('tgdd-bottom-nav');
         if(bottomNav) bottomNav.style.display = 'none';
 
-        // State
         const QUANTITIES = [1, 2, 4, 6, 8];
         let state = {
             qtyIdx: 0,
-            tpl: TEMPLATES[0]
+            tpl: null,
+            templates: [] // Sẽ chứa data load từ github
         };
 
-        // DOM Helper
         const $ = (id) => document.getElementById(id);
 
-        // UI Setup
+        // 1. Dựng UI khung Modal trước
         let modal = $('tgdd-print-modal');
         if (!modal) {
             modal = document.createElement('div');
@@ -179,53 +151,100 @@
                         <div class="pr-top-bar">
                             <div class="pr-title">🖨️ <span>IN ẤN TỰ ĐỘNG</span></div>
                             <div class="pr-actions">
-                                <button class="pr-btn pr-btn-qty" id="btn-pr-qty">SL: 1</button>
-                                <button class="pr-btn pr-btn-print" id="btn-pr-exec">🖨️ IN</button>
+                                <button class="pr-btn pr-btn-qty" id="btn-pr-qty" disabled>SL: 1</button>
+                                <button class="pr-btn pr-btn-print" id="btn-pr-exec" disabled>🖨️ IN</button>
                                 <button class="pr-btn pr-btn-close" id="btn-pr-close">×</button>
                             </div>
                         </div>
                         <div class="pr-list-scroll" id="pr-list"></div>
                     </div>
-                    <div class="pr-body">
-                        <div id="pr-a4" class="pr-a4-page pr-grid-1">
-                            <!-- Grid Items Rendered Here -->
-                        </div>
+                    <div class="pr-body" id="pr-body-wrap">
+                        <div class="pr-loading" id="pr-loading">Đang tải danh sách mẫu in từ hệ thống...</div>
                     </div>
                 </div>
             `;
             document.body.appendChild(modal);
 
-            // Render Template List
-            const listEl = $('pr-list');
-            TEMPLATES.forEach(tpl => {
-                const item = document.createElement('div');
-                item.className = 'pr-tpl-item';
-                if(tpl.id === state.tpl.id) item.classList.add('active');
-                item.innerHTML = `<img src="${tpl.bg}" class="pr-tpl-img"><div class="pr-tpl-name">${tpl.name}</div>`;
-                item.onclick = () => {
-                    state.tpl = tpl;
-                    document.querySelectorAll('.pr-tpl-item').forEach(i => i.classList.remove('active'));
-                    item.classList.add('active');
-                    renderGrid();
-                };
-                listEl.appendChild(item);
-            });
-
-            // Button Events
+            // Nút đóng modal
             $('btn-pr-close').onclick = () => { 
                 modal.style.display = 'none'; 
-                // --- SHOW BOTTOM NAV BACK (FIX UI) ---
                 if(bottomNav) bottomNav.style.display = 'flex';
             };
-            $('btn-pr-exec').onclick = () => { window.print(); };
-            
-            $('btn-pr-qty').onclick = () => {
-                state.qtyIdx = (state.qtyIdx + 1) % QUANTITIES.length;
-                const qty = QUANTITIES[state.qtyIdx];
-                $('btn-pr-qty').innerText = `SL: ${qty}`;
+        }
+
+        modal.style.display = 'flex';
+        
+        // NẾU CHƯA LOAD TEMPLATE BAO GIỜ THÌ GỌI API GITHUB
+        if(state.templates.length === 0) {
+            try {
+                // Fetch song song tất cả các link
+                const fetchPromises = TEMPLATE_URLS.map(url => 
+                    // Thêm cache-buster để đảm bảo mỗi lần sửa file Github nó lấy bản mới nhất ngay lập tức
+                    fetch(`${url}?t=${Date.now()}`).then(res => res.text())
+                );
+                
+                const filesContent = await Promise.all(fetchPromises);
+                
+                // Biên dịch Text thành JavaScript Object
+                filesContent.forEach(text => {
+                    try {
+                        const tplObj = new Function('return ' + text)();
+                        if(tplObj && tplObj.id) {
+                            state.templates.push(tplObj);
+                        }
+                    } catch(err) {
+                        console.error("Lỗi parse file template:", err);
+                    }
+                });
+
+            } catch(e) {
+                $('pr-loading').innerText = "Lỗi khi tải mẫu in. Vui lòng kiểm tra lại kết nối mạng!";
+                return;
+            }
+        }
+
+        // Xử lý khi không có mẫu nào hợp lệ
+        if(state.templates.length === 0) {
+            $('pr-loading').innerText = "Không tìm thấy mẫu in nào!";
+            return;
+        }
+
+        // 2. Dữ liệu đã load xong, render ra UI
+        state.tpl = state.templates[0]; // Chọn mẫu đầu tiên làm mặc định
+        
+        // Xóa loading, tạo layout in
+        const bodyWrap = $('pr-body-wrap');
+        bodyWrap.innerHTML = `<div id="pr-a4" class="pr-a4-page pr-grid-1"></div>`;
+        
+        // Mở khoá các nút
+        $('btn-pr-qty').disabled = false;
+        $('btn-pr-exec').disabled = false;
+
+        // Render danh sách template ở top bar
+        const listEl = $('pr-list');
+        listEl.innerHTML = ''; // Clear cũ nếu có
+        state.templates.forEach(tpl => {
+            const item = document.createElement('div');
+            item.className = 'pr-tpl-item';
+            if(tpl.id === state.tpl.id) item.classList.add('active');
+            item.innerHTML = `<img src="${tpl.bg}" class="pr-tpl-img"><div class="pr-tpl-name">${tpl.name}</div>`;
+            item.onclick = () => {
+                state.tpl = tpl;
+                document.querySelectorAll('.pr-tpl-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
                 renderGrid();
             };
-        }
+            listEl.appendChild(item);
+        });
+
+        // Gắn lại sự kiện cho các nút in
+        $('btn-pr-exec').onclick = () => { window.print(); };
+        $('btn-pr-qty').onclick = () => {
+            state.qtyIdx = (state.qtyIdx + 1) % QUANTITIES.length;
+            const qty = QUANTITIES[state.qtyIdx];
+            $('btn-pr-qty').innerText = `SL: ${qty}`;
+            renderGrid();
+        };
 
         // Render Grid System
         const renderGrid = () => {
@@ -294,7 +313,6 @@
             }
         };
 
-        modal.style.display = 'flex';
         renderGrid(); 
     };
 
