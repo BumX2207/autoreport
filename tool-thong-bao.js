@@ -2,6 +2,7 @@
    MODULE: QUẢN LÝ THÔNG BÁO (NOTIFICATION MANAGER)
    - Gửi thông báo từ Admin tới User (Lưu vào Cột G)
    - Theo dõi trạng thái Đã xem/Chưa xem
+   - Tích hợp tìm kiếm người dùng (Real-time)
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE, GM_xmlhttpRequest } = context;
@@ -20,7 +21,14 @@
         .nt-textarea { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px; font-family: inherit; font-size: 13px; resize: vertical; min-height: 80px; box-sizing: border-box; }
         .nt-textarea:focus { outline: none; border-color: #FF9800; }
         
-        .nt-list-header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; font-size: 13px; font-weight: bold; color: #555; }
+        .nt-list-header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; font-size: 13px; font-weight: bold; color: #555; }
+        
+        /* CSS cho thanh tìm kiếm */
+        .nt-search-box { margin-bottom: 10px; position: relative; }
+        .nt-search-input { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 8px 12px 8px 32px; font-family: inherit; font-size: 13px; box-sizing: border-box; transition: 0.2s; }
+        .nt-search-input:focus { outline: none; border-color: #FF9800; box-shadow: 0 0 0 2px rgba(255,152,0,0.2); }
+        .nt-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 14px; opacity: 0.5; pointer-events: none; }
+
         .nt-list-container { background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow: hidden; }
         .nt-user-row { display: flex; align-items: center; padding: 10px 15px; border-bottom: 1px solid #f0f0f0; transition: 0.2s; cursor: pointer; }
         .nt-user-row:last-child { border-bottom: none; }
@@ -50,9 +58,8 @@
     const runTool = () => {
         const modalId = 'tgdd-notif-modal';
         let modal = document.getElementById(modalId);
-        let userList = []; // Chứa danh sách User load từ Sheet
+        let userList = []; 
 
-        // --- HÀM ẨN/HIỆN NAV ---
         const toggleBottomNav = (show) => {
             const bottomNav = document.getElementById('tgdd-bottom-nav');
             if (bottomNav) {
@@ -63,7 +70,6 @@
 
         if (modal) modal.remove();
 
-        // --- HÀM LOAD DỮ LIỆU TỪ SHEET (CỘT B và CỘT G) ---
         const loadUsers = () => {
             const container = document.getElementById('nt-list-body');
             if(container) container.innerHTML = '<div class="nt-loader"><div class="nt-spin"></div> Đang tải danh sách người dùng...</div>';
@@ -76,13 +82,10 @@
                     if(res.status === 200) {
                         userList = [];
                         const rows = res.responseText.split('\n');
-                        // Duyệt từ dòng 1 (bỏ header)
                         for (let i = 1; i < rows.length; i++) {
                             const rowText = rows[i].trim();
                             if(rowText) {
                                 const cols = UTILS.parseCSVLine(rowText);
-                                // Cột B (index 1): Tên User
-                                // Cột G (index 6): Dữ liệu Thông báo (JSON)
                                 if(cols.length >= 2) {
                                     const userName = cols[1].trim();
                                     const rawNotif = (cols.length > 6) ? cols[6].trim() : "";
@@ -92,22 +95,20 @@
                                         if(rawNotif && rawNotif.startsWith('{')) {
                                             notifData = JSON.parse(rawNotif);
                                         } else if (rawNotif) {
-                                            // Hỗ trợ format text cũ nếu có
                                             notifData = { msg: rawNotif, read: false };
                                         }
                                     } catch(e) {}
 
                                     if(userName) {
-                                        userList.push({
-                                            name: userName,
-                                            notif: notifData,
-                                            rowIndex: i + 1 // Lưu lại số dòng để update cho đúng
-                                        });
+                                        userList.push({ name: userName, notif: notifData, rowIndex: i + 1 });
                                     }
                                 }
                             }
                         }
                         renderUserList();
+                        // Reset thanh tìm kiếm sau khi tải lại
+                        const searchInput = document.getElementById('nt-search-input');
+                        if (searchInput) searchInput.value = "";
                     } else {
                         if(container) container.innerHTML = '<div class="nt-loader" style="color:red">❌ Lỗi tải dữ liệu!</div>';
                     }
@@ -118,7 +119,6 @@
             });
         };
 
-        // --- HÀM RENDER DANH SÁCH ---
         const renderUserList = () => {
             const container = document.getElementById('nt-list-body');
             if(!container) return;
@@ -133,7 +133,6 @@
                 const div = document.createElement('div');
                 div.className = 'nt-user-row';
                 
-                // Xác định trạng thái
                 let badgeHtml = '<span class="nt-badge nt-badge-empty">Trống</span>';
                 let msgPreview = 'Chưa có thông báo';
                 
@@ -155,7 +154,6 @@
                     </div>
                 `;
                 
-                // Click vào row thì toggle checkbox
                 div.onclick = (e) => {
                     if(e.target.type !== 'checkbox') {
                         const chk = document.getElementById(`nt-chk-${idx}`);
@@ -192,6 +190,12 @@
                         </div>
                     </div>
 
+                    <!-- THÊM THANH TÌM KIẾM Ở ĐÂY -->
+                    <div class="nt-search-box">
+                        <span class="nt-search-icon">🔍</span>
+                        <input type="text" id="nt-search-input" class="nt-search-input" placeholder="Nhập tên để tìm kiếm nhanh...">
+                    </div>
+
                     <div class="nt-list-container" id="nt-list-body">
                         <!-- User list render here -->
                     </div>
@@ -209,10 +213,33 @@
         document.getElementById('btn-nt-close').onclick = () => { modal.style.display = 'none'; toggleBottomNav(true); };
         document.getElementById('btn-nt-reload').onclick = loadUsers;
         
+        // --- TÌM KIẾM REAL-TIME ---
+        document.getElementById('nt-search-input').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            const rows = document.querySelectorAll('.nt-user-row');
+            
+            rows.forEach(row => {
+                const userName = row.querySelector('.nt-user-name').innerText.toLowerCase();
+                // Nếu tên chứa từ khóa tìm kiếm thì hiện, không thì ẩn bằng CSS
+                if (userName.includes(searchTerm)) {
+                    row.style.display = 'flex';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+        
+        // --- CHỌN TẤT CẢ (ĐÃ CẢI TIẾN ĐỂ CHỈ CHỌN NHỮNG DÒNG ĐANG HIỂN THỊ) ---
         let isAllSelected = false;
         document.getElementById('btn-nt-select-all').onclick = () => {
             isAllSelected = !isAllSelected;
-            document.querySelectorAll('.nt-chk').forEach(c => c.checked = isAllSelected);
+            // Chỉ lấy các rows đang hiển thị (không bị ẩn bởi ô tìm kiếm)
+            const visibleRows = Array.from(document.querySelectorAll('.nt-user-row')).filter(row => row.style.display !== 'none');
+            
+            visibleRows.forEach(row => {
+                const chk = row.querySelector('.nt-chk');
+                if(chk) chk.checked = isAllSelected;
+            });
             document.getElementById('btn-nt-select-all').innerText = isAllSelected ? "Bỏ chọn" : "Chọn tất cả";
         };
 
@@ -227,14 +254,12 @@
             });
 
             if(selectedUsers.length === 0) return alert("Vui lòng chọn ít nhất 1 người nhận!");
-
             if(!confirm(`Bạn có chắc muốn gửi thông báo cho ${selectedUsers.length} người?`)) return;
 
-            // Gọi API Update (Giả lập logic update cột G)
-            updateColumnG(selectedUsers, msg, false); // read = false
+            updateColumnG(selectedUsers, msg, false);
         };
 
-        // XÓA THÔNG BÁO (Set cột G thành rỗng)
+        // XÓA THÔNG BÁO
         document.getElementById('btn-nt-reset').onclick = () => {
              const selectedUsers = [];
             document.querySelectorAll('.nt-chk:checked').forEach(chk => {
@@ -243,17 +268,14 @@
             if(selectedUsers.length === 0) return alert("Chọn người cần xóa thông báo!");
             if(!confirm(`Xóa thông báo của ${selectedUsers.length} người này?`)) return;
 
-            updateColumnG(selectedUsers, "", true); // msg rỗng = xóa
+            updateColumnG(selectedUsers, "", true);
         };
 
-        // --- HÀM GỌI API ĐỂ UPDATE CỘT G ---
         const updateColumnG = (targetUserNames, message, isClear) => {
             const btn = document.getElementById('btn-nt-send');
             const originalText = btn.innerText;
             btn.innerText = "⏳ Đang lưu..."; btn.disabled = true;
 
-            // Tạo Payload
-            // Data structure: [{ user: "ABC", data: JSON_STRING }, ...]
             const updateData = targetUserNames.map(name => {
                 let jsonVal = "";
                 if (!isClear) {
@@ -267,26 +289,20 @@
                 }
                 return { user: name, val: jsonVal };
             });
-
-            // Sử dụng API Config (giả định API này hỗ trợ type='push_notif' để update cột G theo user)
-            // Nếu API hiện tại của bạn chỉ hỗ trợ saveConfig toàn cục, bạn cần sửa lại API Server (Google Apps Script)
-            // Tuy nhiên, ở đây mình sẽ gửi theo format chuẩn để bạn update GAS.
             
             GM_xmlhttpRequest({
                 method: "POST",
-                url: CONSTANTS.GSHEET.CONFIG_API, // Dùng chung link Config API
+                url: CONSTANTS.GSHEET.CONFIG_API,
                 data: JSON.stringify({ 
-                    action: 'push_notif', // Action mới cho GAS
-                    targets: updateData   // Danh sách user cần update
+                    action: 'push_notif',
+                    targets: updateData
                 }),
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 onload: (res) => {
                     btn.innerText = originalText; btn.disabled = false;
                     try {
-                        // Vì API GAS có thể trả về text hoặc json tùy cách bạn viết
-                        // Ở đây giả định thành công nếu không lỗi 500
-                        UI.showToast("✅ Đã cập nhật Cột G thành công!");
-                        loadUsers(); // Load lại để thấy trạng thái mới
+                        UI.showToast("✅ Đã cập nhật thành công!");
+                        loadUsers(); 
                     } catch (e) {
                         alert("Lỗi phản hồi: " + e);
                     }
@@ -307,7 +323,7 @@
     return {
         name: "Thông báo",
         icon: `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" fill="#8cafbf"/></svg>`,
-        bgColor: "#FFF3E0", // Màu nền icon cam nhạt cho nổi bật
+        bgColor: "#FFF3E0", 
         css: MY_CSS,
         action: runTool
     };
