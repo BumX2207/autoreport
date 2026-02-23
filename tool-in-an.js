@@ -1,7 +1,7 @@
 /* 
-   MODULE: IN ẤN (PRINT TOOL) - V4.3 (FIX MOBILE SHRINK)
-   - Ép khung in theo đơn vị Milimet (mm) thực tế của giấy A4.
-   - Trị dứt điểm lỗi điện thoại tự động thu nhỏ ảnh vào giữa trang.
+   MODULE: IN ẤN (PRINT TOOL) - V4.2 (FIX MOBILE PRINTING)
+   - Khắc phục lỗi cắt viền 2 bên trên điện thoại.
+   - Chặn tuyệt đối lỗi nhảy sang trang 2.
 */
 ((context) => {
     const { UI, AUTH_STATE } = context;
@@ -45,7 +45,7 @@
 
         .pr-body { flex:1; overflow:auto; display:flex; justify-content:center; padding:20px; background:#555; }
         
-        /* KHUNG A4 PREVIEW TRÊN MÀN HÌNH CHỜ */
+        /* KHUNG A4 TRÊN MÀN HÌNH CHỜ (Hiển thị preview) */
         .pr-a4-page { 
             width: 794px; 
             height: 1123px; 
@@ -73,7 +73,7 @@
         .pr-input-div:hover { border-color:rgba(0,0,0,0.2); background:rgba(255,255,255,0.2); }
         .pr-input-div:focus { border-color:#007bff; background:rgba(255,255,255,0.8); z-index:10; }
 
-        /* KHUNG ẢNH CHỤP ẨN */
+        /* KHUNG ẢNH CHỤP ẨN TRÊN MÀN HÌNH */
         #pr-print-image-wrap { display: none; }
 
         .pr-qty-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:50; backdrop-filter:blur(2px); }
@@ -86,7 +86,7 @@
         .pr-qty-btn.pr-qty-active { background:#3498db; color:white; }
 
         /* =========================================================
-           MEDIA PRINT (ÉP ĐƠN VỊ MILIMET VẬT LÝ)
+           MEDIA PRINT (ĐÃ TỐI ƯU CẢ MOBILE & PC)
            ========================================================= */
         @media print {
             @page { 
@@ -94,13 +94,14 @@
                 margin: 0 !important; 
             }
             
-            /* Ép body rộng đúng bằng tờ A4 vật lý */
+            /* overflow: hidden ở thẻ html và body triệt tiêu hoàn toàn trang số 2 */
             html, body { 
                 margin: 0 !important; 
                 padding: 0 !important; 
-                width: 210mm !important; 
-                height: 297mm !important; 
+                width: 100% !important; 
+                height: 100% !important; 
                 background: white !important; 
+                overflow: hidden !important; 
             }
             
             body * { visibility: hidden !important; }
@@ -110,8 +111,8 @@
                 position: absolute !important; 
                 left: 0 !important; 
                 top: 0 !important; 
-                width: 210mm !important; 
-                height: 297mm !important; 
+                width: 100% !important; 
+                height: 100% !important; 
                 z-index: 2147483800; 
                 display: block !important; 
                 margin: 0 !important; 
@@ -121,28 +122,32 @@
             
             .pr-header, .pr-qty-overlay, .pr-body { display: none !important; }
 
-            /* Khung chứa ảnh rộng chính xác bằng giấy in, -1mm chiều cao để chặn trang 2 */
+            /* Thiết lập khung bao quanh bức ảnh bám dính vào giấy */
             #pr-print-image-wrap { 
-                display: block !important; 
+                display: flex !important; 
+                justify-content: center !important;
+                align-items: center !important;
                 position: absolute !important;
                 top: 0 !important;
                 left: 0 !important;
-                width: 210mm !important; 
-                height: 296mm !important; 
+                width: 100% !important; 
+                height: 100% !important; 
                 margin: 0 !important; 
                 padding: 0 !important;
                 background: white;
+                page-break-after: avoid !important;
+                page-break-inside: avoid !important;
             }
             
-            /* Ép ảnh kéo giãn (fill) khớp chính xác 100% mm của giấy. 
-               Do bản thân ảnh chụp là tỉ lệ chuẩn A4 nên dùng fill sẽ ko bị méo. */
+            /* Dùng object-fit: contain để ảnh TỰ THU NHỎ HIỂN THỊ ĐỦ 100% NỘI DUNG */
             #pr-print-image { 
-                width: 210mm !important; 
-                height: 296mm !important; 
-                object-fit: fill !important; 
+                max-width: 100% !important; 
+                max-height: 100% !important; 
+                width: auto !important;
+                height: auto !important;
+                object-fit: contain !important; 
                 display: block !important;
-                margin: 0 !important;
-                padding: 0 !important;
+                margin: 0 auto !important;
             }
         }
         
@@ -383,7 +388,7 @@
     };
 
     return {
-        name: "In ấn Pro V4.3",
+        name: "In ấn",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 12v2H8v-2h8zm2-2v-2H6v2H4v-4c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v4h-2z" fill="white"/></svg>`,
         bgColor: "#e17055",
         css: MY_CSS,
