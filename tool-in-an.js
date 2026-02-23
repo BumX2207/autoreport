@@ -50,7 +50,7 @@
         .pr-body { flex:1; overflow:auto; display:flex; justify-content:center; padding:20px; background:#555; }
         
         .pr-a4-page { 
-            width: 794px; height: 1123px; background: white; 
+            width: 794px; height: 1000px; background: white; 
             box-shadow: 0 0 20px rgba(0,0,0,0.5); margin-bottom: 50px; 
             position: relative; padding: 10px; overflow: hidden; box-sizing: border-box;
         }
