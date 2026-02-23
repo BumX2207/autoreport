@@ -3,6 +3,7 @@
    - Fix lỗi tràn khung (Responsive).
    - Tải ảnh siêu nét (Full HD).
    - Ẩn cảnh báo đỏ khi tải ảnh để ảnh sạch đẹp.
+   - Tự động ẩn Bottom Nav khi mở tool.
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE } = context;
@@ -101,6 +102,18 @@
         const modalId = 'tgdd-qrcode-modal';
         let modal = document.getElementById(modalId);
 
+        // --- LOGIC ẨN/HIỆN BOTTOM NAV ---
+        const toggleBottomNav = (show) => {
+            const bottomNav = document.getElementById('tgdd-bottom-nav');
+            if (bottomNav) {
+                if (show) {
+                    bottomNav.classList.add('show-nav'); // Hiện lại
+                } else {
+                    bottomNav.classList.remove('show-nav'); // Ẩn đi
+                }
+            }
+        };
+
         // A. Render HTML
         if (!modal) {
             modal = document.createElement('div');
@@ -158,9 +171,12 @@
             `;
             document.body.appendChild(modal);
 
+            // --- SỰ KIỆN ĐÓNG MODAL (Nút X) ---
             document.getElementById('btn-qr-close').onclick = () => { 
-                stopScanner(); modal.style.display = 'none'; 
+                stopScanner(); 
+                modal.style.display = 'none'; 
                 document.body.classList.remove('tgdd-body-lock');
+                toggleBottomNav(true); // Hiện lại Nav
             };
 
             const tabs = modal.querySelectorAll('.qr-tab');
@@ -255,8 +271,8 @@
             
             // 2. Tạm ẩn dòng cảnh báo đỏ (NẾU CÓ)
             const warningEl = document.getElementById('qr-warning-msg');
-            const originalWarningDisplay = warningEl.style.display; // Lưu trạng thái cũ
-            warningEl.style.display = 'none'; // Ẩn đi để chụp
+            const originalWarningDisplay = warningEl.style.display; 
+            warningEl.style.display = 'none'; 
 
             // 3. Mở rộng Canvas để chụp nét
             const originalMaxWidth = canvas.style.maxWidth;
@@ -274,7 +290,7 @@
                     container.style.border = originalBorder;
                     canvas.style.maxWidth = originalMaxWidth;
                     canvas.style.height = originalHeight;
-                    warningEl.style.display = originalWarningDisplay; // Hiện lại cảnh báo
+                    warningEl.style.display = originalWarningDisplay; 
 
                     const a = document.createElement('a');
                     a.href = c.toDataURL("image/png");
@@ -337,6 +353,7 @@
 
         // --- START ---
         modal.style.display = 'flex';
+        toggleBottomNav(false); // Ẩn Nav ngay khi mở modal
         document.querySelector('.qr-tab[data-tab="create"]').click();
         inputEl.focus();
     };
