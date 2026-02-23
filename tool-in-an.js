@@ -1,16 +1,14 @@
 /* 
-   MODULE: IN ẤN (PRINT TOOL) - V4.0 (HTML2CANVAS - SNAPSHOT TO PRINT)
-   - Chụp ảnh khung A4 trước khi in để đảm bảo không sai lệch layout 100% trên mọi thiết bị.
+   MODULE: IN ẤN (PRINT TOOL) - V4.1 (FIX FIT PAGE A4)
+   - Chụp ảnh khung A4 trước khi in.
+   - Ép ảnh tràn viền 100% lấp đầy giấy.
 */
 ((context) => {
     const { UI, AUTH_STATE } = context;
 
     const TEMPLATE_URLS = [
         'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan-1.html',
-        'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan-2.html',
-        'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan-4.html',
-        'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan-6.html',
-        'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan-8.html'
+        'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan-2.html'
     ];
 
     // ===============================================================
@@ -89,30 +87,32 @@
            ========================================================= */
         @media print {
             @page { size: A4 portrait; margin: 0 !important; }
+            html, body { margin: 0 !important; padding: 0 !important; width: 100% !important; height: 100% !important; background: white !important; }
             body * { visibility: hidden !important; }
             #tgdd-print-modal, #tgdd-print-modal * { visibility: visible !important; }
             
-            #tgdd-print-modal { position:absolute; left:0; top:0; background:white; width:100vw !important; height:100vh !important; z-index:2147483800; display:block !important; margin:0; padding:0; }
-            .pr-header, .pr-qty-overlay { display:none !important; }
-            
-            /* 1. Ẩn toàn bộ khung HTML chỉnh sửa đi */
-            .pr-body { display: none !important; }
+            #tgdd-print-modal { position:absolute !important; left:0 !important; top:0 !important; width:100vw !important; height:100vh !important; z-index:2147483800; display:block !important; margin:0 !important; padding:0 !important; background: white !important; }
+            .pr-header, .pr-qty-overlay, .pr-body { display:none !important; }
 
-            /* 2. Bật khung hiển thị ảnh chụp lên, ép vừa đúng tờ giấy A4 */
+            /* 2. ÉP KHUNG ẢNH RỘNG 100% TỜ GIẤY */
             #pr-print-image-wrap { 
-                display: flex !important; 
-                justify-content: center;
-                align-items: center;
-                width: 210mm !important; 
-                height: 297mm !important; 
-                margin: 0 auto !important; 
+                display: block !important; 
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100vw !important; 
+                height: 100vh !important; 
+                margin: 0 !important; 
+                padding: 0 !important;
                 background: white;
             }
             #pr-print-image { 
-                width: 100%; 
-                height: 100%; 
-                object-fit: contain; /* Ép ảnh vừa khít không méo */
-                display: block;
+                width: 100vw !important; 
+                height: 100vh !important; 
+                object-fit: cover !important; /* Dùng cover để triệt tiêu mọi khe hở trắng */
+                display: block !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
         }
         
@@ -309,7 +309,6 @@
             btn.disabled = true;
 
             try {
-                // 1. Tải thư viện html2canvas vào trình duyệt nếu chưa có
                 if (typeof html2canvas === 'undefined') {
                     await new Promise((resolve, reject) => {
                         const script = document.createElement('script');
@@ -320,30 +319,33 @@
                     });
                 }
 
-                // 2. Bỏ chọn (blur) các ô text đang gõ để mất con trỏ nhấp nháy trên ảnh
                 if(document.activeElement) document.activeElement.blur();
 
-                // 3. Tiến hành chụp ảnh (Scale x2 để ảnh nét căng khi in ra giấy)
                 const a4 = $('pr-a4');
+                
+                // MẸO QUAN TRỌNG: Tắt bóng đổ (box-shadow) để lúc chụp html2canvas ko bị dính phần bóng dư thừa vào ảnh
+                const oldShadow = a4.style.boxShadow;
+                a4.style.boxShadow = 'none';
+
                 const canvas = await html2canvas(a4, {
                     scale: 2, 
-                    useCORS: true, // Cho phép load ảnh từ domain khác (Github)
+                    useCORS: true,
                     backgroundColor: '#ffffff',
                     logging: false
                 });
 
-                // 4. Gắn ảnh chụp được vào thẻ <img id="pr-print-image">
+                // Bật bóng đổ lại sau khi chụp xong
+                a4.style.boxShadow = oldShadow;
+
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
                 $('pr-print-image').src = dataUrl;
 
-                // 5. Gọi lệnh In của trình duyệt
                 window.print();
 
             } catch (err) {
                 console.error(err);
                 alert("Lỗi khi tạo ảnh in: Đảm bảo ảnh nền của bạn được host ở nơi hỗ trợ CORS (như Github)!");
             } finally {
-                // 6. Khôi phục lại nút bấm
                 btn.innerText = originalText;
                 btn.disabled = false;
             }
@@ -354,7 +356,7 @@
     };
 
     return {
-        name: "In ấn Pro V4",
+        name: "In ấn Pro V4.1",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 12v2H8v-2h8zm2-2v-2H6v2H4v-4c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v4h-2z" fill="white"/></svg>`,
         bgColor: "#e17055",
         css: MY_CSS,
