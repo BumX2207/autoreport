@@ -1,10 +1,17 @@
 /* 
-   MODULE: IN ẤN (PRINT TOOL) - V4.2 (FIX MOBILE PRINTING)
-   - Khắc phục lỗi cắt viền 2 bên trên điện thoại.
-   - Chặn tuyệt đối lỗi nhảy sang trang 2.
+   MODULE: IN ẤN (PRINT TOOL) - V4.3 (MOBILE FIX + DEBUG MODE)
+   - Tự động nhận diện Mobile/PC.
+   - PC: Giữ nguyên logic cũ (đã tốt).
+   - Mobile: Ép ảnh giãn full chiều ngang (width: 100%).
+   - DEBUG: Thêm viền đỏ nét đứt bao quanh ảnh để canh lề.
 */
 ((context) => {
     const { UI, AUTH_STATE } = context;
+
+    // Hàm kiểm tra thiết bị
+    const isMobile = () => {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    };
 
     const TEMPLATE_URLS = [
         'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan-1.html',
@@ -45,7 +52,7 @@
 
         .pr-body { flex:1; overflow:auto; display:flex; justify-content:center; padding:20px; background:#555; }
         
-        /* KHUNG A4 TRÊN MÀN HÌNH CHỜ (Hiển thị preview) */
+        /* KHUNG A4 TRÊN MÀN HÌNH CHỜ */
         .pr-a4-page { 
             width: 794px; 
             height: 1123px; 
@@ -73,7 +80,7 @@
         .pr-input-div:hover { border-color:rgba(0,0,0,0.2); background:rgba(255,255,255,0.2); }
         .pr-input-div:focus { border-color:#007bff; background:rgba(255,255,255,0.8); z-index:10; }
 
-        /* KHUNG ẢNH CHỤP ẨN TRÊN MÀN HÌNH */
+        /* KHUNG ẢNH CHỤP ẨN */
         #pr-print-image-wrap { display: none; }
 
         .pr-qty-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:50; backdrop-filter:blur(2px); }
@@ -86,7 +93,7 @@
         .pr-qty-btn.pr-qty-active { background:#3498db; color:white; }
 
         /* =========================================================
-           MEDIA PRINT (ĐÃ TỐI ƯU CẢ MOBILE & PC)
+           MEDIA PRINT 
            ========================================================= */
         @media print {
             @page { 
@@ -94,7 +101,6 @@
                 margin: 0 !important; 
             }
             
-            /* overflow: hidden ở thẻ html và body triệt tiêu hoàn toàn trang số 2 */
             html, body { 
                 margin: 0 !important; 
                 padding: 0 !important; 
@@ -115,31 +121,24 @@
                 height: 100% !important; 
                 z-index: 2147483800; 
                 display: block !important; 
-                margin: 0 !important; 
-                padding: 0 !important; 
                 background: white !important; 
             }
             
             .pr-header, .pr-qty-overlay, .pr-body { display: none !important; }
 
-            /* Thiết lập khung bao quanh bức ảnh bám dính vào giấy */
             #pr-print-image-wrap { 
                 display: flex !important; 
                 justify-content: center !important;
-                align-items: center !important;
+                align-items: flex-start !important; /* Đổi thành flex-start để ảnh bắt đầu từ trên cùng */
                 position: absolute !important;
                 top: 0 !important;
                 left: 0 !important;
                 width: 100% !important; 
                 height: 100% !important; 
-                margin: 0 !important; 
-                padding: 0 !important;
                 background: white;
-                page-break-after: avoid !important;
-                page-break-inside: avoid !important;
             }
             
-            /* Dùng object-fit: contain để ảnh TỰ THU NHỎ HIỂN THỊ ĐỦ 100% NỘI DUNG */
+            /* --- CẤU HÌNH MẶC ĐỊNH CHO PC --- */
             #pr-print-image { 
                 max-width: 100% !important; 
                 max-height: 100% !important; 
@@ -148,6 +147,22 @@
                 object-fit: contain !important; 
                 display: block !important;
                 margin: 0 auto !important;
+                
+                /* [DEBUG] VIỀN ĐỎ GIÚP BẠN CANH CHỈNH - XÓA DÒNG DƯỚI NẾU KHÔNG CẦN */
+                border: 2px dashed red !important; 
+            }
+
+            /* --- CẤU HÌNH RIÊNG CHO MOBILE --- */
+            /* Khi body có class is-mobile-device thì áp dụng luật này */
+            body.is-mobile-device #pr-print-image {
+                width: 100% !important;     /* Ép chiều ngang 100% */
+                max-width: none !important; /* Bỏ giới hạn tối đa */
+                height: auto !important;    /* Chiều cao tự động theo tỷ lệ */
+                object-fit: fill !important; /* Ép giãn nếu cần */
+                margin-top: 0 !important;
+                
+                /* Mobile đôi khi cần scale nhẹ để không bị mất lề */
+                transform-origin: top center;
             }
         }
         
@@ -163,6 +178,15 @@
     const runTool = async () => {
         const bottomNav = document.getElementById('tgdd-bottom-nav');
         if(bottomNav) bottomNav.style.display = 'none';
+
+        // 1. KIỂM TRA THIẾT BỊ VÀ GẮN CLASS
+        if (isMobile()) {
+            document.body.classList.add('is-mobile-device');
+            console.log("Đang chạy chế độ in cho Mobile");
+        } else {
+            document.body.classList.remove('is-mobile-device');
+            console.log("Đang chạy chế độ in cho PC");
+        }
 
         let state = {
             groupedTemplates: {},
@@ -180,7 +204,10 @@
                 <div class="pr-content">
                     <div class="pr-header">
                         <div class="pr-top-bar">
-                            <div class="pr-title">🖨️ <span>IN ẤN TỰ ĐỘNG</span></div>
+                            <div class="pr-title">
+                                🖨️ <span>IN ẤN TỰ ĐỘNG</span>
+                                ${isMobile() ? '<small style="color:red; font-size:0.8em; margin-left:5px">(Mobile Mode)</small>' : ''}
+                            </div>
                             <div class="pr-actions">
                                 <button class="pr-btn pr-btn-print" id="btn-pr-exec" disabled>🖨️ IN NGAY</button>
                                 <button class="pr-btn pr-btn-close" id="btn-pr-close">×</button>
@@ -211,6 +238,7 @@
 
             $('btn-pr-close').onclick = () => { 
                 modal.style.display = 'none'; 
+                document.body.classList.remove('is-mobile-device'); // Dọn dẹp class khi đóng
                 if(bottomNav) bottomNav.style.display = 'flex';
             };
             
@@ -221,6 +249,7 @@
 
         modal.style.display = 'flex';
         
+        // --- Phần tải Template giữ nguyên ---
         if(Object.keys(state.groupedTemplates).length === 0) {
             try {
                 const fetchPromises = TEMPLATE_URLS.map(url => 
@@ -360,6 +389,7 @@
                 const oldShadow = a4.style.boxShadow;
                 a4.style.boxShadow = 'none';
 
+                // Tăng scale lên 2 để ảnh nét hơn
                 const canvas = await html2canvas(a4, {
                     scale: 2, 
                     useCORS: true,
@@ -372,6 +402,7 @@
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
                 $('pr-print-image').src = dataUrl;
 
+                // Gọi lệnh in hệ thống
                 window.print();
 
             } catch (err) {
@@ -388,7 +419,7 @@
     };
 
     return {
-        name: "In ấn",
+        name: "In ấn (Mobile Fix)",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 12v2H8v-2h8zm2-2v-2H6v2H4v-4c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v4h-2z" fill="white"/></svg>`,
         bgColor: "#e17055",
         css: MY_CSS,
