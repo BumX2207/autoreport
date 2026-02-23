@@ -107,7 +107,7 @@
         if(bottomNav) bottomNav.style.display = 'none';
 
         // MẶC ĐỊNH: Mobile zoom 115% (1.15), PC zoom 100% (1.0)
-        let currentZoom = isMobile() ? 1.15 : 1.0;
+        let currentZoom = isMobile() ? 1.04 : 1.09;
 
         let state = {
             groupedTemplates: {},
