@@ -39,7 +39,7 @@
         .nt-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px; }
         .nt-btn-send { background: linear-gradient(135deg, #FF9800, #EF6C00); color: white; box-shadow: 0 4px 10px rgba(255, 152, 0, 0.3); }
         .nt-btn-send:active { transform: scale(0.98); }
-        .nt-btn-clear { background: #f5f5f5; color: #666; border: 1px solid #ddd; max-width: 100px; }
+        .nt-btn-clear { background: #f5f5f5; color: #666; border: 1px solid #ddd; max-width: 50%; }
         .nt-btn-reload { background: none; border: none; color: #007bff; cursor: pointer; font-size: 12px; font-weight: normal; }
 
         .nt-loader { text-align: center; padding: 30px; color: #888; font-size: 13px; }
