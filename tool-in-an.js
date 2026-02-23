@@ -1,14 +1,17 @@
 /* 
-   MODULE: IN ẤN (PRINT TOOL) - V4.1 (FIX FIT PAGE A4)
-   - Chụp ảnh khung A4 trước khi in.
-   - Ép ảnh tràn viền 100% lấp đầy giấy.
+   MODULE: IN ẤN (PRINT TOOL) - V4.2 (FIX MOBILE PRINTING)
+   - Khắc phục lỗi cắt viền 2 bên trên điện thoại.
+   - Chặn tuyệt đối lỗi nhảy sang trang 2.
 */
 ((context) => {
     const { UI, AUTH_STATE } = context;
 
     const TEMPLATE_URLS = [
         'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan-1.html',
-        'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan-2.html'
+        'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan-2.html',
+        'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan-4.html',
+        'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan-6.html',
+        'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan-8.html'
     ];
 
     // ===============================================================
@@ -42,7 +45,7 @@
 
         .pr-body { flex:1; overflow:auto; display:flex; justify-content:center; padding:20px; background:#555; }
         
-        /* KHUNG A4 TRÊN MÀN HÌNH */
+        /* KHUNG A4 TRÊN MÀN HÌNH CHỜ (Hiển thị preview) */
         .pr-a4-page { 
             width: 794px; 
             height: 1123px; 
@@ -83,36 +86,68 @@
         .pr-qty-btn.pr-qty-active { background:#3498db; color:white; }
 
         /* =========================================================
-           MEDIA PRINT (ÉP CHUẨN A4 BẰNG BỨC ẢNH SNAPSHOT)
+           MEDIA PRINT (ĐÃ TỐI ƯU CẢ MOBILE & PC)
            ========================================================= */
         @media print {
-            @page { size: A4 portrait; margin: 0 !important; }
-            html, body { margin: 0 !important; padding: 0 !important; width: 100% !important; height: 100% !important; background: white !important; }
+            @page { 
+                size: A4 portrait; 
+                margin: 0 !important; 
+            }
+            
+            /* overflow: hidden ở thẻ html và body triệt tiêu hoàn toàn trang số 2 */
+            html, body { 
+                margin: 0 !important; 
+                padding: 0 !important; 
+                width: 100% !important; 
+                height: 100% !important; 
+                background: white !important; 
+                overflow: hidden !important; 
+            }
+            
             body * { visibility: hidden !important; }
             #tgdd-print-modal, #tgdd-print-modal * { visibility: visible !important; }
             
-            #tgdd-print-modal { position:absolute !important; left:0 !important; top:0 !important; width:100vw !important; height:100vh !important; z-index:2147483800; display:block !important; margin:0 !important; padding:0 !important; background: white !important; }
-            .pr-header, .pr-qty-overlay, .pr-body { display:none !important; }
-
-            /* 2. ÉP KHUNG ẢNH RỘNG 100% TỜ GIẤY */
-            #pr-print-image-wrap { 
+            #tgdd-print-modal { 
+                position: absolute !important; 
+                left: 0 !important; 
+                top: 0 !important; 
+                width: 100% !important; 
+                height: 100% !important; 
+                z-index: 2147483800; 
                 display: block !important; 
+                margin: 0 !important; 
+                padding: 0 !important; 
+                background: white !important; 
+            }
+            
+            .pr-header, .pr-qty-overlay, .pr-body { display: none !important; }
+
+            /* Thiết lập khung bao quanh bức ảnh bám dính vào giấy */
+            #pr-print-image-wrap { 
+                display: flex !important; 
+                justify-content: center !important;
+                align-items: center !important;
                 position: absolute !important;
                 top: 0 !important;
                 left: 0 !important;
-                width: 100vw !important; 
-                height: 100vh !important; 
+                width: 100% !important; 
+                height: 100% !important; 
                 margin: 0 !important; 
                 padding: 0 !important;
                 background: white;
+                page-break-after: avoid !important;
+                page-break-inside: avoid !important;
             }
+            
+            /* Dùng object-fit: contain để ảnh TỰ THU NHỎ HIỂN THỊ ĐỦ 100% NỘI DUNG */
             #pr-print-image { 
-                width: 100vw !important; 
-                height: 100vh !important; 
-                object-fit: cover !important; /* Dùng cover để triệt tiêu mọi khe hở trắng */
+                max-width: 100% !important; 
+                max-height: 100% !important; 
+                width: auto !important;
+                height: auto !important;
+                object-fit: contain !important; 
                 display: block !important;
-                margin: 0 !important;
-                padding: 0 !important;
+                margin: 0 auto !important;
             }
         }
         
@@ -322,8 +357,6 @@
                 if(document.activeElement) document.activeElement.blur();
 
                 const a4 = $('pr-a4');
-                
-                // MẸO QUAN TRỌNG: Tắt bóng đổ (box-shadow) để lúc chụp html2canvas ko bị dính phần bóng dư thừa vào ảnh
                 const oldShadow = a4.style.boxShadow;
                 a4.style.boxShadow = 'none';
 
@@ -334,7 +367,6 @@
                     logging: false
                 });
 
-                // Bật bóng đổ lại sau khi chụp xong
                 a4.style.boxShadow = oldShadow;
 
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
@@ -356,7 +388,7 @@
     };
 
     return {
-        name: "In ấn Pro V4.1",
+        name: "In ấn",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 12v2H8v-2h8zm2-2v-2H6v2H4v-4c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v4h-2z" fill="white"/></svg>`,
         bgColor: "#e17055",
         css: MY_CSS,
