@@ -40,7 +40,7 @@
         .rm-label { font-size:11px; font-weight:bold; color:#555; display:block; margin-bottom:3px; }
         .rm-input, .rm-select { width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; box-sizing: border-box; font-size:13px; height: 34px; }
         .rm-input:focus, .rm-select:focus { border-color:#ff9800; outline:none; }
-        .rm-group-box { max-height:100px; overflow-y:auto; border:1px solid #eee; border-radius:6px; padding:5px; background:#fff; }
+        .rm-group-box { min-height:100px; max-height:110px; overflow-y:auto; border:1px solid #eee; border-radius:6px; padding:5px; background:#fff; }
         .rm-hidden { display: none !important; }
         .rm-btn { width:100%; padding:10px; border:none; color:white; font-weight:bold; border-radius:8px; cursor:pointer; margin-top:5px; transition: 0.2s; }
         .rm-btn-add { background:#4caf50; }
