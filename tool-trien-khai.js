@@ -19,7 +19,7 @@
         .dp-form { border-top:2px solid #eee; padding-top:10px; flex-shrink:0; background:#fff; }
         .dp-label { font-size:11px; font-weight:bold; color:#555; display:block; margin-bottom:3px; }
         .dp-input { width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; box-sizing: border-box; font-size:13px; }
-        .dp-group-box { min-height:100px; overflow-y:auto; border:1px solid #eee; border-radius:6px; padding:5px; background:#fff; }
+        .dp-group-box { min-height:100px; max-height:110px; overflow-y:auto; border:1px solid #eee; border-radius:6px; padding:5px; background:#fff; }
         .dp-toggle { display:flex; align-items:center; gap:5px; cursor:pointer; font-size:12px; font-weight:bold; color:#28a745; margin-bottom:5px; }
         .dp-btn { width:100%; padding:10px; border:none; color:white; font-weight:bold; border-radius:8px; cursor:pointer; margin-top:5px; }
         .dp-btn-add { background:#28a745; }
