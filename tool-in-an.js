@@ -1,8 +1,8 @@
 /* 
-   MODULE: IN ẤN (PRINT TOOL) - V6.0 (IFRAME INJECTION - PRO MODE)
-   - Kỹ thuật: Tạo một "trang web ảo" (Iframe) bên trong trang hiện tại.
-   - Ưu điểm: Cô lập hoàn toàn môi trường in, không bị ảnh hưởng bởi giao diện App.
-   - Mobile: Tự động ép CSS đè lên thiết lập mặc định của máy để tràn lề tối đa.
+   MODULE: IN ẤN (PRINT TOOL) - V6.1 (ULTRA SHARP)
+   - Tăng độ phân giải ảnh (Scale 4.0) -> Chữ nét căng.
+   - Chuyển sang định dạng PNG (Lossless) để không bị nhòe nét.
+   - Vẫn giữ cơ chế Iframe Injection để in full khổ giấy.
 */
 ((context) => {
     // Check thiết bị
@@ -10,14 +10,11 @@
 
     const TEMPLATE_URLS = [
         'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan-1.html',
-        'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan-2.html',
-        'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan-4.html',
-        'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan-6.html',
-        'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan-8.html'
+        'https://raw.githubusercontent.com/BumX2207/print/refs/heads/main/the-thanh-toan-2.html'
     ];
 
     // ===============================================================
-    // CSS STYLE GIAO DIỆN TOOL (Không ảnh hưởng bản in)
+    // CSS STYLE GIAO DIỆN
     // ===============================================================
     const MY_CSS = `
         #tgdd-print-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2147483800; font-family: sans-serif; flex-direction:column; }
@@ -62,10 +59,9 @@
     };
 
     // ===============================================================
-    // HÀM IN QUA IFRAME (CORE CỦA V6)
+    // HÀM IN QUA IFRAME (CORE CỦA V6.1)
     // ===============================================================
     const printViaIframe = (dataUrl) => {
-        // 1. Tạo iframe ẩn
         let iframe = document.getElementById('pr-hidden-iframe');
         if (iframe) document.body.removeChild(iframe);
         
@@ -79,13 +75,9 @@
         iframe.style.border = '0';
         document.body.appendChild(iframe);
 
-        // 2. Soạn thảo nội dung HTML cho Iframe
-        // Đây là nơi phép màu xảy ra: Ta thiết lập CSS ép khổ giấy
         const doc = iframe.contentWindow.document;
         
-        // CSS ép lề: 
-        // - width: 100% để full chiều ngang
-        // - transform: scale(1.04) để phóng to nhẹ (4%) nhằm tràn qua Safe Margin của điện thoại
+        // CSS ép lề + Scale cho mobile
         const mobileStyle = isMobile() ? `
             width: 100%;
             height: auto;
@@ -104,20 +96,15 @@
             <head>
                 <title>IN AN TU DONG</title>
                 <style>
-                    @page { 
-                        size: A4 portrait; 
-                        margin: 0 !important; 
-                    }
+                    @page { size: A4 portrait; margin: 0 !important; }
                     html, body {
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        width: 100%;
-                        height: 100%;
-                        overflow: hidden;
+                        margin: 0 !important; padding: 0 !important;
+                        width: 100%; height: 100%; overflow: hidden;
                     }
                     #print-img {
-                        display: block;
-                        margin: 0 auto;
+                        display: block; margin: 0 auto;
+                        /* Quan trọng: image-rendering giúp ảnh không bị nhòe khi thu nhỏ hiển thị */
+                        image-rendering: -webkit-optimize-contrast; 
                         ${mobileStyle}
                     }
                 </style>
@@ -128,8 +115,6 @@
             </html>
         `);
         doc.close();
-
-        // Lưu ý: Lệnh window.print() đã được nhúng vào sự kiện onload của thẻ img bên trong iframe
     };
 
     // ===============================================================
@@ -150,7 +135,7 @@
                 <div class="pr-content">
                     <div class="pr-header">
                         <div class="pr-top-bar">
-                            <div class="pr-title">🖨️ IN SIÊU TỐC (V6)</div>
+                            <div class="pr-title">🖨️ IN ẤN</div>
                             <div class="pr-actions">
                                 <button class="pr-btn pr-btn-print" id="btn-pr-exec" disabled>🖨️ IN NGAY</button>
                                 <button class="pr-btn pr-btn-close" id="btn-pr-close">×</button>
@@ -159,7 +144,7 @@
                         <div class="pr-list-scroll" id="pr-list"></div>
                     </div>
                     <div class="pr-body">
-                        <div class="pr-loading" id="pr-loading">Đang tải cấu trúc...</div>
+                        <div class="pr-loading" id="pr-loading">Đang tải ...</div>
                         <div id="pr-a4" class="pr-a4-page" style="display:none;"></div>
                     </div>
                     <div class="pr-qty-overlay" id="pr-qty-overlay">
@@ -177,7 +162,7 @@
         }
         modal.style.display = 'flex';
         
-        // TẢI TEMPLATE (Giữ nguyên logic cũ)
+        // TẢI TEMPLATE
         if(Object.keys(state.groupedTemplates).length === 0) {
             try {
                 const fetchPromises = TEMPLATE_URLS.map(url => 
@@ -238,7 +223,7 @@
                 const btn = document.createElement('button');
                 btn.className = 'pr-qty-btn';
                 if(group.baseUrl === state.activeBaseUrl && state.activeQty === q) btn.classList.add('pr-qty-active');
-                btn.innerText = `Bản ${q} tem`;
+                btn.innerText = `Số lượng: ${q}`;
                 btn.onclick = () => { state.activeBaseUrl = group.baseUrl; state.activeQty = q; $('pr-qty-overlay').style.display = 'none'; renderMenuList(); renderA4(); };
                 btnContainer.appendChild(btn);
             });
@@ -252,12 +237,12 @@
         };
 
         // =======================================================
-        // XỬ LÝ SỰ KIỆN IN (V6)
+        // XỬ LÝ SỰ KIỆN IN (V6.1 - HIGH RESOLUTION)
         // =======================================================
         $('btn-pr-exec').onclick = async () => { 
             const btn = $('btn-pr-exec');
             const originalText = btn.innerText;
-            btn.innerText = '⚙️ ĐANG XỬ LÝ...';
+            btn.innerText = '📸 ĐANG XỬ LÝ ẢNH...';
             btn.disabled = true;
 
             try {
@@ -268,23 +253,32 @@
                 const oldShadow = a4.style.boxShadow;
                 a4.style.boxShadow = 'none';
 
-                // Tăng scale lên 2 để ảnh nét căng khi in
-                const canvas = await html2canvas(a4, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+                // --- CẤU HÌNH ĐỘ NÉT ---
+                // PC: Scale 4 (Rất nét). Mobile: Scale 3 (Nét & an toàn cho RAM điện thoại)
+                const renderScale = isMobile() ? 3 : 4; 
+
+                const canvas = await html2canvas(a4, { 
+                    scale: renderScale, 
+                    useCORS: true, 
+                    backgroundColor: '#ffffff',
+                    // Tắt logging để tăng tốc
+                    logging: false 
+                });
                 a4.style.boxShadow = oldShadow;
 
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+                // CHUYỂN SANG PNG (Lossless) THAY VÌ JPEG
+                const dataUrl = canvas.toDataURL('image/png');
 
-                // GỌI HÀM IN QUA IFRAME
+                btn.innerText = '🖨️ ĐANG GỬI MÁY IN...';
                 printViaIframe(dataUrl);
 
             } catch (err) {
                 alert("Lỗi: " + err.message);
             } finally {
-                // Đợi 1 chút để lệnh in kịp kích hoạt trước khi mở nút
                 setTimeout(() => {
                     btn.innerText = originalText;
                     btn.disabled = false;
-                }, 1000);
+                }, 2000);
             }
         };
 
@@ -293,7 +287,7 @@
     };
 
     return {
-        name: "In Siêu Tốc (V6)",
+        name: "In ấn",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 12v2H8v-2h8zm2-2v-2H6v2H4v-4c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v4h-2z" fill="white"/></svg>`,
         bgColor: "#e17055",
         css: MY_CSS,
