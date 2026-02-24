@@ -7,7 +7,7 @@ const SHEET_GID = '984479015';
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SHEET_GID}`;
 
 // ===============================================================
-// 2. CSS GIAO DIỆN (Đã sửa lỗi tràn khung tr-paper)
+// 2. CSS GIAO DIỆN
 // ===============================================================
 const MY_CSS = `
     #truyen-app { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#f8f9fa; z-index:2147483800; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; flex-direction:column; overflow:hidden; }
@@ -39,14 +39,12 @@ const MY_CSS = `
     .tr-btn-play:hover { background:#55efc4; }
     .tr-btn-stop { background:#d63031; }
     
-    /* FIX TRÀN KHUNG TẠI ĐÂY */
     .tr-reader-content-wrap { flex:1; overflow-y:auto; padding:20px; scroll-behavior: smooth; display:flex; justify-content:center; align-items:flex-start; }
     .tr-paper { background:#fff; max-width:800px; width:100%; padding:30px 40px; border-radius:8px; box-shadow:0 5px 20px rgba(0,0,0,0.05); height:fit-content; margin-bottom: 50px; }
     
     .tr-story-title { font-size:24px; font-weight:bold; color:#2d3436; text-align:center; margin-bottom:5px;}
     .tr-chapter-title { font-size:18px; color:#e17055; text-align:center; margin-bottom:15px; font-weight:600;}
     
-    /* TOOLBAR CHUYỂN CHƯƠNG */
     .tr-nav-bar { display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:30px; padding-bottom:15px; border-bottom:1px dashed #ddd;}
     .tr-nav-btn { padding:6px 15px; background:#e17055; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer; transition:0.2s; }
     .tr-nav-btn:hover { background:#d63031; }
@@ -129,6 +127,9 @@ const runTool = async () => {
     const $ = (id) => document.getElementById(id);
     let synth = window.speechSynthesis;
     
+    // Khởi tạo giọng đọc ngay từ đầu để trình duyệt kịp nạp
+    synth.getVoices();
+    
     // STATE APP
     let stories = [];
     let genres = new Set();
@@ -138,7 +139,6 @@ const runTool = async () => {
     let currentSentences = [];
     let currentSentenceIndex = 0;
     
-    // BIẾN LƯU DỮ LIỆU TẢI TRƯỚC (PRELOAD)
     let preloadedData = { chapNum: null, contentHtml: null, contentArr: null };
 
     // TẠO DOM APP
@@ -154,14 +154,10 @@ const runTool = async () => {
             
             <div id="tr-view-home" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
                 <div class="tr-toolbar">
-                    <div class="tr-search-box">
-                        <input type="text" id="tr-search" placeholder="🔍 Tìm kiếm tên truyện...">
-                    </div>
+                    <div class="tr-search-box"><input type="text" id="tr-search" placeholder="🔍 Tìm kiếm tên truyện..."></div>
                     <select class="tr-filter" id="tr-filter"><option value="all">Tất cả thể loại</option></select>
                 </div>
-                <div class="tr-home-body" id="tr-grid">
-                    <div style="width:100%; text-align:center; padding:50px; color:#888;">⏳ Đang tải danh sách truyện...</div>
-                </div>
+                <div class="tr-home-body" id="tr-grid"><div style="width:100%; text-align:center; padding:50px; color:#888;">⏳ Đang tải danh sách truyện...</div></div>
             </div>
 
             <div id="tr-view-reader" class="tr-reader-view">
@@ -176,7 +172,6 @@ const runTool = async () => {
                         <div class="tr-story-title" id="tr-read-title">Tên Truyện</div>
                         <div class="tr-chapter-title" id="tr-read-chap">Chương 1</div>
                         
-                        <!-- TOOLBAR ĐIỀU HƯỚNG CHƯƠNG -->
                         <div class="tr-nav-bar">
                             <button class="tr-nav-btn" id="btn-prev-chap">⬅️ Trước</button>
                             <select class="tr-nav-select" id="sel-chap"></select>
@@ -202,7 +197,7 @@ const runTool = async () => {
     app.style.display = 'flex';
 
     // -----------------------------------------------------
-    // LOAD DỮ LIỆU
+    // LOAD DỮ LIỆU TỪ SHEET
     // -----------------------------------------------------
     const loadDataFromSheet = async () => {
         try {
@@ -244,7 +239,7 @@ const runTool = async () => {
     $('tr-filter').onchange = $('tr-search').oninput;
 
     // -----------------------------------------------------
-    // LOGIC BÓC TÁCH NỘI DUNG (DÙNG CHUNG CHO FETCH & PRELOAD)
+    // LOGIC URL & BÓC TÁCH TEXT
     // -----------------------------------------------------
     const getChapterUrl = (baseLink, chapNum) => {
         if(baseLink.match(/chuong-\d+/)) return baseLink.replace(/chuong-\d+/, `chuong-${chapNum}`);
@@ -273,20 +268,20 @@ const runTool = async () => {
     };
 
     // -----------------------------------------------------
-    // LOGIC ĐỌC TRUYỆN, PRELOAD & NAVIGATION
+    // LOGIC ĐỌC TRUYỆN: HIỂN THỊ TRƯỚC -> PRELOAD SAU (SỬA LỖI TREO APP)
     // -----------------------------------------------------
     const updateNavUI = () => {
         $('btn-prev-chap').disabled = (currentChapter <= 1);
         $('btn-next-chap').disabled = (currentChapter >= currentStory.total);
         
-        const sel = $('sel-chap');
-        sel.innerHTML = '';
+        // Tối ưu hoá việc render Select Dropdown để không bị treo màn hình khi truyện quá dài
+        let optionsHTML = [];
         for(let i=1; i<=currentStory.total; i++){
-            sel.innerHTML += `<option value="${i}" ${i === currentChapter ? 'selected' : ''}>Chương ${i}</option>`;
+            optionsHTML.push(`<option value="${i}" ${i === currentChapter ? 'selected' : ''}>Chương ${i}</option>`);
         }
+        $('sel-chap').innerHTML = optionsHTML.join(''); // Vẽ 1 lần duy nhất cực nhanh
     };
 
-    // Hàm tải âm thầm (Preload)
     const preloadNextChapter = async (chapNum) => {
         if (chapNum > currentStory.total) return;
         try {
@@ -294,8 +289,7 @@ const runTool = async () => {
             const htmlText = await fetchWithFallbacks(targetUrl);
             const parsed = parseChapterHTML(htmlText);
             preloadedData = { chapNum: chapNum, contentHtml: parsed.finalHtml, contentArr: parsed.cleanArr };
-            console.log("Đã tải ngầm xong Chương " + chapNum);
-        } catch (e) { console.warn("Lỗi tải ngầm", e); preloadedData = { chapNum: null }; }
+        } catch (e) { preloadedData = { chapNum: null }; }
     };
 
     const openStory = async (story) => {
@@ -307,83 +301,90 @@ const runTool = async () => {
     const loadAndDisplayChapter = async (chapNum) => {
         stopTTS();
         currentChapter = chapNum;
+        
+        // LUÔN BẬT THÔNG BÁO KHI TẢI CHƯƠNG MỚI (Trừ khi có Preload tốc độ cao)
         $('tr-load-msg').innerText = `Đang tải: ${currentStory.name} - Chương ${currentChapter}...`;
         $('tr-loading').style.display = 'flex';
-        updateNavUI();
 
         try {
             let data = null;
-            // KỂM TRA XEM ĐÃ CÓ DATA TỪ PRELOAD CHƯA
             if (preloadedData.chapNum === currentChapter) {
+                // Dùng data tải ngầm
                 data = { finalHtml: preloadedData.contentHtml, cleanArr: preloadedData.contentArr };
-                console.log("Dùng data Preload siêu tốc!");
             } else {
-                // Nếu chưa có (hoặc người dùng nhảy cóc chương) -> Fetch bình thường
+                // Tải trực tiếp nếu chưa có preload
                 const targetUrl = getChapterUrl(currentStory.link, currentChapter);
                 const htmlText = await fetchWithFallbacks(targetUrl);
                 data = parseChapterHTML(htmlText);
             }
 
-            // Hiển thị ra màn hình
+            // In nội dung ra màn hình
             $('tr-read-title').innerText = currentStory.name;
             $('tr-read-chap').innerText = `Chương ${currentChapter} / ${currentStory.total}`;
             $('tr-read-text').innerHTML = data.finalHtml;
+            
+            updateNavUI(); // Load nút điều hướng siêu mượt
+            
             currentSentences = data.cleanArr.join('. ').match(/[^.!?\n]+[.!?\n]+/g) || data.cleanArr;
             currentSentenceIndex = 0;
 
             $('tr-loading').style.display = 'none';
             $('tr-content-wrap').scrollTop = 0;
 
-            // Lập tức kích hoạt Preload chương tiếp theo (Âm thầm)
+            // SAU KHI ĐÃ HIỂN THỊ XONG -> MỚI ÂM THẦM TẢI NGẦM CHƯƠNG TIẾP THEO
             if (currentChapter < currentStory.total) {
-                setTimeout(() => preloadNextChapter(currentChapter + 1), 500);
+                setTimeout(() => { preloadNextChapter(currentChapter + 1); }, 1500);
             }
 
         } catch (e) {
             $('tr-loading').style.display = 'none';
-            $('tr-read-text').innerHTML = `<p style="color:red;">Lỗi: ${e.message}</p>`;
+            $('tr-read-text').innerHTML = `<p style="color:red;">Lỗi tải chương: ${e.message}</p>`;
         }
     };
 
-    // Sự kiện Nút điều hướng
     $('btn-prev-chap').onclick = () => { if(currentChapter > 1) loadAndDisplayChapter(currentChapter - 1); };
     $('btn-next-chap').onclick = () => { if(currentChapter < currentStory.total) loadAndDisplayChapter(currentChapter + 1); };
     $('sel-chap').onchange = (e) => { loadAndDisplayChapter(parseInt(e.target.value)); };
 
     // -----------------------------------------------------
-    // LOGIC TTS (ÉP GIỌNG NỮ, RATE 1.3, PITCH 1.1)
+    // LOGIC TTS (FIX TRIỆT ĐỂ LỖI GIỌNG NAM / TIẾNG ANH)
     // -----------------------------------------------------
-    // Ép load giọng ngay khi khởi động để Chrome không bị nghẹn
-    let voiceList = [];
-    const fetchVoices = () => { voiceList = synth.getVoices(); };
-    fetchVoices();
-    if(speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = fetchVoices;
-
     const getVietnameseFemaleVoice = () => {
-        if (voiceList.length === 0) fetchVoices();
-        // Lọc tất cả giọng Tiếng Việt
-        let viVoices = voiceList.filter(v => v.lang === 'vi-VN' || v.lang === 'vi_VN' || v.lang.includes('vi'));
+        let voices = synth.getVoices();
+        // Lọc tất cả giọng chứa mã ngôn ngữ Việt Nam
+        let viVoices = voices.filter(v => v.lang.toLowerCase().includes('vi'));
+        
+        // Nếu trình duyệt chưa load kịp, ép dùng thuộc tính lang vi-VN
         if (viVoices.length === 0) return null;
 
-        // Ưu tiên 1: Google Tiếng Việt (Thường mặc định là Nữ trên Chrome)
-        let googleVoice = viVoices.find(v => v.name.includes('Google') || v.name.includes('Google Tiếng Việt'));
-        // Ưu tiên 2: Microsoft HoaiMy (Giọng Nữ chuẩn của Edge)
+        // Ưu tiên 1: Google Tiếng Việt (Thường là giọng Nữ trên Chrome PC/Android)
+        let googleVoice = viVoices.find(v => v.name.includes('Google') || v.name.includes('Tiếng Việt'));
+        
+        // Ưu tiên 2: Giọng Hoài My (Nữ chuẩn của Microsoft Edge)
         let hoaimyVoice = viVoices.find(v => v.name.includes('HoaiMy'));
-        // Loại trừ giọng Nam của Edge (An)
-        let otherVoices = viVoices.filter(v => !v.name.includes(' An '));
+        
+        // Ưu tiên 3: Giọng Mai (Apple Safari)
+        let maiVoice = viVoices.find(v => v.name.includes('Mai'));
 
-        return googleVoice || hoaimyVoice || otherVoices[0] || viVoices[0];
+        // Loại bỏ giọng Nam của Edge tên là "An"
+        let fallbackVoice = viVoices.find(v => !v.name.includes(' An '));
+
+        return googleVoice || hoaimyVoice || maiVoice || fallbackVoice || viVoices[0];
     };
 
     const setupUtterance = (text, isSystemMsg = false) => {
         let u = new SpeechSynthesisUtterance(text);
+        
+        // Bắt buộc khai báo ngôn ngữ (Giúp Chrome nhận dạng tự tải data nếu thiếu)
+        u.lang = 'vi-VN'; 
+        
         const voice = getVietnameseFemaleVoice();
         if(voice) u.voice = voice;
-        u.lang = 'vi-VN';
         
-        // THIẾT LẬP THEO YÊU CẦU: TỐC ĐỘ 1.3, CAO ĐỘ 1.1
+        // THIẾT LẬP: TỐC ĐỘ 1.3, CAO ĐỘ 1.1 (Giọng nữ trong trẻo)
         u.rate = isSystemMsg ? 1.4 : 1.3; 
         u.pitch = 1.1; 
+        
         return u;
     };
 
@@ -407,15 +408,17 @@ const runTool = async () => {
             if(isReading) speakNextSentence();
         };
 
+        // Bắt lỗi nếu API bị lỗi
+        u.onerror = (e) => { console.warn("TTS Error: ", e); isReading = false; };
+
         synth.speak(u);
         
-        // Highlight logic
+        // Đổi màu highlight câu đang đọc
         const pTags = $('tr-read-text').querySelectorAll('p');
         pTags.forEach(p => p.classList.remove('tr-reading-active'));
         for(let p of pTags) {
             if(p.innerText.includes(sentence.substring(0, 15))) {
                 p.classList.add('tr-reading-active');
-                // Cuộn mượt theo chữ
                 p.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 break;
             }
@@ -425,15 +428,13 @@ const runTool = async () => {
     const handleChapterFinished = () => {
         isReading = false;
         if(currentChapter < currentStory.total) {
-            speakSystemMsg(`Đã đọc xong chương ${currentChapter}, đang tải chương mới.`, async () => {
+            speakSystemMsg(`Đã đọc xong chương ${currentChapter}, chuyển sang chương mới.`, async () => {
                 await loadAndDisplayChapter(currentChapter + 1);
                 isReading = true;
                 speakNextSentence();
             });
         } else {
-            speakSystemMsg("Đã đọc xong toàn bộ truyện. Cảm ơn bạn.", () => {
-                alert("Chúc mừng! Bạn đã hoàn thành bộ truyện này.");
-            });
+            speakSystemMsg("Đã đọc xong bộ truyện. Cảm ơn bạn.", () => { alert("Bạn đã đọc hết truyện!"); });
         }
     };
 
@@ -442,6 +443,8 @@ const runTool = async () => {
     $('btn-read-play').onclick = () => {
         if (!isReading) {
             isReading = true;
+            // Ép load lại VoiceList trước khi phát để chống lỗi Chrome
+            synth.getVoices();
             if(synth.paused) synth.resume();
             else speakNextSentence();
         }
@@ -450,11 +453,12 @@ const runTool = async () => {
     $('btn-read-pause').onclick = () => { isReading = false; synth.pause(); };
     $('btn-read-stop').onclick = () => { stopTTS(); currentSentenceIndex = 0; $('tr-read-text').querySelectorAll('p').forEach(p => p.classList.remove('tr-reading-active'));};
 
+    // Khởi chạy App
     loadDataFromSheet();
 };
 
 return {
-    name: "Đọc Truyện App",
+    name: "Đọc Truyện V1",
     icon: `<svg viewBox="0 0 24 24"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.15C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zM21 18.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z" fill="white"/></svg>`,
     bgColor: "#0984e3",
     css: MY_CSS,
