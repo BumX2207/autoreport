@@ -6,12 +6,12 @@
     const SHEET_GID = '984479015';
     const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SHEET_GID}`;
     
-    // Khóa lưu trữ lịch sử đọc cục bộ (dự phòng)
+    // Khóa lưu trữ lịch sử đọc cục bộ
     const PROGRESS_KEY = 'tgdd_story_progress_v1';
     
     // Lấy thông tin User và API từ Auto BI Context
     const USER_NAME = context.AUTH_STATE ? context.AUTH_STATE.userName : 'Khách';
-    const API_URL = context.CONSTANTS.GSHEET.CONFIG_API; // Dùng API có sẵn của Auto BI
+    const API_URL = context.CONSTANTS.GSHEET.CONFIG_API; 
     
     // ===============================================================
     // 2. CSS GIAO DIỆN
@@ -24,13 +24,13 @@
         .tr-logo { font-size:20px; font-weight:900; color:#e17055; display:flex; align-items:center; gap:8px; cursor:pointer;}
         .tr-btn-close { background:#fab1a0; color:#d63031; border:none; border-radius:50%; width:32px; height:32px; font-weight:bold; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; }
         
-        /* USER INFO BAR (Yêu cầu 2) */
+        /* USER INFO BAR */
         .tr-user-bar { background:#2d3436; color:#dfe6e9; padding:5px 20px; font-size:12px; display:flex; justify-content:space-between; align-items:center; font-weight:bold; }
         .tr-user-name { color: #00cec9; }
 
-        /* TOOLBAR (Yêu cầu 3 - Luôn 1 hàng) */
+        /* TOOLBAR */
         .tr-toolbar { background:#fff; padding:10px 20px; border-bottom:1px solid #eee; display:flex; gap:10px; z-index:15; flex-wrap:nowrap; align-items:center; }
-        .tr-search-box { flex:1; display:flex; min-width: 0; /* Cho phép co nhỏ */ }
+        .tr-search-box { flex:1; display:flex; min-width: 0; }
         .tr-search-box input { width:100%; padding:8px 15px; border:1px solid #ddd; border-radius:20px; outline:none; font-size:14px; transition:0.3s; }
         .tr-search-box input:focus { border-color:#e17055; box-shadow:0 0 5px rgba(225,112,85,0.3); }
         .tr-filter { padding:8px 10px; border:1px solid #ddd; border-radius:20px; outline:none; font-size:14px; background:#fff; cursor:pointer; width: 130px; flex-shrink: 0; text-overflow: ellipsis;}
@@ -52,7 +52,6 @@
         /* READER VIEW */
         .tr-reader-view { display:none; flex:1; flex-direction:column; background:#f4f5f7; overflow:hidden; position:relative; }
         
-        /* TOOLBAR ĐỌC & SETTINGS (Yêu cầu 4) */
         .tr-reader-tools { background:#2d3436; padding:10px 20px; display:flex; justify-content:center; gap:10px; z-index:10; position: relative; flex-wrap: wrap;}
         .tr-btn-tool { background:#636e72; color:white; border:none; padding:8px 15px; border-radius:20px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s; white-space: nowrap;}
         .tr-btn-tool:hover { background:#b2bec3; color:#2d3436; }
@@ -60,8 +59,9 @@
         .tr-btn-play:hover { background:#55efc4; }
         .tr-btn-stop { background:#d63031; }
         .tr-btn-settings { background:#0984e3; } 
-    
-        /* BẢNG CÀI ĐẶT (Yêu cầu 4) */
+        .tr-btn-sleep { background:#6c5ce7; } /* Nút chế độ treo máy */
+
+        /* BẢNG CÀI ĐẶT */
         .tr-settings-panel {
             position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
             background: white; padding: 15px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.2);
@@ -93,6 +93,17 @@
     
         .tr-loading-overlay { position:absolute; top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.95); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:50; font-weight:bold; font-size:16px; color:#e17055;}
         
+        /* MÀN HÌNH TREO MÁY (FAKE LOCK SCREEN) */
+        #tr-fake-lock-screen {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000000; z-index: 2147483999; 
+            flex-direction: column; justify-content: center; align-items: center;
+            color: #444; user-select: none;
+        }
+        .tr-fake-clock { font-size: 40px; font-weight: bold; color: #222; margin-bottom: 20px; }
+        .tr-fake-hint { font-size: 14px; color: #333; animation: breathe 3s infinite; }
+        @keyframes breathe { 0%, 100% {opacity: 0.3} 50% {opacity: 0.8} }
+
         /* MOBILE RESPONSIVE */
         @media (max-width: 768px) {
             .tr-card { width:calc(33.33% - 15px); }
@@ -182,11 +193,14 @@
         let isResuming = false;
         let preloadedData = { chapNum: null, contentHtml: null, contentArr: null };
 
-        // SETTINGS STATE (Yêu cầu 4)
+        // SETTINGS STATE
         let ttsRate = 1.3;
         let ttsPitch = 1.0;
-        let ttsVoiceIndex = -1; // -1 là mặc định, >=0 là index trong danh sách voices
+        let ttsVoiceIndex = -1;
         let availableVoices = [];
+        
+        // WAKE LOCK STATE
+        let wakeLock = null;
     
         // TẠO DOM APP
         let app = $('truyen-app');
@@ -199,14 +213,12 @@
                     <button class="tr-btn-close" id="tr-btn-close">✖</button>
                 </div>
                 
-                <!-- Yêu cầu 2: Hiển thị User -->
                 <div class="tr-user-bar">
                     <span>Xin chào, <span class="tr-user-name">${USER_NAME}</span></span>
                     <span id="tr-status-text">Sẵn sàng</span>
                 </div>
 
                 <div id="tr-view-home" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
-                    <!-- Yêu cầu 3: Toolbar 1 hàng -->
                     <div class="tr-toolbar">
                         <div class="tr-search-box"><input type="text" id="tr-search" placeholder="🔍 Tìm truyện..."></div>
                         <select class="tr-filter" id="tr-filter"><option value="all">Tất cả</option></select>
@@ -215,15 +227,13 @@
                 </div>
     
                 <div id="tr-view-reader" class="tr-reader-view">
-                    <!-- Yêu cầu 4: Nút cài đặt -->
                     <div class="tr-reader-tools">
                         <button class="tr-btn-tool" id="btn-back-home">⬅️ <span>Trang chủ</span></button>
                         <button class="tr-btn-tool tr-btn-play" id="btn-read-play">▶️ <span>Đọc</span></button>
                         <button class="tr-btn-tool" id="btn-read-pause">⏸️ <span>Dừng</span></button>
-                        <button class="tr-btn-tool tr-btn-stop" id="btn-read-stop">⏹️ <span>Tắt</span></button>
                         <button class="tr-btn-tool tr-btn-settings" id="btn-settings">⚙️ <span>Cài đặt</span></button>
+                        <button class="tr-btn-tool tr-btn-sleep" id="btn-sleep-mode">🌙 <span>Treo máy</span></button>
                         
-                        <!-- Panel Cài đặt -->
                         <div class="tr-settings-panel" id="tr-settings-panel">
                             <div class="tr-setting-row">
                                 <span class="tr-setting-label">Giọng đọc</span>
@@ -260,13 +270,20 @@
                         <div style="font-size:40px; margin-bottom:10px;">⏳</div>
                         <span id="tr-load-msg">Đang tải dữ liệu truyện...</span>
                     </div>
+
+                    <!-- MÀN HÌNH GIẢ LẬP KHÓA MÁY -->
+                    <div id="tr-fake-lock-screen">
+                        <div class="tr-fake-clock" id="tr-fake-clock">00:00</div>
+                        <div class="tr-fake-hint">Chạm 2 lần để mở khóa</div>
+                        <div style="margin-top:20px; color:#222; font-size:12px;">Mode: Battery Saver (OLED)</div>
+                    </div>
                 </div>
             `;
             document.body.appendChild(app);
             const style = document.createElement('style'); style.innerHTML = MY_CSS; document.head.appendChild(style);
     
-            $('tr-btn-close').onclick = () => { app.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; stopTTS(); saveCloudHistory(); };
-            $('tr-btn-home').onclick = $('btn-back-home').onclick = () => { stopTTS(); saveCloudHistory(); $('tr-view-reader').style.display = 'none'; $('tr-view-home').style.display = 'flex'; renderStories(stories); };
+            $('tr-btn-close').onclick = () => { app.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; stopTTS(); releaseWakeLock(); saveCloudHistory(); };
+            $('tr-btn-home').onclick = $('btn-back-home').onclick = () => { stopTTS(); releaseWakeLock(); saveCloudHistory(); $('tr-view-reader').style.display = 'none'; $('tr-view-home').style.display = 'flex'; renderStories(stories); };
             
             // Toggle Settings
             $('btn-settings').onclick = (e) => {
@@ -278,6 +295,59 @@
             document.addEventListener('click', (e) => {
                 if(!e.target.closest('#btn-settings')) $('tr-settings-panel').classList.remove('show');
             });
+
+            // WAKE LOCK & FAKE SLEEP LOGIC
+            $('btn-sleep-mode').onclick = async () => {
+                if (!isReading) {
+                    alert("Vui lòng bấm ĐỌC trước khi treo máy!");
+                    return;
+                }
+                // 1. Request Wake Lock (Giữ màn hình sáng)
+                try {
+                    if ('wakeLock' in navigator) {
+                        wakeLock = await navigator.wakeLock.request('screen');
+                        console.log('Screen Wake Lock active');
+                    } else {
+                        alert("Trình duyệt này không hỗ trợ giữ sáng màn hình. Vui lòng chỉnh cài đặt điện thoại thủ công.");
+                    }
+                } catch (err) {
+                    console.error(`${err.name}, ${err.message}`);
+                }
+
+                // 2. Bật màn hình đen
+                $('tr-fake-lock-screen').style.display = 'flex';
+                
+                // Đồng hồ giả
+                const updateClock = () => {
+                    const now = new Date();
+                    const h = now.getHours().toString().padStart(2, '0');
+                    const m = now.getMinutes().toString().padStart(2, '0');
+                    $('tr-fake-clock').innerText = `${h}:${m}`;
+                };
+                updateClock();
+                window.fakeClockInterval = setInterval(updateClock, 10000);
+            };
+
+            // Double tap to exit sleep mode
+            let lastTap = 0;
+            $('tr-fake-lock-screen').onclick = (e) => {
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTap;
+                if (tapLength < 500 && tapLength > 0) {
+                    // Double Tap Detected
+                    $('tr-fake-lock-screen').style.display = 'none';
+                    releaseWakeLock();
+                    if(window.fakeClockInterval) clearInterval(window.fakeClockInterval);
+                    e.preventDefault();
+                }
+                lastTap = currentTime;
+            };
+
+            const releaseWakeLock = () => {
+                if (wakeLock !== null) {
+                    wakeLock.release().then(() => { wakeLock = null; console.log('Wake Lock released'); });
+                }
+            };
 
             // Bind Settings Events
             $('rng-rate').oninput = (e) => { ttsRate = parseFloat(e.target.value); $('val-rate').innerText = ttsRate; };
@@ -459,7 +529,6 @@
                 } else { $('tr-content-wrap').scrollTop = 0; }
                 
                 saveProgressToLocal();
-                // Lưu lên Cloud mỗi khi chuyển chương (Yêu cầu 1)
                 saveCloudHistory();
 
                 if (currentChapter < currentStory.total) { setTimeout(() => { preloadNextChapter(currentChapter + 1); }, 1500); }
@@ -477,33 +546,20 @@
             setLocalVal(PROGRESS_KEY, progressData);
         };
 
-        // Yêu cầu 1: Lưu lịch sử lên Sheet Auth (Cột H)
         const saveCloudHistory = () => {
             if(!currentStory || !context.AUTH_STATE.isAuthorized || !API_URL) return;
-            
             const historyData = {
                 story: currentStory.name,
                 chapter: currentChapter,
                 percent: Math.round((currentChapter / currentStory.total) * 100) + '%',
                 time: new Date().toLocaleString('vi-VN')
             };
-
             $('tr-status-text').innerText = "Đang lưu...";
-            
             context.GM_xmlhttpRequest({
-                method: "POST",
-                url: API_URL,
-                data: JSON.stringify({
-                    action: 'save_config', // Sử dụng chung cơ chế save config của Main App
-                    type: 'history',       // Định danh loại dữ liệu là history
-                    user: USER_NAME,
-                    config: JSON.stringify(historyData) // Gói dữ liệu vào string
-                }),
+                method: "POST", url: API_URL,
+                data: JSON.stringify({ action: 'save_config', type: 'history', user: USER_NAME, config: JSON.stringify(historyData) }),
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                onload: (res) => {
-                     $('tr-status-text').innerText = "Đã lưu";
-                     setTimeout(()=> $('tr-status-text').innerText = "Sẵn sàng", 2000);
-                },
+                onload: (res) => { $('tr-status-text').innerText = "Đã lưu"; setTimeout(()=> $('tr-status-text').innerText = "Sẵn sàng", 2000); },
                 onerror: () => { $('tr-status-text').innerText = "Lỗi lưu"; }
             });
         };
@@ -513,11 +569,10 @@
         $('sel-chap').onchange = (e) => { isResuming=false; saveCloudHistory(); loadAndDisplayChapter(parseInt(e.target.value)); };
     
         // -----------------------------------------------------
-        // LOGIC TTS (ĐỌC TRUYỆN) - ĐÃ CẬP NHẬT SETTINGS
+        // LOGIC TTS (ĐỌC TRUYỆN)
         // -----------------------------------------------------
         const getVoice = () => {
             if (ttsVoiceIndex >= 0 && availableVoices[ttsVoiceIndex]) return availableVoices[ttsVoiceIndex];
-            // Fallback logic cũ
             let voices = synth.getVoices();
             let viVoices = voices.filter(v => v.lang.toLowerCase().includes('vi'));
             if (viVoices.length === 0) return null;
@@ -529,7 +584,6 @@
             u.lang = 'vi-VN'; 
             const voice = getVoice();
             if(voice) u.voice = voice;
-            // Áp dụng Rate & Pitch từ Settings (Yêu cầu 4)
             u.rate = isSystemMsg ? 1.4 : ttsRate; 
             u.pitch = isSystemMsg ? 1.1 : ttsPitch; 
             return u;
