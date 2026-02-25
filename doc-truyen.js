@@ -22,7 +22,7 @@
     const API_URL = context.CONSTANTS ? context.CONSTANTS.GSHEET.CONFIG_API : null;
     
     // ===============================================================
-    // 2. CSS GIAO DIỆN (Đã update tính năng Treo máy mới)
+    // 2. CSS GIAO DIỆN
     // ===============================================================
     const MY_CSS = `
         #truyen-app { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#f8f9fa; z-index:2147483800; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; flex-direction:column; overflow:hidden; }
@@ -102,7 +102,6 @@
     
         .tr-loading-overlay { position:absolute; top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.95); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:50; font-weight:bold; font-size:16px; color:#e17055;}
         
-        /* MÀN HÌNH TREO MÁY - GIAO DIỆN MỚI */
         #tr-fake-lock-screen {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #000000; z-index: 2147483999; 
@@ -206,11 +205,11 @@
 
         // SETTINGS STATE
         let ttsRate = 1.3;
-        let ttsPitch = 1.1; // CẬP NHẬT: Mặc định 1.1
+        let ttsPitch = 1.1; 
         let ttsVoiceIndex = -1;
         let availableVoices = [];
         let wakeLock = null;
-        let sleepTimer = null; // Timer cho chế độ treo máy
+        let sleepTimer = null; 
     
         // TẠO DOM APP
         let app = $('truyen-app');
@@ -307,9 +306,10 @@
             $('tr-settings-panel').onclick = (e) => e.stopPropagation();
             document.addEventListener('click', (e) => { if(!e.target.closest('#btn-settings')) $('tr-settings-panel').classList.remove('show'); });
 
-            // LOGIC TREO MÁY MỚI
+            // --- LOGIC TREO MÁY CẢI TIẾN ---
             const enterSleepMode = async () => {
-                if (!isReading) return; // Chỉ treo máy khi đang đọc
+                // Chỉ treo máy khi đang đọc AI
+                if (!isReading) return;
                 try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (err) {}
                 $('tr-sleep-story-name').innerText = currentStory ? currentStory.name : "Truyện";
                 $('tr-fake-lock-screen').style.display = 'flex';
@@ -317,45 +317,50 @@
 
             const resetIdleTimer = () => {
                 if (sleepTimer) clearTimeout(sleepTimer);
-                // Nếu đang đọc và màn hình treo máy đang tắt, set timer 3s để bật nó lên
-                if (isReading && $('tr-fake-lock-screen').style.display === 'none') {
+                // Nếu đang đọc và màn hình chưa khóa
+                if (isReading) {
                     sleepTimer = setTimeout(() => {
-                        enterSleepMode();
+                        // Kiểm tra lại lần nữa xem có đang khóa không
+                        if ($('tr-fake-lock-screen').style.display !== 'flex') {
+                            enterSleepMode();
+                        }
                     }, 3000); // 3 giây
                 }
             };
 
+            // Sự kiện reset timer khi thao tác
+            ['mousemove', 'click', 'touchstart', 'scroll', 'keydown'].forEach(evt => {
+                document.getElementById('tr-view-reader').addEventListener(evt, () => {
+                    // Nếu đang treo máy thì không reset timer (để màn hình đen yên tĩnh)
+                    // Chỉ reset khi màn hình đang sáng và đang đọc
+                    if (isReading && $('tr-fake-lock-screen').style.display !== 'flex') {
+                        resetIdleTimer();
+                    }
+                }, { passive: true });
+            });
+
             $('btn-sleep-mode').onclick = () => {
-                // Bấm nút thì vào luôn chế độ treo máy, không cần đợi
-                if (!isReading) { 
-                    alert("Vui lòng bấm ĐỌC trước khi treo máy!"); 
-                    return; 
-                }
+                if (!isReading) { alert("Vui lòng bấm ĐỌC trước khi treo máy!"); return; }
                 enterSleepMode();
             };
 
             let lastTap = 0;
             $('tr-fake-lock-screen').onclick = (e) => {
-                const cur = new Date().getTime(); const diff = cur - lastTap;
+                const cur = new Date().getTime(); 
+                const diff = cur - lastTap;
+                // Bấm 2 lần trong 500ms
                 if (diff < 500 && diff > 0) { 
-                    // Bấm 2 lần -> Mở khóa
                     $('tr-fake-lock-screen').style.display = 'none'; 
                     releaseWakeLock(); 
                     e.preventDefault();
-                    // Sau khi mở khóa, lại bắt đầu đếm 3s để treo máy lại nếu không làm gì
+                    // Sau khi mở khóa, kích hoạt lại timer để sau 3s lại tự khóa nếu ko làm gì
                     resetIdleTimer();
                 }
                 lastTap = cur;
             };
 
-            // Bắt sự kiện người dùng tương tác để reset timer (khi đang đọc mà chưa treo máy)
-            ['click', 'mousemove', 'touchstart', 'scroll'].forEach(evt => {
-                document.getElementById('tr-view-reader').addEventListener(evt, () => {
-                    if(isReading) resetIdleTimer();
-                }, {passive: true});
-            });
-
             const releaseWakeLock = () => { if (wakeLock) { wakeLock.release(); wakeLock = null; } };
+            // --- HẾT LOGIC TREO MÁY ---
 
             $('rng-rate').oninput = (e) => { ttsRate = parseFloat(e.target.value); $('val-rate').innerText = ttsRate; };
             $('rng-pitch').oninput = (e) => { ttsPitch = parseFloat(e.target.value); $('val-pitch').innerText = ttsPitch; };
@@ -371,7 +376,7 @@
         app.style.display = 'flex';
     
         // -----------------------------------------------------
-        // LOAD DỮ LIỆU TỪ SHEET
+        // LOAD DỮ LIỆU TỪ SHEET & CLOUD HISTORY
         // -----------------------------------------------------
         const loadDataFromSheet = async () => {
             try {
@@ -393,8 +398,61 @@
                         });
                     }
                 }
-                renderFilters(); renderHome();
+                renderFilters(); 
+                renderHome(); // Render lần đầu (có thể từ local)
+                syncCloudHistory(); // Sau đó ưu tiên tải từ Cloud
             } catch (e) { $('tr-home-content').innerHTML = `<div style="color:red; width:100%; text-align:center;">Lỗi tải dữ liệu.</div>`; }
+        };
+
+        // HÀM MỚI: TẢI LỊCH SỬ TỪ CLOUD
+        const syncCloudHistory = () => {
+            if (!API_URL || !context.AUTH_STATE.isAuthorized) return;
+            $('tr-status-text').innerText = "Đang đồng bộ Cloud...";
+            
+            context.GM_xmlhttpRequest({
+                method: "GET",
+                url: `${API_URL}?action=get_config&type=history&user=${USER_NAME}`,
+                onload: (res) => {
+                    try {
+                        const json = JSON.parse(res.responseText);
+                        if(json && json.data && Array.isArray(json.data)) {
+                            // Map dữ liệu Cloud về Local format
+                            let cloudHistory = json.data;
+                            let localData = getLocalVal(PROGRESS_KEY, {});
+                            let hasUpdate = false;
+
+                            cloudHistory.forEach(item => {
+                                // Tìm truyện trong danh sách đã tải
+                                let story = stories.find(s => s.name === item.story);
+                                if (story) {
+                                    // Ghi đè local bằng cloud (Ưu tiên Cloud)
+                                    // Chỉ cập nhật nếu local chưa có hoặc cloud mới hơn (dựa vào timestamp nếu có, ở đây giả sử cloud luôn đúng)
+                                    if (!localData[story.link] || (item.timestamp && item.timestamp > (localData[story.link].time || 0))) {
+                                        localData[story.link] = { 
+                                            chap: parseInt(item.chapter) || 1, 
+                                            sentence: 0, 
+                                            time: item.timestamp || Date.now() 
+                                        };
+                                        hasUpdate = true;
+                                    }
+                                }
+                            });
+
+                            if(hasUpdate) {
+                                setLocalVal(PROGRESS_KEY, localData);
+                                $('tr-status-text').innerText = "Đồng bộ thành công";
+                                renderHome(); // Render lại giao diện với dữ liệu mới
+                            } else {
+                                $('tr-status-text').innerText = "Đã đồng bộ";
+                            }
+                        } else {
+                            $('tr-status-text').innerText = "Không có dữ liệu Cloud";
+                        }
+                    } catch(e) { console.warn("Parse cloud data error", e); $('tr-status-text').innerText = "Sẵn sàng"; }
+                    setTimeout(() => $('tr-status-text').innerText = "Sẵn sàng", 3000);
+                },
+                onerror: () => { $('tr-status-text').innerText = "Lỗi mạng"; }
+            });
         };
     
         const renderFilters = () => {
@@ -607,7 +665,7 @@
 
             if (fullHistory.length === 0) return;
 
-            $('tr-status-text').innerText = "Đang đồng bộ...";
+            $('tr-status-text').innerText = "Đang lưu Cloud...";
             context.GM_xmlhttpRequest({
                 method: "POST", url: API_URL,
                 data: JSON.stringify({ action: 'save_config', type: 'history', user: USER_NAME, config: fullHistory }),
@@ -681,9 +739,7 @@
                 synth.getVoices(); 
                 if(synth.paused) synth.resume(); 
                 else speakNextSentence(); 
-                
-                // Bắt đầu đếm 3s để tự động treo máy
-                resetIdleTimer();
+                resetIdleTimer(); // Bắt đầu đếm 3s để treo máy
             } 
         };
         $('btn-read-pause').onclick = () => { 
@@ -704,7 +760,7 @@
     };
     
     return {
-        name: "Đọc Truyện V1",
+        name: "Đọc Truyện V2",
         icon: `<svg viewBox="0 0 24 24"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.15C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zM21 18.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z" fill="white"/></svg>`,
         bgColor: "#0984e3",
         action: runTool
