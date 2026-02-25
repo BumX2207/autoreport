@@ -4,6 +4,10 @@
     // ===============================================================
     let USER_NAME = 'Khách';
     let IS_LOGGED_IN = false; // Cờ kiểm tra trạng thái đăng nhập
+    const SHEET_ID = '1iuApMwdKYx9ofo0oJR84AlzXka0PmTQPudXzx0Uub0o';
+    const SHEET_GID = '984479015';
+    const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SHEET_GID}`;
+    const PROGRESS_KEY = 'tgdd_truyen_progress';
     
     // 1. Nếu là User gốc (Quản lý MWG) có bản quyền
     if (context.AUTH_STATE && context.AUTH_STATE.isAuthorized) {
