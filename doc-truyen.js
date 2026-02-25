@@ -7,7 +7,9 @@
     const SHEET_ID = '1iuApMwdKYx9ofo0oJR84AlzXka0PmTQPudXzx0Uub0o';
     const SHEET_GID = '984479015';
     const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SHEET_GID}`;
-    const PROGRESS_KEY = 'tgdd_truyen_progress';
+    
+    // Tạo key lưu trữ riêng biệt theo từng USER để không bị trùng lặp lịch sử
+    const getProgressKey = () => 'tgdd_truyen_progress_' + USER_NAME;
     
     // 1. Nếu là User gốc (Quản lý MWG) có bản quyền
     if (context.AUTH_STATE && context.AUTH_STATE.isAuthorized) {
@@ -24,7 +26,7 @@
             // 3. Khách vãng lai chưa đăng nhập
             let guestId = localStorage.getItem('tgdd_guest_id');
             if (!guestId) {
-                guestId = 'Guest-' + Math.floor(Math.random() * 1000);
+                guestId = 'Guest-' + Math.floor(Math.random() * 100000);
                 localStorage.setItem('tgdd_guest_id', guestId);
             }
             USER_NAME = guestId;
@@ -34,7 +36,7 @@
     const API_URL = context.CONSTANTS ? context.CONSTANTS.GSHEET.CONFIG_API : null;
     
     // ===============================================================
-    // 2. CSS GIAO DIỆN
+    // 2. CSS GIAO DIỆN (Đã xác nhận z-index: 2147483646)
     // ===============================================================
     const MY_CSS = `
         #truyen-app { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#f8f9fa; z-index:2147483646; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; flex-direction:column; overflow:hidden; }
@@ -146,7 +148,7 @@
     // 3. HÀM FETCH VƯỢT RÀO VÀ PARSE CSV
     // ===============================================================
     const fetchWithFallbacks = async (targetUrl) => {
-        const proxies = [
+        const proxies =[
             `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`,
             `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`
         ];
@@ -170,7 +172,7 @@
     
     const parseCSV = (text) => {
         const rows = [];
-        let row = [], curr = '', inQuotes = false;
+        let row =[], curr = '', inQuotes = false;
         for (let i = 0; i < text.length; i++) {
             let char = text[i];
             if (inQuotes) {
@@ -182,7 +184,7 @@
                 else if (char === ',') { row.push(curr); curr = ''; } 
                 else if (char === '\n' || char === '\r') {
                     if (char === '\r' && text[i + 1] === '\n') i++;
-                    row.push(curr); rows.push(row); row = []; curr = '';
+                    row.push(curr); rows.push(row); row =[]; curr = '';
                 } else { curr += char; }
             }
         }
@@ -204,12 +206,12 @@
         let synth = window.speechSynthesis;
         synth.getVoices();
         
-        let stories = [];
+        let stories =[];
         let genres = new Set();
         let currentStory = null;
         let currentChapter = 1;
         let isReading = false;
-        let currentSentences = [];
+        let currentSentences =[];
         let currentSentenceIndex = 0;
         let isResuming = false;
         let preloadedData = { chapNum: null, contentHtml: null, contentArr: null };
@@ -219,7 +221,7 @@
         let ttsRate = 1.3;
         let ttsPitch = 1.1; 
         let ttsVoiceIndex = -1;
-        let availableVoices = [];
+        let availableVoices =[];
         let wakeLock = null;
         let sleepTimer = null; 
     
@@ -335,15 +337,14 @@
                         $('tr-btn-logout').onclick = () => {
                             if(confirm("Bạn có chắc chắn muốn đăng xuất?")) {
                                 localStorage.removeItem('tgdd_guest_account');
-                                let guestId = localStorage.getItem('tgdd_guest_id');
-                                if (!guestId) {
-                                    guestId = 'Guest-' + Math.floor(Math.random() * 1000);
-                                    localStorage.setItem('tgdd_guest_id', guestId);
-                                }
+                                // TẠO GUEST MỚI KHI ĐĂNG XUẤT ĐỂ XÓA TRẮNG GIAO DIỆN LỊCH SỬ
+                                let guestId = 'Guest-' + Math.floor(Math.random() * 100000);
+                                localStorage.setItem('tgdd_guest_id', guestId);
                                 USER_NAME = guestId;
                                 IS_LOGGED_IN = false;
+                                
                                 updateAuthUI();
-                                renderHome(); // Reset về mặc định
+                                renderHome(); // Reset màn hình về trắng trơn vì user mới
                             }
                         };
                     } else {
@@ -413,14 +414,14 @@
                                             document.body.classList.remove('tgdd-body-lock');
                                             
                                             localStorage.setItem('tgdd_guest_account', JSON.stringify({user: u, pass: p}));
-                                            USER_NAME = u;
+                                            USER_NAME = u; // Cập nhật TÊN USER MỚI
                                             IS_LOGGED_IN = true;
                                             
                                             updateAuthUI();
                                             
                                             $('tr-status-text').innerText = "Đang tải lịch sử...";
-                                            await syncCloudHistory();
-                                            renderHome();
+                                            await syncCloudHistory(); // Sẽ kéo dữ liệu và lưu vào Key của User Mới
+                                            renderHome(); // Vẽ lại giao diện theo lịch sử của User Mới
                                             
                                         } else {
                                             alert("❌ Lỗi: " + json.message);
@@ -466,9 +467,7 @@
                         }
                     }, 3000);
                 }
-            };
-
-            ['mousemove', 'click', 'touchstart', 'scroll', 'keydown'].forEach(evt => {
+            };['mousemove', 'click', 'touchstart', 'scroll', 'keydown'].forEach(evt => {
                 document.getElementById('tr-view-reader').addEventListener(evt, () => {
                     if (isReading && $('tr-fake-lock-screen').style.display !== 'flex') {
                         resetIdleTimer();
@@ -510,7 +509,7 @@
         app.style.display = 'flex';
     
         // -----------------------------------------------------
-        // LOAD DỮ LIỆU TỪ SHEET & CLOUD HISTORY (ĐÃ FIX LỖI PARSE STRING)
+        // LOAD DỮ LIỆU TỪ SHEET & CLOUD HISTORY
         // -----------------------------------------------------
         const syncCloudHistory = () => {
             return new Promise((resolve, reject) => {
@@ -526,15 +525,14 @@
                     onload: (res) => {
                         try {
                             const json = JSON.parse(res.responseText);
-                            // --- FIX LỖI TẠI ĐÂY ---
-                            // Dữ liệu từ Sheet trả về có thể là String (do cell lưu text)
                             let cloudHistory = json.data;
                             if (typeof cloudHistory === 'string') {
                                 try { cloudHistory = JSON.parse(cloudHistory); } catch(e){}
                             }
                             
                             if(cloudHistory && Array.isArray(cloudHistory)) {
-                                let localData = getLocalVal(PROGRESS_KEY, {});
+                                // Sử dụng Key động dựa trên USER hiện tại
+                                let localData = getLocalVal(getProgressKey(), {});
                                 let hasUpdate = false;
     
                                 cloudHistory.forEach(item => {
@@ -552,13 +550,12 @@
                                 });
     
                                 if(hasUpdate) {
-                                    setLocalVal(PROGRESS_KEY, localData);
+                                    setLocalVal(getProgressKey(), localData);
                                     $('tr-status-text').innerText = "Đồng bộ thành công";
                                 } else {
                                     $('tr-status-text').innerText = "Đã đồng bộ";
                                 }
                             } else {
-                                // Trường hợp json.data null hoặc rỗng
                                 $('tr-status-text').innerText = "Chưa có lịch sử";
                             }
                             resolve(true);
@@ -584,7 +581,7 @@
                 const csvText = await res.text();
                 const rows = parseCSV(csvText);
                 
-                stories = []; genres.clear();
+                stories =[]; genres.clear();
                 for(let i = 1; i < rows.length; i++) {
                     const r = rows[i];
                     if(r.length >= 4 && r[0].trim() !== "") {
@@ -620,7 +617,8 @@
         };
     
         const renderStoryCards = (list, container) => {
-            const progressData = getLocalVal(PROGRESS_KEY, {});
+            // Đọc từ Key động
+            const progressData = getLocalVal(getProgressKey(), {});
             list.forEach(story => {
                 const card = document.createElement('div'); card.className = 'tr-card';
                 let coverHtml = (story.cover && story.cover.startsWith('http')) ? `<img src="${story.cover}" class="tr-card-img" loading="lazy">` : story.name.charAt(0).toUpperCase();
@@ -650,7 +648,8 @@
                 return;
             }
 
-            const progressData = getLocalVal(PROGRESS_KEY, {});
+            // Đọc từ Key động
+            const progressData = getLocalVal(getProgressKey(), {});
             let historyList = stories.filter(s => progressData[s.link]).map(s => {
                 return { ...s, lastReadTime: progressData[s.link].time || 0 };
             }).sort((a, b) => b.lastReadTime - a.lastReadTime);
@@ -715,7 +714,7 @@
             if(!contentHtml) throw new Error("Không tìm thấy nội dung chữ.");
             contentHtml.querySelectorAll('.ads, script, iframe').forEach(el => el.remove());
             const paragraphs = Array.from(contentHtml.querySelectorAll('p')).map(p => p.innerText.trim()).filter(t => t.length > 0);
-            let finalHtml = "", cleanArr = [];
+            let finalHtml = "", cleanArr =[];
             if(paragraphs.length > 0) {
                 finalHtml = paragraphs.map(p => `<p>${p}</p>`).join(''); cleanArr = paragraphs;
             } else {
@@ -728,7 +727,7 @@
         const updateNavUI = () => {
             $('btn-prev-chap').disabled = (currentChapter <= 1);
             $('btn-next-chap').disabled = (currentChapter >= currentStory.total);
-            let optionsHTML = [];
+            let optionsHTML =[];
             for(let i=1; i<=currentStory.total; i++){ optionsHTML.push(`<option value="${i}" ${i === currentChapter ? 'selected' : ''}>Chương ${i}</option>`); }
             $('sel-chap').innerHTML = optionsHTML.join('');
         };
@@ -746,7 +745,7 @@
         const openStory = async (story) => {
             currentStory = story; preloadedData = { chapNum: null };
             $('tr-view-home').style.display = 'none'; $('tr-view-reader').style.display = 'flex';
-            const progressData = getLocalVal(PROGRESS_KEY, {});
+            const progressData = getLocalVal(getProgressKey(), {});
             const saved = progressData[story.link];
             if (saved && saved.chap) {
                 currentChapter = saved.chap; currentSentenceIndex = saved.sentence || 0; isResuming = true;
@@ -801,14 +800,14 @@
     
         const saveProgressToLocal = () => {
             if(!currentStory) return;
-            let progressData = getLocalVal(PROGRESS_KEY, {});
+            let progressData = getLocalVal(getProgressKey(), {});
             progressData[currentStory.link] = { chap: currentChapter, sentence: currentSentenceIndex, time: Date.now() };
-            setLocalVal(PROGRESS_KEY, progressData);
+            setLocalVal(getProgressKey(), progressData);
         };
 
         const saveCloudHistory = () => {
             if (!API_URL || !IS_LOGGED_IN) return;
-            const progressData = getLocalVal(PROGRESS_KEY, {});
+            const progressData = getLocalVal(getProgressKey(), {});
             let fullHistory = Object.keys(progressData).map(link => {
                 let s = stories.find(st => st.link === link);
                 let p = progressData[link];
