@@ -18,7 +18,7 @@
         // Tạo ID ảo cho khách nếu chưa có
         let guestId = localStorage.getItem('tgdd_guest_id');
         if (!guestId) {
-            guestId = 'G-' + Math.floor(Math.random() * 10000);
+            guestId = 'Guest-' + Math.floor(Math.random() * 1000);
             localStorage.setItem('tgdd_guest_id', guestId);
         }
         USER_NAME = guestId;
@@ -223,7 +223,6 @@
         if (!app) {
             app = document.createElement('div');
             app.id = 'truyen-app';
-            // Nội dung HTML giống như trên
             app.innerHTML = `
                 <div class="tr-header">
                     <div class="tr-logo" id="tr-btn-home">📖 Đọc Truyện Online</div>
@@ -324,21 +323,25 @@
         }
         app.style.display = 'flex';
     
-        // FETCH CSV FIX
+        // LOAD DATA FUNCTION (REVERTED TO DIRECT FETCH)
         const loadDataFromSheet = async () => {
             try {
-                // SỬ DỤNG FETCH WITH FALLBACKS ĐỂ TRÁNH LỖI CORS
-                const csvText = await fetchWithFallbacks(CSV_URL);
-                if (!csvText) throw new Error("Empty CSV");
-
+                // SỬ DỤNG FETCH TRỰC TIẾP NHƯ BẢN GỐC
+                const res = await fetch(CSV_URL);
+                if (!res.ok) throw new Error("Fetch failed");
+                const csvText = await res.text();
+                
                 const rows = parseCSV(csvText);
+                
                 stories = []; genres.clear();
                 for(let i = 1; i < rows.length; i++) {
                     const r = rows[i];
                     if(r.length >= 4 && r[0].trim() !== "") {
                         genres.add(r[1].trim());
                         stories.push({ 
-                            name: r[0].trim(), genre: r[1].trim(), link: r[2].trim(), 
+                            name: r[0].trim(), 
+                            genre: r[1].trim(), 
+                            link: r[2].trim(), 
                             total: parseInt(r[3].trim()) || 1,
                             cover: (r.length > 4 && r[4].trim() !== "") ? r[4].trim() : null
                         });
@@ -347,7 +350,7 @@
                 renderFilters(); renderStories(stories);
             } catch (e) { 
                 console.error(e);
-                $('tr-grid').innerHTML = `<div style="color:red; width:100%; text-align:center;">Lỗi tải danh sách: ${e.message}</div>`; 
+                $('tr-grid').innerHTML = `<div style="color:red; width:100%; text-align:center;">Lỗi tải dữ liệu: ${e.message}</div>`; 
             }
         };
     
