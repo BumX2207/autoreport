@@ -2,22 +2,30 @@
     // ===============================================================
     // 1. CẤU HÌNH DATA SHEET
     // ===============================================================
-    const SHEET_ID = '1iuApMwdKYx9ofo0oJR84AlzXka0PmTQPudXzx0Uub0o';
-    const SHEET_GID = '984479015';
-    const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SHEET_GID}`;
-    
-    const PROGRESS_KEY = 'tgdd_story_progress_v1';
-    
     let USER_NAME = 'Khách';
-    if (context.AUTH_STATE && context.AUTH_STATE.userName) {
+    let IS_LOGGED_IN = false; // Cờ kiểm tra trạng thái đăng nhập
+    
+    // 1. Nếu là User gốc (Quản lý MWG) có bản quyền
+    if (context.AUTH_STATE && context.AUTH_STATE.isAuthorized) {
         USER_NAME = context.AUTH_STATE.userName;
+        IS_LOGGED_IN = true;
     } else {
-        let guestId = localStorage.getItem('tgdd_guest_id');
-        if (!guestId) {
-            guestId = 'Guest-' + Math.floor(Math.random() * 1000);
-            localStorage.setItem('tgdd_guest_id', guestId);
+        // 2. Nếu là khách, kiểm tra xem đã đăng nhập tài khoản riêng chưa
+        let savedGuestInfo = localStorage.getItem('tgdd_guest_account');
+        if (savedGuestInfo) {
+            let acc = JSON.parse(savedGuestInfo);
+            USER_NAME = acc.user;
+            IS_LOGGED_IN = true;
+        } else {
+            // 3. Khách vãng lai chưa đăng nhập
+            let guestId = localStorage.getItem('tgdd_guest_id');
+            if (!guestId) {
+                guestId = 'Guest-' + Math.floor(Math.random() * 1000);
+                localStorage.setItem('tgdd_guest_id', guestId);
+            }
+            USER_NAME = guestId;
+            IS_LOGGED_IN = false;
         }
-        USER_NAME = guestId;
     }
     const API_URL = context.CONSTANTS ? context.CONSTANTS.GSHEET.CONFIG_API : null;
     
@@ -224,7 +232,15 @@
                 
                 <div class="tr-user-bar">
                     <span>Xin chào, <span class="tr-user-name">${USER_NAME}</span></span>
-                    <span id="tr-status-text">Sẵn sàng</span>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <span id="tr-status-text">Sẵn sàng</span>
+                        ${!IS_LOGGED_IN ? `
+                            <button id="tr-btn-login" style="background:#0984e3; color:#fff; border:none; padding:3px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold;">Đăng nhập</button>
+                            <button id="tr-btn-register" style="background:#00b894; color:#fff; border:none; padding:3px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold;">Đăng ký</button>
+                        ` : (context.AUTH_STATE && !context.AUTH_STATE.isAuthorized ? `
+                            <button id="tr-btn-logout" style="background:#d63031; color:#fff; border:none; padding:3px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold;">Đăng xuất</button>
+                        ` : '')}
+                    </div>
                 </div>
 
                 <div id="tr-view-home" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
@@ -294,6 +310,90 @@
             const style = document.createElement('style'); style.innerHTML = MY_CSS; document.head.appendChild(style);
     
             $('tr-btn-close').onclick = () => { app.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; stopTTS(); releaseWakeLock(); saveCloudHistory(); };
+
+            // --- XỬ LÝ LOGIC MODAL ĐĂNG NHẬP / ĐĂNG KÝ GUEST ---
+            const showAuthModal = (mode) => {
+                const isLogin = mode === 'login';
+                const title = isLogin ? '🔐 ĐĂNG NHẬP KHÁCH' : '📝 TẠO TÀI KHOẢN';
+                const htmlContent = `
+                    <div style="text-align:left; font-size:13px; margin-bottom:10px;">
+                        <div style="margin-bottom:8px;">
+                            <label style="font-weight:bold; color:#555;">Tài khoản đăng nhập:</label>
+                            <input type="text" id="tr-auth-user" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; margin-top:4px;" placeholder="Tên đăng nhập (không dấu)...">
+                        </div>
+                        <div style="margin-bottom:20px;">
+                            <label style="font-weight:bold; color:#555;">Mật khẩu:</label>
+                            <input type="password" id="tr-auth-pass" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; margin-top:4px;" placeholder="Nhập mật khẩu...">
+                        </div>
+                        <button id="tr-auth-submit" class="tgdd-msg-btn" style="width:100%; background: ${isLogin ? '#0984e3' : '#00b894'}; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+                            ${isLogin ? 'Đăng Nhập Ngay' : 'Đăng Ký Tài Khoản'}
+                        </button>
+                    </div>
+                `;
+                
+                // Mượn Modal của hệ thống MWG gốc
+                context.UI.showMsg(title, htmlContent, 'info');
+
+                setTimeout(() => {
+                    const btnSubmit = document.getElementById('tr-auth-submit');
+                    if(btnSubmit) {
+                        btnSubmit.onclick = () => {
+                            const u = document.getElementById('tr-auth-user').value.trim();
+                            const p = document.getElementById('tr-auth-pass').value.trim();
+                            if(!u || !p) { alert("⚠️ Vui lòng nhập đầy đủ tài khoản và mật khẩu!"); return; }
+
+                            btnSubmit.innerText = "⏳ Đang xử lý...";
+                            btnSubmit.disabled = true;
+
+                            context.GM_xmlhttpRequest({
+                                method: "POST",
+                                url: API_URL,
+                                data: JSON.stringify({
+                                    action: isLogin ? 'login_guest' : 'register_guest',
+                                    user: u,
+                                    password: p
+                                }),
+                                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                                onload: (res) => {
+                                    try {
+                                        const json = JSON.parse(res.responseText);
+                                        if(json.status === 'success') {
+                                            alert("✅ " + json.message);
+                                            // Ẩn modal hiện tại
+                                            document.getElementById('tgdd-msg-modal').style.display = 'none';
+                                            document.body.classList.remove('tgdd-body-lock');
+                                            
+                                            // Nếu đăng nhập hoặc đăng ký thành công -> Lưu cache & Khởi động lại App
+                                            if(isLogin || (!isLogin && confirm("Bạn có muốn đăng nhập ngay luôn không?"))) {
+                                                localStorage.setItem('tgdd_guest_account', JSON.stringify({user: u, pass: p}));
+                                                document.getElementById('truyen-app').remove(); // Xóa UI cũ
+                                                runTool(); // Gọi lại tool với biến IS_LOGGED_IN = true
+                                            }
+                                        } else {
+                                            alert("❌ Lỗi: " + json.message);
+                                            btnSubmit.innerText = isLogin ? 'Đăng Nhập Ngay' : 'Đăng Ký Tài Khoản';
+                                            btnSubmit.disabled = false;
+                                        }
+                                    } catch(e) { alert("❌ Lỗi phản hồi từ máy chủ!"); btnSubmit.disabled = false; }
+                                },
+                                onerror: () => { alert("❌ Mất kết nối mạng!"); btnSubmit.disabled = false; }
+                            });
+                        };
+                    }
+                }, 100);
+            };
+
+            if($('tr-btn-login')) $('tr-btn-login').onclick = () => showAuthModal('login');
+            if($('tr-btn-register')) $('tr-btn-register').onclick = () => showAuthModal('register');
+            if($('tr-btn-logout')) {
+                $('tr-btn-logout').onclick = () => {
+                    if(confirm("Bạn có chắc chắn muốn đăng xuất?")) {
+                        localStorage.removeItem('tgdd_guest_account');
+                        document.getElementById('truyen-app').remove();
+                        runTool(); // Render lại giao diện khách vãng lai
+                    }
+                };
+            }
             
             $('tr-btn-home').onclick = $('btn-back-home').onclick = () => { 
                 stopTTS(); releaseWakeLock(); saveCloudHistory(); 
@@ -406,7 +506,7 @@
 
         // HÀM MỚI: TẢI LỊCH SỬ TỪ CLOUD
         const syncCloudHistory = () => {
-            if (!API_URL || !context.AUTH_STATE.isAuthorized) return;
+            if (!API_URL || !IS_LOGGED_IN) return;
             $('tr-status-text').innerText = "Đang đồng bộ Cloud...";
             
             context.GM_xmlhttpRequest({
@@ -648,7 +748,7 @@
         };
 
         const saveCloudHistory = () => {
-            if(!context.AUTH_STATE.isAuthorized || !API_URL) return;
+            if (!API_URL || !IS_LOGGED_IN) return;
             const progressData = getLocalVal(PROGRESS_KEY, {});
             let fullHistory = Object.keys(progressData).map(link => {
                 let s = stories.find(st => st.link === link);
