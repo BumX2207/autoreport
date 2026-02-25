@@ -9,7 +9,7 @@
     // Khóa lưu trữ lịch sử đọc cục bộ
     const PROGRESS_KEY = 'tgdd_story_progress_v1';
     
-    // Lấy thông tin User
+    // Lấy thông tin User và API
     let USER_NAME = 'Khách';
     if (context.AUTH_STATE && context.AUTH_STATE.userName) {
         USER_NAME = context.AUTH_STATE.userName;
@@ -21,11 +21,10 @@
         }
         USER_NAME = guestId;
     }
-    
     const API_URL = context.CONSTANTS ? context.CONSTANTS.GSHEET.CONFIG_API : null;
     
     // ===============================================================
-    // 2. CSS GIAO DIỆN
+    // 2. CSS GIAO DIỆN (Đã update thêm tính năng mới)
     // ===============================================================
     const MY_CSS = `
         #truyen-app { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#f8f9fa; z-index:2147483800; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; flex-direction:column; overflow:hidden; }
@@ -34,9 +33,11 @@
         .tr-logo { font-size:20px; font-weight:900; color:#e17055; display:flex; align-items:center; gap:8px; cursor:pointer;}
         .tr-btn-close { background:#fab1a0; color:#d63031; border:none; border-radius:50%; width:32px; height:32px; font-weight:bold; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; }
         
+        /* USER INFO BAR */
         .tr-user-bar { background:#2d3436; color:#dfe6e9; padding:5px 20px; font-size:12px; display:flex; justify-content:space-between; align-items:center; font-weight:bold; }
         .tr-user-name { color: #00cec9; }
 
+        /* TOOLBAR 1 HÀNG */
         .tr-toolbar { background:#fff; padding:10px 20px; border-bottom:1px solid #eee; display:flex; gap:10px; z-index:15; flex-wrap:nowrap; align-items:center; }
         .tr-search-box { flex:1; display:flex; min-width: 0; }
         .tr-search-box input { width:100%; padding:8px 15px; border:1px solid #ddd; border-radius:20px; outline:none; font-size:14px; transition:0.3s; }
@@ -57,7 +58,6 @@
         .tr-card-chap { font-size:12px; color:#636e72; margin-top:auto; font-weight:500;}
     
         .tr-reader-view { display:none; flex:1; flex-direction:column; background:#f4f5f7; overflow:hidden; position:relative; }
-        
         .tr-reader-tools { background:#2d3436; padding:10px 20px; display:flex; justify-content:center; gap:10px; z-index:10; position: relative; flex-wrap: wrap;}
         .tr-btn-tool { background:#636e72; color:white; border:none; padding:8px 15px; border-radius:20px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s; white-space: nowrap;}
         .tr-btn-tool:hover { background:#b2bec3; color:#2d3436; }
@@ -66,7 +66,8 @@
         .tr-btn-stop { background:#d63031; }
         .tr-btn-settings { background:#0984e3; } 
         .tr-btn-sleep { background:#6c5ce7; }
-
+        
+        /* BẢNG CÀI ĐẶT */
         .tr-settings-panel {
             position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
             background: white; padding: 15px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.2);
@@ -79,7 +80,7 @@
         .tr-setting-input { width: 100%; cursor: pointer; }
         .tr-setting-val { font-size: 11px; color: #0984e3; float: right;}
         @keyframes slideDown { from {opacity:0; transform:translate(-50%, -10px);} to {opacity:1; transform:translate(-50%, 0);} }
-        
+
         .tr-reader-info-bar { background:#fff; padding:15px 20px; border-bottom:1px solid #ddd; z-index:9; flex-shrink:0; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .tr-story-title { font-size:20px; font-weight:bold; color:#2d3436; text-align:center; margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
         .tr-chapter-title { font-size:16px; color:#e17055; text-align:center; margin-bottom:10px; font-weight:600;}
@@ -98,6 +99,7 @@
     
         .tr-loading-overlay { position:absolute; top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.95); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:50; font-weight:bold; font-size:16px; color:#e17055;}
         
+        /* MÀN HÌNH TREO MÁY */
         #tr-fake-lock-screen {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #000000; z-index: 2147483999; 
@@ -125,9 +127,31 @@
     `;
     
     // ===============================================================
-    // 3. HÀM HELPER
+    // 3. HÀM FETCH VƯỢT RÀO VÀ PARSE CSV (Dùng cho Chapter)
     // ===============================================================
-    // Parser giống hệt file gốc
+    const fetchWithFallbacks = async (targetUrl) => {
+        const proxies = [
+            `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`,
+            `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`
+        ];
+        for (let proxy of proxies) {
+            try {
+                const res = await fetch(proxy);
+                if (!res.ok) continue;
+                let htmlText = "";
+                if(proxy.includes('allorigins')) {
+                    const json = await res.json();
+                    htmlText = json.contents;
+                } else {
+                    htmlText = await res.text();
+                }
+                if(htmlText.includes('Cloudflare') && htmlText.includes('Attention Required!')) continue; 
+                return htmlText;
+            } catch (e) { console.warn("Proxy failed", proxy); }
+        }
+        throw new Error("Lỗi tải trang. Các Proxy đã bị chặn.");
+    };
+    
     const parseCSV = (text) => {
         const rows = [];
         let row = [], curr = '', inQuotes = false;
@@ -149,43 +173,23 @@
         if (curr !== '' || row.length > 0) { row.push(curr); rows.push(row); }
         return rows;
     };
-
-    const fetchWithFallbacks = async (targetUrl) => {
-        const proxies = [
-            `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`,
-            `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`
-        ];
-        for (let proxy of proxies) {
-            try {
-                const res = await fetch(proxy);
-                if (!res.ok) continue;
-                let htmlText = "";
-                if(proxy.includes('allorigins')) {
-                    const json = await res.json();
-                    htmlText = json.contents;
-                } else {
-                    htmlText = await res.text();
-                }
-                if(htmlText.includes('Cloudflare') && htmlText.includes('Attention Required!')) continue;
-                if(!htmlText || htmlText.length < 10) continue;
-                return htmlText;
-            } catch (e) { console.warn("Proxy failed", proxy); }
-        }
-        throw new Error("Lỗi tải trang.");
-    };
     
     // ===============================================================
     // 4. LOGIC CHÍNH CỦA APP
     // ===============================================================
     const runTool = async () => {
+        // Nếu Tool đang chạy trong hệ sinh thái Auto BI
         const bottomNav = document.getElementById('tgdd-bottom-nav');
         if(bottomNav) bottomNav.style.display = 'none';
     
         const getLocalVal = (key, def) => { try { return typeof GM_getValue === 'function' ? GM_getValue(key, def) : (JSON.parse(localStorage.getItem(key)) || def); } catch(e) { return def; }};
         const setLocalVal = (key, val) => { try { if(typeof GM_setValue === 'function') GM_setValue(key, val); localStorage.setItem(key, JSON.stringify(val)); } catch(e){} };
+    
         const $ = (id) => document.getElementById(id);
-        
         let synth = window.speechSynthesis;
+        synth.getVoices();
+        
+        // STATE APP
         let stories = [];
         let genres = new Set();
         let currentStory = null;
@@ -195,11 +199,15 @@
         let currentSentenceIndex = 0;
         let isResuming = false;
         let preloadedData = { chapNum: null, contentHtml: null, contentArr: null };
-        let ttsRate = 1.3, ttsPitch = 1.0, ttsVoiceIndex = -1;
+
+        // SETTINGS STATE
+        let ttsRate = 1.3;
+        let ttsPitch = 1.0;
+        let ttsVoiceIndex = -1;
         let availableVoices = [];
         let wakeLock = null;
     
-        // INIT UI
+        // TẠO DOM APP
         let app = $('truyen-app');
         if (!app) {
             app = document.createElement('div');
@@ -209,24 +217,29 @@
                     <div class="tr-logo" id="tr-btn-home">📖 Đọc Truyện Online</div>
                     <button class="tr-btn-close" id="tr-btn-close">✖</button>
                 </div>
+                
                 <div class="tr-user-bar">
                     <span>Xin chào, <span class="tr-user-name">${USER_NAME}</span></span>
                     <span id="tr-status-text">Sẵn sàng</span>
                 </div>
+
                 <div id="tr-view-home" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
                     <div class="tr-toolbar">
-                        <div class="tr-search-box"><input type="text" id="tr-search" placeholder="🔍 Tìm truyện..."></div>
-                        <select class="tr-filter" id="tr-filter"><option value="all">Tất cả</option></select>
+                        <div class="tr-search-box"><input type="text" id="tr-search" placeholder="🔍 Tìm kiếm tên truyện..."></div>
+                        <select class="tr-filter" id="tr-filter"><option value="all">Tất cả thể loại</option></select>
                     </div>
                     <div class="tr-home-body" id="tr-grid"><div style="width:100%; text-align:center; padding:50px; color:#888;">⏳ Đang tải danh sách truyện...</div></div>
                 </div>
+    
                 <div id="tr-view-reader" class="tr-reader-view">
                     <div class="tr-reader-tools">
                         <button class="tr-btn-tool" id="btn-back-home">⬅️ <span>Trang chủ</span></button>
-                        <button class="tr-btn-tool tr-btn-play" id="btn-read-play">▶️ <span>Đọc</span></button>
+                        <button class="tr-btn-tool tr-btn-play" id="btn-read-play">▶️ <span>AI Đọc</span></button>
                         <button class="tr-btn-tool" id="btn-read-pause">⏸️ <span>Dừng</span></button>
+                        <button class="tr-btn-tool tr-btn-stop" id="btn-read-stop">⏹️ <span>Tắt AI</span></button>
                         <button class="tr-btn-tool tr-btn-settings" id="btn-settings">⚙️ <span>Cài đặt</span></button>
                         <button class="tr-btn-tool tr-btn-sleep" id="btn-sleep-mode">🌙 <span>Treo máy</span></button>
+                        
                         <div class="tr-settings-panel" id="tr-settings-panel">
                             <div class="tr-setting-row">
                                 <span class="tr-setting-label">Giọng đọc</span>
@@ -242,6 +255,7 @@
                             </div>
                         </div>
                     </div>
+                    
                     <div class="tr-reader-info-bar">
                         <div class="tr-story-title" id="tr-read-title">Tên Truyện</div>
                         <div class="tr-chapter-title" id="tr-read-chap">Chương 1</div>
@@ -251,13 +265,18 @@
                             <button class="tr-nav-btn" id="btn-next-chap">Tiếp ➡</button>
                         </div>
                     </div>
+    
                     <div class="tr-reader-content-wrap" id="tr-content-wrap">
-                        <div class="tr-paper"><div class="tr-text" id="tr-read-text">Nội dung...</div></div>
+                        <div class="tr-paper">
+                            <div class="tr-text" id="tr-read-text">Nội dung...</div>
+                        </div>
                     </div>
+    
                     <div class="tr-loading-overlay" id="tr-loading">
                         <div style="font-size:40px; margin-bottom:10px;">⏳</div>
                         <span id="tr-load-msg">Đang tải dữ liệu truyện...</span>
                     </div>
+
                     <div id="tr-fake-lock-screen">
                         <div class="tr-fake-clock" id="tr-fake-clock">00:00</div>
                         <div class="tr-fake-hint">Chạm 2 lần để mở khóa</div>
@@ -297,17 +316,19 @@
 
             const loadVoices = () => {
                 availableVoices = synth.getVoices().filter(v => v.lang.toLowerCase().includes('vi'));
-                const sel = $('sel-voice'); sel.innerHTML = `<option value="-1">Mặc định</option>`;
+                const sel = $('sel-voice'); sel.innerHTML = `<option value="-1">Mặc định (Google/Chị Google)</option>`;
                 availableVoices.forEach((v, i) => { sel.innerHTML += `<option value="${i}">${v.name}</option>`; });
             };
             synth.onvoiceschanged = loadVoices; setTimeout(loadVoices, 500);
         }
         app.style.display = 'flex';
     
-        // LOAD DATA FUNCTION - REVERTED TO ORIGINAL FETCH
+        // -----------------------------------------------------
+        // LOAD DỮ LIỆU TỪ SHEET (DÙNG FETCH NGUYÊN BẢN)
+        // -----------------------------------------------------
         const loadDataFromSheet = async () => {
             try {
-                // Đây là cách tải của file gốc, dùng fetch trực tiếp
+                // ĐÂY LÀ PHẦN QUAN TRỌNG: DÙNG FETCH THUẦN TÚY NHƯ FILE GỐC
                 const res = await fetch(CSV_URL);
                 const csvText = await res.text();
                 const rows = parseCSV(csvText);
@@ -327,14 +348,11 @@
                     }
                 }
                 renderFilters(); renderStories(stories);
-            } catch (e) { 
-                console.error(e);
-                $('tr-grid').innerHTML = `<div style="color:red; width:100%; text-align:center;">Lỗi tải dữ liệu: ${e.message}</div>`; 
-            }
+            } catch (e) { $('tr-grid').innerHTML = `<div style="color:red; width:100%; text-align:center;">Lỗi tải dữ liệu. (Gốc)</div>`; }
         };
     
         const renderFilters = () => {
-            const filterEl = $('tr-filter'); filterEl.innerHTML = `<option value="all">Tất cả</option>`;
+            const filterEl = $('tr-filter'); filterEl.innerHTML = `<option value="all">Tất cả thể loại</option>`;
             genres.forEach(g => { if(g) filterEl.innerHTML += `<option value="${g}">${g}</option>`; });
         };
     
@@ -357,6 +375,9 @@
         };
         $('tr-filter').onchange = $('tr-search').oninput;
     
+        // -----------------------------------------------------
+        // LOGIC URL & BÓC TÁCH TEXT
+        // -----------------------------------------------------
         const getChapterUrl = (baseLink, chapNum) => {
             if(baseLink.match(/chuong-\d+/)) return baseLink.replace(/chuong-\d+/, `chuong-${chapNum}`);
             let cleanLink = baseLink.endsWith('/') ? baseLink.slice(0, -1) : baseLink;
@@ -478,6 +499,9 @@
         $('btn-next-chap').onclick = () => { if(currentChapter < currentStory.total) { isResuming=false; saveCloudHistory(); loadAndDisplayChapter(currentChapter + 1); }};
         $('sel-chap').onchange = (e) => { isResuming=false; saveCloudHistory(); loadAndDisplayChapter(parseInt(e.target.value)); };
     
+        // -----------------------------------------------------
+        // LOGIC TTS (ĐỌC TRUYỆN)
+        // -----------------------------------------------------
         const getVoice = () => {
             if (ttsVoiceIndex >= 0 && availableVoices[ttsVoiceIndex]) return availableVoices[ttsVoiceIndex];
             let voices = synth.getVoices();
@@ -491,7 +515,8 @@
             u.lang = 'vi-VN'; 
             const voice = getVoice();
             if(voice) u.voice = voice;
-            u.rate = isSystemMsg ? 1.4 : ttsRate; u.pitch = isSystemMsg ? 1.1 : ttsPitch; 
+            u.rate = isSystemMsg ? 1.4 : ttsRate; 
+            u.pitch = isSystemMsg ? 1.1 : ttsPitch; 
             return u;
         };
     
@@ -532,7 +557,7 @@
     };
     
     return {
-        name: "Đọc Truyện",
+        name: "Đọc Truyện App",
         icon: `<svg viewBox="0 0 24 24"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.15C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zM21 18.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z" fill="white"/></svg>`,
         bgColor: "#0984e3",
         action: runTool
