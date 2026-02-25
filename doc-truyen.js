@@ -312,13 +312,12 @@
 
             // --- XỬ LÝ LOGIC MODAL ĐĂNG NHẬP / ĐĂNG KÝ GUEST ---
            
-            // Hàm xử lý việc hiển thị tên và nút Đăng Nhập/Đăng Xuất mượt mà
             const updateAuthUI = () => {
                 const nameEl = $('tr-user-name-display');
                 const btnContainer = $('tr-auth-btns');
                 if (!nameEl || !btnContainer) return;
 
-                nameEl.innerText = USER_NAME; // Cập nhật tên user lên màn hình
+                nameEl.innerText = USER_NAME;
 
                 if (!IS_LOGGED_IN) {
                     btnContainer.innerHTML = `
@@ -329,27 +328,26 @@
                     $('tr-btn-register').onclick = () => showAuthModal('register');
                 } else {
                     let isMwUser = context.AUTH_STATE && context.AUTH_STATE.isAuthorized;
-                    if (!isMwUser) { // Nếu là khách đăng nhập -> Hiện nút đăng xuất
+                    if (!isMwUser) {
                         btnContainer.innerHTML = `
                             <button id="tr-btn-logout" style="background:#d63031; color:#fff; border:none; padding:3px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold;">Đăng xuất</button>
                         `;
                         $('tr-btn-logout').onclick = () => {
                             if(confirm("Bạn có chắc chắn muốn đăng xuất?")) {
-                                localStorage.removeItem('tgdd_guest_account'); // Xóa cache
+                                localStorage.removeItem('tgdd_guest_account');
                                 let guestId = localStorage.getItem('tgdd_guest_id');
                                 if (!guestId) {
                                     guestId = 'Guest-' + Math.floor(Math.random() * 1000);
                                     localStorage.setItem('tgdd_guest_id', guestId);
                                 }
-                                USER_NAME = guestId; // Trả lại tên khách vãng lai
+                                USER_NAME = guestId;
                                 IS_LOGGED_IN = false;
-                                
-                                updateAuthUI(); // Chuyển lại nút Đăng nhập
-                                if (typeof renderHome === 'function') renderHome(); // Tải lại danh sách lịch sử
+                                updateAuthUI();
+                                renderHome(); // Reset về mặc định
                             }
                         };
                     } else {
-                        btnContainer.innerHTML = ''; // User gốc có bản quyền thì không cần nút đăng xuất
+                        btnContainer.innerHTML = '';
                     }
                 }
             };
@@ -376,12 +374,10 @@
                 context.UI.showMsg(title, htmlContent, 'info');
 
                 setTimeout(() => {
-                    // SỬA LỖI Z-INDEX: Ép modal hệ thống nổi lên trên công cụ đọc truyện
                     const modal = document.getElementById('tgdd-msg-modal');
                     if (modal) {
                         modal.style.zIndex = '2147483999';
                         let parent = modal.parentElement;
-                        // Tìm và nâng luôn nền đen đằng sau (overlay) nếu có
                         while(parent && parent.tagName !== 'BODY') {
                             if(window.getComputedStyle(parent).position === 'fixed' || window.getComputedStyle(parent).position === 'absolute') {
                                 parent.style.zIndex = '2147483998';
@@ -409,30 +405,30 @@
                                     password: p
                                 }),
                                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                                onload: (res) => {
+                                onload: async (res) => { // SỬA: Thêm async để await syncCloudHistory
                                     try {
                                         const json = JSON.parse(res.responseText);
                                         if(json.status === 'success') {
-                                            // XÓA ALERT CŨ VÀ CẬP NHẬT MƯỢT UI
-                                            if (modal) modal.style.display = 'none'; // Đóng Modal ẩn
+                                            if (modal) modal.style.display = 'none';
                                             document.body.classList.remove('tgdd-body-lock');
                                             
-                                            // Lưu thông tin đăng nhập
                                             localStorage.setItem('tgdd_guest_account', JSON.stringify({user: u, pass: p}));
                                             USER_NAME = u;
                                             IS_LOGGED_IN = true;
                                             
-                                            // Gọi hàm này để đổi nút & hiển thị tên mới lập tức
                                             updateAuthUI();
                                             
-                                            // Gọi đồng bộ cloud history của user mới (nếu có lịch sử cũ sẽ load về)
-                                            if (typeof syncCloudHistory === 'function') syncCloudHistory();
+                                            // SỬA: Đợi sync xong mới render
+                                            $('tr-status-text').innerText = "Đang tải lịch sử...";
+                                            await syncCloudHistory();
+                                            renderHome();
+                                            
                                         } else {
                                             alert("❌ Lỗi: " + json.message);
                                             btnSubmit.innerText = isLogin ? 'Đăng Nhập Ngay' : 'Đăng Ký Tài Khoản';
                                             btnSubmit.disabled = false;
                                         }
-                                    } catch(e) { alert("❌ Lỗi phản hồi từ máy chủ!"); btnSubmit.disabled = false; }
+                                    } catch(e) { console.error(e); alert("❌ Lỗi phản hồi từ máy chủ!"); btnSubmit.disabled = false; }
                                 },
                                 onerror: () => { alert("❌ Mất kết nối mạng!"); btnSubmit.disabled = false; }
                             });
@@ -441,20 +437,7 @@
                 }, 100);
             };
 
-            // Gọi chạy lần đầu khi mở app để khởi tạo nút tương ứng
             updateAuthUI();
-
-            if($('tr-btn-login')) $('tr-btn-login').onclick = () => showAuthModal('login');
-            if($('tr-btn-register')) $('tr-btn-register').onclick = () => showAuthModal('register');
-            if($('tr-btn-logout')) {
-                $('tr-btn-logout').onclick = () => {
-                    if(confirm("Bạn có chắc chắn muốn đăng xuất?")) {
-                        localStorage.removeItem('tgdd_guest_account');
-                        document.getElementById('truyen-app').remove();
-                        runTool(); // Render lại giao diện khách vãng lai
-                    }
-                };
-            }
             
             $('tr-btn-home').onclick = $('btn-back-home').onclick = () => { 
                 stopTTS(); releaseWakeLock(); saveCloudHistory(); 
@@ -467,9 +450,8 @@
             $('tr-settings-panel').onclick = (e) => e.stopPropagation();
             document.addEventListener('click', (e) => { if(!e.target.closest('#btn-settings')) $('tr-settings-panel').classList.remove('show'); });
 
-            // --- LOGIC TREO MÁY CẢI TIẾN ---
+            // --- LOGIC TREO MÁY ---
             const enterSleepMode = async () => {
-                // Chỉ treo máy khi đang đọc AI
                 if (!isReading) return;
                 try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (err) {}
                 $('tr-sleep-story-name').innerText = currentStory ? currentStory.name : "Truyện";
@@ -478,22 +460,17 @@
 
             const resetIdleTimer = () => {
                 if (sleepTimer) clearTimeout(sleepTimer);
-                // Nếu đang đọc và màn hình chưa khóa
                 if (isReading) {
                     sleepTimer = setTimeout(() => {
-                        // Kiểm tra lại lần nữa xem có đang khóa không
                         if ($('tr-fake-lock-screen').style.display !== 'flex') {
                             enterSleepMode();
                         }
-                    }, 3000); // 3 giây
+                    }, 3000);
                 }
             };
 
-            // Sự kiện reset timer khi thao tác
             ['mousemove', 'click', 'touchstart', 'scroll', 'keydown'].forEach(evt => {
                 document.getElementById('tr-view-reader').addEventListener(evt, () => {
-                    // Nếu đang treo máy thì không reset timer (để màn hình đen yên tĩnh)
-                    // Chỉ reset khi màn hình đang sáng và đang đọc
                     if (isReading && $('tr-fake-lock-screen').style.display !== 'flex') {
                         resetIdleTimer();
                     }
@@ -509,19 +486,16 @@
             $('tr-fake-lock-screen').onclick = (e) => {
                 const cur = new Date().getTime(); 
                 const diff = cur - lastTap;
-                // Bấm 2 lần trong 500ms
                 if (diff < 500 && diff > 0) { 
                     $('tr-fake-lock-screen').style.display = 'none'; 
                     releaseWakeLock(); 
                     e.preventDefault();
-                    // Sau khi mở khóa, kích hoạt lại timer để sau 3s lại tự khóa nếu ko làm gì
                     resetIdleTimer();
                 }
                 lastTap = cur;
             };
 
             const releaseWakeLock = () => { if (wakeLock) { wakeLock.release(); wakeLock = null; } };
-            // --- HẾT LOGIC TREO MÁY ---
 
             $('rng-rate').oninput = (e) => { ttsRate = parseFloat(e.target.value); $('val-rate').innerText = ttsRate; };
             $('rng-pitch').oninput = (e) => { ttsPitch = parseFloat(e.target.value); $('val-pitch').innerText = ttsPitch; };
@@ -537,10 +511,72 @@
         app.style.display = 'flex';
     
         // -----------------------------------------------------
-        // LOAD DỮ LIỆU TỪ SHEET & CLOUD HISTORY
+        // LOAD DỮ LIỆU TỪ SHEET & CLOUD HISTORY (ĐÃ SỬA)
         // -----------------------------------------------------
+        
+        // Hàm sync được sửa thành Promise để có thể await
+        const syncCloudHistory = () => {
+            return new Promise((resolve, reject) => {
+                if (!API_URL || !IS_LOGGED_IN) {
+                    resolve(false); // Không cần sync
+                    return;
+                }
+                $('tr-status-text').innerText = "Đang đồng bộ Cloud...";
+                
+                context.GM_xmlhttpRequest({
+                    method: "GET",
+                    url: `${API_URL}?action=get_config&type=history&user=${USER_NAME}`,
+                    onload: (res) => {
+                        try {
+                            const json = JSON.parse(res.responseText);
+                            if(json && json.data && Array.isArray(json.data)) {
+                                let cloudHistory = json.data;
+                                let localData = getLocalVal(PROGRESS_KEY, {});
+                                let hasUpdate = false;
+    
+                                cloudHistory.forEach(item => {
+                                    let story = stories.find(s => s.name === item.story);
+                                    if (story) {
+                                        // Ưu tiên Cloud
+                                        if (!localData[story.link] || (item.timestamp && item.timestamp > (localData[story.link].time || 0))) {
+                                            localData[story.link] = { 
+                                                chap: parseInt(item.chapter) || 1, 
+                                                sentence: 0, 
+                                                time: item.timestamp || Date.now() 
+                                            };
+                                            hasUpdate = true;
+                                        }
+                                    }
+                                });
+    
+                                if(hasUpdate) {
+                                    setLocalVal(PROGRESS_KEY, localData);
+                                    $('tr-status-text').innerText = "Đồng bộ thành công";
+                                } else {
+                                    $('tr-status-text').innerText = "Đã đồng bộ";
+                                }
+                            } else {
+                                $('tr-status-text').innerText = "Không có dữ liệu Cloud";
+                            }
+                            resolve(true); // Xong thành công
+                        } catch(e) { 
+                            console.warn("Parse cloud data error", e); 
+                            $('tr-status-text').innerText = "Lỗi dữ liệu";
+                            resolve(false); // Lỗi nhưng vẫn resolve để app chạy tiếp
+                        }
+                        setTimeout(() => $('tr-status-text').innerText = "Sẵn sàng", 3000);
+                    },
+                    onerror: () => { 
+                        $('tr-status-text').innerText = "Lỗi mạng"; 
+                        resolve(false); 
+                    }
+                });
+            });
+        };
+
         const loadDataFromSheet = async () => {
             try {
+                // 1. Tải danh sách truyện trước
                 const res = await fetch(CSV_URL);
                 const csvText = await res.text();
                 const rows = parseCSV(csvText);
@@ -560,62 +596,21 @@
                     }
                 }
                 renderFilters(); 
-                renderHome(); // Render lần đầu (có thể từ local)
-                syncCloudHistory(); // Sau đó ưu tiên tải từ Cloud
-            } catch (e) { $('tr-home-content').innerHTML = `<div style="color:red; width:100%; text-align:center;">Lỗi tải dữ liệu.</div>`; }
+                
+                // 2. Nếu đã đăng nhập (MWG hoặc có cache guest), tải lịch sử TRƯỚC khi vẽ
+                if (IS_LOGGED_IN) {
+                    await syncCloudHistory(); 
+                }
+
+                // 3. Sau khi đã có (hoặc ko có) lịch sử, mới vẽ giao diện
+                renderHome(); 
+
+            } catch (e) { 
+                console.error(e);
+                $('tr-home-content').innerHTML = `<div style="color:red; width:100%; text-align:center;">Lỗi tải dữ liệu.</div>`; 
+            }
         };
 
-        // HÀM MỚI: TẢI LỊCH SỬ TỪ CLOUD
-        const syncCloudHistory = () => {
-            if (!API_URL || !IS_LOGGED_IN) return;
-            $('tr-status-text').innerText = "Đang đồng bộ Cloud...";
-            
-            context.GM_xmlhttpRequest({
-                method: "GET",
-                url: `${API_URL}?action=get_config&type=history&user=${USER_NAME}`,
-                onload: (res) => {
-                    try {
-                        const json = JSON.parse(res.responseText);
-                        if(json && json.data && Array.isArray(json.data)) {
-                            // Map dữ liệu Cloud về Local format
-                            let cloudHistory = json.data;
-                            let localData = getLocalVal(PROGRESS_KEY, {});
-                            let hasUpdate = false;
-
-                            cloudHistory.forEach(item => {
-                                // Tìm truyện trong danh sách đã tải
-                                let story = stories.find(s => s.name === item.story);
-                                if (story) {
-                                    // Ghi đè local bằng cloud (Ưu tiên Cloud)
-                                    // Chỉ cập nhật nếu local chưa có hoặc cloud mới hơn (dựa vào timestamp nếu có, ở đây giả sử cloud luôn đúng)
-                                    if (!localData[story.link] || (item.timestamp && item.timestamp > (localData[story.link].time || 0))) {
-                                        localData[story.link] = { 
-                                            chap: parseInt(item.chapter) || 1, 
-                                            sentence: 0, 
-                                            time: item.timestamp || Date.now() 
-                                        };
-                                        hasUpdate = true;
-                                    }
-                                }
-                            });
-
-                            if(hasUpdate) {
-                                setLocalVal(PROGRESS_KEY, localData);
-                                $('tr-status-text').innerText = "Đồng bộ thành công";
-                                renderHome(); // Render lại giao diện với dữ liệu mới
-                            } else {
-                                $('tr-status-text').innerText = "Đã đồng bộ";
-                            }
-                        } else {
-                            $('tr-status-text').innerText = "Không có dữ liệu Cloud";
-                        }
-                    } catch(e) { console.warn("Parse cloud data error", e); $('tr-status-text').innerText = "Sẵn sàng"; }
-                    setTimeout(() => $('tr-status-text').innerText = "Sẵn sàng", 3000);
-                },
-                onerror: () => { $('tr-status-text').innerText = "Lỗi mạng"; }
-            });
-        };
-    
         const renderFilters = () => {
             const filterEl = $('tr-filter'); filterEl.innerHTML = `<option value="all">Tất cả thể loại</option>`;
             genres.forEach(g => { if(g) filterEl.innerHTML += `<option value="${g}">${g}</option>`; });
@@ -921,7 +916,7 @@
     };
     
     return {
-        name: "Đọc Truyện V1",
+        name: "Đọc Truyện V2",
         icon: `<svg viewBox="0 0 24 24"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.15C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zM21 18.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z" fill="white"/></svg>`,
         bgColor: "#0984e3",
         action: runTool
