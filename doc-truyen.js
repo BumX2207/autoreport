@@ -44,7 +44,16 @@
         .tr-search-box input:focus { border-color:#e17055; box-shadow:0 0 5px rgba(225,112,85,0.3); }
         .tr-filter { padding:8px 10px; border:1px solid #ddd; border-radius:20px; outline:none; font-size:14px; background:#fff; cursor:pointer; width: 130px; flex-shrink: 0; text-overflow: ellipsis;}
         
-        .tr-home-body { flex:1; overflow-y:auto; padding:20px; background:#f4f5f7; display:flex; flex-wrap:wrap; gap:20px; align-content: flex-start;}
+        .tr-home-body { flex:1; overflow-y:auto; padding:20px; background:#f4f5f7; display:flex; flex-direction: column; gap:30px; }
+        
+        /* SECTIONS & GRIDS (Mới) */
+        .tr-section { width: 100%; display: flex; flex-direction: column; gap: 15px;}
+        .tr-section-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e17055; padding-bottom: 5px;}
+        .tr-section-title { font-size: 18px; font-weight: bold; color: #2d3436; text-transform: uppercase; }
+        .tr-btn-view-all { background: transparent; color: #e17055; border: 1px solid #e17055; padding: 4px 12px; border-radius: 15px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .tr-btn-view-all:hover { background: #e17055; color: white; }
+        .tr-grid-container { display:flex; flex-wrap:wrap; gap:20px; align-content: flex-start; width: 100%; }
+
         .tr-card { background:#fff; border-radius:10px; box-shadow:0 4px 6px rgba(0,0,0,0.05); width:calc(25% - 15px); min-width:200px; overflow:hidden; cursor:pointer; transition:transform 0.2s; display:flex; flex-direction:column;}
         .tr-card:hover { transform:translateY(-5px); box-shadow:0 8px 15px rgba(0,0,0,0.1); }
         
@@ -123,11 +132,12 @@
             .tr-toolbar { gap: 5px; padding: 10px; }
             .tr-nav-btn { padding: 6px 10px; font-size: 12px; }
             .tr-filter { width: 100px; font-size: 12px; }
+            .tr-section-title { font-size: 16px; }
         }
     `;
     
     // ===============================================================
-    // 3. HÀM FETCH VƯỢT RÀO VÀ PARSE CSV (Dùng cho Chapter)
+    // 3. HÀM FETCH VƯỢT RÀO VÀ PARSE CSV
     // ===============================================================
     const fetchWithFallbacks = async (targetUrl) => {
         const proxies = [
@@ -178,7 +188,6 @@
     // 4. LOGIC CHÍNH CỦA APP
     // ===============================================================
     const runTool = async () => {
-        // Nếu Tool đang chạy trong hệ sinh thái Auto BI
         const bottomNav = document.getElementById('tgdd-bottom-nav');
         if(bottomNav) bottomNav.style.display = 'none';
     
@@ -199,6 +208,9 @@
         let currentSentenceIndex = 0;
         let isResuming = false;
         let preloadedData = { chapNum: null, contentHtml: null, contentArr: null };
+        
+        // STATE TRANG CHỦ MỚI
+        let showAllHistory = false; // Trạng thái nút "Xem tất cả lịch sử"
 
         // SETTINGS STATE
         let ttsRate = 1.3;
@@ -228,7 +240,10 @@
                         <div class="tr-search-box"><input type="text" id="tr-search" placeholder="🔍 Tìm kiếm tên truyện..."></div>
                         <select class="tr-filter" id="tr-filter"><option value="all">Tất cả thể loại</option></select>
                     </div>
-                    <div class="tr-home-body" id="tr-grid"><div style="width:100%; text-align:center; padding:50px; color:#888;">⏳ Đang tải danh sách truyện...</div></div>
+                    <!-- Nơi chứa các mảng truyện -->
+                    <div class="tr-home-body" id="tr-home-content">
+                        <div style="width:100%; text-align:center; padding:50px; color:#888;">⏳ Đang tải dữ liệu truyện...</div>
+                    </div>
                 </div>
     
                 <div id="tr-view-reader" class="tr-reader-view">
@@ -288,13 +303,20 @@
             const style = document.createElement('style'); style.innerHTML = MY_CSS; document.head.appendChild(style);
     
             $('tr-btn-close').onclick = () => { app.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; stopTTS(); releaseWakeLock(); saveCloudHistory(); };
-            $('tr-btn-home').onclick = $('btn-back-home').onclick = () => { stopTTS(); releaseWakeLock(); saveCloudHistory(); $('tr-view-reader').style.display = 'none'; $('tr-view-home').style.display = 'flex'; renderStories(stories); };
+            
+            // Hàm Back To Home có tính năng Load lại lưới truyện
+            $('tr-btn-home').onclick = $('btn-back-home').onclick = () => { 
+                stopTTS(); releaseWakeLock(); saveCloudHistory(); 
+                $('tr-view-reader').style.display = 'none'; 
+                $('tr-view-home').style.display = 'flex'; 
+                showAllHistory = false; // Reset trạng thái xem tất cả
+                renderHome(); // Tải lại trang chủ mới
+            };
             
             $('btn-settings').onclick = (e) => { e.stopPropagation(); $('tr-settings-panel').classList.toggle('show'); };
             $('tr-settings-panel').onclick = (e) => e.stopPropagation();
             document.addEventListener('click', (e) => { if(!e.target.closest('#btn-settings')) $('tr-settings-panel').classList.remove('show'); });
 
-            // Wake Lock
             $('btn-sleep-mode').onclick = async () => {
                 if (!isReading) { alert("Vui lòng bấm ĐỌC trước khi treo máy!"); return; }
                 try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (err) {}
@@ -324,11 +346,10 @@
         app.style.display = 'flex';
     
         // -----------------------------------------------------
-        // LOAD DỮ LIỆU TỪ SHEET (DÙNG FETCH NGUYÊN BẢN)
+        // LOAD DỮ LIỆU TỪ SHEET
         // -----------------------------------------------------
         const loadDataFromSheet = async () => {
             try {
-                // ĐÂY LÀ PHẦN QUAN TRỌNG: DÙNG FETCH THUẦN TÚY NHƯ FILE GỐC
                 const res = await fetch(CSV_URL);
                 const csvText = await res.text();
                 const rows = parseCSV(csvText);
@@ -347,8 +368,8 @@
                         });
                     }
                 }
-                renderFilters(); renderStories(stories);
-            } catch (e) { $('tr-grid').innerHTML = `<div style="color:red; width:100%; text-align:center;">Lỗi tải dữ liệu. (Gốc)</div>`; }
+                renderFilters(); renderHome();
+            } catch (e) { $('tr-home-content').innerHTML = `<div style="color:red; width:100%; text-align:center;">Lỗi tải dữ liệu.</div>`; }
         };
     
         const renderFilters = () => {
@@ -356,24 +377,98 @@
             genres.forEach(g => { if(g) filterEl.innerHTML += `<option value="${g}">${g}</option>`; });
         };
     
-        const renderStories = (list) => {
-            const grid = $('tr-grid'); grid.innerHTML = '';
-            if(list.length === 0) return grid.innerHTML = `<div style="width:100%; text-align:center;">Không tìm thấy truyện nào.</div>`;
+        // HÀM VẼ CARD TRUYỆN (Dùng chung cho các lưới)
+        const renderStoryCards = (list, container) => {
             const progressData = getLocalVal(PROGRESS_KEY, {});
             list.forEach(story => {
                 const card = document.createElement('div'); card.className = 'tr-card';
                 let coverHtml = (story.cover && story.cover.startsWith('http')) ? `<img src="${story.cover}" class="tr-card-img" loading="lazy">` : story.name.charAt(0).toUpperCase();
                 let progressHtml = (progressData[story.link] && progressData[story.link].chap) ? `<div class="tr-card-progress">Đang đọc: Chương ${progressData[story.link].chap}</div>` : '';
                 card.innerHTML = `<div class="tr-card-cover">${coverHtml}${progressHtml}</div><div class="tr-card-info"><div class="tr-card-title">${story.name}</div><div class="tr-card-genre">${story.genre}</div><div class="tr-card-chap">Tổng: ${story.total} Chương</div></div>`;
-                card.onclick = () => openStory(story); grid.appendChild(card);
+                card.onclick = () => openStory(story); 
+                container.appendChild(card);
             });
         };
-    
-        $('tr-search').oninput = () => {
-            const kw = $('tr-search').value.toLowerCase(); const gr = $('tr-filter').value;
-            renderStories(stories.filter(s => s.name.toLowerCase().includes(kw) && (gr === 'all' || s.genre === gr)));
+
+        // RENDER GIAO DIỆN TRANG CHỦ THEO MẢNG
+        const renderHome = () => {
+            const kw = $('tr-search').value.toLowerCase(); 
+            const gr = $('tr-filter').value;
+            const content = $('tr-home-content');
+            content.innerHTML = ''; // Clear giao diện cũ
+
+            const isSearching = kw !== '' || gr !== 'all';
+
+            // TRƯỜNG HỢP 1: ĐANG TÌM KIẾM HOẶC LỌC THỂ LOẠI (Gộp chung thành 1 list)
+            if (isSearching) {
+                const filtered = stories.filter(s => s.name.toLowerCase().includes(kw) && (gr === 'all' || s.genre === gr));
+                if(filtered.length === 0) { 
+                    content.innerHTML = `<div style="width:100%; text-align:center; padding:20px;">Không tìm thấy truyện nào phù hợp.</div>`; 
+                    return; 
+                }
+                const grid = document.createElement('div'); grid.className = 'tr-grid-container';
+                renderStoryCards(filtered, grid);
+                content.appendChild(grid);
+                return;
+            }
+
+            // TRƯỜNG HỢP 2: TRANG CHỦ MẶC ĐỊNH (Chia thành các section/mảng)
+            const progressData = getLocalVal(PROGRESS_KEY, {});
+            
+            // Mảng 1: Lịch sử truyện đang đọc
+            let historyList = stories.filter(s => progressData[s.link]).map(s => {
+                return { ...s, lastReadTime: progressData[s.link].time || 0 };
+            }).sort((a, b) => b.lastReadTime - a.lastReadTime); // Sắp xếp truyện đọc gần nhất lên đầu
+
+            if (historyList.length > 0) {
+                const limit = showAllHistory ? historyList.length : 4;
+                const displayList = historyList.slice(0, limit);
+                
+                const sec = document.createElement('div'); sec.className = 'tr-section';
+                sec.innerHTML = `
+                    <div class="tr-section-header">
+                        <div class="tr-section-title">🕒 Truyện đang đọc</div>
+                        ${historyList.length > 4 ? `<button class="tr-btn-view-all" id="btn-toggle-history">${showAllHistory ? 'Thu gọn' : 'Xem tất cả (' + historyList.length + ')'}</button>` : ''}
+                    </div>
+                    <div class="tr-grid-container" id="grid-history"></div>
+                `;
+                content.appendChild(sec);
+                renderStoryCards(displayList, sec.querySelector('#grid-history'));
+                
+                const toggleBtn = sec.querySelector('#btn-toggle-history');
+                if(toggleBtn) { toggleBtn.onclick = () => { showAllHistory = !showAllHistory; renderHome(); }; }
+            }
+
+            // Mảng 2: Tất cả các truyện (Tối đa 10 truyện)
+            if (stories.length > 0) {
+                const allSec = document.createElement('div'); allSec.className = 'tr-section';
+                allSec.innerHTML = `<div class="tr-section-header"><div class="tr-section-title">📚 Tất cả truyện</div></div><div class="tr-grid-container" id="grid-all"></div>`;
+                content.appendChild(allSec);
+                renderStoryCards(stories.slice(0, 10), allSec.querySelector('#grid-all'));
+            }
+
+            // Hàm tạo các mảng theo thể loại linh hoạt
+            const createCategorySection = (title, keyword, emoji, max = 4) => {
+                const filteredList = stories.filter(s => s.genre.toLowerCase().includes(keyword));
+                if (filteredList.length > 0) {
+                    const sec = document.createElement('div'); sec.className = 'tr-section';
+                    const safeId = "grid-" + keyword.replace(/\s+/g, "");
+                    sec.innerHTML = `<div class="tr-section-header"><div class="tr-section-title">${emoji} ${title}</div></div><div class="tr-grid-container" id="${safeId}"></div>`;
+                    content.appendChild(sec);
+                    renderStoryCards(filteredList.slice(0, max), sec.querySelector(`#${safeId}`));
+                }
+            };
+
+            // Mảng 3: Tiên Hiệp (Tối đa 4)
+            createCategorySection("Tiên Hiệp", "tiên hiệp", "☁️");
+            // Mảng 4: Kiếm Hiệp (Tối đa 4)
+            createCategorySection("Kiếm Hiệp", "kiếm hiệp", "⚔️");
+            // Mảng 5: Ngôn Tình (Tối đa 4)
+            createCategorySection("Ngôn Tình", "ngôn tình", "🌸");
         };
-        $('tr-filter').onchange = $('tr-search').oninput;
+    
+        $('tr-search').oninput = renderHome;
+        $('tr-filter').onchange = renderHome;
     
         // -----------------------------------------------------
         // LOGIC URL & BÓC TÁCH TEXT
@@ -483,12 +578,29 @@
         };
 
         const saveCloudHistory = () => {
-            if(!currentStory || !context.AUTH_STATE.isAuthorized || !API_URL) return;
-            const historyData = { story: currentStory.name, chapter: currentChapter, percent: Math.round((currentChapter / currentStory.total) * 100) + '%', time: new Date().toLocaleString('vi-VN') };
-            $('tr-status-text').innerText = "Đang lưu...";
+            if(!context.AUTH_STATE.isAuthorized || !API_URL) return;
+            
+            // CẬP NHẬT MỚI: Đồng bộ danh sách Lịch sử đọc lên Cloud (Tối đa 15 bộ gần nhất)
+            const progressData = getLocalVal(PROGRESS_KEY, {});
+            let fullHistory = Object.keys(progressData).map(link => {
+                let s = stories.find(st => st.link === link);
+                let p = progressData[link];
+                if (!s || !p) return null;
+                return {
+                    story: s.name,
+                    chapter: p.chap,
+                    percent: Math.round((p.chap / s.total) * 100) + '%',
+                    time: new Date(p.time || Date.now()).toLocaleString('vi-VN'),
+                    timestamp: p.time || 0
+                };
+            }).filter(item => item !== null).sort((a,b) => b.timestamp - a.timestamp).slice(0, 15);
+
+            if (fullHistory.length === 0) return;
+
+            $('tr-status-text').innerText = "Đang đồng bộ...";
             context.GM_xmlhttpRequest({
                 method: "POST", url: API_URL,
-                data: JSON.stringify({ action: 'save_config', type: 'history', user: USER_NAME, config: JSON.stringify(historyData) }),
+                data: JSON.stringify({ action: 'save_config', type: 'history', user: USER_NAME, config: fullHistory }),
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 onload: (res) => { $('tr-status-text').innerText = "Đã lưu"; setTimeout(()=> $('tr-status-text').innerText = "Sẵn sàng", 2000); },
                 onerror: () => { $('tr-status-text').innerText = "Lỗi lưu"; }
@@ -557,7 +669,7 @@
     };
     
     return {
-        name: "Đọc Truyện V1",
+        name: "Đọc Truyện V2",
         icon: `<svg viewBox="0 0 24 24"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.15C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zM21 18.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z" fill="white"/></svg>`,
         bgColor: "#0984e3",
         action: runTool
