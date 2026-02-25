@@ -9,8 +9,7 @@
     // Khóa lưu trữ lịch sử đọc cục bộ (Dùng cho cả Khách và User)
     const PROGRESS_KEY = 'tgdd_story_progress_v1';
     
-    // Lấy thông tin User và API từ Auto BI Context
-    // Nếu không có User (Khách) -> Tạo một ID ảo để hiển thị cho đẹp
+    // Lấy thông tin User
     let USER_NAME = 'Khách';
     if (context.AUTH_STATE && context.AUTH_STATE.userName) {
         USER_NAME = context.AUTH_STATE.userName;
@@ -32,23 +31,19 @@
     const MY_CSS = `
         #truyen-app { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#f8f9fa; z-index:2147483800; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; flex-direction:column; overflow:hidden; }
         
-        /* HEADER */
         .tr-header { background:#fff; padding:10px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); display:flex; justify-content:space-between; align-items:center; z-index:20; flex-shrink:0; }
         .tr-logo { font-size:20px; font-weight:900; color:#e17055; display:flex; align-items:center; gap:8px; cursor:pointer;}
         .tr-btn-close { background:#fab1a0; color:#d63031; border:none; border-radius:50%; width:32px; height:32px; font-weight:bold; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; }
         
-        /* USER INFO BAR */
         .tr-user-bar { background:#2d3436; color:#dfe6e9; padding:5px 20px; font-size:12px; display:flex; justify-content:space-between; align-items:center; font-weight:bold; }
         .tr-user-name { color: #00cec9; }
 
-        /* TOOLBAR */
         .tr-toolbar { background:#fff; padding:10px 20px; border-bottom:1px solid #eee; display:flex; gap:10px; z-index:15; flex-wrap:nowrap; align-items:center; }
         .tr-search-box { flex:1; display:flex; min-width: 0; }
         .tr-search-box input { width:100%; padding:8px 15px; border:1px solid #ddd; border-radius:20px; outline:none; font-size:14px; transition:0.3s; }
         .tr-search-box input:focus { border-color:#e17055; box-shadow:0 0 5px rgba(225,112,85,0.3); }
         .tr-filter { padding:8px 10px; border:1px solid #ddd; border-radius:20px; outline:none; font-size:14px; background:#fff; cursor:pointer; width: 130px; flex-shrink: 0; text-overflow: ellipsis;}
         
-        /* GRID TRUYỆN */
         .tr-home-body { flex:1; overflow-y:auto; padding:20px; background:#f4f5f7; display:flex; flex-wrap:wrap; gap:20px; align-content: flex-start;}
         .tr-card { background:#fff; border-radius:10px; box-shadow:0 4px 6px rgba(0,0,0,0.05); width:calc(25% - 15px); min-width:200px; overflow:hidden; cursor:pointer; transition:transform 0.2s; display:flex; flex-direction:column;}
         .tr-card:hover { transform:translateY(-5px); box-shadow:0 8px 15px rgba(0,0,0,0.1); }
@@ -62,7 +57,6 @@
         .tr-card-genre { font-size:11px; color:#00b894; background:#e8f8f5; padding:3px 8px; border-radius:12px; align-self:flex-start; margin-bottom:8px;}
         .tr-card-chap { font-size:12px; color:#636e72; margin-top:auto; font-weight:500;}
     
-        /* READER VIEW */
         .tr-reader-view { display:none; flex:1; flex-direction:column; background:#f4f5f7; overflow:hidden; position:relative; }
         
         .tr-reader-tools { background:#2d3436; padding:10px 20px; display:flex; justify-content:center; gap:10px; z-index:10; position: relative; flex-wrap: wrap;}
@@ -74,7 +68,6 @@
         .tr-btn-settings { background:#0984e3; } 
         .tr-btn-sleep { background:#6c5ce7; }
 
-        /* BẢNG CÀI ĐẶT */
         .tr-settings-panel {
             position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
             background: white; padding: 15px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.2);
@@ -106,7 +99,6 @@
     
         .tr-loading-overlay { position:absolute; top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.95); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:50; font-weight:bold; font-size:16px; color:#e17055;}
         
-        /* FAKE LOCK SCREEN */
         #tr-fake-lock-screen {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #000000; z-index: 2147483999; 
@@ -117,7 +109,6 @@
         .tr-fake-hint { font-size: 14px; color: #333; animation: breathe 3s infinite; }
         @keyframes breathe { 0%, 100% {opacity: 0.3} 50% {opacity: 0.8} }
 
-        /* RESPONSIVE */
         @media (max-width: 768px) {
             .tr-card { width:calc(33.33% - 15px); }
             .tr-paper { padding: 20px; }
@@ -135,34 +126,8 @@
     `;
     
     // ===============================================================
-    // 3. HÀM FETCH VƯỢT RÀO VÀ PARSE CSV
+    // 3. HÀM HELPER
     // ===============================================================
-    const fetchWithFallbacks = async (targetUrl) => {
-        const proxies = [
-            `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`,
-            `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`
-        ];
-        for (let proxy of proxies) {
-            try {
-                const res = await fetch(proxy);
-                if (!res.ok) continue;
-                let htmlText = "";
-                if(proxy.includes('allorigins')) {
-                    const json = await res.json();
-                    htmlText = json.contents;
-                } else {
-                    htmlText = await res.text();
-                }
-                // Check if result is valid
-                if(htmlText.includes('Cloudflare') && htmlText.includes('Attention Required!')) continue;
-                if(!htmlText || htmlText.length < 10) continue;
-
-                return htmlText;
-            } catch (e) { console.warn("Proxy failed", proxy); }
-        }
-        throw new Error("Lỗi tải trang. Các Proxy đã bị chặn.");
-    };
-    
     const parseCSV = (text) => {
         if(!text) return [];
         const rows = [];
@@ -185,6 +150,30 @@
         if (curr !== '' || row.length > 0) { row.push(curr); rows.push(row); }
         return rows;
     };
+
+    const fetchWithFallbacks = async (targetUrl) => {
+        const proxies = [
+            `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`,
+            `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`
+        ];
+        for (let proxy of proxies) {
+            try {
+                const res = await fetch(proxy);
+                if (!res.ok) continue;
+                let htmlText = "";
+                if(proxy.includes('allorigins')) {
+                    const json = await res.json();
+                    htmlText = json.contents;
+                } else {
+                    htmlText = await res.text();
+                }
+                if(htmlText.includes('Cloudflare') && htmlText.includes('Attention Required!')) continue;
+                if(!htmlText || htmlText.length < 10) continue;
+                return htmlText;
+            } catch (e) { console.warn("Proxy failed", proxy); }
+        }
+        throw new Error("Lỗi tải trang.");
+    };
     
     // ===============================================================
     // 4. LOGIC CHÍNH CỦA APP
@@ -195,10 +184,9 @@
     
         const getLocalVal = (key, def) => { try { return typeof GM_getValue === 'function' ? GM_getValue(key, def) : (JSON.parse(localStorage.getItem(key)) || def); } catch(e) { return def; }};
         const setLocalVal = (key, val) => { try { if(typeof GM_setValue === 'function') GM_setValue(key, val); localStorage.setItem(key, JSON.stringify(val)); } catch(e){} };
-    
         const $ = (id) => document.getElementById(id);
-        let synth = window.speechSynthesis;
         
+        let synth = window.speechSynthesis;
         let stories = [];
         let genres = new Set();
         let currentStory = null;
@@ -208,14 +196,8 @@
         let currentSentenceIndex = 0;
         let isResuming = false;
         let preloadedData = { chapNum: null, contentHtml: null, contentArr: null };
-
-        // SETTINGS
-        let ttsRate = 1.3;
-        let ttsPitch = 1.0;
-        let ttsVoiceIndex = -1;
+        let ttsRate = 1.3, ttsPitch = 1.0, ttsVoiceIndex = -1;
         let availableVoices = [];
-        
-        // WAKE LOCK
         let wakeLock = null;
     
         // INIT UI
@@ -323,35 +305,41 @@
         }
         app.style.display = 'flex';
     
-        // LOAD DATA FUNCTION (REVERTED TO DIRECT FETCH)
-        const loadDataFromSheet = async () => {
-            try {
-                // SỬ DỤNG FETCH TRỰC TIẾP NHƯ BẢN GỐC
-                const res = await fetch(CSV_URL);
-                if (!res.ok) throw new Error("Fetch failed");
-                const csvText = await res.text();
-                
-                const rows = parseCSV(csvText);
-                
-                stories = []; genres.clear();
-                for(let i = 1; i < rows.length; i++) {
-                    const r = rows[i];
-                    if(r.length >= 4 && r[0].trim() !== "") {
-                        genres.add(r[1].trim());
-                        stories.push({ 
-                            name: r[0].trim(), 
-                            genre: r[1].trim(), 
-                            link: r[2].trim(), 
-                            total: parseInt(r[3].trim()) || 1,
-                            cover: (r.length > 4 && r[4].trim() !== "") ? r[4].trim() : null
-                        });
+        // LOAD DATA FUNCTION - SỬ DỤNG GM_xmlhttpRequest ĐỂ CHẮC CHẮN TẢI ĐƯỢC
+        const loadDataFromSheet = () => {
+            $('tr-load-msg').innerText = "Đang tải danh sách truyện...";
+            // Sử dụng context.GM_xmlhttpRequest từ Auto BI truyền sang
+            context.GM_xmlhttpRequest({
+                method: "GET",
+                url: CSV_URL,
+                onload: (res) => {
+                    if (res.status === 200) {
+                        try {
+                            const rows = parseCSV(res.responseText);
+                            stories = []; genres.clear();
+                            for(let i = 1; i < rows.length; i++) {
+                                const r = rows[i];
+                                if(r.length >= 4 && r[0].trim() !== "") {
+                                    genres.add(r[1].trim());
+                                    stories.push({ 
+                                        name: r[0].trim(), genre: r[1].trim(), link: r[2].trim(), 
+                                        total: parseInt(r[3].trim()) || 1,
+                                        cover: (r.length > 4 && r[4].trim() !== "") ? r[4].trim() : null
+                                    });
+                                }
+                            }
+                            renderFilters(); renderStories(stories);
+                        } catch (e) {
+                            $('tr-grid').innerHTML = `<div style="color:red; width:100%; text-align:center;">Lỗi xử lý dữ liệu: ${e.message}</div>`;
+                        }
+                    } else {
+                        $('tr-grid').innerHTML = `<div style="color:red; width:100%; text-align:center;">Không tải được Sheet (Lỗi ${res.status})</div>`;
                     }
+                },
+                onerror: (err) => {
+                    $('tr-grid').innerHTML = `<div style="color:red; width:100%; text-align:center;">Lỗi kết nối mạng!</div>`;
                 }
-                renderFilters(); renderStories(stories);
-            } catch (e) { 
-                console.error(e);
-                $('tr-grid').innerHTML = `<div style="color:red; width:100%; text-align:center;">Lỗi tải dữ liệu: ${e.message}</div>`; 
-            }
+            });
         };
     
         const renderFilters = () => {
@@ -553,7 +541,7 @@
     };
     
     return {
-        name: "Đọc Truyện V1",
+        name: "Đọc Truyện",
         icon: `<svg viewBox="0 0 24 24"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.15C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zM21 18.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z" fill="white"/></svg>`,
         bgColor: "#e17055",
         action: runTool
