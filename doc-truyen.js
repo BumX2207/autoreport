@@ -52,7 +52,7 @@
         .tr-search-box { flex:1; display:flex; min-width: 0; }
         .tr-search-box input { width:100%; padding:8px 15px; border:1px solid #ddd; border-radius:20px; outline:none; font-size:14px; transition:0.3s; }
         .tr-search-box input:focus { border-color:#e17055; box-shadow:0 0 5px rgba(225,112,85,0.3); }
-        .tr-filter { padding:8px 10px; border:1px solid #ddd; border-radius:20px; outline:none; font-size:14px; background:#fff; cursor:pointer; width: 130px; flex-shrink: 0; text-overflow: ellipsis;}
+        .tr-filter { padding:8px 10px; border:1px solid #ddd; border-radius:20px; outline:none; font-size:14px; background:#fff; cursor:pointer; width: 150px; flex-shrink: 0; text-overflow: ellipsis;}
         
         .tr-home-body { flex:1; overflow-y:auto; padding:20px; background:#f4f5f7; display:flex; flex-direction: column; gap:30px; }
         
@@ -139,7 +139,7 @@
             .tr-card-cover { height: 180px; }
             .tr-toolbar { gap: 5px; padding: 10px; }
             .tr-nav-btn { padding: 6px 10px; font-size: 12px; }
-            .tr-filter { width: 100px; font-size: 12px; }
+            .tr-filter { width: 150px; font-size: 12px; }
             .tr-section-title { font-size: 16px; }
         }
     `;
