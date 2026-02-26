@@ -111,16 +111,11 @@
         
         .tr-text { 
             font-size:18px; line-height:1.7; color:#2d3436; text-align:justify; 
-            /* CHẶN COPY VÀ SELECT VĂN BẢN */
-            -webkit-user-select: none; 
-            -moz-user-select: none; 
-            -ms-user-select: none; 
-            user-select: none; 
+            -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; 
             -webkit-touch-callout: none;
         }
         .tr-text p { margin-bottom: 15px; }
 
-        /* NÂNG CẤP HIGHLIGHT CHÍNH XÁC THEO CÂU */
         .tr-sent { cursor: pointer; border-radius: 4px; padding: 2px 3px; transition: background 0.2s, color 0.2s; }
         .tr-sent:hover { background: #e8f8f5; }
         .tr-reading-active { background: #ffeaa7; color: #d63031; }
@@ -136,7 +131,29 @@
         .tr-fake-status { font-size: 16px; color: #888; margin-bottom: 15px; }
         .tr-fake-story-name { font-size: 24px; font-weight: bold; color: #e17055; margin-bottom: 30px; text-transform: uppercase; }
         .tr-fake-hint { font-size: 14px; color: #555; animation: breathe 3s infinite; border: 1px solid #333; padding: 8px 15px; border-radius: 20px;}
-        @keyframes breathe { 0%, 100% {opacity: 0.3; border-color:#333} 50% {opacity: 0.9; border-color:#777} }
+
+        /* CSS MÀN HÌNH NHẮC NHỞ KHI BỊ GIÁN ĐOẠN (CUỘC GỌI / BÁO THỨC) */
+        #tr-resume-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 2147483999; 
+            flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(5px);
+        }
+        .tr-btn-big-resume {
+            background: #00b894; color: white; border: none; border-radius: 50%;
+            width: 140px; height: 140px; font-size: 16px; font-weight: bold; text-transform: uppercase;
+            box-shadow: 0 0 20px rgba(0, 184, 148, 0.6); cursor: pointer;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px;
+            animation: pulse-green 2s infinite; transition: 0.2s;
+        }
+        .tr-btn-big-resume:hover { background: #55efc4; transform: scale(1.05); }
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(0, 184, 148, 0.7); }
+            70% { box-shadow: 0 0 0 25px rgba(0, 184, 148, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 184, 148, 0); }
+        }
+        .tr-resume-text { color: #dfe6e9; margin-top: 30px; font-size: 16px; text-align: center; padding: 0 20px;}
+        .tr-btn-close-resume { position: absolute; top: 30px; right: 30px; background: transparent; color: #bbb; border: 1px solid #bbb; padding: 6px 15px; border-radius: 20px; cursor:pointer; font-size: 12px;}
+        .tr-btn-close-resume:hover { color: white; border-color: white; }
 
         @media (max-width: 768px) {
             .tr-card { width:calc(33.33% - 15px); }
@@ -171,9 +188,7 @@
                 if(proxy.includes('allorigins')) {
                     const json = await res.json();
                     htmlText = json.contents;
-                } else {
-                    htmlText = await res.text();
-                }
+                } else { htmlText = await res.text(); }
                 if(htmlText.includes('Cloudflare') && htmlText.includes('Attention Required!')) continue; 
                 return htmlText;
             } catch (e) { console.warn("Proxy failed", proxy); }
@@ -223,7 +238,8 @@
         let currentSentences =[];
         let currentSentenceIndex = 0;
         let isResuming = false;
-        let isJumping = false; // Cờ chặn lỗi khi nhảy dòng
+        let isJumping = false; 
+        let isManualCancel = false; // Cờ kiểm tra xem tool chủ động tắt hay do hệ thống ngắt
         let preloadedData = { chapNum: null, contentArr: null };
         let showAllHistory = false;
 
@@ -319,11 +335,65 @@
                         <div class="tr-fake-story-name" id="tr-sleep-story-name">Tên Truyện</div>
                         <div class="tr-fake-hint">Bấm 2 lần vào màn hình để trở lại</div>
                     </div>
+
+                    <!-- MÀN HÌNH NHẮC ĐỌC TIẾP SAU KHI BỊ CUỘC GỌI CẮT NGANG -->
+                    <div id="tr-resume-overlay">
+                        <button class="tr-btn-close-resume" id="btn-close-resume">Đóng (Tạm dừng)</button>
+                        <button class="tr-btn-big-resume" id="btn-big-resume">
+                            <span style="font-size:40px">▶</span>
+                            <span>Đọc tiếp</span>
+                        </button>
+                        <div class="tr-resume-text">Trình đọc vừa bị gián đoạn bởi hệ thống.<br>Bạn có muốn tiếp tục nghe không?</div>
+                    </div>
                 </div>
             `;
             document.body.appendChild(app);
             const style = document.createElement('style'); style.innerHTML = MY_CSS; document.head.appendChild(style);
             
+            // Hàm chủ động tắt TTS (đặt cờ isManualCancel để khỏi nhầm với OS ngắt)
+            const cancelTTS = () => {
+                isManualCancel = true;
+                synth.cancel();
+                setTimeout(() => { isManualCancel = false; }, 300);
+            };
+
+            // HÀM XỬ LÝ KHI BỊ HỆ THỐNG NGẮT (CUỘC GỌI/BÁO THỨC)
+            const handleAudioInterruption = () => {
+                if (!isReading) return;
+                isReading = false;
+                cancelTTS();
+                saveCloudHistory(); // Lưu mốc ngay lập tức
+
+                // Hiện nút to tròn nhắc đọc tiếp
+                $('tr-resume-overlay').style.display = 'flex';
+                
+                // Hủy luôn lock màn hình nếu đang treo máy
+                $('tr-fake-lock-screen').style.display = 'none';
+                releaseWakeLock();
+            };
+
+            // Bắt sự kiện OS chèn popup full màn hình (Cuộc gọi, App khác đè lên)
+            document.addEventListener("visibilitychange", () => {
+                if (document.hidden && isReading) {
+                    console.log("[Đọc Truyện] Phát hiện ứng dụng bị đè khuất. Tạm dừng AI.");
+                    handleAudioInterruption();
+                }
+            });
+
+            // Gán sự kiện cho màn hình nhắc đọc tiếp
+            $('btn-big-resume').onclick = () => {
+                $('tr-resume-overlay').style.display = 'none';
+                if (!isReading) {
+                    isReading = true;
+                    synth.getVoices();
+                    speakNextSentence();
+                }
+            };
+            $('btn-close-resume').onclick = () => {
+                $('tr-resume-overlay').style.display = 'none';
+            };
+
+            // Scroll Logic
             const contentWrap = document.getElementById('tr-content-wrap');
             if (contentWrap) {
                 const handleUserScroll = () => {
@@ -336,11 +406,11 @@
                 contentWrap.addEventListener('touchmove', handleUserScroll, {passive: true});
             }
 
-            // SỰ KIỆN CLICK ĐÚP CHUỘT / CHẠM 2 LẦN VÀO CÂU VĂN
+            // Click đúp chuyển câu
             let lastClickTime = 0;
             $('tr-read-text').addEventListener('click', (e) => {
                 const now = new Date().getTime();
-                if (now - lastClickTime < 350) { // Chuẩn thời gian của double click
+                if (now - lastClickTime < 350) {
                     let target = e.target.closest('.tr-sent');
                     if (target) {
                         let idx = parseInt(target.getAttribute('data-idx'));
@@ -612,7 +682,6 @@
             let cleanLink = baseLink.endsWith('/') ? baseLink.slice(0, -1) : baseLink; return `${cleanLink}/chuong-${chapNum}/`;
         };
     
-        // CHỈ BÓC TÁCH TEXT SẠCH RA, HTML SẼ ĐƯỢC BUILD RIÊNG LẠI SAU
         const parseChapterHTML = (htmlText) => {
             const parser = new DOMParser(); const doc = parser.parseFromString(htmlText, 'text/html');
             const contentHtml = doc.querySelector('#chapter-c') || doc.querySelector('.chapter-c');
@@ -669,15 +738,10 @@
                 $('tr-read-title').innerText = currentStory.name; $('tr-read-chap').innerText = `Chương ${currentChapter} / ${currentStory.total}`;
                 updateNavUI(); 
                 
-                // TỰ ĐỘNG BUILD LẠI CẤU TRÚC HTML: BỌC MỖI CÂU VÀO 1 THẺ SPAN CÓ ĐÁNH SỐ (DATA-IDX)
-                let builtHtml = '';
-                currentSentences =[];
-                let sIndex = 0;
+                let builtHtml = ''; currentSentences =[]; let sIndex = 0;
 
                 data.cleanArr.forEach(txt => {
                     let pText = txt.trim();
-                    
-                    // FIX LỖI THÊM DẤU CHẤM SAU CÂU NGOẶC KÉP: CHỈ THÊM CHẤM NẾU CUỐI DÒNG CHƯA CÓ NGẮT CÂU/NGOẶC
                     if (!/[.!?]+["'”’\])}]*$/.test(pText)) pText += '.';
 
                     let sents = pText.match(/[^.!?]+[.!?]+/g) || [pText];
@@ -701,7 +765,6 @@
 
                 $('tr-loading').style.display = 'none';
                 
-                // HIGHLIGHT CHÍNH XÁC CÂU BẰNG SPAN ID MÀ KHÔNG DÙNG HÀM MATCH
                 if (isResuming && currentSentenceIndex > 0) {
                     setTimeout(() => {
                         let targetSpan = $('tr-read-text').querySelector(`.tr-sent[data-idx="${currentSentenceIndex}"]`);
@@ -729,6 +792,7 @@
         const saveCloudHistory = () => {
             if (!API_URL || !IS_LOGGED_IN || isReading) return; 
 
+            // ĐÃ TỐI ƯU: BỎ 'PERCENT' VÀ 'TIME' KHỎI MẢNG CLOUD JSON
             let fullHistory = Object.keys(localProgressData).map(link => {
                 let s = stories.find(st => st.link === link); let p = localProgressData[link];
                 if (!s || !p) return null;
@@ -777,7 +841,7 @@
     
         const jumpToSentence = (idx) => {
             isJumping = true;
-            synth.cancel(); // Buộc dừng câu đang đọc hiện tại
+            cancelTTS(); 
             
             currentSentenceIndex = idx;
             updateLocalSessionKey(currentChapter, currentSentenceIndex);
@@ -791,7 +855,6 @@
             }
 
             isReading = true;
-            // Cho delay 1 tí để hàm tắt mượt mà trước khi load câu mới lên loa
             setTimeout(() => { isJumping = false; speakNextSentence(); }, 150);
         };
 
@@ -807,13 +870,17 @@
                 updateLocalSessionKey(currentChapter, currentSentenceIndex); 
                 if(isReading) speakNextSentence(); 
             };
+            
+            // XỬ LÝ LỖI HỆ THỐNG KHI BỊ CƯỚP LOA (Báo thức nền / Cuộc gọi chìm)
             u.onerror = (e) => { 
                 console.warn("TTS Error: ", e); 
-                if (!isJumping) isReading = false; 
+                if (!isJumping && !isManualCancel && isReading) {
+                    console.log("[Đọc Truyện] Lỗi mất audio focus. Tạm dừng AI.");
+                    handleAudioInterruption();
+                } 
             };
             synth.speak(u);
 
-            // XÓA MÀU TẤT CẢ VÀ CHỈ TÔ MÀU ĐÚNG SPAN CỦA CÂU ĐANG ĐỌC
             const spans = $('tr-read-text').querySelectorAll('.tr-sent'); 
             spans.forEach(s => s.classList.remove('tr-reading-active'));
             
@@ -833,7 +900,7 @@
             } else { speakSystemMsg("Đã đọc xong bộ truyện. Cảm ơn bạn.", () => { alert("Bạn đã đọc hết truyện!"); }); }
         };
     
-        const stopTTS = () => { isReading = false; synth.cancel(); };
+        const stopTTS = () => { isReading = false; cancelTTS(); };
     
         $('btn-read-play').onclick = () => { 
             if (!isReading) { 
@@ -857,7 +924,7 @@
     };
     
     return {
-        name: "Đọc Truyện V2",
+        name: "Đọc Truyện V1",
         icon: `<svg viewBox="0 0 24 24"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.15C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zM21 18.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z" fill="white"/></svg>`,
         bgColor: "#0984e3",
         action: runTool
