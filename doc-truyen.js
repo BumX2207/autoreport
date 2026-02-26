@@ -30,41 +30,30 @@
         }
     }
     const API_URL = context.CONSTANTS ? context.CONSTANTS.GSHEET.CONFIG_API : null;
-
-    // BỘ ICON SVG HIỆN ĐẠI
-    const ICONS = {
-        home: `<svg width="20" height="20" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>`,
-        close: `<svg width="20" height="20" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>`,
-        play: `<svg width="18" height="18" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`,
-        pause: `<svg width="18" height="18" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`,
-        stop: `<svg width="16" height="16" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>`,
-        settings: `<svg width="18" height="18" viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>`,
-        sleep: `<svg width="18" height="18" viewBox="0 0 24 24"><path d="M12.1 2.5a9.95 9.95 0 0 0-1.8 19 9.8 9.8 0 0 0 10.9-6 8 8 0 0 1-9.1-13z"/></svg>`
-    };
     
     // ===============================================================
-    // 2. CSS GIAO DIỆN (ĐÃ LÀM MỚI HEADER & BUTTONS)
+    // 2. CSS GIAO DIỆN (ĐÃ UPDATE UI NÚT BẤM HIỆN ĐẠI)
     // ===============================================================
     const MY_CSS = `
         #truyen-app { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#f8f9fa; z-index:2147483646; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; flex-direction:column; overflow:hidden; }
         
-        /* HEADER MỚI */
-        .tr-header { background:#fff; padding:12px 20px; box-shadow: 0 2px 15px rgba(0,0,0,0.05); display:flex; justify-content:space-between; align-items:center; z-index:20; flex-shrink:0; position:relative;}
-        .tr-logo { position: absolute; left: 50%; transform: translateX(-50%); font-size:18px; font-weight:800; color:#2d3436; text-transform:uppercase; letter-spacing: 1px;}
-        .tr-btn-header-action { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:none; cursor:pointer; transition:all 0.2s; background:#f1f2f6; color:#2d3436; }
-        .tr-btn-header-action svg { fill: currentColor; }
-        .tr-btn-header-action:hover { background:#dfe4ea; transform:scale(1.05); }
-        .tr-btn-close-app { background:#ffeaa7; color:#d63031; }
-        .tr-btn-close-app:hover { background:#fab1a0; color:#fff; }
+        .tr-header { background:#fff; padding:10px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); display:flex; justify-content:center; align-items:center; z-index:20; flex-shrink:0; position:relative; height:60px; }
+        .tr-logo { font-size:18px; font-weight:900; color:#e17055; text-transform:uppercase; letter-spacing: 1px;}
         
-        .tr-user-bar { background:#2d3436; color:#dfe6e9; padding:6px 20px; font-size:12px; display:flex; justify-content:space-between; align-items:center; font-weight:bold; }
+        .tr-btn-home-icon { position:absolute; left:20px; background:#ffeaa7; color:#e17055; border:none; border-radius:50%; width:36px; height:36px; display:flex; justify-content:center; align-items:center; cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.1); transition:0.2s;}
+        .tr-btn-home-icon:hover { background:#e17055; color:white; }
+        
+        .tr-btn-close { position:absolute; right:20px; background:#fab1a0; color:#d63031; border:none; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.1); transition:0.2s;}
+        .tr-btn-close:hover { background:#d63031; color:white; }
+        
+        .tr-user-bar { background:#2d3436; color:#dfe6e9; padding:5px 20px; font-size:12px; display:flex; justify-content:space-between; align-items:center; font-weight:bold; }
         .tr-user-name { color: #00cec9; }
 
         .tr-toolbar { background:#fff; padding:10px 20px; border-bottom:1px solid #eee; display:flex; gap:10px; z-index:15; flex-wrap:nowrap; align-items:center; }
         .tr-search-box { flex:1; display:flex; min-width: 0; }
-        .tr-search-box input { width:100%; padding:9px 15px; border:1px solid #ddd; border-radius:20px; outline:none; font-size:14px; transition:0.3s; background:#f8f9fa;}
-        .tr-search-box input:focus { border-color:#e17055; background:#fff; box-shadow:0 0 8px rgba(225,112,85,0.2); }
-        .tr-filter { padding:9px 10px; border:1px solid #ddd; border-radius:20px; outline:none; font-size:14px; background:#f8f9fa; cursor:pointer; width: 130px; flex-shrink: 0; text-overflow: ellipsis;}
+        .tr-search-box input { width:100%; padding:8px 15px; border:1px solid #ddd; border-radius:20px; outline:none; font-size:14px; transition:0.3s; }
+        .tr-search-box input:focus { border-color:#e17055; box-shadow:0 0 5px rgba(225,112,85,0.3); }
+        .tr-filter { padding:8px 10px; border:1px solid #ddd; border-radius:20px; outline:none; font-size:14px; background:#fff; cursor:pointer; width: 130px; flex-shrink: 0; text-overflow: ellipsis;}
         
         .tr-home-body { flex:1; overflow-y:auto; padding:20px; background:#f4f5f7; display:flex; flex-direction: column; gap:30px; }
         
@@ -81,48 +70,53 @@
         .tr-card-cover { background:#e17055; height:200px; display:flex; align-items:center; justify-content:center; color:white; font-size:50px; overflow:hidden; position:relative; }
         .tr-card-img { width:100%; height:100%; object-fit:cover; display:block; }
         .tr-card-progress { position:absolute; bottom:0; left:0; width:100%; background:rgba(0,0,0,0.7); color:#FFD700; font-size:12px; font-weight:bold; padding:5px; text-align:center; }
+    
         .tr-btn-delete-history { position:absolute; top:8px; right:8px; background:rgba(255,255,255,0.9); color:#d63031; border:none; border-radius:50%; width:26px; height:26px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; justify-content:center; align-items:center; z-index:10; box-shadow:0 2px 5px rgba(0,0,0,0.2); transition:0.2s; }
         .tr-btn-delete-history:hover { background:#d63031; color:white; }
+
         .tr-card-info { padding:12px; flex:1; display:flex; flex-direction:column; }
         .tr-card-title { font-size:15px; font-weight:bold; color:#2d3436; margin-bottom:5px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
         .tr-card-genre { font-size:11px; color:#00b894; background:#e8f8f5; padding:3px 8px; border-radius:12px; align-self:flex-start; margin-bottom:8px;}
         .tr-card-chap { font-size:12px; color:#636e72; margin-top:auto; font-weight:500;}
     
         .tr-reader-view { display:none; flex:1; flex-direction:column; background:#f4f5f7; overflow:hidden; position:relative; }
+        .tr-reader-tools { background:#2d3436; padding:12px 20px; display:flex; justify-content:center; gap:12px; z-index:10; position: relative; flex-wrap: wrap;}
         
-        /* THANH CÔNG CỤ HIỆN ĐẠI */
-        .tr-reader-tools { background:#fff; box-shadow:0 4px 15px rgba(0,0,0,0.06); padding:12px 20px; display:flex; justify-content:center; gap:12px; z-index:10; position:relative; flex-wrap:wrap; border-bottom:1px solid #f1f2f6;}
-        .tr-btn-tool { padding:9px 18px; border-radius:25px; border:none; color:white; font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 10px rgba(0,0,0,0.15); transition:all 0.25s ease; white-space:nowrap; }
-        .tr-btn-tool:hover { transform:translateY(-2px); box-shadow:0 6px 15px rgba(0,0,0,0.2); filter:brightness(1.05); }
-        .tr-btn-tool:active { transform:translateY(1px); }
-        .tr-icon svg { fill: currentColor; display:block; }
+        /* CẬP NHẬT GIAO DIỆN NÚT BẤM HIỆN ĐẠI */
+        .tr-btn-tool { background:#636e72; color:white; border:none; padding:10px 20px; border-radius:25px; font-size:14px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.3s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.15); white-space: nowrap;}
+        .tr-btn-tool:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.2); }
+        .tr-btn-tool:active { transform: translateY(1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         
-        /* MÀU GRADIENT TƯƠI MỚI */
-        .tr-btn-play-state { background: linear-gradient(135deg, #00b09b, #96c93d); }
-        .tr-btn-pause-state { background: linear-gradient(135deg, #f093fb, #f5576c); }
-        .tr-btn-stop { background: linear-gradient(135deg, #ff0844, #ffb199); }
-        .tr-btn-settings { background: linear-gradient(135deg, #4facfe, #00f2fe); text-shadow: 0 1px 2px rgba(0,0,0,0.1);} 
-        .tr-btn-sleep { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .tr-btn-play { background:#00b894; }
+        .tr-btn-pause { background:#f39c12; }
+        .tr-btn-stop { background:#d63031; }
+        .tr-btn-settings { background:#0984e3; } 
+        .tr-btn-sleep { background:#6c5ce7; }
         
-        .tr-settings-panel { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); background: white; padding: 15px; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.15); width: 300px; display: none; flex-direction: column; gap: 12px; z-index: 100; border: 1px solid #eee; }
+        .tr-settings-panel {
+            position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+            background: white; padding: 15px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            width: 300px; display: none; flex-direction: column; gap: 10px; z-index: 100;
+            border: 1px solid #eee;
+        }
         .tr-settings-panel.show { display: flex; animation: slideDown 0.2s; }
         .tr-setting-row { display: flex; flex-direction: column; gap: 5px; }
-        .tr-setting-label { font-size: 13px; font-weight: bold; color: #555; }
+        .tr-setting-label { font-size: 12px; font-weight: bold; color: #555; }
         .tr-setting-input { width: 100%; cursor: pointer; }
-        .tr-setting-val { font-size: 12px; font-weight: bold; color: #0984e3; float: right;}
+        .tr-setting-val { font-size: 11px; color: #0984e3; float: right;}
         @keyframes slideDown { from {opacity:0; transform:translate(-50%, -10px);} to {opacity:1; transform:translate(-50%, 0);} }
 
-        .tr-reader-info-bar { background:#fff; padding:15px 20px; border-bottom:1px solid #ddd; z-index:9; flex-shrink:0; box-shadow: 0 4px 6px rgba(0,0,0,0.03); }
-        .tr-story-title { font-size:22px; font-weight:bold; color:#2d3436; text-align:center; margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-        .tr-chapter-title { font-size:16px; color:#e17055; text-align:center; margin-bottom:12px; font-weight:600;}
+        .tr-reader-info-bar { background:#fff; padding:15px 20px; border-bottom:1px solid #ddd; z-index:9; flex-shrink:0; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .tr-story-title { font-size:20px; font-weight:bold; color:#2d3436; text-align:center; margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+        .tr-chapter-title { font-size:16px; color:#e17055; text-align:center; margin-bottom:10px; font-weight:600;}
         .tr-nav-bar { display:flex; justify-content:center; align-items:center; gap:10px;}
-        .tr-nav-btn { padding:6px 15px; background:#e17055; color:white; border:none; border-radius:20px; font-weight:bold; cursor:pointer; transition:0.2s; white-space:nowrap; }
+        .tr-nav-btn { padding:6px 15px; background:#e17055; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer; transition:0.2s; white-space:nowrap; }
         .tr-nav-btn:hover { background:#d63031; }
         .tr-nav-btn:disabled { background:#b2bec3; cursor:not-allowed; }
-        .tr-nav-select { padding:6px 10px; border-radius:20px; border:1px solid #ccc; font-size:14px; outline:none; max-width: 150px; cursor:pointer;}
+        .tr-nav-select { padding:6px; border-radius:4px; border:1px solid #ccc; font-size:14px; outline:none; max-width: 150px; cursor:pointer;}
     
         .tr-reader-content-wrap { flex:1; overflow-y:auto; padding:20px; scroll-behavior: smooth; display:flex; justify-content:center; align-items:flex-start; }
-        .tr-paper { background:#fff; max-width:800px; width:100%; padding:30px 40px; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.06); height:fit-content; margin-bottom: 50px; }
+        .tr-paper { background:#fff; max-width:800px; width:100%; padding:30px 40px; border-radius:8px; box-shadow:0 5px 20px rgba(0,0,0,0.05); height:fit-content; margin-bottom: 50px; }
         
         .tr-text { 
             font-size:18px; line-height:1.7; color:#2d3436; text-align:justify; 
@@ -132,7 +126,7 @@
 
         .tr-sent { cursor: pointer; border-radius: 4px; padding: 2px 3px; transition: background 0.2s, color 0.2s; }
         .tr-sent:hover { background: #e8f8f5; }
-        .tr-reading-active { background: #ffeaa7; color: #d63031; font-weight:500;}
+        .tr-reading-active { background: #ffeaa7; color: #d63031; }
     
         .tr-loading-overlay { position:absolute; top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.95); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:50; font-weight:bold; font-size:16px; color:#e17055;}
         
@@ -164,8 +158,8 @@
         @media (max-width: 768px) {
             .tr-card { width:calc(33.33% - 15px); }
             .tr-paper { padding: 20px; }
-            .tr-text { font-size: 17px; }
-            .tr-logo { font-size: 15px; }
+            .tr-text { font-size: 16px; }
+            .tr-settings-panel { width: 90%; }
         }
         @media (max-width: 480px) {
             .tr-card { width:calc(50% - 10px); min-width: 140px; }
@@ -174,9 +168,11 @@
             .tr-nav-btn { padding: 6px 10px; font-size: 12px; }
             .tr-filter { width: 100px; font-size: 12px; }
             .tr-section-title { font-size: 16px; }
-            .tr-reader-tools { gap: 8px; padding: 10px; }
-            .tr-btn-tool { padding: 8px 14px; font-size: 12px; }
-            .tr-btn-header-action { width: 32px; height: 32px; }
+            
+            /* THU NHỎ NÚT TRÊN MOBILE NHƯNG KHÔNG ẨN CHỮ */
+            .tr-reader-tools { padding: 10px; gap: 8px; }
+            .tr-btn-tool { padding: 8px 14px; font-size: 13px; gap: 5px; }
+            .tr-btn-tool svg { width: 16px; height: 16px; }
         }
     `;
     
@@ -247,6 +243,23 @@
 
         let ttsRate = 1.3; let ttsPitch = 1.1; let ttsVoiceIndex = -1; let availableVoices =[]; let wakeLock = null;
     
+        // HÀM CẬP NHẬT TRẠNG THÁI NÚT PLAY/PAUSE
+        const updatePlayPauseUI = (reading) => {
+            const iconPlay = $('icon-play'); const iconPause = $('icon-pause');
+            const textToggle = $('text-read-toggle'); const btnToggle = $('btn-read-toggle');
+            if (reading) {
+                if(iconPlay) iconPlay.style.display = 'none';
+                if(iconPause) iconPause.style.display = 'block';
+                if(textToggle) textToggle.innerText = 'Tạm dừng';
+                if(btnToggle) { btnToggle.classList.remove('tr-btn-play'); btnToggle.classList.add('tr-btn-pause'); }
+            } else {
+                if(iconPlay) iconPlay.style.display = 'block';
+                if(iconPause) iconPause.style.display = 'none';
+                if(textToggle) textToggle.innerText = 'AI Đọc';
+                if(btnToggle) { btnToggle.classList.remove('tr-btn-pause'); btnToggle.classList.add('tr-btn-play'); }
+            }
+        };
+
         // TẠO DOM APP
         let app = $('truyen-app');
         if (!app) {
@@ -254,9 +267,13 @@
             app.id = 'truyen-app';
             app.innerHTML = `
                 <div class="tr-header">
-                    <button class="tr-btn-header-action" id="tr-btn-home" style="visibility: hidden;">${ICONS.home}</button>
+                    <button class="tr-btn-home-icon" id="tr-btn-home" title="Trang chủ">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                    </button>
                     <div class="tr-logo">Đọc Truyện Online</div>
-                    <button class="tr-btn-header-action tr-btn-close-app" id="tr-btn-close">${ICONS.close}</button>
+                    <button class="tr-btn-close" id="tr-btn-close" title="Đóng">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                    </button>
                 </div>
                 
                 <div class="tr-user-bar">
@@ -279,21 +296,24 @@
     
                 <div id="tr-view-reader" class="tr-reader-view">
                     <div class="tr-reader-tools">
-                        <button class="tr-btn-tool tr-btn-play-state" id="btn-read-toggle">
-                            <span class="tr-icon" id="tr-icon-toggle">${ICONS.play}</span>
-                            <span class="tr-btn-text" id="tr-text-toggle">AI Đọc</span>
+                        <!-- Nút Gộp Play / Pause -->
+                        <button class="tr-btn-tool tr-btn-play" id="btn-read-toggle">
+                            <svg id="icon-play" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                            <svg id="icon-pause" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                            <span id="text-read-toggle">AI Đọc</span>
                         </button>
+                        
                         <button class="tr-btn-tool tr-btn-stop" id="btn-read-stop">
-                            <span class="tr-icon">${ICONS.stop}</span>
-                            <span class="tr-btn-text">Tắt AI</span>
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 6h12v12H6z"/></svg>
+                            <span>Tắt AI</span>
                         </button>
                         <button class="tr-btn-tool tr-btn-settings" id="btn-settings">
-                            <span class="tr-icon">${ICONS.settings}</span>
-                            <span class="tr-btn-text">Cài đặt</span>
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+                            <span>Cài đặt</span>
                         </button>
                         <button class="tr-btn-tool tr-btn-sleep" id="btn-sleep-mode">
-                            <span class="tr-icon">${ICONS.sleep}</span>
-                            <span class="tr-btn-text">Treo máy</span>
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>
+                            <span>Treo máy</span>
                         </button>
                         
                         <div class="tr-settings-panel" id="tr-settings-panel">
@@ -349,28 +369,13 @@
             document.body.appendChild(app);
             const style = document.createElement('style'); style.innerHTML = MY_CSS; document.head.appendChild(style);
             
-            // HÀM CẬP NHẬT GIAO DIỆN NÚT PLAY/PAUSE
-            const updatePlayBtnUI = () => {
-                const btn = $('btn-read-toggle');
-                const icon = $('tr-icon-toggle');
-                const txt = $('tr-text-toggle');
-                if (isReading) {
-                    btn.className = 'tr-btn-tool tr-btn-pause-state';
-                    icon.innerHTML = ICONS.pause;
-                    txt.innerText = 'Tạm dừng';
-                } else {
-                    btn.className = 'tr-btn-tool tr-btn-play-state';
-                    icon.innerHTML = ICONS.play;
-                    txt.innerText = 'AI Đọc';
-                }
-            };
-
+            // XỬ LÝ LẮNG NGHE CUỘC GỌI / BÁO THỨC (VISIBILITY CHANGE)
             document.addEventListener('visibilitychange', () => {
                 if (document.hidden && isReading) {
                     isReading = false; 
-                    updatePlayBtnUI();
                     synth.cancel(); 
                     saveCloudHistory(); 
+                    updatePlayPauseUI(false);
                     $('tr-interruption-overlay').style.display = 'flex'; 
                 }
             });
@@ -378,7 +383,8 @@
             $('btn-resume-giant').onclick = () => {
                 $('tr-interruption-overlay').style.display = 'none';
                 if (!isReading) {
-                    isReading = true; updatePlayBtnUI(); synth.getVoices();
+                    isReading = true; synth.getVoices();
+                    updatePlayPauseUI(true);
                     speakNextSentence(); 
                 }
             };
@@ -409,15 +415,6 @@
                 }
                 lastClickTime = now;
             });
-
-            // NÚT TRANG CHỦ MỚI (GÓC TRÁI)
-            $('tr-btn-home').onclick = () => { 
-                stopTTS(); releaseWakeLock(); saveCloudHistory(); 
-                $('tr-btn-home').style.visibility = 'hidden'; // Ẩn nút Home khi về màn chính
-                $('tr-view-reader').style.display = 'none'; 
-                $('tr-view-home').style.display = 'flex'; 
-                showAllHistory = false; renderHome();
-            };
 
             $('tr-btn-close').onclick = () => { app.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; stopTTS(); releaseWakeLock(); saveCloudHistory(); };
 
@@ -484,12 +481,18 @@
 
             updateAuthUI();
             
+            $('tr-btn-home').onclick = () => { 
+                stopTTS(); releaseWakeLock(); saveCloudHistory(); 
+                $('tr-view-reader').style.display = 'none'; $('tr-view-home').style.display = 'flex'; 
+                showAllHistory = false; renderHome();
+            };
+            
             $('btn-settings').onclick = (e) => { e.stopPropagation(); $('tr-settings-panel').classList.toggle('show'); };
             $('tr-settings-panel').onclick = (e) => e.stopPropagation();
             document.addEventListener('click', (e) => { if(!e.target.closest('#btn-settings')) $('tr-settings-panel').classList.remove('show'); });
 
             const enterSleepMode = async () => {
-                if (!isReading) { alert("Vui lòng bật AI Đọc trước khi treo máy!"); return; }
+                if (!isReading) { alert("Vui lòng bấm AI Đọc trước khi treo máy!"); return; }
                 try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (err) {}
                 $('tr-sleep-story-name').innerText = currentStory ? currentStory.name : "Truyện";
                 $('tr-fake-lock-screen').style.display = 'flex';
@@ -699,9 +702,7 @@
     
         const openStory = async (story) => {
             currentStory = story; preloadedData = { chapNum: null };
-            $('tr-view-home').style.display = 'none'; 
-            $('tr-view-reader').style.display = 'flex';
-            $('tr-btn-home').style.visibility = 'visible'; // Hiện nút Home
+            $('tr-view-home').style.display = 'none'; $('tr-view-reader').style.display = 'flex';
             
             if (activeSession.link === story.link) {
                 currentChapter = activeSession.chap; currentSentenceIndex = activeSession.sentence;
@@ -737,7 +738,7 @@
                     let pText = txt.trim();
                     if (!/[.!?]+["'”’\])}]*$/.test(pText)) pText += '.';
 
-                    let sents = pText.match(/[^.!?]+[.!?]+/g) ||[pText];
+                    let sents = pText.match(/[^.!?]+[.!?]+/g) || [pText];
                     let pHtml = '<p>';
                     sents.forEach(s => {
                         let st = s.trim();
@@ -788,7 +789,12 @@
             let fullHistory = Object.keys(localProgressData).map(link => {
                 let s = stories.find(st => st.link === link); let p = localProgressData[link];
                 if (!s || !p) return null;
-                return { story: s.name, chapter: p.chap, sentence: p.sentence || 0, timestamp: p.time || Date.now() };
+                return {
+                    story: s.name, 
+                    chapter: p.chap, 
+                    sentence: p.sentence || 0,
+                    timestamp: p.time || Date.now()
+                };
             }).filter(item => item !== null).sort((a,b) => b.timestamp - a.timestamp).slice(0, 15);
 
             if (fullHistory.length === 0) return;
@@ -807,7 +813,7 @@
         $('sel-chap').onchange = (e) => { isResuming=false; loadAndDisplayChapter(parseInt(e.target.value), true); };
     
         // -----------------------------------------------------
-        // LOGIC TTS (ĐỌC TRUYỆN) & TÍCH HỢP PLAY/PAUSE
+        // LOGIC TTS (ĐỌC TRUYỆN) & JUMP DOUBLE CLICK
         // -----------------------------------------------------
         const getVoice = () => {
             if (ttsVoiceIndex >= 0 && availableVoices[ttsVoiceIndex]) return availableVoices[ttsVoiceIndex];
@@ -841,7 +847,8 @@
                 if(!isUserScrolling) targetSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
 
-            isReading = true; updatePlayBtnUI();
+            isReading = true;
+            updatePlayPauseUI(true);
             setTimeout(() => { isJumping = false; speakNextSentence(); }, 150);
         };
 
@@ -860,7 +867,10 @@
             };
             u.onerror = (e) => { 
                 console.warn("TTS Error: ", e); 
-                if (!isJumping) { isReading = false; updatePlayBtnUI(); }
+                if (!isJumping) {
+                    isReading = false; 
+                    updatePlayPauseUI(false);
+                }
             };
             synth.speak(u);
 
@@ -875,30 +885,38 @@
         };
     
         const handleChapterFinished = () => {
-            isReading = false; updatePlayBtnUI(); saveCloudHistory(); 
+            isReading = false; saveCloudHistory(); 
             if(currentChapter < currentStory.total) {
                 speakSystemMsg(`Đã đọc xong chương ${currentChapter}, chuyển sang chương mới.`, async () => {
-                    isResuming = false; await loadAndDisplayChapter(currentChapter + 1, false); 
-                    isReading = true; updatePlayBtnUI(); speakNextSentence();
+                    isResuming = false; await loadAndDisplayChapter(currentChapter + 1, false); isReading = true; speakNextSentence();
                 });
-            } else { speakSystemMsg("Đã đọc xong bộ truyện. Cảm ơn bạn.", () => { alert("Bạn đã đọc hết truyện!"); }); }
-        };
-    
-        const stopTTS = () => { isReading = false; updatePlayBtnUI(); synth.cancel(); };
-    
-        // GỘP NÚT PLAY / PAUSE LÀM 1
-        $('btn-read-toggle').onclick = () => { 
-            if (!isReading) { 
-                isReading = true; updatePlayBtnUI();
-                synth.getVoices(); 
-                if(synth.paused) synth.resume(); else speakNextSentence(); 
-            } else {
-                isReading = false; updatePlayBtnUI();
-                synth.pause(); 
-                saveCloudHistory(); 
+            } else { 
+                speakSystemMsg("Đã đọc xong bộ truyện. Cảm ơn bạn.", () => { alert("Bạn đã đọc hết truyện!"); }); 
+                updatePlayPauseUI(false);
             }
         };
-
+    
+        const stopTTS = () => { 
+            isReading = false; 
+            synth.cancel(); 
+            updatePlayPauseUI(false);
+        };
+    
+        // LOGIC NÚT TOGGLE PLAY/PAUSE
+        $('btn-read-toggle').onclick = () => { 
+            if (!isReading) { 
+                isReading = true; 
+                synth.getVoices(); 
+                if(synth.paused) synth.resume(); else speakNextSentence(); 
+                updatePlayPauseUI(true);
+            } else {
+                isReading = false; 
+                synth.pause(); 
+                saveCloudHistory();
+                updatePlayPauseUI(false);
+            }
+        };
+        
         $('btn-read-stop').onclick = () => { 
             stopTTS(); 
             saveCloudHistory(); 
@@ -910,7 +928,7 @@
     };
     
     return {
-        name: "Đọc Truyện V1",
+        name: "Đọc Truyện V2",
         icon: `<svg viewBox="0 0 24 24"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.15C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zM21 18.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z" fill="white"/></svg>`,
         bgColor: "#0984e3",
         action: runTool
