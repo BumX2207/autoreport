@@ -459,7 +459,7 @@
                     isUserScrolling = true;
                     updateProgressBar(); // Ngay lập tức cập nhật thanh cuộn khi tay chạm vào màn hình
                     if(scrollResumeTimer) clearTimeout(scrollResumeTimer);
-                    scrollResumeTimer = setTimeout(() => { isUserScrolling = false; }, 4000); 
+                    scrollResumeTimer = setTimeout(() => { isUserScrolling = false; }, 2000); 
                 };
                 contentWrap.addEventListener('touchstart', handleUserScroll, {passive: true});
                 contentWrap.addEventListener('wheel', handleUserScroll, {passive: true});
