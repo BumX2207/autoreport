@@ -733,10 +733,10 @@
                 let s = stories.find(st => st.link === link); let p = localProgressData[link];
                 if (!s || !p) return null;
                 return {
-                    story: s.name, chapter: p.chap, sentence: p.sentence || 0,
-                    percent: Math.round((p.chap / s.total) * 100) + '%',
-                    time: new Date(p.time || Date.now()).toLocaleString('vi-VN'),
-                    timestamp: p.time || 0
+                    story: s.name, 
+                    chapter: p.chap, 
+                    sentence: p.sentence || 0,
+                    timestamp: p.time || Date.now()
                 };
             }).filter(item => item !== null).sort((a,b) => b.timestamp - a.timestamp).slice(0, 15);
 
