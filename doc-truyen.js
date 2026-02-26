@@ -881,7 +881,7 @@
         const handleChapterFinished = () => {
             isReading = false; saveCloudHistory(); 
             if(currentChapter < currentStory.total) {
-                speakSystemMsg(`Đã đọc xong chương ${currentChapter}, chuyển sang chương mới.`, async () => {
+                speakSystemMsg(`Hết chương ${currentChapter}, chuyển sang chương mới.`, async () => {
                     isResuming = false; await loadAndDisplayChapter(currentChapter + 1, false); isReading = true; speakNextSentence();
                 });
             } else { 
