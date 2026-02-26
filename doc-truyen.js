@@ -111,8 +111,7 @@
         
         .tr-text { 
             font-size:18px; line-height:1.7; color:#2d3436; text-align:justify; 
-            -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; 
-            -webkit-touch-callout: none;
+            -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; -webkit-touch-callout: none;
         }
         .tr-text p { margin-bottom: 15px; }
 
@@ -124,36 +123,29 @@
         
         #tr-fake-lock-screen {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000000; z-index: 2147483999; 
-            flex-direction: column; justify-content: center; align-items: center;
+            background: #000000; z-index: 2147483999; flex-direction: column; justify-content: center; align-items: center;
             color: #ccc; user-select: none; text-align: center; padding: 20px;
         }
         .tr-fake-status { font-size: 16px; color: #888; margin-bottom: 15px; }
         .tr-fake-story-name { font-size: 24px; font-weight: bold; color: #e17055; margin-bottom: 30px; text-transform: uppercase; }
         .tr-fake-hint { font-size: 14px; color: #555; animation: breathe 3s infinite; border: 1px solid #333; padding: 8px 15px; border-radius: 20px;}
+        @keyframes breathe { 0%, 100% {opacity: 0.3; border-color:#333} 50% {opacity: 0.9; border-color:#777} }
 
-        /* CSS MÀN HÌNH NHẮC NHỞ KHI BỊ GIÁN ĐOẠN (CUỘC GỌI / BÁO THỨC) */
-        #tr-resume-overlay {
+        /* MÀN HÌNH CHỜ KHI CÓ CUỘC GỌI/BÁO THỨC */
+        #tr-interruption-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 2147483999; 
-            flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(5px);
+            background: rgba(0,0,0,0.85); z-index: 2147483999;
+            flex-direction: column; justify-content: center; align-items: center;
         }
-        .tr-btn-big-resume {
-            background: #00b894; color: white; border: none; border-radius: 50%;
-            width: 140px; height: 140px; font-size: 16px; font-weight: bold; text-transform: uppercase;
-            box-shadow: 0 0 20px rgba(0, 184, 148, 0.6); cursor: pointer;
-            display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px;
-            animation: pulse-green 2s infinite; transition: 0.2s;
+        .tr-btn-resume-giant {
+            width: 100px; height: 100px; border-radius: 50%; background: #00b894;
+            color: white; border: none; font-size: 40px; cursor: pointer;
+            box-shadow: 0 0 25px rgba(0, 184, 148, 0.6); display: flex; justify-content: center; align-items: center;
+            animation: pulse-play 2s infinite; padding-left: 8px; /* Cân chỉnh icon play */
         }
-        .tr-btn-big-resume:hover { background: #55efc4; transform: scale(1.05); }
-        @keyframes pulse-green {
-            0% { box-shadow: 0 0 0 0 rgba(0, 184, 148, 0.7); }
-            70% { box-shadow: 0 0 0 25px rgba(0, 184, 148, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(0, 184, 148, 0); }
-        }
-        .tr-resume-text { color: #dfe6e9; margin-top: 30px; font-size: 16px; text-align: center; padding: 0 20px;}
-        .tr-btn-close-resume { position: absolute; top: 30px; right: 30px; background: transparent; color: #bbb; border: 1px solid #bbb; padding: 6px 15px; border-radius: 20px; cursor:pointer; font-size: 12px;}
-        .tr-btn-close-resume:hover { color: white; border-color: white; }
+        @keyframes pulse-play { 0% {transform: scale(1); box-shadow: 0 0 15px rgba(0,184,148,0.5);} 50% {transform: scale(1.1); box-shadow: 0 0 35px rgba(0,184,148,0.9);} 100% {transform: scale(1); box-shadow: 0 0 15px rgba(0,184,148,0.5);} }
+        .tr-interruption-text { color: #fff; margin-top: 25px; font-size: 18px; font-weight: bold; letter-spacing: 1px;}
+        .tr-btn-close-overlay { margin-top: 40px; background: transparent; border: 1px solid #777; color: #aaa; padding: 8px 25px; border-radius: 20px; cursor: pointer; font-size: 13px;}
 
         @media (max-width: 768px) {
             .tr-card { width:calc(33.33% - 15px); }
@@ -185,10 +177,8 @@
                 const res = await fetch(proxy);
                 if (!res.ok) continue;
                 let htmlText = "";
-                if(proxy.includes('allorigins')) {
-                    const json = await res.json();
-                    htmlText = json.contents;
-                } else { htmlText = await res.text(); }
+                if(proxy.includes('allorigins')) { const json = await res.json(); htmlText = json.contents; } 
+                else { htmlText = await res.text(); }
                 if(htmlText.includes('Cloudflare') && htmlText.includes('Attention Required!')) continue; 
                 return htmlText;
             } catch (e) { console.warn("Proxy failed", proxy); }
@@ -230,30 +220,16 @@
         let synth = window.speechSynthesis;
         synth.getVoices();
         
-        let stories =[];
-        let genres = new Set();
-        let currentStory = null;
-        let currentChapter = 1;
-        let isReading = false;
-        let currentSentences =[];
-        let currentSentenceIndex = 0;
-        let isResuming = false;
-        let isJumping = false; 
-        let isManualCancel = false; // Cờ kiểm tra xem tool chủ động tắt hay do hệ thống ngắt
+        let stories =[]; let genres = new Set();
+        let currentStory = null; let currentChapter = 1; let currentSentences =[]; let currentSentenceIndex = 0;
+        let isReading = false; let isResuming = false; let isJumping = false;
         let preloadedData = { chapNum: null, contentArr: null };
         let showAllHistory = false;
 
-        let isUserScrolling = false;
-        let scrollResumeTimer = null;
+        let isUserScrolling = false; let scrollResumeTimer = null;
+        let localProgressData = {}; let activeSession = { link: null, chap: 1, sentence: 0 }; 
 
-        let localProgressData = {}; 
-        let activeSession = { link: null, chap: 1, sentence: 0 }; 
-
-        let ttsRate = 1.3;
-        let ttsPitch = 1.1; 
-        let ttsVoiceIndex = -1;
-        let availableVoices =[];
-        let wakeLock = null;
+        let ttsRate = 1.3; let ttsPitch = 1.1; let ttsVoiceIndex = -1; let availableVoices =[]; let wakeLock = null;
     
         // TẠO DOM APP
         let app = $('truyen-app');
@@ -336,64 +312,37 @@
                         <div class="tr-fake-hint">Bấm 2 lần vào màn hình để trở lại</div>
                     </div>
 
-                    <!-- MÀN HÌNH NHẮC ĐỌC TIẾP SAU KHI BỊ CUỘC GỌI CẮT NGANG -->
-                    <div id="tr-resume-overlay">
-                        <button class="tr-btn-close-resume" id="btn-close-resume">Đóng (Tạm dừng)</button>
-                        <button class="tr-btn-big-resume" id="btn-big-resume">
-                            <span style="font-size:40px">▶</span>
-                            <span>Đọc tiếp</span>
-                        </button>
-                        <div class="tr-resume-text">Trình đọc vừa bị gián đoạn bởi hệ thống.<br>Bạn có muốn tiếp tục nghe không?</div>
+                    <div id="tr-interruption-overlay">
+                        <button id="btn-resume-giant" class="tr-btn-resume-giant">▶</button>
+                        <div class="tr-interruption-text">Truyện đang tạm dừng</div>
+                        <button id="btn-close-overlay" class="tr-btn-close-overlay">Bỏ qua</button>
                     </div>
                 </div>
             `;
             document.body.appendChild(app);
             const style = document.createElement('style'); style.innerHTML = MY_CSS; document.head.appendChild(style);
             
-            // Hàm chủ động tắt TTS (đặt cờ isManualCancel để khỏi nhầm với OS ngắt)
-            const cancelTTS = () => {
-                isManualCancel = true;
-                synth.cancel();
-                setTimeout(() => { isManualCancel = false; }, 300);
-            };
-
-            // HÀM XỬ LÝ KHI BỊ HỆ THỐNG NGẮT (CUỘC GỌI/BÁO THỨC)
-            const handleAudioInterruption = () => {
-                if (!isReading) return;
-                isReading = false;
-                cancelTTS();
-                saveCloudHistory(); // Lưu mốc ngay lập tức
-
-                // Hiện nút to tròn nhắc đọc tiếp
-                $('tr-resume-overlay').style.display = 'flex';
-                
-                // Hủy luôn lock màn hình nếu đang treo máy
-                $('tr-fake-lock-screen').style.display = 'none';
-                releaseWakeLock();
-            };
-
-            // Bắt sự kiện OS chèn popup full màn hình (Cuộc gọi, App khác đè lên)
-            document.addEventListener("visibilitychange", () => {
+            // XỬ LÝ LẮNG NGHE CUỘC GỌI / BÁO THỨC (VISIBILITY CHANGE)
+            document.addEventListener('visibilitychange', () => {
                 if (document.hidden && isReading) {
-                    console.log("[Đọc Truyện] Phát hiện ứng dụng bị đè khuất. Tạm dừng AI.");
-                    handleAudioInterruption();
+                    // Hệ điều hành ép ẩn trình duyệt do có Cuộc gọi/Báo thức hiện đè lên
+                    isReading = false; 
+                    synth.cancel(); // Ngắt loa ngay lập tức, giữ nguyên vị trí sentence hiện tại
+                    saveCloudHistory(); 
+                    $('tr-interruption-overlay').style.display = 'flex'; // Hiển thị nút Play to
                 }
             });
 
-            // Gán sự kiện cho màn hình nhắc đọc tiếp
-            $('btn-big-resume').onclick = () => {
-                $('tr-resume-overlay').style.display = 'none';
+            $('btn-resume-giant').onclick = () => {
+                $('tr-interruption-overlay').style.display = 'none';
                 if (!isReading) {
-                    isReading = true;
-                    synth.getVoices();
-                    speakNextSentence();
+                    isReading = true; synth.getVoices();
+                    speakNextSentence(); // Đọc tiếp câu bị ngắt
                 }
             };
-            $('btn-close-resume').onclick = () => {
-                $('tr-resume-overlay').style.display = 'none';
-            };
 
-            // Scroll Logic
+            $('btn-close-overlay').onclick = () => { $('tr-interruption-overlay').style.display = 'none'; };
+
             const contentWrap = document.getElementById('tr-content-wrap');
             if (contentWrap) {
                 const handleUserScroll = () => {
@@ -406,11 +355,10 @@
                 contentWrap.addEventListener('touchmove', handleUserScroll, {passive: true});
             }
 
-            // Click đúp chuyển câu
             let lastClickTime = 0;
             $('tr-read-text').addEventListener('click', (e) => {
                 const now = new Date().getTime();
-                if (now - lastClickTime < 350) {
+                if (now - lastClickTime < 350) { 
                     let target = e.target.closest('.tr-sent');
                     if (target) {
                         let idx = parseInt(target.getAttribute('data-idx'));
@@ -422,12 +370,10 @@
 
             $('tr-btn-close').onclick = () => { app.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; stopTTS(); releaseWakeLock(); saveCloudHistory(); };
 
-            // --- XỬ LÝ AUTH ---
             const updateAuthUI = () => {
                 const nameEl = $('tr-user-name-display'); const btnContainer = $('tr-auth-btns');
                 if (!nameEl || !btnContainer) return;
                 nameEl.innerText = USER_NAME;
-
                 if (!IS_LOGGED_IN) {
                     btnContainer.innerHTML = `<button id="tr-btn-login" style="background:#0984e3; color:#fff; border:none; padding:3px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold;">Đăng nhập</button><button id="tr-btn-register" style="background:#00b894; color:#fff; border:none; padding:3px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold;">Đăng ký</button>`;
                     $('tr-btn-login').onclick = () => showAuthModal('login'); $('tr-btn-register').onclick = () => showAuthModal('register');
@@ -497,7 +443,6 @@
             $('tr-settings-panel').onclick = (e) => e.stopPropagation();
             document.addEventListener('click', (e) => { if(!e.target.closest('#btn-settings')) $('tr-settings-panel').classList.remove('show'); });
 
-            // --- LOGIC TREO MÁY ---
             const enterSleepMode = async () => {
                 if (!isReading) { alert("Vui lòng bấm AI Đọc trước khi treo máy!"); return; }
                 try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (err) {}
@@ -620,7 +565,6 @@
                         }
                     };
                 }
-
                 card.onclick = () => openStory(story); 
                 container.appendChild(card);
             });
@@ -738,7 +682,9 @@
                 $('tr-read-title').innerText = currentStory.name; $('tr-read-chap').innerText = `Chương ${currentChapter} / ${currentStory.total}`;
                 updateNavUI(); 
                 
-                let builtHtml = ''; currentSentences =[]; let sIndex = 0;
+                let builtHtml = '';
+                currentSentences =[];
+                let sIndex = 0;
 
                 data.cleanArr.forEach(txt => {
                     let pText = txt.trim();
@@ -789,10 +735,10 @@
             setLocalVal(getProgressKey(), localProgressData);
         };
 
+        // LƯU CLOUD GỌN NHẸ THEO YÊU CẦU
         const saveCloudHistory = () => {
             if (!API_URL || !IS_LOGGED_IN || isReading) return; 
 
-            // ĐÃ TỐI ƯU: BỎ 'PERCENT' VÀ 'TIME' KHỎI MẢNG CLOUD JSON
             let fullHistory = Object.keys(localProgressData).map(link => {
                 let s = stories.find(st => st.link === link); let p = localProgressData[link];
                 if (!s || !p) return null;
@@ -841,7 +787,7 @@
     
         const jumpToSentence = (idx) => {
             isJumping = true;
-            cancelTTS(); 
+            synth.cancel(); 
             
             currentSentenceIndex = idx;
             updateLocalSessionKey(currentChapter, currentSentenceIndex);
@@ -866,18 +812,14 @@
 
             let u = setupUtterance(cleanText);
             u.onend = () => { 
+                if(!isReading) return; // Bảo vệ: Nếu bị dừng từ sự kiện visibility thì không tăng index tiếp
                 currentSentenceIndex++; 
                 updateLocalSessionKey(currentChapter, currentSentenceIndex); 
-                if(isReading) speakNextSentence(); 
+                speakNextSentence(); 
             };
-            
-            // XỬ LÝ LỖI HỆ THỐNG KHI BỊ CƯỚP LOA (Báo thức nền / Cuộc gọi chìm)
             u.onerror = (e) => { 
                 console.warn("TTS Error: ", e); 
-                if (!isJumping && !isManualCancel && isReading) {
-                    console.log("[Đọc Truyện] Lỗi mất audio focus. Tạm dừng AI.");
-                    handleAudioInterruption();
-                } 
+                if (!isJumping) isReading = false; 
             };
             synth.speak(u);
 
@@ -900,7 +842,7 @@
             } else { speakSystemMsg("Đã đọc xong bộ truyện. Cảm ơn bạn.", () => { alert("Bạn đã đọc hết truyện!"); }); }
         };
     
-        const stopTTS = () => { isReading = false; cancelTTS(); };
+        const stopTTS = () => { isReading = false; synth.cancel(); };
     
         $('btn-read-play').onclick = () => { 
             if (!isReading) { 
@@ -924,7 +866,7 @@
     };
     
     return {
-        name: "Đọc Truyện V1",
+        name: "Đọc Truyện V10",
         icon: `<svg viewBox="0 0 24 24"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.15C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zM21 18.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z" fill="white"/></svg>`,
         bgColor: "#0984e3",
         action: runTool
