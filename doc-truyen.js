@@ -333,7 +333,7 @@
                 </div>
                 
                 <div class="tr-user-bar">
-                    <span>Xin chào, <span class="tr-user-name" id="tr-user-name-display">${USER_NAME}</span></span>
+                    <span>Xin chào, <span class="tr-user-name" id="tr-user-name-display">${USER_NAME}</span>!</span>
                     <div style="display:flex; gap:10px; align-items:center;">
                         <span id="tr-status-text">Sẵn sàng</span>
                         <div id="tr-auth-btns" style="display:flex; gap:10px;"></div>
