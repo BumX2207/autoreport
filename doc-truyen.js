@@ -109,9 +109,21 @@
         .tr-reader-content-wrap { flex:1; overflow-y:auto; padding:20px; scroll-behavior: smooth; display:flex; justify-content:center; align-items:flex-start; }
         .tr-paper { background:#fff; max-width:800px; width:100%; padding:30px 40px; border-radius:8px; box-shadow:0 5px 20px rgba(0,0,0,0.05); height:fit-content; margin-bottom: 50px; }
         
-        .tr-text { font-size:18px; line-height:1.7; color:#2d3436; text-align:justify; }
+        .tr-text { 
+            font-size:18px; line-height:1.7; color:#2d3436; text-align:justify; 
+            /* CHẶN COPY VÀ SELECT VĂN BẢN */
+            -webkit-user-select: none; 
+            -moz-user-select: none; 
+            -ms-user-select: none; 
+            user-select: none; 
+            -webkit-touch-callout: none;
+        }
         .tr-text p { margin-bottom: 15px; }
-        .tr-reading-active { background: #ffeaa7; color: #d63031; border-radius: 3px; border-left: 3px solid #e17055; padding-left: 5px; }
+
+        /* NÂNG CẤP HIGHLIGHT CHÍNH XÁC THEO CÂU */
+        .tr-sent { cursor: pointer; border-radius: 4px; padding: 2px 3px; transition: background 0.2s, color 0.2s; }
+        .tr-sent:hover { background: #e8f8f5; }
+        .tr-reading-active { background: #ffeaa7; color: #d63031; }
     
         .tr-loading-overlay { position:absolute; top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.95); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:50; font-weight:bold; font-size:16px; color:#e17055;}
         
@@ -211,18 +223,16 @@
         let currentSentences =[];
         let currentSentenceIndex = 0;
         let isResuming = false;
-        let preloadedData = { chapNum: null, contentHtml: null, contentArr: null };
+        let isJumping = false; // Cờ chặn lỗi khi nhảy dòng
+        let preloadedData = { chapNum: null, contentArr: null };
         let showAllHistory = false;
 
-        // CỜ CHẶN TỰ ĐỘNG CUỘN KHI NGƯỜI DÙNG VUỐT
         let isUserScrolling = false;
         let scrollResumeTimer = null;
 
-        // BIẾN QUẢN LÝ DỮ LIỆU ĐỌC:
         let localProgressData = {}; 
         let activeSession = { link: null, chap: 1, sentence: 0 }; 
 
-        // SETTINGS STATE
         let ttsRate = 1.3;
         let ttsPitch = 1.1; 
         let ttsVoiceIndex = -1;
@@ -314,19 +324,31 @@
             document.body.appendChild(app);
             const style = document.createElement('style'); style.innerHTML = MY_CSS; document.head.appendChild(style);
             
-            // Lắng nghe sự kiện vuốt trên vùng đọc để tạm dừng auto-scroll
             const contentWrap = document.getElementById('tr-content-wrap');
             if (contentWrap) {
                 const handleUserScroll = () => {
                     isUserScrolling = true;
                     if(scrollResumeTimer) clearTimeout(scrollResumeTimer);
-                    // Sau 3 giây không chạm, hệ thống cuộn sẽ được kích hoạt lại
-                    scrollResumeTimer = setTimeout(() => { isUserScrolling = false; }, 3000); 
+                    scrollResumeTimer = setTimeout(() => { isUserScrolling = false; }, 4000); 
                 };
                 contentWrap.addEventListener('touchstart', handleUserScroll, {passive: true});
                 contentWrap.addEventListener('wheel', handleUserScroll, {passive: true});
                 contentWrap.addEventListener('touchmove', handleUserScroll, {passive: true});
             }
+
+            // SỰ KIỆN CLICK ĐÚP CHUỘT / CHẠM 2 LẦN VÀO CÂU VĂN
+            let lastClickTime = 0;
+            $('tr-read-text').addEventListener('click', (e) => {
+                const now = new Date().getTime();
+                if (now - lastClickTime < 350) { // Chuẩn thời gian của double click
+                    let target = e.target.closest('.tr-sent');
+                    if (target) {
+                        let idx = parseInt(target.getAttribute('data-idx'));
+                        jumpToSentence(idx);
+                    }
+                }
+                lastClickTime = now;
+            });
 
             $('tr-btn-close').onclick = () => { app.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; stopTTS(); releaseWakeLock(); saveCloudHistory(); };
 
@@ -590,19 +612,17 @@
             let cleanLink = baseLink.endsWith('/') ? baseLink.slice(0, -1) : baseLink; return `${cleanLink}/chuong-${chapNum}/`;
         };
     
+        // CHỈ BÓC TÁCH TEXT SẠCH RA, HTML SẼ ĐƯỢC BUILD RIÊNG LẠI SAU
         const parseChapterHTML = (htmlText) => {
             const parser = new DOMParser(); const doc = parser.parseFromString(htmlText, 'text/html');
             const contentHtml = doc.querySelector('#chapter-c') || doc.querySelector('.chapter-c');
             if(!contentHtml) throw new Error("Không tìm thấy nội dung chữ.");
             contentHtml.querySelectorAll('.ads, script, iframe').forEach(el => el.remove());
             const paragraphs = Array.from(contentHtml.querySelectorAll('p')).map(p => p.innerText.trim()).filter(t => t.length > 0);
-            let finalHtml = "", cleanArr =[];
-            if(paragraphs.length > 0) { finalHtml = paragraphs.map(p => `<p>${p}</p>`).join(''); cleanArr = paragraphs; } 
-            else {
-                let rawParts = contentHtml.innerHTML.split(/<br\s*\/?>/i).map(t => t.replace(/<[^>]*>?/gm, '').trim()).filter(t => t.length > 0);
-                finalHtml = rawParts.map(p => `<p>${p}</p>`).join(''); cleanArr = rawParts;
-            }
-            return { finalHtml, cleanArr };
+            let cleanArr =[];
+            if(paragraphs.length > 0) { cleanArr = paragraphs; } 
+            else { cleanArr = contentHtml.innerHTML.split(/<br\s*\/?>/i).map(t => t.replace(/<[^>]*>?/gm, '').trim()).filter(t => t.length > 0); }
+            return { cleanArr };
         };
     
         const updateNavUI = () => {
@@ -615,7 +635,7 @@
             if (chapNum > currentStory.total) return;
             try {
                 const targetUrl = getChapterUrl(currentStory.link, chapNum); const htmlText = await fetchWithFallbacks(targetUrl); const parsed = parseChapterHTML(htmlText);
-                preloadedData = { chapNum: chapNum, contentHtml: parsed.finalHtml, contentArr: parsed.cleanArr };
+                preloadedData = { chapNum: chapNum, contentArr: parsed.cleanArr };
             } catch (e) { preloadedData = { chapNum: null }; }
         };
     
@@ -643,31 +663,52 @@
             $('tr-loading').style.display = 'flex';
             try {
                 let data = null;
-                if (preloadedData.chapNum === currentChapter) { data = { finalHtml: preloadedData.contentHtml, cleanArr: preloadedData.contentArr }; } 
+                if (preloadedData.chapNum === currentChapter) { data = { cleanArr: preloadedData.contentArr }; } 
                 else { const targetUrl = getChapterUrl(currentStory.link, currentChapter); const htmlText = await fetchWithFallbacks(targetUrl); data = parseChapterHTML(htmlText); }
                 
-                $('tr-read-title').innerText = currentStory.name; $('tr-read-chap').innerText = `Chương ${currentChapter} / ${currentStory.total}`; $('tr-read-text').innerHTML = data.finalHtml;
+                $('tr-read-title').innerText = currentStory.name; $('tr-read-chap').innerText = `Chương ${currentChapter} / ${currentStory.total}`;
                 updateNavUI(); 
                 
-                // LỌC VÀ NỐI CÂU KHÔNG TẠO RA DẤU CHẤM DƯ THỪA
-                let normalizedText = data.cleanArr.map(txt => {
-                    let t = txt.trim();
-                    // Nếu cuối dòng chưa có ngắt câu, thêm chấm để tránh dính chữ
-                    if (!/[.!?]$/.test(t)) t += '.';
-                    return t;
-                }).join(' ');
-                
-                currentSentences = normalizedText.match(/[^.!?]+[.!?]+/g) ||[normalizedText];
-                currentSentences = currentSentences.map(s => s.trim()).filter(s => s.length > 0);
+                // TỰ ĐỘNG BUILD LẠI CẤU TRÚC HTML: BỌC MỖI CÂU VÀO 1 THẺ SPAN CÓ ĐÁNH SỐ (DATA-IDX)
+                let builtHtml = '';
+                currentSentences =[];
+                let sIndex = 0;
+
+                data.cleanArr.forEach(txt => {
+                    let pText = txt.trim();
+                    
+                    // FIX LỖI THÊM DẤU CHẤM SAU CÂU NGOẶC KÉP: CHỈ THÊM CHẤM NẾU CUỐI DÒNG CHƯA CÓ NGẮT CÂU/NGOẶC
+                    if (!/[.!?]+["'”’\])}]*$/.test(pText)) pText += '.';
+
+                    let sents = pText.match(/[^.!?]+[.!?]+/g) || [pText];
+                    let pHtml = '<p>';
+                    sents.forEach(s => {
+                        let st = s.trim();
+                        if (st.length > 0) {
+                            currentSentences.push(st);
+                            pHtml += `<span class="tr-sent" data-idx="${sIndex}">${st}</span> `;
+                            sIndex++;
+                        }
+                    });
+                    pHtml += '</p>';
+                    builtHtml += pHtml;
+                });
+
+                $('tr-read-text').innerHTML = builtHtml;
                 
                 if (!isResuming) { currentSentenceIndex = 0; }
                 updateLocalSessionKey(currentChapter, currentSentenceIndex);
 
                 $('tr-loading').style.display = 'none';
+                
+                // HIGHLIGHT CHÍNH XÁC CÂU BẰNG SPAN ID MÀ KHÔNG DÙNG HÀM MATCH
                 if (isResuming && currentSentenceIndex > 0) {
                     setTimeout(() => {
-                        const pTags = $('tr-read-text').querySelectorAll('p'); let targetSentence = currentSentences[currentSentenceIndex];
-                        if(targetSentence) { for(let p of pTags) { if(p.innerText.includes(targetSentence.substring(0, 15))) { p.classList.add('tr-reading-active'); p.scrollIntoView({ behavior: 'smooth', block: 'center' }); break; } } }
+                        let targetSpan = $('tr-read-text').querySelector(`.tr-sent[data-idx="${currentSentenceIndex}"]`);
+                        if(targetSpan) { 
+                            targetSpan.classList.add('tr-reading-active'); 
+                            if(!isUserScrolling) targetSpan.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
+                        }
                         isResuming = false;
                     }, 500);
                 } else { $('tr-content-wrap').scrollTop = 0; }
@@ -715,7 +756,7 @@
         $('sel-chap').onchange = (e) => { isResuming=false; loadAndDisplayChapter(parseInt(e.target.value), true); };
     
         // -----------------------------------------------------
-        // LOGIC TTS (ĐỌC TRUYỆN)
+        // LOGIC TTS (ĐỌC TRUYỆN) & JUMP DOUBLE CLICK
         // -----------------------------------------------------
         const getVoice = () => {
             if (ttsVoiceIndex >= 0 && availableVoices[ttsVoiceIndex]) return availableVoices[ttsVoiceIndex];
@@ -734,11 +775,30 @@
             let u = setupUtterance(text, true); u.onend = () => { if(callback) callback(); }; synth.speak(u);
         };
     
+        const jumpToSentence = (idx) => {
+            isJumping = true;
+            synth.cancel(); // Buộc dừng câu đang đọc hiện tại
+            
+            currentSentenceIndex = idx;
+            updateLocalSessionKey(currentChapter, currentSentenceIndex);
+            
+            const spans = $('tr-read-text').querySelectorAll('.tr-sent');
+            spans.forEach(s => s.classList.remove('tr-reading-active'));
+            let targetSpan = $('tr-read-text').querySelector(`.tr-sent[data-idx="${idx}"]`);
+            if (targetSpan) {
+                targetSpan.classList.add('tr-reading-active');
+                if(!isUserScrolling) targetSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            isReading = true;
+            // Cho delay 1 tí để hàm tắt mượt mà trước khi load câu mới lên loa
+            setTimeout(() => { isJumping = false; speakNextSentence(); }, 150);
+        };
+
         const speakNextSentence = () => {
             if(currentSentenceIndex >= currentSentences.length) { handleChapterFinished(); return; }
             let sentence = currentSentences[currentSentenceIndex];
             
-            // XÓA KÝ TỰ LẠ VÀ RÚT GỌN ... THÀNH .
             let cleanText = sentence.replace(/["'()$#@*~\[\]{}“”‘’]/g, '').replace(/\.{2,}/g, '.').trim();
 
             let u = setupUtterance(cleanText);
@@ -747,19 +807,20 @@
                 updateLocalSessionKey(currentChapter, currentSentenceIndex); 
                 if(isReading) speakNextSentence(); 
             };
-            u.onerror = (e) => { console.warn("TTS Error: ", e); isReading = false; };
+            u.onerror = (e) => { 
+                console.warn("TTS Error: ", e); 
+                if (!isJumping) isReading = false; 
+            };
             synth.speak(u);
 
-            const pTags = $('tr-read-text').querySelectorAll('p'); pTags.forEach(p => p.classList.remove('tr-reading-active'));
-            for(let p of pTags) { 
-                if(p.innerText.includes(sentence.substring(0, 15))) { 
-                    p.classList.add('tr-reading-active'); 
-                    // CHỈ CUỘN KHI NGƯỜI DÙNG KHÔNG TƯƠNG TÁC VUỐT MÀN HÌNH
-                    if (!isUserScrolling) {
-                        p.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
-                    }
-                    break; 
-                } 
+            // XÓA MÀU TẤT CẢ VÀ CHỈ TÔ MÀU ĐÚNG SPAN CỦA CÂU ĐANG ĐỌC
+            const spans = $('tr-read-text').querySelectorAll('.tr-sent'); 
+            spans.forEach(s => s.classList.remove('tr-reading-active'));
+            
+            let targetSpan = $('tr-read-text').querySelector(`.tr-sent[data-idx="${currentSentenceIndex}"]`);
+            if (targetSpan) {
+                targetSpan.classList.add('tr-reading-active');
+                if(!isUserScrolling) targetSpan.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
             }
         };
     
@@ -788,7 +849,7 @@
         $('btn-read-stop').onclick = () => { 
             stopTTS(); 
             saveCloudHistory(); 
-            $('tr-read-text').querySelectorAll('p').forEach(p => p.classList.remove('tr-reading-active'));
+            $('tr-read-text').querySelectorAll('.tr-sent').forEach(p => p.classList.remove('tr-reading-active'));
             $('tr-fake-lock-screen').style.display = 'none'; releaseWakeLock();
         };
     
@@ -796,7 +857,7 @@
     };
     
     return {
-        name: "Đọc Truyện V1",
+        name: "Đọc Truyện V2",
         icon: `<svg viewBox="0 0 24 24"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.15C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zM21 18.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z" fill="white"/></svg>`,
         bgColor: "#0984e3",
         action: runTool
