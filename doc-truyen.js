@@ -214,9 +214,13 @@
         let preloadedData = { chapNum: null, contentHtml: null, contentArr: null };
         let showAllHistory = false;
 
+        // CỜ CHẶN TỰ ĐỘNG CUỘN KHI NGƯỜI DÙNG VUỐT
+        let isUserScrolling = false;
+        let scrollResumeTimer = null;
+
         // BIẾN QUẢN LÝ DỮ LIỆU ĐỌC:
-        let localProgressData = {}; // RAM Cache chứa toàn bộ lịch sử (Ưu tiên cập nhật từ Cloud)
-        let activeSession = { link: null, chap: 1, sentence: 0 }; // KEY THEO DÕI TRUYỆN ĐANG ĐỌC HIỆN TẠI
+        let localProgressData = {}; 
+        let activeSession = { link: null, chap: 1, sentence: 0 }; 
 
         // SETTINGS STATE
         let ttsRate = 1.3;
@@ -309,7 +313,21 @@
             `;
             document.body.appendChild(app);
             const style = document.createElement('style'); style.innerHTML = MY_CSS; document.head.appendChild(style);
-    
+            
+            // Lắng nghe sự kiện vuốt trên vùng đọc để tạm dừng auto-scroll
+            const contentWrap = document.getElementById('tr-content-wrap');
+            if (contentWrap) {
+                const handleUserScroll = () => {
+                    isUserScrolling = true;
+                    if(scrollResumeTimer) clearTimeout(scrollResumeTimer);
+                    // Sau 3 giây không chạm, hệ thống cuộn sẽ được kích hoạt lại
+                    scrollResumeTimer = setTimeout(() => { isUserScrolling = false; }, 3000); 
+                };
+                contentWrap.addEventListener('touchstart', handleUserScroll, {passive: true});
+                contentWrap.addEventListener('wheel', handleUserScroll, {passive: true});
+                contentWrap.addEventListener('touchmove', handleUserScroll, {passive: true});
+            }
+
             $('tr-btn-close').onclick = () => { app.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; stopTTS(); releaseWakeLock(); saveCloudHistory(); };
 
             // --- XỬ LÝ AUTH ---
@@ -420,7 +438,7 @@
         app.style.display = 'flex';
     
         // -----------------------------------------------------
-        // ĐỒNG BỘ CLOUD -> LOCAL (ƯU TIÊN CLOUD LÀM CHUẨN)
+        // ĐỒNG BỘ CLOUD -> LOCAL
         // -----------------------------------------------------
         const syncCloudHistory = () => {
             return new Promise((resolve) => {
@@ -444,11 +462,10 @@
                                         let cloudTime = item.timestamp || 0;
                                         let lData = localProgressData[story.link];
                                         let localTime = lData ? (lData.time || 0) : 0;
-                                        // Ghi đè Local nếu Cloud mới hơn hoặc Local chưa có dữ liệu
                                         if (!lData || cloudTime >= localTime) {
                                             localProgressData[story.link] = { 
                                                 chap: parseInt(item.chapter) || 1, 
-                                                sentence: parseInt(item.sentence) || 0, // Nhận sentence từ cloud
+                                                sentence: parseInt(item.sentence) || 0,
                                                 time: cloudTime 
                                             };
                                         }
@@ -478,7 +495,7 @@
                     }
                 }
                 renderFilters(); 
-                localProgressData = getLocalVal(getProgressKey(), {}); // Tải cache offline làm nền
+                localProgressData = getLocalVal(getProgressKey(), {}); 
                 if (IS_LOGGED_IN) { await syncCloudHistory(); }
                 renderHome(); 
             } catch (e) { console.error(e); $('tr-home-content').innerHTML = `<div style="color:red; width:100%; text-align:center;">Lỗi tải dữ liệu.</div>`; }
@@ -495,7 +512,6 @@
                 let coverHtml = (story.cover && story.cover.startsWith('http')) ? `<img src="${story.cover}" class="tr-card-img" loading="lazy">` : story.name.charAt(0).toUpperCase();
                 let progressHtml = (localProgressData[story.link] && localProgressData[story.link].chap) ? `<div class="tr-card-progress">Đang đọc: Chương ${localProgressData[story.link].chap}</div>` : '';
                 
-                // Thêm nút xóa (X) nếu là mục Lịch Sử Truyện
                 let deleteBtnHtml = isHistoryCard ? `<button class="tr-btn-delete-history" title="Xóa lịch sử truyện này">✖</button>` : '';
 
                 card.innerHTML = `<div class="tr-card-cover">${coverHtml}${progressHtml}${deleteBtnHtml}</div><div class="tr-card-info"><div class="tr-card-title">${story.name}</div><div class="tr-card-genre">${story.genre}</div><div class="tr-card-chap">Tổng: ${story.total} Chương</div></div>`;
@@ -507,7 +523,7 @@
                             delete localProgressData[story.link];
                             if(activeSession.link === story.link) activeSession = { link: null, chap: 1, sentence: 0 };
                             setLocalVal(getProgressKey(), localProgressData);
-                            saveCloudHistory(); // Đồng bộ xóa lên cloud
+                            saveCloudHistory(); 
                             renderHome();
                         }
                     };
@@ -540,7 +556,7 @@
                 const sec = document.createElement('div'); sec.className = 'tr-section';
                 sec.innerHTML = `<div class="tr-section-header"><div class="tr-section-title">🕒 Truyện đang đọc</div>${historyList.length > 4 ? `<button class="tr-btn-view-all" id="btn-toggle-history">${showAllHistory ? 'Thu gọn' : 'Xem tất cả (' + historyList.length + ')'}</button>` : ''}</div><div class="tr-grid-container" id="grid-history"></div>`;
                 content.appendChild(sec);
-                renderStoryCards(displayList, sec.querySelector('#grid-history'), true); // true = hiển thị nút (X)
+                renderStoryCards(displayList, sec.querySelector('#grid-history'), true); 
                 
                 const toggleBtn = sec.querySelector('#btn-toggle-history');
                 if(toggleBtn) { toggleBtn.onclick = () => { showAllHistory = !showAllHistory; renderHome(); }; }
@@ -607,7 +623,6 @@
             currentStory = story; preloadedData = { chapNum: null };
             $('tr-view-home').style.display = 'none'; $('tr-view-reader').style.display = 'flex';
             
-            // XỬ LÝ NẠP KEY SESSION (Không đẩy lên Cloud khi mới mở)
             if (activeSession.link === story.link) {
                 currentChapter = activeSession.chap; currentSentenceIndex = activeSession.sentence;
             } else {
@@ -615,12 +630,11 @@
                 if (saved && saved.chap) {
                     currentChapter = saved.chap; currentSentenceIndex = saved.sentence || 0;
                 } else { currentChapter = 1; currentSentenceIndex = 0; }
-                // Cập nhật Key cho truyện mới mở
                 activeSession = { link: story.link, chap: currentChapter, sentence: currentSentenceIndex };
             }
 
             isResuming = (currentSentenceIndex > 0);
-            await loadAndDisplayChapter(currentChapter, false); // false = không kích hoạt saveCloud lúc vừa mở
+            await loadAndDisplayChapter(currentChapter, false); 
         };
     
         const loadAndDisplayChapter = async (chapNum, triggerSaveCloud = true) => {
@@ -634,10 +648,19 @@
                 
                 $('tr-read-title').innerText = currentStory.name; $('tr-read-chap').innerText = `Chương ${currentChapter} / ${currentStory.total}`; $('tr-read-text').innerHTML = data.finalHtml;
                 updateNavUI(); 
-                currentSentences = data.cleanArr.join('. ').match(/[^.!?\n]+[.!?\n]+/g) || data.cleanArr;
+                
+                // LỌC VÀ NỐI CÂU KHÔNG TẠO RA DẤU CHẤM DƯ THỪA
+                let normalizedText = data.cleanArr.map(txt => {
+                    let t = txt.trim();
+                    // Nếu cuối dòng chưa có ngắt câu, thêm chấm để tránh dính chữ
+                    if (!/[.!?]$/.test(t)) t += '.';
+                    return t;
+                }).join(' ');
+                
+                currentSentences = normalizedText.match(/[^.!?]+[.!?]+/g) ||[normalizedText];
+                currentSentences = currentSentences.map(s => s.trim()).filter(s => s.length > 0);
                 
                 if (!isResuming) { currentSentenceIndex = 0; }
-                // Lưu trạng thái hiện tại vào Key & Local Storage
                 updateLocalSessionKey(currentChapter, currentSentenceIndex);
 
                 $('tr-loading').style.display = 'none';
@@ -649,7 +672,6 @@
                     }, 500);
                 } else { $('tr-content-wrap').scrollTop = 0; }
                 
-                // Chỉ đồng bộ lên Cloud nếu do chuyển chương (không phải do mở truyện)
                 if (triggerSaveCloud) saveCloudHistory();
                 
                 if (currentChapter < currentStory.total) { setTimeout(() => { preloadNextChapter(currentChapter + 1); }, 1500); }
@@ -664,14 +686,13 @@
         };
 
         const saveCloudHistory = () => {
-            // NẾU ĐANG ĐỌC AI THÌ CHẶN LẠI NHƯỜNG TÀI NGUYÊN CHO ĐỌC
             if (!API_URL || !IS_LOGGED_IN || isReading) return; 
 
             let fullHistory = Object.keys(localProgressData).map(link => {
                 let s = stories.find(st => st.link === link); let p = localProgressData[link];
                 if (!s || !p) return null;
                 return {
-                    story: s.name, chapter: p.chap, sentence: p.sentence || 0, // Lưu Sentence lên Cloud
+                    story: s.name, chapter: p.chap, sentence: p.sentence || 0,
                     percent: Math.round((p.chap / s.total) * 100) + '%',
                     time: new Date(p.time || Date.now()).toLocaleString('vi-VN'),
                     timestamp: p.time || 0
@@ -717,13 +738,12 @@
             if(currentSentenceIndex >= currentSentences.length) { handleChapterFinished(); return; }
             let sentence = currentSentences[currentSentenceIndex];
             
-            // LỌC KÝ TỰ ĐẶC BIỆT TRƯỚC KHI ĐỌC
-            let cleanText = sentence.replace(/["'()$#@*~\[\]{}“”‘’]/g, '').trim();
+            // XÓA KÝ TỰ LẠ VÀ RÚT GỌN ... THÀNH .
+            let cleanText = sentence.replace(/["'()$#@*~\[\]{}“”‘’]/g, '').replace(/\.{2,}/g, '.').trim();
 
             let u = setupUtterance(cleanText);
             u.onend = () => { 
                 currentSentenceIndex++; 
-                // Cập nhật Key Session liên tục khi đọc (không ném lên cloud ngay)
                 updateLocalSessionKey(currentChapter, currentSentenceIndex); 
                 if(isReading) speakNextSentence(); 
             };
@@ -731,11 +751,20 @@
             synth.speak(u);
 
             const pTags = $('tr-read-text').querySelectorAll('p'); pTags.forEach(p => p.classList.remove('tr-reading-active'));
-            for(let p of pTags) { if(p.innerText.includes(sentence.substring(0, 15))) { p.classList.add('tr-reading-active'); p.scrollIntoView({ behavior: 'smooth', block: 'center' }); break; } }
+            for(let p of pTags) { 
+                if(p.innerText.includes(sentence.substring(0, 15))) { 
+                    p.classList.add('tr-reading-active'); 
+                    // CHỈ CUỘN KHI NGƯỜI DÙNG KHÔNG TƯƠNG TÁC VUỐT MÀN HÌNH
+                    if (!isUserScrolling) {
+                        p.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
+                    }
+                    break; 
+                } 
+            }
         };
     
         const handleChapterFinished = () => {
-            isReading = false; saveCloudHistory(); // Hết chương thì lưu Cloud
+            isReading = false; saveCloudHistory(); 
             if(currentChapter < currentStory.total) {
                 speakSystemMsg(`Đã đọc xong chương ${currentChapter}, chuyển sang chương mới.`, async () => {
                     isResuming = false; await loadAndDisplayChapter(currentChapter + 1, false); isReading = true; speakNextSentence();
@@ -747,19 +776,18 @@
     
         $('btn-read-play').onclick = () => { 
             if (!isReading) { 
-                isReading = true; // Chặn saveCloudHistory
+                isReading = true; 
                 synth.getVoices(); 
                 if(synth.paused) synth.resume(); else speakNextSentence(); 
             } 
         };
         $('btn-read-pause').onclick = () => { 
             isReading = false; synth.pause(); 
-            saveCloudHistory(); // Tạm dừng thì lưu lại tiến độ lên Cloud
+            saveCloudHistory(); 
         };
         $('btn-read-stop').onclick = () => { 
             stopTTS(); 
-            // Không reset sentence về 0 để giữ vị trí đọc. Muốn reset người dùng có thể lùi tiến chương.
-            saveCloudHistory(); // Tắt AI thì lưu tiến độ lên Cloud
+            saveCloudHistory(); 
             $('tr-read-text').querySelectorAll('p').forEach(p => p.classList.remove('tr-reading-active'));
             $('tr-fake-lock-screen').style.display = 'none'; releaseWakeLock();
         };
@@ -768,7 +796,7 @@
     };
     
     return {
-        name: "Đọc Truyện",
+        name: "Đọc Truyện V1",
         icon: `<svg viewBox="0 0 24 24"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.15C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zM21 18.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z" fill="white"/></svg>`,
         bgColor: "#0984e3",
         action: runTool
