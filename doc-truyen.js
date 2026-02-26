@@ -55,12 +55,12 @@
         .tr-search-box input:focus { border-color:#e17055; box-shadow:0 0 5px rgba(225,112,85,0.3); }
         .tr-filter { padding:8px 10px; border:1px solid #ddd; border-radius:20px; outline:none; font-size:14px; background:#fff; cursor:pointer; width: 130px; flex-shrink: 0; text-overflow: ellipsis;}
         
-        .tr-home-body { flex:1; overflow-y:auto; padding:20px; background:#f4f5f7; display:flex; flex-direction: column; gap:30px; }
+        .tr-home-body { flex:1; overflow-y:auto; padding:20px; background:#f4f5f7; display:flex; flex-direction: column; gap:30px; scroll-behavior: smooth;}
         
         .tr-section { width: 100%; display: flex; flex-direction: column; gap: 15px;}
         .tr-section-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e17055; padding-bottom: 5px;}
         .tr-section-title { font-size: 18px; font-weight: bold; color: #2d3436; text-transform: uppercase; }
-        .tr-btn-view-all { background: transparent; color: #e17055; border: 1px solid #e17055; padding: 4px 12px; border-radius: 15px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .tr-btn-view-all { background: transparent; color: #e17055; border: 1px solid #e17055; padding: 4px 12px; border-radius: 15px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; white-space: nowrap;}
         .tr-btn-view-all:hover { background: #e17055; color: white; }
         .tr-grid-container { display:flex; flex-wrap:wrap; gap:20px; align-content: flex-start; width: 100%; }
 
@@ -131,15 +131,11 @@
         /* THANH TIẾN ĐỘ ĐỌC DƯỚI CÙNG MÀN HÌNH */
         .tr-progress-container {
             position: absolute; bottom: 0; left: 0; width: 100%; height: 5px;
-            background: rgba(225, 112, 85, 0.15); 
-            z-index: 100;
+            background: rgba(225, 112, 85, 0.15); z-index: 100;
         }
         .tr-progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #ff9ff3, #e17055);
-            width: 0%;
-            transition: width 0.2s linear;
-            position: relative;
+            height: 100%; background: linear-gradient(90deg, #ff9ff3, #e17055); width: 0%;
+            transition: width 0.2s linear; position: relative;
         }
         .tr-progress-thumb {
             position: absolute; right: -6px; top: -5px; width: 15px; height: 15px;
@@ -187,7 +183,6 @@
         }
         @media (max-width: 480px) {
             .tr-card { width:calc(50% - 10px); min-width: 140px; }
-            
             .tr-card-cover { height: 230px; }
             .tr-card-img { object-fit: fill; }
             
@@ -264,6 +259,10 @@
         let localProgressData = {}; let activeSession = { link: null, chap: 1, sentence: 0 }; 
 
         let ttsRate = 1.3; let ttsPitch = 1.1; let ttsVoiceIndex = -1; let availableVoices =[]; let wakeLock = null;
+
+        // BIẾN CHO PHÂN TRANG (PAGINATION)
+        let currentCategoryView = null; // null = trang chủ, 'all', 'tiên hiệp'... = trang chi tiết
+        let categoryItemsLimit = 10; 
         
         const requestWakeLock = async () => {
             if (!wakeLock) {
@@ -290,23 +289,18 @@
             }
         };
 
-        // HÀM TÍNH TOÁN THANH TIẾN ĐỘ THEO 2 CHẾ ĐỘ
         const updateProgressBar = () => {
             const wrap = $('tr-content-wrap');
             if (!wrap) return;
             let percent = 0;
             
             if (isReading && !isUserScrolling) {
-                // Chế độ 2: Theo AI đọc
-                if (currentSentences.length > 0) {
-                    percent = (currentSentenceIndex / currentSentences.length) * 100;
-                }
+                if (currentSentences.length > 0) percent = (currentSentenceIndex / currentSentences.length) * 100;
             } else {
-                // Chế độ 1: Theo thanh cuộn (Thủ công / Vuốt)
                 const scrollT = wrap.scrollTop;
                 const scrollH = wrap.scrollHeight - wrap.clientHeight;
                 if (scrollH > 0) percent = (scrollT / scrollH) * 100;
-                else percent = 100; // Nội dung ngắn ko có cuộn
+                else percent = 100; 
             }
 
             if (percent < 0) percent = 0;
@@ -333,7 +327,7 @@
                 </div>
                 
                 <div class="tr-user-bar">
-                    <span>Xin chào, <span class="tr-user-name" id="tr-user-name-display">${USER_NAME}</span>!</span>
+                    <span>Xin chào, <span class="tr-user-name" id="tr-user-name-display">${USER_NAME}</span></span>
                     <div style="display:flex; gap:10px; align-items:center;">
                         <span id="tr-status-text">Sẵn sàng</span>
                         <div id="tr-auth-btns" style="display:flex; gap:10px;"></div>
@@ -402,7 +396,6 @@
                         </div>
                     </div>
 
-                    <!-- THANH TIẾN ĐỘ ĐỌC MỚI THÊM VÀO -->
                     <div class="tr-progress-container" id="tr-progress-container">
                         <div class="tr-progress-bar" id="tr-progress-bar">
                             <div class="tr-progress-thumb"></div>
@@ -457,15 +450,13 @@
             if (contentWrap) {
                 const handleUserScroll = () => {
                     isUserScrolling = true;
-                    updateProgressBar(); // Ngay lập tức cập nhật thanh cuộn khi tay chạm vào màn hình
+                    updateProgressBar(); 
                     if(scrollResumeTimer) clearTimeout(scrollResumeTimer);
-                    scrollResumeTimer = setTimeout(() => { isUserScrolling = false; }, 2000); 
+                    scrollResumeTimer = setTimeout(() => { isUserScrolling = false; }, 4000); 
                 };
                 contentWrap.addEventListener('touchstart', handleUserScroll, {passive: true});
                 contentWrap.addEventListener('wheel', handleUserScroll, {passive: true});
                 contentWrap.addEventListener('touchmove', handleUserScroll, {passive: true});
-                
-                // Lắng nghe sự kiện scroll để update thanh tiến trình liên tục
                 contentWrap.addEventListener('scroll', updateProgressBar, {passive: true});
             }
 
@@ -482,7 +473,7 @@
                 lastClickTime = now;
             });
 
-            $('tr-btn-close').onclick = () => { app.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; stopTTS(); releaseWakeLock(); saveCloudHistory(); };
+            $('tr-btn-close').onclick = () => { app.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; stopTTS(); releaseWakeLock(); saveCloudHistory(); currentCategoryView = null; };
 
             const updateAuthUI = () => {
                 const nameEl = $('tr-user-name-display'); const btnContainer = $('tr-auth-btns');
@@ -501,6 +492,7 @@
                                 let guestId = 'Guest-' + Math.floor(Math.random() * 100000);
                                 localStorage.setItem('tgdd_guest_id', guestId);
                                 USER_NAME = guestId; IS_LOGGED_IN = false; activeSession = {link:null, chap:1, sentence:0}; localProgressData = {};
+                                currentCategoryView = null;
                                 updateAuthUI(); renderHome();
                             }
                         };
@@ -533,6 +525,7 @@
                                             if (modal) modal.style.display = 'none'; document.body.classList.remove('tgdd-body-lock');
                                             localStorage.setItem('tgdd_guest_account', JSON.stringify({user: u, pass: p}));
                                             USER_NAME = u; IS_LOGGED_IN = true;
+                                            currentCategoryView = null;
                                             updateAuthUI();
                                             $('tr-status-text').innerText = "Đang tải lịch sử...";
                                             await syncCloudHistory(); renderHome();
@@ -550,7 +543,7 @@
             $('tr-btn-home').onclick = () => { 
                 stopTTS(); releaseWakeLock(); saveCloudHistory(); 
                 $('tr-view-reader').style.display = 'none'; $('tr-view-home').style.display = 'flex'; 
-                showAllHistory = false; renderHome();
+                showAllHistory = false; currentCategoryView = null; renderHome();
             };
             
             $('btn-settings').onclick = (e) => { e.stopPropagation(); $('tr-settings-panel').classList.toggle('show'); };
@@ -684,53 +677,115 @@
             });
         };
 
+        // Hàm render trang chi tiết thể loại
+        const renderCategoryDetail = (container) => {
+            let title = ""; let list =[];
+            if (currentCategoryView === 'all') { title = "📚 Tất cả truyện"; list = stories; } 
+            else {
+                title = currentCategoryView === 'tiên hiệp' ? '☁️ Tiên Hiệp' : currentCategoryView === 'kiếm hiệp' ? '⚔️ Kiếm Hiệp' : '🌸 Ngôn Tình';
+                list = stories.filter(s => s.genre.toLowerCase().includes(currentCategoryView));
+            }
+
+            const sec = document.createElement('div'); sec.className = 'tr-section';
+            sec.innerHTML = `
+                <div class="tr-section-header" style="justify-content: flex-start; gap: 15px;">
+                    <button class="tr-btn-view-all" id="btn-back-cat" style="padding: 4px 8px;">⬅ Quay lại</button>
+                    <div class="tr-section-title">${title}</div>
+                </div>
+                <div class="tr-grid-container" id="grid-detail"></div>
+            `;
+            container.appendChild(sec);
+
+            sec.querySelector('#btn-back-cat').onclick = () => { currentCategoryView = null; renderHome(); };
+
+            const grid = sec.querySelector('#grid-detail');
+            const displayList = list.slice(0, categoryItemsLimit);
+            renderStoryCards(displayList, grid);
+
+            const wrapBtn = document.createElement('div');
+            wrapBtn.style = "width: 100%; text-align: center; margin-top: 20px;";
+            const btnMore = document.createElement('button');
+            btnMore.className = 'tr-btn-tool'; 
+            btnMore.style = "margin: 0 auto; background: #e17055; width: fit-content;";
+
+            if (categoryItemsLimit >= list.length) {
+                btnMore.innerText = "Đã tải hết danh sách truyện";
+                btnMore.style.background = "#b2bec3";
+                btnMore.style.cursor = "not-allowed";
+                btnMore.style.boxShadow = "none";
+                btnMore.disabled = true;
+            } else {
+                btnMore.innerText = "Tải thêm 10 truyện ⬇";
+                btnMore.onclick = () => { categoryItemsLimit += 10; renderHome(); };
+            }
+            wrapBtn.appendChild(btnMore);
+            container.appendChild(wrapBtn);
+        };
+
+        // Hàm helper render nhóm truyện ngoài trang chủ
+        const renderCategorySection = (container, title, catKey, list, limit) => {
+            if (list.length === 0) return;
+            const sec = document.createElement('div'); sec.className = 'tr-section';
+            const safeId = "grid-" + catKey.replace(/\s+/g, "");
+            sec.innerHTML = `
+                <div class="tr-section-header">
+                    <div class="tr-section-title">${title}</div>
+                    ${list.length > limit ? `<button class="tr-btn-view-all" id="btn-view-all-${safeId}">Xem tất cả (${list.length})</button>` : ''}
+                </div>
+                <div class="tr-grid-container" id="${safeId}"></div>
+            `;
+            container.appendChild(sec);
+            renderStoryCards(list.slice(0, limit), sec.querySelector(`#${safeId}`));
+
+            const btn = sec.querySelector(`#btn-view-all-${safeId}`);
+            if (btn) {
+                btn.onclick = () => { currentCategoryView = catKey; categoryItemsLimit = 10; $('tr-home-content').scrollTop = 0; renderHome(); };
+            }
+        };
+
         const renderHome = () => {
             const kw = $('tr-search').value.toLowerCase(); const gr = $('tr-filter').value; const content = $('tr-home-content');
             content.innerHTML = ''; 
 
             if (kw !== '' || gr !== 'all') {
+                currentCategoryView = null; // Tự thoát chế độ xem chi tiết nếu search
                 const filtered = stories.filter(s => s.name.toLowerCase().includes(kw) && (gr === 'all' || s.genre === gr));
                 if(filtered.length === 0) { content.innerHTML = `<div style="width:100%; text-align:center; padding:20px;">Không tìm thấy truyện nào phù hợp.</div>`; return; }
                 const grid = document.createElement('div'); grid.className = 'tr-grid-container';
                 renderStoryCards(filtered, grid); content.appendChild(grid); return;
             }
 
+            // NẾU ĐANG Ở CHẾ ĐỘ XEM CHI TIẾT
+            if (currentCategoryView !== null) {
+                renderCategoryDetail(content);
+                return;
+            }
+
+            // NẾU ĐANG Ở TRANG CHỦ BÌNH THƯỜNG
             let historyList = stories.filter(s => localProgressData[s.link]).map(s => {
                 return { ...s, lastReadTime: localProgressData[s.link].time || 0 };
             }).sort((a, b) => b.lastReadTime - a.lastReadTime);
 
             if (historyList.length > 0) {
-                const limit = showAllHistory ? historyList.length : 4;
+                const limit = showAllHistory ? historyList.length : 6;
                 const displayList = historyList.slice(0, limit);
-                
                 const sec = document.createElement('div'); sec.className = 'tr-section';
-                sec.innerHTML = `<div class="tr-section-header"><div class="tr-section-title">🕒 Truyện đang đọc</div>${historyList.length > 4 ? `<button class="tr-btn-view-all" id="btn-toggle-history">${showAllHistory ? 'Thu gọn' : 'Xem tất cả (' + historyList.length + ')'}</button>` : ''}</div><div class="tr-grid-container" id="grid-history"></div>`;
+                sec.innerHTML = `<div class="tr-section-header"><div class="tr-section-title">🕒 Truyện đang đọc</div>${historyList.length > 6 ? `<button class="tr-btn-view-all" id="btn-toggle-history">${showAllHistory ? 'Thu gọn' : 'Xem tất cả (' + historyList.length + ')'}</button>` : ''}</div><div class="tr-grid-container" id="grid-history"></div>`;
                 content.appendChild(sec);
                 renderStoryCards(displayList, sec.querySelector('#grid-history'), true); 
-                
                 const toggleBtn = sec.querySelector('#btn-toggle-history');
                 if(toggleBtn) { toggleBtn.onclick = () => { showAllHistory = !showAllHistory; renderHome(); }; }
             }
 
-            if (stories.length > 0) {
-                const allSec = document.createElement('div'); allSec.className = 'tr-section';
-                allSec.innerHTML = `<div class="tr-section-header"><div class="tr-section-title">📚 Tất cả truyện</div></div><div class="tr-grid-container" id="grid-all"></div>`;
-                content.appendChild(allSec);
-                renderStoryCards(stories.slice(0, 10), allSec.querySelector('#grid-all'));
-            }
-
-            const createCategorySection = (title, keyword, emoji, max = 4) => {
-                const filteredList = stories.filter(s => s.genre.toLowerCase().includes(keyword));
-                if (filteredList.length > 0) {
-                    const sec = document.createElement('div'); sec.className = 'tr-section'; const safeId = "grid-" + keyword.replace(/\s+/g, "");
-                    sec.innerHTML = `<div class="tr-section-header"><div class="tr-section-title">${emoji} ${title}</div></div><div class="tr-grid-container" id="${safeId}"></div>`;
-                    content.appendChild(sec); renderStoryCards(filteredList.slice(0, max), sec.querySelector(`#${safeId}`));
-                }
-            };
-            createCategorySection("Tiên Hiệp", "tiên hiệp", "☁️"); createCategorySection("Kiếm Hiệp", "kiếm hiệp", "⚔️"); createCategorySection("Ngôn Tình", "ngôn tình", "🌸");
+            // Hiển thị tối đa 10 ở màn hình chính (theo yêu cầu cũ), sau đó có thể bấm xem tất cả
+            renderCategorySection(content, "📚 Tất cả truyện", "all", stories, 10);
+            renderCategorySection(content, "☁️ Tiên Hiệp", "tiên hiệp", stories.filter(s => s.genre.toLowerCase().includes("tiên hiệp")), 6);
+            renderCategorySection(content, "⚔️ Kiếm Hiệp", "kiếm hiệp", stories.filter(s => s.genre.toLowerCase().includes("kiếm hiệp")), 6);
+            renderCategorySection(content, "🌸 Ngôn Tình", "ngôn tình", stories.filter(s => s.genre.toLowerCase().includes("ngôn tình")), 6);
         };
     
-        $('tr-search').oninput = renderHome; $('tr-filter').onchange = renderHome;
+        $('tr-search').oninput = () => { currentCategoryView = null; renderHome(); };
+        $('tr-filter').onchange = () => { currentCategoryView = null; renderHome(); };
     
         // -----------------------------------------------------
         // LOGIC ĐỌC TRUYỆN & SESSION KEY
@@ -833,7 +888,7 @@
                             if(!isUserScrolling) targetSpan.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
                         }
                         isResuming = false;
-                        updateProgressBar(); // Cập nhật progress khi vuốt đến câu
+                        updateProgressBar(); 
                     }, 500);
                 } else { 
                     $('tr-content-wrap').scrollTop = 0; 
@@ -920,7 +975,7 @@
             isReading = true;
             updatePlayPauseUI(true);
             requestWakeLock();
-            updateProgressBar(); // Update progress bar nháy theo click
+            updateProgressBar(); 
             setTimeout(() => { isJumping = false; speakNextSentence(); }, 150);
         };
 
@@ -955,7 +1010,7 @@
                 targetSpan.classList.add('tr-reading-active');
                 if(!isUserScrolling) targetSpan.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
             }
-            updateProgressBar(); // Cập nhật progress bar theo câu đang đọc
+            updateProgressBar(); 
         };
     
         const handleChapterFinished = () => {
@@ -999,7 +1054,7 @@
     };
     
     return {
-        name: "Đọc Truyện V1",
+        name: "Đọc Truyện",
         icon: `<svg viewBox="0 0 24 24"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.15C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zM21 18.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z" fill="white"/></svg>`,
         bgColor: "#0984e3",
         action: runTool
