@@ -53,7 +53,7 @@
         .tr-search-box { flex:1; display:flex; min-width: 0; }
         .tr-search-box input { width:100%; padding:8px 15px; border:1px solid #ddd; border-radius:20px; outline:none; font-size:14px; transition:0.3s; }
         .tr-search-box input:focus { border-color:#e17055; box-shadow:0 0 5px rgba(225,112,85,0.3); }
-        .tr-filter { padding:8px 10px; border:1px solid #ddd; border-radius:20px; outline:none; font-size:14px; background:#fff; cursor:pointer; width: 150px; flex-shrink: 0; text-overflow: ellipsis;}
+        .tr-filter { padding:8px 10px; border:1px solid #ddd; border-radius:20px; outline:none; font-size:14px; background:#fff; cursor:pointer; width: 130px; flex-shrink: 0; text-overflow: ellipsis;}
         
         .tr-home-body { flex:1; overflow-y:auto; padding:20px; background:#f4f5f7; display:flex; flex-direction: column; gap:30px; }
         
@@ -64,7 +64,8 @@
         .tr-btn-view-all:hover { background: #e17055; color: white; }
         .tr-grid-container { display:flex; flex-wrap:wrap; gap:20px; align-content: flex-start; width: 100%; }
 
-        .tr-card { background:#fff; border-radius:10px; box-shadow:0 4px 6px rgba(0,0,0,0.05); width:calc(25% - 15px); min-width:200px; overflow:hidden; cursor:pointer; transition:transform 0.2s; display:flex; flex-direction:column; position:relative;}
+        /* TỐI ĐA 6 TRUYỆN 1 HÀNG */
+        .tr-card { background:#fff; border-radius:10px; box-shadow:0 4px 6px rgba(0,0,0,0.05); width:calc(16.666% - 16.666px); min-width:160px; overflow:hidden; cursor:pointer; transition:transform 0.2s; display:flex; flex-direction:column; position:relative;}
         .tr-card:hover { transform:translateY(-5px); box-shadow:0 8px 15px rgba(0,0,0,0.1); }
         
         .tr-card-cover { background:#e17055; height:200px; display:flex; align-items:center; justify-content:center; color:white; font-size:50px; overflow:hidden; position:relative; }
@@ -93,7 +94,6 @@
         .tr-btn-settings { background:#0984e3; } 
         .tr-btn-sleep { background:#6c5ce7; }
         
-        /* BẢNG CÀI ĐẶT */
         .tr-settings-panel {
             position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
             background: white; padding: 15px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.2);
@@ -164,7 +164,11 @@
         }
         @media (max-width: 480px) {
             .tr-card { width:calc(50% - 10px); min-width: 140px; }
-            .tr-card-cover { height: 180px; }
+            
+            /* THUỘC TÍNH YÊU CẦU CHO MOBILE */
+            .tr-card-cover { height: 230px; }
+            .tr-card-img { object-fit: fill; }
+            
             .tr-toolbar { gap: 5px; padding: 10px; }
             .tr-nav-btn { padding: 6px 10px; font-size: 12px; }
             .tr-filter { width: 130px; font-size: 12px; }
@@ -238,7 +242,17 @@
         let localProgressData = {}; let activeSession = { link: null, chap: 1, sentence: 0 }; 
 
         let ttsRate = 1.3; let ttsPitch = 1.1; let ttsVoiceIndex = -1; let availableVoices =[]; let wakeLock = null;
-    
+        
+        // HÀM BẬT / TẮT WAKELOCK (MÀN HÌNH LUÔN SÁNG)
+        const requestWakeLock = async () => {
+            if (!wakeLock) {
+                try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
+            }
+        };
+        const releaseWakeLock = () => {
+            if (wakeLock) { wakeLock.release(); wakeLock = null; }
+        };
+
         // HÀM CẬP NHẬT TRẠNG THÁI NÚT PLAY/STOP
         const updatePlayPauseUI = (reading) => {
             const iconPlay = $('icon-play'); const iconStop = $('icon-stop');
@@ -310,7 +324,7 @@
                         </button>
                     </div>
 
-                    <!-- Bảng Cài đặt (Đưa ra ngoài thanh công cụ) -->
+                    <!-- Bảng Cài đặt -->
                     <div class="tr-settings-panel" id="tr-settings-panel">
                         <div class="tr-setting-row">
                             <span class="tr-setting-label">Giọng đọc</span>
@@ -370,6 +384,7 @@
                     synth.cancel(); 
                     saveCloudHistory(); 
                     updatePlayPauseUI(false);
+                    releaseWakeLock(); // Giải phóng màn hình khi bị ẩn
                     $('tr-interruption-overlay').style.display = 'flex'; 
                 }
             });
@@ -379,6 +394,7 @@
                 if (!isReading) {
                     isReading = true; synth.getVoices();
                     updatePlayPauseUI(true);
+                    requestWakeLock(); // Bật lại sáng màn hình
                     speakNextSentence(); 
                 }
             };
@@ -487,7 +503,6 @@
 
             const enterSleepMode = async () => {
                 if (!isReading) { alert("Vui lòng bấm AI Đọc trước khi treo máy!"); return; }
-                try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (err) {}
                 $('tr-sleep-story-name').innerText = currentStory ? currentStory.name : "Truyện";
                 $('tr-fake-lock-screen').style.display = 'flex';
             };
@@ -497,11 +512,13 @@
             let lastTap = 0;
             $('tr-fake-lock-screen').onclick = (e) => {
                 const cur = new Date().getTime(); const diff = cur - lastTap;
-                if (diff < 500 && diff > 0) { $('tr-fake-lock-screen').style.display = 'none'; releaseWakeLock(); e.preventDefault(); }
+                if (diff < 500 && diff > 0) { 
+                    $('tr-fake-lock-screen').style.display = 'none'; 
+                    // CHÚ Ý: Không gọi releaseWakeLock ở đây vì người dùng vẫn đang nghe truyện
+                    e.preventDefault(); 
+                }
                 lastTap = cur;
             };
-
-            const releaseWakeLock = () => { if (wakeLock) { wakeLock.release(); wakeLock = null; } };
 
             $('rng-rate').oninput = (e) => { ttsRate = parseFloat(e.target.value); $('val-rate').innerText = ttsRate; };
             $('rng-pitch').oninput = (e) => { ttsPitch = parseFloat(e.target.value); $('val-pitch').innerText = ttsPitch; };
@@ -843,6 +860,7 @@
 
             isReading = true;
             updatePlayPauseUI(true);
+            requestWakeLock();
             setTimeout(() => { isJumping = false; speakNextSentence(); }, 150);
         };
 
@@ -864,6 +882,7 @@
                 if (!isJumping) {
                     isReading = false; 
                     updatePlayPauseUI(false);
+                    releaseWakeLock();
                 }
             };
             synth.speak(u);
@@ -881,12 +900,13 @@
         const handleChapterFinished = () => {
             isReading = false; saveCloudHistory(); 
             if(currentChapter < currentStory.total) {
-                speakSystemMsg(`Hết chương ${currentChapter}, chuyển sang chương mới.`, async () => {
+                speakSystemMsg(`Đã đọc xong chương ${currentChapter}, chuyển sang chương mới.`, async () => {
                     isResuming = false; await loadAndDisplayChapter(currentChapter + 1, false); isReading = true; speakNextSentence();
                 });
             } else { 
                 speakSystemMsg("Đã đọc xong bộ truyện. Cảm ơn bạn.", () => { alert("Bạn đã đọc hết truyện!"); }); 
                 updatePlayPauseUI(false);
+                releaseWakeLock();
             }
         };
     
@@ -894,6 +914,7 @@
             isReading = false; 
             synth.cancel(); 
             updatePlayPauseUI(false);
+            releaseWakeLock();
         };
     
         // LOGIC NÚT TOGGLE PLAY/STOP ĐỌC TỪ ĐẦU CÂU
@@ -901,11 +922,13 @@
             if (!isReading) { 
                 isReading = true; 
                 synth.getVoices(); 
+                requestWakeLock();
                 speakNextSentence(); 
                 updatePlayPauseUI(true);
             } else {
                 isReading = false; 
                 synth.cancel(); 
+                releaseWakeLock();
                 saveCloudHistory();
                 updatePlayPauseUI(false);
             }
@@ -915,7 +938,7 @@
     };
     
     return {
-        name: "Đọc Truyện V1",
+        name: "Đọc Truyện",
         icon: `<svg viewBox="0 0 24 24"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.15C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zM21 18.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z" fill="white"/></svg>`,
         bgColor: "#0984e3",
         action: runTool
