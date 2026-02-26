@@ -64,7 +64,6 @@
         .tr-btn-view-all:hover { background: #e17055; color: white; }
         .tr-grid-container { display:flex; flex-wrap:wrap; gap:20px; align-content: flex-start; width: 100%; }
 
-        /* TỐI ĐA 6 TRUYỆN 1 HÀNG */
         .tr-card { background:#fff; border-radius:10px; box-shadow:0 4px 6px rgba(0,0,0,0.05); width:calc(16.666% - 16.666px); min-width:160px; overflow:hidden; cursor:pointer; transition:transform 0.2s; display:flex; flex-direction:column; position:relative;}
         .tr-card:hover { transform:translateY(-5px); box-shadow:0 8px 15px rgba(0,0,0,0.1); }
         
@@ -129,6 +128,30 @@
         .tr-sent:hover { background: #e8f8f5; }
         .tr-reading-active { background: #ffeaa7; color: #d63031; }
     
+        /* THANH TIẾN ĐỘ ĐỌC DƯỚI CÙNG MÀN HÌNH */
+        .tr-progress-container {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 5px;
+            background: rgba(225, 112, 85, 0.15); 
+            z-index: 100;
+        }
+        .tr-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #ff9ff3, #e17055);
+            width: 0%;
+            transition: width 0.2s linear;
+            position: relative;
+        }
+        .tr-progress-thumb {
+            position: absolute; right: -6px; top: -5px; width: 15px; height: 15px;
+            background: #fff; border: 3px solid #e17055; border-radius: 50%;
+            box-shadow: 0 0 10px #e17055, 0 0 20px rgba(225,112,85,0.8);
+            animation: spark 1.5s infinite alternate;
+        }
+        @keyframes spark {
+            0% { box-shadow: 0 0 5px #e17055, 0 0 10px rgba(225,112,85,0.5); transform: scale(0.9); }
+            100% { box-shadow: 0 0 15px #e17055, 0 0 25px rgba(225,112,85,1); transform: scale(1.15); }
+        }
+
         .tr-loading-overlay { position:absolute; top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.95); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:50; font-weight:bold; font-size:16px; color:#e17055;}
         
         #tr-fake-lock-screen {
@@ -165,7 +188,6 @@
         @media (max-width: 480px) {
             .tr-card { width:calc(50% - 10px); min-width: 140px; }
             
-            /* THUỘC TÍNH YÊU CẦU CHO MOBILE */
             .tr-card-cover { height: 230px; }
             .tr-card-img { object-fit: fill; }
             
@@ -243,7 +265,6 @@
 
         let ttsRate = 1.3; let ttsPitch = 1.1; let ttsVoiceIndex = -1; let availableVoices =[]; let wakeLock = null;
         
-        // HÀM BẬT / TẮT WAKELOCK (MÀN HÌNH LUÔN SÁNG)
         const requestWakeLock = async () => {
             if (!wakeLock) {
                 try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
@@ -253,7 +274,6 @@
             if (wakeLock) { wakeLock.release(); wakeLock = null; }
         };
 
-        // HÀM CẬP NHẬT TRẠNG THÁI NÚT PLAY/STOP
         const updatePlayPauseUI = (reading) => {
             const iconPlay = $('icon-play'); const iconStop = $('icon-stop');
             const textToggle = $('text-read-toggle'); const btnToggle = $('btn-read-toggle');
@@ -268,6 +288,32 @@
                 if(textToggle) textToggle.innerText = 'AI Đọc';
                 if(btnToggle) { btnToggle.classList.remove('tr-btn-stop'); btnToggle.classList.add('tr-btn-play'); }
             }
+        };
+
+        // HÀM TÍNH TOÁN THANH TIẾN ĐỘ THEO 2 CHẾ ĐỘ
+        const updateProgressBar = () => {
+            const wrap = $('tr-content-wrap');
+            if (!wrap) return;
+            let percent = 0;
+            
+            if (isReading && !isUserScrolling) {
+                // Chế độ 2: Theo AI đọc
+                if (currentSentences.length > 0) {
+                    percent = (currentSentenceIndex / currentSentences.length) * 100;
+                }
+            } else {
+                // Chế độ 1: Theo thanh cuộn (Thủ công / Vuốt)
+                const scrollT = wrap.scrollTop;
+                const scrollH = wrap.scrollHeight - wrap.clientHeight;
+                if (scrollH > 0) percent = (scrollT / scrollH) * 100;
+                else percent = 100; // Nội dung ngắn ko có cuộn
+            }
+
+            if (percent < 0) percent = 0;
+            if (percent > 100) percent = 100;
+
+            const bar = $('tr-progress-bar');
+            if (bar) bar.style.width = percent + '%';
         };
 
         // TẠO DOM APP
@@ -355,6 +401,13 @@
                             <div class="tr-text" id="tr-read-text">Nội dung...</div>
                         </div>
                     </div>
+
+                    <!-- THANH TIẾN ĐỘ ĐỌC MỚI THÊM VÀO -->
+                    <div class="tr-progress-container" id="tr-progress-container">
+                        <div class="tr-progress-bar" id="tr-progress-bar">
+                            <div class="tr-progress-thumb"></div>
+                        </div>
+                    </div>
     
                     <div class="tr-loading-overlay" id="tr-loading">
                         <div style="font-size:40px; margin-bottom:10px;">⏳</div>
@@ -377,14 +430,13 @@
             document.body.appendChild(app);
             const style = document.createElement('style'); style.innerHTML = MY_CSS; document.head.appendChild(style);
             
-            // XỬ LÝ LẮNG NGHE CUỘC GỌI / BÁO THỨC (VISIBILITY CHANGE)
             document.addEventListener('visibilitychange', () => {
                 if (document.hidden && isReading) {
                     isReading = false; 
                     synth.cancel(); 
                     saveCloudHistory(); 
                     updatePlayPauseUI(false);
-                    releaseWakeLock(); // Giải phóng màn hình khi bị ẩn
+                    releaseWakeLock(); 
                     $('tr-interruption-overlay').style.display = 'flex'; 
                 }
             });
@@ -394,7 +446,7 @@
                 if (!isReading) {
                     isReading = true; synth.getVoices();
                     updatePlayPauseUI(true);
-                    requestWakeLock(); // Bật lại sáng màn hình
+                    requestWakeLock(); 
                     speakNextSentence(); 
                 }
             };
@@ -405,12 +457,16 @@
             if (contentWrap) {
                 const handleUserScroll = () => {
                     isUserScrolling = true;
+                    updateProgressBar(); // Ngay lập tức cập nhật thanh cuộn khi tay chạm vào màn hình
                     if(scrollResumeTimer) clearTimeout(scrollResumeTimer);
                     scrollResumeTimer = setTimeout(() => { isUserScrolling = false; }, 4000); 
                 };
                 contentWrap.addEventListener('touchstart', handleUserScroll, {passive: true});
                 contentWrap.addEventListener('wheel', handleUserScroll, {passive: true});
                 contentWrap.addEventListener('touchmove', handleUserScroll, {passive: true});
+                
+                // Lắng nghe sự kiện scroll để update thanh tiến trình liên tục
+                contentWrap.addEventListener('scroll', updateProgressBar, {passive: true});
             }
 
             let lastClickTime = 0;
@@ -514,7 +570,6 @@
                 const cur = new Date().getTime(); const diff = cur - lastTap;
                 if (diff < 500 && diff > 0) { 
                     $('tr-fake-lock-screen').style.display = 'none'; 
-                    // CHÚ Ý: Không gọi releaseWakeLock ở đây vì người dùng vẫn đang nghe truyện
                     e.preventDefault(); 
                 }
                 lastTap = cur;
@@ -778,8 +833,12 @@
                             if(!isUserScrolling) targetSpan.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
                         }
                         isResuming = false;
+                        updateProgressBar(); // Cập nhật progress khi vuốt đến câu
                     }, 500);
-                } else { $('tr-content-wrap').scrollTop = 0; }
+                } else { 
+                    $('tr-content-wrap').scrollTop = 0; 
+                    setTimeout(updateProgressBar, 100); 
+                }
                 
                 if (triggerSaveCloud) saveCloudHistory();
                 
@@ -861,6 +920,7 @@
             isReading = true;
             updatePlayPauseUI(true);
             requestWakeLock();
+            updateProgressBar(); // Update progress bar nháy theo click
             setTimeout(() => { isJumping = false; speakNextSentence(); }, 150);
         };
 
@@ -895,6 +955,7 @@
                 targetSpan.classList.add('tr-reading-active');
                 if(!isUserScrolling) targetSpan.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
             }
+            updateProgressBar(); // Cập nhật progress bar theo câu đang đọc
         };
     
         const handleChapterFinished = () => {
@@ -938,7 +999,7 @@
     };
     
     return {
-        name: "Đọc Truyện",
+        name: "Đọc Truyện V1",
         icon: `<svg viewBox="0 0 24 24"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.15C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zM21 18.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z" fill="white"/></svg>`,
         bgColor: "#0984e3",
         action: runTool
