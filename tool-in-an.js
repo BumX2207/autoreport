@@ -255,7 +255,7 @@
 
                 // --- CẤU HÌNH ĐỘ NÉT ---
                 // PC: Scale 4 (Rất nét). Mobile: Scale 3 (Nét & an toàn cho RAM điện thoại)
-                const renderScale = isMobile() ? 3 : 4; 
+                const renderScale = 4; 
 
                 const canvas = await html2canvas(a4, { 
                     scale: renderScale, 
