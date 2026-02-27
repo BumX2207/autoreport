@@ -36,8 +36,8 @@
     // ===============================================================
     const MY_CSS = `
         /* KHÓA CHẶT CHIỀU RỘNG, CẤM TRÀN NGANG TUYỆT ĐỐI */
-        #truyen-app { display:none; position:fixed; top:0; left:0; right:0; bottom:0; width:100%; height:100%; background:#f8f9fa; z-index:2147483646; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; flex-direction:column; overflow:hidden; box-sizing: border-box; }
-        #truyen-app *, #truyen-app *::before, #truyen-app *::after { box-sizing: inherit; }
+        #truyen-app { display:none; position:fixed; top:0; left:0; right:0; bottom:0; width:100% !important; max-width:100vw !important; height:100% !important; background:#f8f9fa; z-index:2147483646; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; flex-direction:column; overflow-x: hidden !important; overflow-y: hidden !important; box-sizing: border-box !important; }
+        #truyen-app *, #truyen-app *::before, #truyen-app *::after { box-sizing: border-box !important; max-width: 100%; }
         
         .tr-header { background:#fff; padding:10px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); display:flex; justify-content:center; align-items:center; z-index:20; flex-shrink:0; position:relative; height:60px; }
         .tr-logo { font-size:18px; font-weight:900; color:#e17055; text-transform:uppercase; letter-spacing: 1px;}
@@ -105,13 +105,13 @@
         /* THANH TIẾN ĐỘ ĐỌC NẰM NGAY TRÊN TOOLBAR */
         .tr-progress-container { width: 100%; height: 5px; background: rgba(225, 112, 85, 0.15); z-index: 100; flex-shrink: 0; }
         .tr-progress-bar { height: 100%; background: linear-gradient(90deg, #ff9ff3, #e17055); width: 0%; transition: width 0.2s linear; position: relative; }
-        .tr-progress-thumb { position: absolute; right: -5px; top: -5px; width: 15px; height: 15px; background: #fff; border: 3px solid #e17055; border-radius: 50%; box-shadow: 0 0 10px #e17055, 0 0 20px rgba(225,112,85,0.8); animation: spark 1.5s infinite alternate; }
+        .tr-progress-thumb { position: absolute; right: 0; top: -5px; width: 15px; height: 15px; background: #fff; border: 3px solid #e17055; border-radius: 50%; box-shadow: 0 0 10px #e17055, 0 0 20px rgba(225,112,85,0.8); animation: spark 1.5s infinite alternate; }
         @keyframes spark { 0% { box-shadow: 0 0 5px #e17055, 0 0 10px rgba(225,112,85,0.5); transform: scale(0.9); } 100% { box-shadow: 0 0 15px #e17055, 0 0 25px rgba(225,112,85,1); transform: scale(1.15); } }
 
         /* THANH CÔNG CỤ NÚT BẤM DƯỚI CÙNG (LAYOUT MỚI) */
-        .tr-reader-tools { background:#2d3436; padding:0 20px; height:80px; display:flex; justify-content:center; align-items:center; gap:15px; z-index:10; position: relative; flex-wrap: nowrap; flex-shrink: 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.1);}
+        .tr-reader-tools { background:#2d3436; padding:0 15px; height:80px; display:flex; justify-content:center; align-items:center; gap:10px; z-index:10; position: relative; flex-wrap: nowrap; flex-shrink: 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); width: 100%; overflow-x: hidden;}
         
-        .tr-btn-tool { flex: 1; max-width: 120px; margin-bottom: 15px; background:#636e72; color:white; border:none; padding:10px 10px; border-radius:25px; font-size:14px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.3s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.15); white-space: nowrap;}
+        .tr-btn-tool { flex: 1; min-width: 0; max-width: 120px; margin-bottom: 15px; background:#636e72; color:white; border:none; padding:10px 5px; border-radius:25px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.3s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.15); white-space: nowrap; overflow: hidden; }
         .tr-btn-tool:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.2); }
         .tr-btn-tool:active { transform: translateY(1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         
@@ -167,9 +167,8 @@
             .tr-filter { width: 130px; font-size: 12px; }
             .tr-section-title { font-size: 16px; }
             
-            /* ĐIỀU CHỈNH LẠI TOOLBAR MOBILE THEO Ý BẠN */
-            .tr-reader-tools { gap: 8px; justify-content: space-between; }
-            .tr-btn-tool { flex: 1; max-width: 120px; padding: 10px 5px; font-size: 13px; gap: 5px; }
+            /* Tinh chỉnh riêng nút cho màn nhỏ để chữ không bị khuất */
+            .tr-btn-tool { font-size: 12px; gap: 4px; padding: 10px 2px; }
             .tr-btn-tool svg { width: 16px; height: 16px; flex-shrink: 0; }
         }
     `;
@@ -1048,7 +1047,7 @@
     };
     
     return {
-        name: "Đọc Truyện",
+        name: "Đọc Truyện V1",
         icon: `<svg viewBox="0 0 24 24"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.15C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zM21 18.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z" fill="white"/></svg>`,
         bgColor: "#0984e3",
         action: runTool
