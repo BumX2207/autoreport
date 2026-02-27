@@ -35,7 +35,9 @@
     // 2. CSS GIAO DIỆN
     // ===============================================================
     const MY_CSS = `
-        #truyen-app { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#f8f9fa; z-index:2147483646; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; flex-direction:column; overflow:hidden; }
+        /* FIX LỖI TRÀN MÀN HÌNH NGANG (BORDER-BOX) */
+        #truyen-app { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#f8f9fa; z-index:2147483646; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; flex-direction:column; overflow:hidden; box-sizing: border-box; }
+        #truyen-app *, #truyen-app *::before, #truyen-app *::after { box-sizing: inherit; }
         
         .tr-header { background:#fff; padding:10px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); display:flex; justify-content:center; align-items:center; z-index:20; flex-shrink:0; position:relative; height:60px; }
         .tr-logo { font-size:18px; font-weight:900; color:#e17055; text-transform:uppercase; letter-spacing: 1px;}
@@ -100,14 +102,14 @@
         .tr-sent:hover { background: #e8f8f5; }
         .tr-reading-active { background: #ffeaa7; color: #d63031; }
 
-        /* THANH TIẾN ĐỘ ĐỌC (NẰM SÁT TRÊN TOOLBAR DƯỚI CÙNG) */
+        /* THANH TIẾN ĐỘ ĐỌC NẰM NGAY TRÊN TOOLBAR */
         .tr-progress-container { width: 100%; height: 5px; background: rgba(225, 112, 85, 0.15); z-index: 100; flex-shrink: 0; }
         .tr-progress-bar { height: 100%; background: linear-gradient(90deg, #ff9ff3, #e17055); width: 0%; transition: width 0.2s linear; position: relative; }
         .tr-progress-thumb { position: absolute; right: -6px; top: -5px; width: 15px; height: 15px; background: #fff; border: 3px solid #e17055; border-radius: 50%; box-shadow: 0 0 10px #e17055, 0 0 20px rgba(225,112,85,0.8); animation: spark 1.5s infinite alternate; }
         @keyframes spark { 0% { box-shadow: 0 0 5px #e17055, 0 0 10px rgba(225,112,85,0.5); transform: scale(0.9); } 100% { box-shadow: 0 0 15px #e17055, 0 0 25px rgba(225,112,85,1); transform: scale(1.15); } }
 
-        /* THANH CÔNG CỤ NÚT BẤM DƯỚI CÙNG */
-        .tr-reader-tools { background:#2d3436; padding:12px 20px; display:flex; justify-content:center; gap:12px; z-index:10; position: relative; flex-wrap: nowrap; overflow-x: auto; flex-shrink: 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.1);}
+        /* THANH CÔNG CỤ NÚT BẤM DƯỚI CÙNG CAO 80PX */
+        .tr-reader-tools { background:#2d3436; padding:0 20px; height:80px; display:flex; justify-content:center; align-items:center; gap:12px; z-index:10; position: relative; flex-wrap: nowrap; overflow-x: auto; flex-shrink: 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.1);}
         .tr-reader-tools::-webkit-scrollbar { display: none; }
         
         .tr-btn-tool { flex-shrink: 1; background:#636e72; color:white; border:none; padding:10px 20px; border-radius:25px; font-size:14px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.3s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.15); white-space: nowrap;}
@@ -119,9 +121,9 @@
         .tr-btn-settings { background:#0984e3; } 
         .tr-btn-sleep { background:#6c5ce7; }
         
-        /* BẢNG CÀI ĐẶT POPUP TỪ DƯỚI LÊN */
+        /* BẢNG CÀI ĐẶT POPUP NÂNG LÊN CAO HƠN VÌ TOOLBAR ĐÃ 80PX */
         .tr-settings-panel {
-            position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%);
+            position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%);
             background: white; padding: 15px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.2);
             width: 300px; display: none; flex-direction: column; gap: 10px; z-index: 100;
             border: 1px solid #eee;
@@ -165,9 +167,9 @@
             .tr-nav-btn { padding: 6px 10px; font-size: 12px; }
             .tr-filter { width: 130px; font-size: 12px; }
             .tr-section-title { font-size: 16px; }
-            .tr-reader-tools { padding: 10px; gap: 8px; justify-content: space-between; }
-            .tr-btn-tool { flex: 1; padding: 8px 5px; font-size: 13px; gap: 5px; }
-            .tr-btn-tool svg { width: 16px; height: 16px; flex-shrink: 0; }
+            
+            /* LOẠI BỎ PADDING THỪA THEO ĐÚNG YÊU CẦU */
+            .tr-reader-tools { gap: 8px; justify-content: space-between; padding: 0 15px; } 
         }
     `;
     
@@ -233,7 +235,6 @@
         let preloadedData = { chapNum: null, contentArr: null };
         let showAllHistory = false;
         
-        // CỜ: QUYẾT ĐỊNH XEM CÓ ĐỌC TÊN CHƯƠNG KHÔNG
         let shouldReadChapterTitle = false;
 
         let isUserScrolling = false; let scrollResumeTimer = null;
@@ -325,7 +326,6 @@
                 </div>
     
                 <div id="tr-view-reader" class="tr-reader-view">
-                    <!-- Top Info Bar -->
                     <div class="tr-reader-info-bar">
                         <div class="tr-story-title" id="tr-read-title">Tên Truyện</div>
                         <div class="tr-chapter-title" id="tr-read-chap">Chương 1</div>
@@ -336,20 +336,20 @@
                         </div>
                     </div>
     
-                    <!-- Middle Content (Scrollable) -->
                     <div class="tr-reader-content-wrap" id="tr-content-wrap">
                         <div class="tr-paper">
                             <div class="tr-text" id="tr-read-text">Nội dung...</div>
                         </div>
                     </div>
 
-                    <!-- Bottom Components: Progress Bar THEN Tools -->
+                    <!-- Thanh Tiến Độ Nằm Sát Trên Toolbar -->
                     <div class="tr-progress-container" id="tr-progress-container">
                         <div class="tr-progress-bar" id="tr-progress-bar">
                             <div class="tr-progress-thumb"></div>
                         </div>
                     </div>
                     
+                    <!-- Toolbar Dưới Cùng Cố Định Chiều Cao 80px -->
                     <div class="tr-reader-tools">
                         <button class="tr-btn-tool tr-btn-play" id="btn-read-toggle">
                             <svg id="icon-play" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
@@ -368,7 +368,7 @@
                         </button>
                     </div>
 
-                    <!-- Bảng Cài đặt -->
+                    <!-- Bảng Cài đặt Trồi Lên Mượt Mà -->
                     <div class="tr-settings-panel" id="tr-settings-panel">
                         <div class="tr-setting-row">
                             <span class="tr-setting-label">Giọng đọc</span>
@@ -813,7 +813,7 @@
             }
 
             isResuming = (currentSentenceIndex > 0);
-            shouldReadChapterTitle = !isResuming; // Đọc tên chương nếu mở lần đầu (chưa đọc câu nào)
+            shouldReadChapterTitle = !isResuming; 
             await loadAndDisplayChapter(currentChapter, false); 
         };
     
@@ -960,7 +960,6 @@
         const speakNextSentence = () => {
             if(currentSentenceIndex >= currentSentences.length) { handleChapterFinished(); return; }
             
-            // XỬ LÝ ĐỌC SỐ CHƯƠNG KHI BẮT ĐẦU CHƯƠNG MỚI
             if (currentSentenceIndex === 0 && shouldReadChapterTitle) {
                 shouldReadChapterTitle = false;
                 speakSystemMsg(`Chương ${currentChapter}`, () => {
@@ -1005,13 +1004,13 @@
             if(currentChapter < currentStory.total) {
                 speakSystemMsg(`Đã đọc xong chương ${currentChapter}, chuyển sang chương mới.`, async () => {
                     isResuming = false; 
-                    shouldReadChapterTitle = true; // Kích hoạt đọc tên chương mới
+                    shouldReadChapterTitle = true; 
                     
                     await loadAndDisplayChapter(currentChapter + 1, false); 
                     
                     isReading = true; 
                     updatePlayPauseUI(true);
-                    requestWakeLock(); // Sửa lỗi rớt màn hình sáng ở đây
+                    requestWakeLock(); 
                     speakNextSentence();
                 });
             } else { 
@@ -1048,7 +1047,7 @@
     };
     
     return {
-        name: "Đọc Truyện V1",
+        name: "Đọc Truyện",
         icon: `<svg viewBox="0 0 24 24"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.15C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zM21 18.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z" fill="white"/></svg>`,
         bgColor: "#0984e3",
         action: runTool
