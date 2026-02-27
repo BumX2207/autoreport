@@ -46,10 +46,10 @@
         .tr-btn-close { position:absolute; right:20px; background:#fab1a0; color:#d63031; border:none; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.1); transition:0.2s;}
         .tr-btn-close:hover { background:#d63031; color:white; }
         
-        .tr-user-bar { background:#2d3436; color:#dfe6e9; padding:5px 20px; font-size:12px; display:flex; justify-content:space-between; align-items:center; font-weight:bold; }
+        .tr-user-bar { background:#2d3436; color:#dfe6e9; padding:5px 20px; font-size:12px; display:flex; justify-content:space-between; align-items:center; font-weight:bold; flex-shrink:0;}
         .tr-user-name { color: #00cec9; }
 
-        .tr-toolbar { background:#fff; padding:10px 20px; border-bottom:1px solid #eee; display:flex; gap:10px; z-index:15; flex-wrap:nowrap; align-items:center; }
+        .tr-toolbar { background:#fff; padding:10px 20px; border-bottom:1px solid #eee; display:flex; gap:10px; z-index:15; flex-wrap:nowrap; align-items:center; flex-shrink:0;}
         .tr-search-box { flex:1; display:flex; min-width: 0; }
         .tr-search-box input { width:100%; padding:8px 15px; border:1px solid #ddd; border-radius:20px; outline:none; font-size:14px; transition:0.3s; }
         .tr-search-box input:focus { border-color:#e17055; box-shadow:0 0 5px rgba(225,112,85,0.3); }
@@ -81,7 +81,33 @@
     
         .tr-reader-view { display:none; flex:1; flex-direction:column; background:#f4f5f7; overflow:hidden; position:relative; }
         
-        .tr-reader-tools { background:#2d3436; padding:12px 20px; display:flex; justify-content:center; gap:12px; z-index:10; position: relative; flex-wrap: nowrap; overflow-x: auto; }
+        .tr-reader-info-bar { background:#fff; padding:15px 20px; border-bottom:1px solid #ddd; z-index:9; flex-shrink:0; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .tr-story-title { font-size:20px; font-weight:bold; color:#2d3436; text-align:center; margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+        .tr-chapter-title { font-size:16px; color:#e17055; text-align:center; margin-bottom:10px; font-weight:600;}
+        .tr-nav-bar { display:flex; justify-content:center; align-items:center; gap:10px;}
+        .tr-nav-btn { padding:6px 15px; background:#e17055; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer; transition:0.2s; white-space:nowrap; }
+        .tr-nav-btn:hover { background:#d63031; }
+        .tr-nav-btn:disabled { background:#b2bec3; cursor:not-allowed; }
+        .tr-nav-select { padding:6px; border-radius:4px; border:1px solid #ccc; font-size:14px; outline:none; max-width: 150px; cursor:pointer;}
+    
+        .tr-reader-content-wrap { flex:1; overflow-y:auto; padding:20px; scroll-behavior: smooth; display:flex; justify-content:center; align-items:flex-start; }
+        .tr-paper { background:#fff; max-width:800px; width:100%; padding:30px 40px; border-radius:8px; box-shadow:0 5px 20px rgba(0,0,0,0.05); height:fit-content; margin-bottom: 30px; }
+        
+        .tr-text { font-size:18px; line-height:1.7; color:#2d3436; text-align:justify; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; -webkit-touch-callout: none; }
+        .tr-text p { margin-bottom: 15px; }
+
+        .tr-sent { cursor: pointer; border-radius: 4px; padding: 2px 3px; transition: background 0.2s, color 0.2s; }
+        .tr-sent:hover { background: #e8f8f5; }
+        .tr-reading-active { background: #ffeaa7; color: #d63031; }
+
+        /* THANH TIẾN ĐỘ ĐỌC (NẰM SÁT TRÊN TOOLBAR DƯỚI CÙNG) */
+        .tr-progress-container { width: 100%; height: 5px; background: rgba(225, 112, 85, 0.15); z-index: 100; flex-shrink: 0; }
+        .tr-progress-bar { height: 100%; background: linear-gradient(90deg, #ff9ff3, #e17055); width: 0%; transition: width 0.2s linear; position: relative; }
+        .tr-progress-thumb { position: absolute; right: -6px; top: -5px; width: 15px; height: 15px; background: #fff; border: 3px solid #e17055; border-radius: 50%; box-shadow: 0 0 10px #e17055, 0 0 20px rgba(225,112,85,0.8); animation: spark 1.5s infinite alternate; }
+        @keyframes spark { 0% { box-shadow: 0 0 5px #e17055, 0 0 10px rgba(225,112,85,0.5); transform: scale(0.9); } 100% { box-shadow: 0 0 15px #e17055, 0 0 25px rgba(225,112,85,1); transform: scale(1.15); } }
+
+        /* THANH CÔNG CỤ NÚT BẤM DƯỚI CÙNG */
+        .tr-reader-tools { background:#2d3436; padding:12px 20px; display:flex; justify-content:center; gap:12px; z-index:10; position: relative; flex-wrap: nowrap; overflow-x: auto; flex-shrink: 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.1);}
         .tr-reader-tools::-webkit-scrollbar { display: none; }
         
         .tr-btn-tool { flex-shrink: 1; background:#636e72; color:white; border:none; padding:10px 20px; border-radius:25px; font-size:14px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.3s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.15); white-space: nowrap;}
@@ -93,61 +119,20 @@
         .tr-btn-settings { background:#0984e3; } 
         .tr-btn-sleep { background:#6c5ce7; }
         
+        /* BẢNG CÀI ĐẶT POPUP TỪ DƯỚI LÊN */
         .tr-settings-panel {
-            position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+            position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%);
             background: white; padding: 15px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.2);
             width: 300px; display: none; flex-direction: column; gap: 10px; z-index: 100;
             border: 1px solid #eee;
         }
-        .tr-settings-panel.show { display: flex; animation: slideDown 0.2s; }
+        .tr-settings-panel.show { display: flex; animation: slideUp 0.2s; }
         .tr-setting-row { display: flex; flex-direction: column; gap: 5px; }
         .tr-setting-label { font-size: 12px; font-weight: bold; color: #555; }
         .tr-setting-input { width: 100%; cursor: pointer; }
         .tr-setting-val { font-size: 11px; color: #0984e3; float: right;}
-        @keyframes slideDown { from {opacity:0; transform:translate(-50%, -10px);} to {opacity:1; transform:translate(-50%, 0);} }
-
-        .tr-reader-info-bar { background:#fff; padding:15px 20px; border-bottom:1px solid #ddd; z-index:9; flex-shrink:0; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .tr-story-title { font-size:20px; font-weight:bold; color:#2d3436; text-align:center; margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-        .tr-chapter-title { font-size:16px; color:#e17055; text-align:center; margin-bottom:10px; font-weight:600;}
-        .tr-nav-bar { display:flex; justify-content:center; align-items:center; gap:10px;}
-        .tr-nav-btn { padding:6px 15px; background:#e17055; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer; transition:0.2s; white-space:nowrap; }
-        .tr-nav-btn:hover { background:#d63031; }
-        .tr-nav-btn:disabled { background:#b2bec3; cursor:not-allowed; }
-        .tr-nav-select { padding:6px; border-radius:4px; border:1px solid #ccc; font-size:14px; outline:none; max-width: 150px; cursor:pointer;}
+        @keyframes slideUp { from {opacity:0; transform:translate(-50%, 10px);} to {opacity:1; transform:translate(-50%, 0);} }
     
-        .tr-reader-content-wrap { flex:1; overflow-y:auto; padding:20px; scroll-behavior: smooth; display:flex; justify-content:center; align-items:flex-start; }
-        .tr-paper { background:#fff; max-width:800px; width:100%; padding:30px 40px; border-radius:8px; box-shadow:0 5px 20px rgba(0,0,0,0.05); height:fit-content; margin-bottom: 50px; }
-        
-        .tr-text { 
-            font-size:18px; line-height:1.7; color:#2d3436; text-align:justify; 
-            -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; -webkit-touch-callout: none;
-        }
-        .tr-text p { margin-bottom: 15px; }
-
-        .tr-sent { cursor: pointer; border-radius: 4px; padding: 2px 3px; transition: background 0.2s, color 0.2s; }
-        .tr-sent:hover { background: #e8f8f5; }
-        .tr-reading-active { background: #ffeaa7; color: #d63031; }
-    
-        /* THANH TIẾN ĐỘ ĐỌC DƯỚI CÙNG MÀN HÌNH */
-        .tr-progress-container {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 5px;
-            background: rgba(225, 112, 85, 0.15); z-index: 100;
-        }
-        .tr-progress-bar {
-            height: 100%; background: linear-gradient(90deg, #ff9ff3, #e17055); width: 0%;
-            transition: width 0.2s linear; position: relative;
-        }
-        .tr-progress-thumb {
-            position: absolute; right: -6px; top: -5px; width: 15px; height: 15px;
-            background: #fff; border: 3px solid #e17055; border-radius: 50%;
-            box-shadow: 0 0 10px #e17055, 0 0 20px rgba(225,112,85,0.8);
-            animation: spark 1.5s infinite alternate;
-        }
-        @keyframes spark {
-            0% { box-shadow: 0 0 5px #e17055, 0 0 10px rgba(225,112,85,0.5); transform: scale(0.9); }
-            100% { box-shadow: 0 0 15px #e17055, 0 0 25px rgba(225,112,85,1); transform: scale(1.15); }
-        }
-
         .tr-loading-overlay { position:absolute; top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.95); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:50; font-weight:bold; font-size:16px; color:#e17055;}
         
         #tr-fake-lock-screen {
@@ -160,17 +145,8 @@
         .tr-fake-hint { font-size: 14px; color: #555; animation: breathe 3s infinite; border: 1px solid #333; padding: 8px 15px; border-radius: 20px;}
         @keyframes breathe { 0%, 100% {opacity: 0.3; border-color:#333} 50% {opacity: 0.9; border-color:#777} }
 
-        #tr-interruption-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 2147483999;
-            flex-direction: column; justify-content: center; align-items: center;
-        }
-        .tr-btn-resume-giant {
-            width: 100px; height: 100px; border-radius: 50%; background: #00b894;
-            color: white; border: none; font-size: 40px; cursor: pointer;
-            box-shadow: 0 0 25px rgba(0, 184, 148, 0.6); display: flex; justify-content: center; align-items: center;
-            animation: pulse-play 2s infinite; padding-left: 8px;
-        }
+        #tr-interruption-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2147483999; flex-direction: column; justify-content: center; align-items: center; }
+        .tr-btn-resume-giant { width: 100px; height: 100px; border-radius: 50%; background: #00b894; color: white; border: none; font-size: 40px; cursor: pointer; box-shadow: 0 0 25px rgba(0, 184, 148, 0.6); display: flex; justify-content: center; align-items: center; animation: pulse-play 2s infinite; padding-left: 8px; }
         @keyframes pulse-play { 0% {transform: scale(1); box-shadow: 0 0 15px rgba(0,184,148,0.5);} 50% {transform: scale(1.1); box-shadow: 0 0 35px rgba(0,184,148,0.9);} 100% {transform: scale(1); box-shadow: 0 0 15px rgba(0,184,148,0.5);} }
         .tr-interruption-text { color: #fff; margin-top: 25px; font-size: 18px; font-weight: bold; letter-spacing: 1px;}
         .tr-btn-close-overlay { margin-top: 40px; background: transparent; border: 1px solid #777; color: #aaa; padding: 8px 25px; border-radius: 20px; cursor: pointer; font-size: 13px;}
@@ -185,11 +161,13 @@
             .tr-card { width:calc(50% - 10px); min-width: 140px; }
             .tr-card-cover { height: 230px; }
             .tr-card-img { object-fit: fill; }
-            
             .tr-toolbar { gap: 5px; padding: 10px; }
             .tr-nav-btn { padding: 6px 10px; font-size: 12px; }
             .tr-filter { width: 130px; font-size: 12px; }
             .tr-section-title { font-size: 16px; }
+            .tr-reader-tools { padding: 10px; gap: 8px; justify-content: space-between; }
+            .tr-btn-tool { flex: 1; padding: 8px 5px; font-size: 13px; gap: 5px; }
+            .tr-btn-tool svg { width: 16px; height: 16px; flex-shrink: 0; }
         }
     `;
     
@@ -254,14 +232,16 @@
         let isReading = false; let isResuming = false; let isJumping = false;
         let preloadedData = { chapNum: null, contentArr: null };
         let showAllHistory = false;
+        
+        // CỜ: QUYẾT ĐỊNH XEM CÓ ĐỌC TÊN CHƯƠNG KHÔNG
+        let shouldReadChapterTitle = false;
 
         let isUserScrolling = false; let scrollResumeTimer = null;
         let localProgressData = {}; let activeSession = { link: null, chap: 1, sentence: 0 }; 
 
         let ttsRate = 1.3; let ttsPitch = 1.1; let ttsVoiceIndex = -1; let availableVoices =[]; let wakeLock = null;
 
-        // BIẾN CHO PHÂN TRANG (PAGINATION)
-        let currentCategoryView = null; // null = trang chủ, 'all', 'tiên hiệp'... = trang chi tiết
+        let currentCategoryView = null; 
         let categoryItemsLimit = 10; 
         
         const requestWakeLock = async () => {
@@ -345,7 +325,31 @@
                 </div>
     
                 <div id="tr-view-reader" class="tr-reader-view">
-                    <!-- Thanh Công Cụ -->
+                    <!-- Top Info Bar -->
+                    <div class="tr-reader-info-bar">
+                        <div class="tr-story-title" id="tr-read-title">Tên Truyện</div>
+                        <div class="tr-chapter-title" id="tr-read-chap">Chương 1</div>
+                        <div class="tr-nav-bar">
+                            <button class="tr-nav-btn" id="btn-prev-chap">⬅ Trước</button>
+                            <select class="tr-nav-select" id="sel-chap"></select>
+                            <button class="tr-nav-btn" id="btn-next-chap">Tiếp ➡</button>
+                        </div>
+                    </div>
+    
+                    <!-- Middle Content (Scrollable) -->
+                    <div class="tr-reader-content-wrap" id="tr-content-wrap">
+                        <div class="tr-paper">
+                            <div class="tr-text" id="tr-read-text">Nội dung...</div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Components: Progress Bar THEN Tools -->
+                    <div class="tr-progress-container" id="tr-progress-container">
+                        <div class="tr-progress-bar" id="tr-progress-bar">
+                            <div class="tr-progress-thumb"></div>
+                        </div>
+                    </div>
+                    
                     <div class="tr-reader-tools">
                         <button class="tr-btn-tool tr-btn-play" id="btn-read-toggle">
                             <svg id="icon-play" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
@@ -377,28 +381,6 @@
                         <div class="tr-setting-row">
                             <span class="tr-setting-label">Cao độ: <span id="val-pitch" class="tr-setting-val">1.1</span></span>
                             <input type="range" id="rng-pitch" class="tr-setting-input" min="0.5" max="2.0" step="0.1" value="1.1">
-                        </div>
-                    </div>
-                    
-                    <div class="tr-reader-info-bar">
-                        <div class="tr-story-title" id="tr-read-title">Tên Truyện</div>
-                        <div class="tr-chapter-title" id="tr-read-chap">Chương 1</div>
-                        <div class="tr-nav-bar">
-                            <button class="tr-nav-btn" id="btn-prev-chap">⬅ Trước</button>
-                            <select class="tr-nav-select" id="sel-chap"></select>
-                            <button class="tr-nav-btn" id="btn-next-chap">Tiếp ➡</button>
-                        </div>
-                    </div>
-    
-                    <div class="tr-reader-content-wrap" id="tr-content-wrap">
-                        <div class="tr-paper">
-                            <div class="tr-text" id="tr-read-text">Nội dung...</div>
-                        </div>
-                    </div>
-
-                    <div class="tr-progress-container" id="tr-progress-container">
-                        <div class="tr-progress-bar" id="tr-progress-bar">
-                            <div class="tr-progress-thumb"></div>
                         </div>
                     </div>
     
@@ -677,7 +659,6 @@
             });
         };
 
-        // Hàm render trang chi tiết thể loại
         const renderCategoryDetail = (container) => {
             let title = ""; let list =[];
             if (currentCategoryView === 'all') { title = "📚 Tất cả truyện"; list = stories; } 
@@ -722,7 +703,6 @@
             container.appendChild(wrapBtn);
         };
 
-        // Hàm helper render nhóm truyện ngoài trang chủ
         const renderCategorySection = (container, title, catKey, list, limit) => {
             if (list.length === 0) return;
             const sec = document.createElement('div'); sec.className = 'tr-section';
@@ -748,20 +728,18 @@
             content.innerHTML = ''; 
 
             if (kw !== '' || gr !== 'all') {
-                currentCategoryView = null; // Tự thoát chế độ xem chi tiết nếu search
+                currentCategoryView = null; 
                 const filtered = stories.filter(s => s.name.toLowerCase().includes(kw) && (gr === 'all' || s.genre === gr));
                 if(filtered.length === 0) { content.innerHTML = `<div style="width:100%; text-align:center; padding:20px;">Không tìm thấy truyện nào phù hợp.</div>`; return; }
                 const grid = document.createElement('div'); grid.className = 'tr-grid-container';
                 renderStoryCards(filtered, grid); content.appendChild(grid); return;
             }
 
-            // NẾU ĐANG Ở CHẾ ĐỘ XEM CHI TIẾT
             if (currentCategoryView !== null) {
                 renderCategoryDetail(content);
                 return;
             }
 
-            // NẾU ĐANG Ở TRANG CHỦ BÌNH THƯỜNG
             let historyList = stories.filter(s => localProgressData[s.link]).map(s => {
                 return { ...s, lastReadTime: localProgressData[s.link].time || 0 };
             }).sort((a, b) => b.lastReadTime - a.lastReadTime);
@@ -777,7 +755,6 @@
                 if(toggleBtn) { toggleBtn.onclick = () => { showAllHistory = !showAllHistory; renderHome(); }; }
             }
 
-            // Hiển thị tối đa 10 ở màn hình chính (theo yêu cầu cũ), sau đó có thể bấm xem tất cả
             renderCategorySection(content, "📚 Tất cả truyện", "all", stories, 10);
             renderCategorySection(content, "☁️ Tiên Hiệp", "tiên hiệp", stories.filter(s => s.genre.toLowerCase().includes("tiên hiệp")), 6);
             renderCategorySection(content, "⚔️ Kiếm Hiệp", "kiếm hiệp", stories.filter(s => s.genre.toLowerCase().includes("kiếm hiệp")), 6);
@@ -836,6 +813,7 @@
             }
 
             isResuming = (currentSentenceIndex > 0);
+            shouldReadChapterTitle = !isResuming; // Đọc tên chương nếu mở lần đầu (chưa đọc câu nào)
             await loadAndDisplayChapter(currentChapter, false); 
         };
     
@@ -933,9 +911,9 @@
             });
         };
     
-        $('btn-prev-chap').onclick = () => { if(currentChapter > 1) { isResuming=false; loadAndDisplayChapter(currentChapter - 1, true); }};
-        $('btn-next-chap').onclick = () => { if(currentChapter < currentStory.total) { isResuming=false; loadAndDisplayChapter(currentChapter + 1, true); }};
-        $('sel-chap').onchange = (e) => { isResuming=false; loadAndDisplayChapter(parseInt(e.target.value), true); };
+        $('btn-prev-chap').onclick = () => { if(currentChapter > 1) { isResuming=false; shouldReadChapterTitle=true; loadAndDisplayChapter(currentChapter - 1, true); }};
+        $('btn-next-chap').onclick = () => { if(currentChapter < currentStory.total) { isResuming=false; shouldReadChapterTitle=true; loadAndDisplayChapter(currentChapter + 1, true); }};
+        $('sel-chap').onchange = (e) => { isResuming=false; shouldReadChapterTitle=true; loadAndDisplayChapter(parseInt(e.target.value), true); };
     
         // -----------------------------------------------------
         // LOGIC TTS (ĐỌC TRUYỆN) & JUMP DOUBLE CLICK
@@ -981,8 +959,17 @@
 
         const speakNextSentence = () => {
             if(currentSentenceIndex >= currentSentences.length) { handleChapterFinished(); return; }
-            let sentence = currentSentences[currentSentenceIndex];
             
+            // XỬ LÝ ĐỌC SỐ CHƯƠNG KHI BẮT ĐẦU CHƯƠNG MỚI
+            if (currentSentenceIndex === 0 && shouldReadChapterTitle) {
+                shouldReadChapterTitle = false;
+                speakSystemMsg(`Chương ${currentChapter}`, () => {
+                    if (isReading) speakNextSentence(); 
+                });
+                return; 
+            }
+
+            let sentence = currentSentences[currentSentenceIndex];
             let cleanText = sentence.replace(/["'()$#@*~\[\]{}“”‘’]/g, '').replace(/\.{2,}/g, '.').trim();
 
             let u = setupUtterance(cleanText);
@@ -1017,7 +1004,15 @@
             isReading = false; saveCloudHistory(); 
             if(currentChapter < currentStory.total) {
                 speakSystemMsg(`Đã đọc xong chương ${currentChapter}, chuyển sang chương mới.`, async () => {
-                    isResuming = false; await loadAndDisplayChapter(currentChapter + 1, false); isReading = true; speakNextSentence();
+                    isResuming = false; 
+                    shouldReadChapterTitle = true; // Kích hoạt đọc tên chương mới
+                    
+                    await loadAndDisplayChapter(currentChapter + 1, false); 
+                    
+                    isReading = true; 
+                    updatePlayPauseUI(true);
+                    requestWakeLock(); // Sửa lỗi rớt màn hình sáng ở đây
+                    speakNextSentence();
                 });
             } else { 
                 speakSystemMsg("Đã đọc xong bộ truyện. Cảm ơn bạn.", () => { alert("Bạn đã đọc hết truyện!"); }); 
@@ -1033,7 +1028,6 @@
             releaseWakeLock();
         };
     
-        // LOGIC NÚT TOGGLE PLAY/STOP ĐỌC TỪ ĐẦU CÂU
         $('btn-read-toggle').onclick = () => { 
             if (!isReading) { 
                 isReading = true; 
@@ -1054,7 +1048,7 @@
     };
     
     return {
-        name: "Đọc Truyện",
+        name: "Đọc Truyện V1",
         icon: `<svg viewBox="0 0 24 24"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.15C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zM21 18.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z" fill="white"/></svg>`,
         bgColor: "#0984e3",
         action: runTool
