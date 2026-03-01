@@ -14,7 +14,7 @@
         .dp-header { font-size:18px; font-weight:bold; margin-bottom:10px; text-align:center; color:#28a745; border-bottom:2px solid #eee; padding-bottom:10px; flex-shrink:0; }
         .dp-btn-close { position:absolute; top:15px; right:15px; background:none; border:none; font-size:24px; color:#999; cursor:pointer; line-height:1; z-index:10; }
         
-        .dp-list-container { flex:1; overflow-y:auto; margin-bottom:15px; border:1px solid #eee; border-radius:8px; background:#f9f9f9; padding:5px; min-height:120px; }
+        .dp-list-container { flex:1; overflow-y:auto; margin-bottom:15px; border:1px solid #eee; border-radius:8px; background:#f9f9f9; padding:5px; min-height:120px; max-height: 245px;}
         
         .dp-item { background:white; border-radius:8px; padding:10px; margin-bottom:5px; border:1px solid #e0e0e0; display:flex; justify-content:space-between; align-items:center; transition: background 0.2s; }
         .dp-item.editing { background:#e8f5e9; border-color:#28a745; }
