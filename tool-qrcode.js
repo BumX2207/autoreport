@@ -102,18 +102,6 @@
         const modalId = 'tgdd-qrcode-modal';
         let modal = document.getElementById(modalId);
 
-        // --- LOGIC ẨN/HIỆN BOTTOM NAV ---
-        const toggleBottomNav = (show) => {
-            const bottomNav = document.getElementById('tgdd-bottom-nav');
-            if (bottomNav) {
-                if (show) {
-                    bottomNav.classList.add('show-nav'); // Hiện lại
-                } else {
-                    bottomNav.classList.remove('show-nav'); // Ẩn đi
-                }
-            }
-        };
-
         // A. Render HTML
         if (!modal) {
             modal = document.createElement('div');
