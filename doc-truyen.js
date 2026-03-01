@@ -171,6 +171,115 @@
             .tr-btn-tool { font-size: 12px; gap: 4px; padding: 10px 2px; }
             .tr-btn-tool svg { width: 16px; height: 16px; flex-shrink: 0; }
         }
+
+        /* =========================================================
+           --- GLASS UI THEME (GIAO DIỆN IPAD LƠ LỬNG) ---
+           ========================================================= */
+        
+        /* 1. Nền Overlay ngoài cùng (Gradient tối + Mờ) & Padding tạo viền kính */
+        body.glass-ui-mode #truyen-app {
+            background: radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.25), transparent 50%),
+                        radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.25), transparent 50%),
+                        rgba(15, 23, 42, 0.8) !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+            padding: 12px !important; /* Tạo khoảng trống để làm viền kính */
+        }
+
+        /* 2. Lõi Trắng (Tạo hiệu ứng thiết bị lơ lửng) */
+        body.glass-ui-mode #truyen-app::before {
+            content: "" !important; position: absolute !important;
+            top: 12px !important; left: 12px !important; right: 12px !important; bottom: 12px !important;
+            background: #ffffff !important; border-radius: 24px !important;
+            z-index: 0 !important; box-shadow: 0 15px 50px rgba(0,0,0,0.4) !important;
+            border: 1px solid rgba(255,255,255,0.4) !important;
+        }
+        
+        /* Nâng toàn bộ content lên trên lớp lõi trắng */
+        body.glass-ui-mode #truyen-app > * { position: relative; z-index: 1; }
+
+        /* 3. Header & Nút Đóng/Home */
+        body.glass-ui-mode .tr-header {
+            background: transparent !important; box-shadow: none !important;
+            border-bottom: 2px solid rgba(0,0,0,0.05) !important;
+            border-top-left-radius: 24px !important; border-top-right-radius: 24px !important;
+        }
+        
+        body.glass-ui-mode .tr-btn-close,
+        body.glass-ui-mode .tr-btn-home-icon {
+            background: #f1f3f5 !important; color: #555 !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+        }
+        body.glass-ui-mode .tr-btn-close:hover { background: #fee2e2 !important; color: #ef4444 !important; transform: scale(1.1); }
+        body.glass-ui-mode .tr-btn-home-icon:hover { background: #e3f2fd !important; color: #007bff !important; transform: scale(1.1); }
+
+        /* 4. User Bar (Chuyển sang tone sáng) */
+        body.glass-ui-mode .tr-user-bar {
+            background: transparent !important; color: #555 !important;
+            border-bottom: 1px solid rgba(0,0,0,0.05) !important;
+        }
+        body.glass-ui-mode .tr-user-name { color: #e17055 !important; }
+
+        /* 5. Toolbar (Search & Filter) */
+        body.glass-ui-mode .tr-toolbar { background: transparent !important; border-bottom: 1px solid rgba(0,0,0,0.05) !important; }
+        body.glass-ui-mode .tr-search-box input, body.glass-ui-mode .tr-filter {
+            background: #f8f9fa !important; border: 1px solid #eee !important; color: #333 !important; border-radius: 12px !important;
+        }
+        body.glass-ui-mode .tr-search-box input:focus { background: #fff !important; border-color: #e17055 !important; box-shadow: 0 0 0 3px rgba(225, 112, 85, 0.15) !important; }
+
+        /* 6. Body & Cards */
+        body.glass-ui-mode .tr-home-body { background: transparent !important; }
+        body.glass-ui-mode .tr-card {
+            background: #ffffff !important; border: 1px solid rgba(0,0,0,0.05) !important;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03) !important; border-radius: 16px !important;
+        }
+        body.glass-ui-mode .tr-card:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 12px 25px rgba(225, 112, 85, 0.15) !important; border-color: rgba(225, 112, 85, 0.3) !important; }
+        body.glass-ui-mode .tr-btn-view-all { border-color: rgba(225, 112, 85, 0.5) !important; background: rgba(225, 112, 85, 0.05) !important; }
+        body.glass-ui-mode .tr-btn-view-all:hover { background: linear-gradient(135deg, #ff9ff3, #e17055) !important; color: #fff !important; border-color: transparent !important; box-shadow: 0 4px 10px rgba(225, 112, 85, 0.3) !important;}
+
+        /* 7. Reader View (Trang đọc truyện) */
+        body.glass-ui-mode .tr-reader-view { background: transparent !important; border-bottom-left-radius: 24px !important; border-bottom-right-radius: 24px !important; }
+        body.glass-ui-mode .tr-reader-info-bar { background: rgba(255,255,255,0.8) !important; backdrop-filter: blur(15px) !important; -webkit-backdrop-filter: blur(15px) !important; box-shadow: 0 2px 10px rgba(0,0,0,0.02) !important; border-bottom: 1px solid rgba(0,0,0,0.05) !important; }
+        body.glass-ui-mode .tr-reader-content-wrap { background: transparent !important; }
+        body.glass-ui-mode .tr-paper { border: 1px solid rgba(0,0,0,0.05) !important; box-shadow: 0 5px 25px rgba(0,0,0,0.05) !important; border-radius: 16px !important;}
+
+        /* 8. Toolbar Nút Bấm Đọc Truyện (Bo góc sâu, gradient lung linh) */
+        body.glass-ui-mode .tr-reader-tools {
+            background: rgba(255, 255, 255, 0.85) !important; backdrop-filter: blur(15px) !important; -webkit-backdrop-filter: blur(15px) !important;
+            border-top: 1px solid rgba(0,0,0,0.05) !important; box-shadow: 0 -5px 25px rgba(0,0,0,0.05) !important;
+            border-bottom-left-radius: 24px !important; border-bottom-right-radius: 24px !important;
+        }
+
+        body.glass-ui-mode .tr-btn-tool {
+            border-radius: 16px !important; border: none !important; color: #fff !important;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2) !important;
+        }
+        body.glass-ui-mode .tr-btn-tool:active { transform: scale(0.92) !important; }
+        
+        body.glass-ui-mode .tr-btn-play { background: linear-gradient(135deg, #00b894, #00cec9) !important; box-shadow: 0 4px 15px rgba(0, 184, 148, 0.4) !important; }
+        body.glass-ui-mode .tr-btn-stop { background: linear-gradient(135deg, #ff7675, #d63031) !important; box-shadow: 0 4px 15px rgba(214, 48, 49, 0.4) !important; }
+        body.glass-ui-mode .tr-btn-settings { background: linear-gradient(135deg, #74b9ff, #0984e3) !important; box-shadow: 0 4px 15px rgba(9, 132, 227, 0.4) !important; }
+        body.glass-ui-mode .tr-btn-sleep { background: linear-gradient(135deg, #a29bfe, #6c5ce7) !important; box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4) !important; }
+
+        /* 9. Setting Panel (Menu Cài đặt mọc lên) */
+        body.glass-ui-mode .tr-settings-panel {
+            background: rgba(255, 255, 255, 0.95) !important; backdrop-filter: blur(20px) !important; -webkit-backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.6) !important; border-radius: 20px !important;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15) !important;
+        }
+        body.glass-ui-mode .tr-nav-select { background: #f8f9fa !important; border: 1px solid #eee !important; border-radius: 8px !important; }
+        
+        /* 10. Nút Đăng nhập/Đăng ký trên User Bar */
+        body.glass-ui-mode #tr-btn-login { background: linear-gradient(135deg, #74b9ff, #0984e3) !important; box-shadow: 0 2px 8px rgba(9, 132, 227, 0.3) !important; border-radius: 8px !important;}
+        body.glass-ui-mode #tr-btn-register { background: linear-gradient(135deg, #00b894, #00cec9) !important; box-shadow: 0 2px 8px rgba(0, 184, 148, 0.3) !important; border-radius: 8px !important;}
+        body.glass-ui-mode #tr-btn-logout { background: linear-gradient(135deg, #ff7675, #d63031) !important; box-shadow: 0 2px 8px rgba(214, 48, 49, 0.3) !important; border-radius: 8px !important;}
+
+        /* 11. Custom Scrollbar cho mượt (tuỳ chọn) */
+        body.glass-ui-mode ::-webkit-scrollbar { width: 6px; }
+        body.glass-ui-mode ::-webkit-scrollbar-track { background: transparent; }
+        body.glass-ui-mode ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+        body.glass-ui-mode ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
     `;
     
     // ===============================================================
