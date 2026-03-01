@@ -1,38 +1,44 @@
 /* 
-   MODULE: NHẮC VIỆC (V6.7 - FIX CACHE & SYNC BUG + AUTO HIDE NAV)
-   - Fix triệt để lỗi "Zombie Closure" gây sinh task mới.
-   - FIX: Vô hiệu hóa Cache của trình duyệt (Browser Cache) khi Sync để luôn lấy data mới nhất.
-   - Clean Object cũ. Chống trùng ID. Block Double Click.
-   - Tự động ẩn Bottom Nav khi mở tool.
+   MODULE: NHẮC VIỆC (V6.8 - GLASS UI & CLEANUP)
+   - Fix: Loại bỏ logic ẩn/hiện Nav để tránh lỗi (Main Script tự quản lý).
+   - New: Hỗ trợ giao diện Glassmorphism (Kính mờ).
+   - Fix: Vô hiệu hóa Cache browser khi Sync.
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE, GM_xmlhttpRequest } = context;
 
     const MY_CSS = `
-        /* Z-INDEX: 2147483646 */
-        #tgdd-reminder-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(3px); z-index:2147483646; justify-content:center; align-items:center; }
+        /* Z-INDEX: 2147483660 (Cao hơn main modal) */
+        #tgdd-reminder-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(3px); z-index:2147483660; justify-content:center; align-items:center; }
         
         .rm-content { background:white; width:95%; max-width:480px; border-radius:15px; padding:20px; box-shadow:0 10px 40px rgba(0,0,0,0.3); animation: popIn 0.3s; font-family: sans-serif; display:flex; flex-direction:column; max-height: 90vh; min-height: 85vh;position: relative; }
         .rm-header { font-size:18px; font-weight:bold; margin-bottom:10px; text-align:center; color:#ff9800; border-bottom:2px solid #eee; padding-bottom:10px; flex-shrink:0; display:flex; justify-content:center; align-items:center; gap: 8px; }
         .rm-btn-close { position:absolute; top:15px; right:15px; background:none; border:none; font-size:24px; color:#999; cursor:pointer; line-height:1; z-index:10; transition:color 0.2s; }
         .rm-btn-close:hover { color:#333; }
+        
         .rm-list-container { flex:1; overflow-y:auto; margin-bottom:15px; border:1px solid #eee; border-radius:8px; background:#f9f9f9; padding:5px; min-height:100px; max-height: 30vh; position:relative; }
+        
         .rm-item { background:white; border-radius:8px; padding:10px; margin-bottom:5px; border:1px solid #e0e0e0; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 5px rgba(0,0,0,0.05); transition: background 0.2s; }
         .rm-item:hover { border-color:#ff9800; }
         .rm-item.editing { background:#fff3e0; border-color:#ff9800; transform: scale(0.99); border-width: 2px; }
+        
         .rm-item-info { flex:1; cursor:pointer; }
         .rm-time { font-weight:bold; color:#d35400; font-size:14px; display:flex; align-items:center; gap:5px; flex-wrap: wrap; }
+        
         .rm-badge { font-size:10px; padding:2px 6px; border-radius:4px; color:white; font-weight:bold; text-transform:uppercase; white-space:nowrap; }
         .rm-badge-daily { background:#4caf50; } 
         .rm-badge-once { background:#607d8b; } 
         .rm-badge-weekly { background:#2196f3; } 
         .rm-badge-monthly { background:#9c27b0; } 
+        
         .rm-text { font-size:12px; color:#555; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; margin-top:3px; }
+        
         .rm-actions { display:flex; align-items:center; gap:5px; }
         .rm-btn-icon { cursor:pointer; padding:5px; border-radius:5px; display:flex; align-items:center; justify-content:center; }
         .rm-btn-edit { color:#2196f3; font-size:18px; }
         .rm-btn-del { color:#e74c3c; font-size:22px; padding:0 10px; font-weight:bold; }
         .rm-btn-edit:hover, .rm-btn-del:hover { background:#eee; }
+        
         .rm-form { border-top:2px solid #eee; padding-top:10px; flex-shrink:0; background:#fff; }
         .rm-row { display:flex; gap:10px; margin-bottom:8px; align-items: flex-end; }
         .rm-col { flex:1; }
@@ -40,7 +46,9 @@
         .rm-label { font-size:11px; font-weight:bold; color:#555; display:block; margin-bottom:3px; }
         .rm-input, .rm-select { width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; box-sizing: border-box; font-size:13px; height: 34px; }
         .rm-input:focus, .rm-select:focus { border-color:#ff9800; outline:none; }
+        
         .rm-group-box { min-height:100px; max-height:110px; overflow-y:auto; border:1px solid #eee; border-radius:6px; padding:5px; background:#fff; }
+        
         .rm-hidden { display: none !important; }
         .rm-btn { width:100%; padding:10px; border:none; color:white; font-weight:bold; border-radius:8px; cursor:pointer; margin-top:5px; transition: 0.2s; }
         .rm-btn-add { background:#4caf50; }
@@ -48,9 +56,65 @@
         .rm-btn-save { background:#2196f3; margin-top:10px; }
         .rm-btn:active { transform:scale(0.98); }
         .rm-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        
         .rm-loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #888; font-size: 13px; }
         .rm-sync-spin { animation: spin 1s linear infinite; font-size: 24px; margin-bottom: 8px; color: #ff9800; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- GLASS UI THEME (Kích hoạt khi body có class glass-ui-mode) --- */
+        body.glass-ui-mode #tgdd-reminder-modal {
+            background: rgba(15, 23, 42, 0.6) !important;
+        }
+        body.glass-ui-mode .rm-content {
+            background: rgba(255, 255, 255, 0.1) !important;
+            backdrop-filter: blur(25px) !important;
+            -webkit-backdrop-filter: blur(25px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+            color: #fff !important;
+        }
+        body.glass-ui-mode .rm-header {
+            background: transparent !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+            color: #FFD700 !important;
+        }
+        
+        body.glass-ui-mode .rm-list-container {
+            background: rgba(0, 0, 0, 0.2) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.1) !important;
+        }
+        body.glass-ui-mode .rm-item {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+            color: #fff !important;
+        }
+        body.glass-ui-mode .rm-item:hover { background: rgba(255, 255, 255, 0.2) !important; border-color: #FFD700 !important; }
+        body.glass-ui-mode .rm-item.editing { background: rgba(255, 152, 0, 0.2) !important; border-color: #FF9800 !important; }
+        
+        body.glass-ui-mode .rm-time { color: #FFD700 !important; }
+        body.glass-ui-mode .rm-text { color: rgba(255,255,255,0.8) !important; }
+        
+        body.glass-ui-mode .rm-form { background: transparent !important; border-top: 1px solid rgba(255, 255, 255, 0.1) !important; }
+        body.glass-ui-mode .rm-label { color: rgba(255,255,255,0.8) !important; }
+        
+        body.glass-ui-mode .rm-input, 
+        body.glass-ui-mode .rm-select,
+        body.glass-ui-mode .rm-group-box {
+            background: rgba(0, 0, 0, 0.3) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            color: white !important;
+        }
+        body.glass-ui-mode .rm-group-box { background: rgba(0, 0, 0, 0.2) !important; }
+
+        body.glass-ui-mode .rm-btn-edit { color: #81d4fa !important; }
+        body.glass-ui-mode .rm-btn-del { color: #ef5350 !important; }
+        body.glass-ui-mode .rm-btn-edit:hover, body.glass-ui-mode .rm-btn-del:hover { background: rgba(255,255,255,0.2) !important; }
+
+        body.glass-ui-mode .rm-btn-add { background: linear-gradient(135deg, #4caf50, #2e7d32) !important; box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3); }
+        body.glass-ui-mode .rm-btn-update { background: linear-gradient(135deg, #FF9800, #EF6C00) !important; box-shadow: 0 4px 10px rgba(255, 152, 0, 0.3); }
+        body.glass-ui-mode .rm-btn-save { background: linear-gradient(135deg, #2196f3, #1565c0) !important; box-shadow: 0 4px 10px rgba(33, 150, 243, 0.3); }
     `;
 
     const runTool = () => {
@@ -218,7 +282,7 @@
                 return;
             }
 
-            // [UPDATE V6.7]: Thêm tham số &nocache=Date.now() để phá Cache của trình duyệt
+            // [UPDATE]: Thêm tham số &nocache=Date.now() để phá Cache của trình duyệt
             const cacheBuster = new Date().getTime();
             
             GM_xmlhttpRequest({
@@ -339,7 +403,6 @@
         // --- SỰ KIỆN ĐÓNG MODAL (Nút X) ---
         document.getElementById('btn-rm-close').onclick = () => { 
             modal.style.display = 'none';
-            toggleBottomNav(true); // Hiện lại Nav 
         };
 
         document.getElementById('rm-mode').onchange = (e) => { updateFormMode(e.target.value); };
@@ -433,7 +496,6 @@
                         if (response.status === 'success') {
                             UI.showToast("✅ Lưu thành công!");
                             modal.style.display = 'none';
-                            toggleBottomNav(true); // Hiện lại Nav khi lưu xong
                         } else { alert("Lỗi Server: " + response.message); }
                     } catch (e) { alert("Lỗi phản hồi Server"); }
                 },
@@ -446,7 +508,6 @@
         if (toastEl) document.body.appendChild(toastEl);
         
         modal.style.display = 'flex';
-        toggleBottomNav(false); // Ẩn Nav ngay khi mở modal
         syncFromCloud();
     };
 
