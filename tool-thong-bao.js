@@ -9,7 +9,7 @@
 
     const MY_CSS = `
         #tgdd-notif-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(3px); z-index:2147483646; justify-content:center; align-items:center; }
-        .nt-content { background:white; width:95%; max-width:500px; border-radius:16px; padding:0; box-shadow:0 15px 50px rgba(0,0,0,0.3); animation: popIn 0.3s; display:flex; flex-direction:column; max-height:90vh; min-height: 90vh; overflow:hidden; position:relative; }
+        .nt-content { background:white; width:95%; max-width:500px; border-radius:16px; padding:0; box-shadow:0 15px 50px rgba(0,0,0,0.3); animation: popIn 0.3s; display:flex; flex-direction:column; max-height:80vh; min-height: 80vh; overflow:hidden; position:relative; }
         .nt-header { background: linear-gradient(135deg, #FF9800, #F57C00); padding: 15px; color: white; font-weight: bold; font-size: 16px; display: flex; align-items: center; gap: 10px; }
         .nt-body { padding: 15px; overflow-y: auto; flex: 1; background: #f4f6f8; }
         .nt-footer { padding: 15px; background: white; border-top: 1px solid #eee; display: flex; gap: 10px; }
