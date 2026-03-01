@@ -1,31 +1,93 @@
 /* 
-   MODULE: AUTO TRIỂN KHAI
+   MODULE: AUTO TRIỂN KHAI (V2 - GLASS UI & CLEANUP)
+   - Clean: Bỏ logic ẩn/hiện Nav (Main Script tự quản lý).
+   - New: Giao diện Glassmorphism.
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE, GM_xmlhttpRequest } = context;
 
     const MY_CSS = `
-        #tgdd-deploy-tool-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(3px); z-index:2147483646; justify-content:center; align-items:center; }
+        /* Z-INDEX: 2147483660 */
+        #tgdd-deploy-tool-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(3px); z-index:2147483660; justify-content:center; align-items:center; }
+        
         .dp-content { background:white; width:95%; max-width:450px; border-radius:15px; padding:20px; box-shadow:0 10px 40px rgba(0,0,0,0.3); animation: popIn 0.3s; font-family: sans-serif; display:flex; flex-direction:column; max-height:90vh; position: relative; }
         .dp-header { font-size:18px; font-weight:bold; margin-bottom:10px; text-align:center; color:#28a745; border-bottom:2px solid #eee; padding-bottom:10px; flex-shrink:0; }
         .dp-btn-close { position:absolute; top:15px; right:15px; background:none; border:none; font-size:24px; color:#999; cursor:pointer; line-height:1; z-index:10; }
+        
         .dp-list-container { flex:1; overflow-y:auto; margin-bottom:15px; border:1px solid #eee; border-radius:8px; background:#f9f9f9; padding:5px; min-height:120px; }
+        
         .dp-item { background:white; border-radius:8px; padding:10px; margin-bottom:5px; border:1px solid #e0e0e0; display:flex; justify-content:space-between; align-items:center; transition: background 0.2s; }
         .dp-item.editing { background:#e8f5e9; border-color:#28a745; }
+        
         .dp-time { font-weight:bold; color:#2e7d32; font-size:14px; display:flex; align-items:center; gap: 5px; }
         .dp-text { font-size:13px; font-weight: 600; color:#333; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:200px; margin-top: 2px;}
         .dp-sub-text { font-size: 10px; color: #888; margin-top: 2px; }
         .dp-badge { font-size:10px; padding:2px 6px; border-radius:4px; color:white; font-weight:bold; background:#28a745; }
+        
         .dp-form { border-top:2px solid #eee; padding-top:10px; flex-shrink:0; background:#fff; }
         .dp-label { font-size:11px; font-weight:bold; color:#555; display:block; margin-bottom:3px; }
         .dp-input { width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; box-sizing: border-box; font-size:13px; }
         .dp-group-box { min-height:100px; max-height:110px; overflow-y:auto; border:1px solid #eee; border-radius:6px; padding:5px; background:#fff; }
+        
         .dp-toggle { display:flex; align-items:center; gap:5px; cursor:pointer; font-size:12px; font-weight:bold; color:#28a745; margin-bottom:5px; }
         .dp-btn { width:100%; padding:10px; border:none; color:white; font-weight:bold; border-radius:8px; cursor:pointer; margin-top:5px; }
         .dp-btn-add { background:#28a745; }
         .dp-btn-save { background:#007bff; margin-top:10px; }
         .dp-icon-btn { cursor:pointer; padding:5px; font-size:16px; }
         .dp-loader { text-align:center; padding:20px; color:#666; font-size:12px; font-style:italic;}
+
+        /* --- GLASS UI THEME --- */
+        body.glass-ui-mode #tgdd-deploy-tool-modal {
+            background: rgba(15, 23, 42, 0.6) !important;
+        }
+        body.glass-ui-mode .dp-content {
+            background: rgba(255, 255, 255, 0.1) !important;
+            backdrop-filter: blur(25px) !important;
+            -webkit-backdrop-filter: blur(25px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+            color: #fff !important;
+        }
+        body.glass-ui-mode .dp-header {
+            background: transparent !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: #FFD700 !important;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+        }
+        body.glass-ui-mode .dp-list-container {
+            background: rgba(0, 0, 0, 0.2) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.1) !important;
+        }
+        body.glass-ui-mode .dp-item {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+            color: #fff !important;
+        }
+        body.glass-ui-mode .dp-item:hover { background: rgba(255, 255, 255, 0.2) !important; border-color: #FFD700 !important; }
+        body.glass-ui-mode .dp-item.editing { background: rgba(40, 167, 69, 0.2) !important; border-color: #28a745 !important; }
+        
+        body.glass-ui-mode .dp-text { color: #fff !important; }
+        body.glass-ui-mode .dp-time { color: #FFD700 !important; }
+        body.glass-ui-mode .dp-badge { background: rgba(40, 167, 69, 0.8) !important; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        
+        body.glass-ui-mode .dp-form { background: transparent !important; border-top: 1px solid rgba(255, 255, 255, 0.1) !important; }
+        body.glass-ui-mode .dp-label { color: rgba(255,255,255,0.8) !important; }
+        body.glass-ui-mode .dp-toggle { color: #00e676 !important; }
+        
+        body.glass-ui-mode .dp-input,
+        body.glass-ui-mode .dp-group-box {
+            background: rgba(0, 0, 0, 0.3) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            color: white !important;
+        }
+        body.glass-ui-mode .dp-group-box { background: rgba(0, 0, 0, 0.2) !important; }
+        
+        body.glass-ui-mode .dp-icon-btn { color: #fff !important; }
+        body.glass-ui-mode #dp-del-btn { color: #ef5350 !important; }
+
+        body.glass-ui-mode .dp-btn-add { background: linear-gradient(135deg, #4caf50, #2e7d32) !important; box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3); }
+        body.glass-ui-mode .dp-btn-save { background: linear-gradient(135deg, #2196f3, #1565c0) !important; box-shadow: 0 4px 10px rgba(33, 150, 243, 0.3); }
     `;
 
     const runTool = () => {
@@ -227,7 +289,6 @@
         // --- SỰ KIỆN ĐÓNG MODAL (Nút X) ---
         document.getElementById('btn-dp-close').onclick = () => { 
             modal.style.display = 'none'; 
-            toggleBottomNav(true); // Hiện lại Nav
         };
         
         document.getElementById('dp-chk-daily').onchange = (e) => {
@@ -299,7 +360,6 @@
                             UTILS.savePersistentConfig(userCfg);
                             
                             modal.style.display = 'none';
-                            toggleBottomNav(true); // Hiện lại Nav khi lưu xong và đóng modal
                         } else { alert("Lỗi: " + response.message); }
                     } catch (e) { alert("Lỗi phản hồi Server"); }
                 },
@@ -308,7 +368,6 @@
         };
 
         modal.style.display = 'flex';
-        toggleBottomNav(false); // Ẩn Nav ngay khi mở modal
         loadFromCloud();
     };
 
