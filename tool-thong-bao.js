@@ -1,20 +1,19 @@
 /* 
-   MODULE: QUẢN LÝ THÔNG BÁO (NOTIFICATION MANAGER)
-   - Gửi thông báo từ Admin tới User (Lưu vào Cột G)
-   - Theo dõi trạng thái Đã xem/Chưa xem
-   - Tích hợp tìm kiếm người dùng (Real-time)
+   MODULE: QUẢN LÝ THÔNG BÁO (NOTIFICATION MANAGER) - GLASS UI EDITION
+   - Clean: Đã bỏ logic ẩn/hiện Bottom Nav (để Main Script tự quản lý)
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE, GM_xmlhttpRequest } = context;
 
     const MY_CSS = `
-        #tgdd-notif-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(3px); z-index:2147483646; justify-content:center; align-items:center; }
-        .nt-content { background:white; width:95%; max-width:500px; border-radius:16px; padding:0; box-shadow:0 15px 50px rgba(0,0,0,0.3); animation: popIn 0.3s; display:flex; flex-direction:column; max-height:80vh; min-height: 80vh; overflow:hidden; position:relative; }
+        /* --- STANDARD THEME (Mặc định) --- */
+        #tgdd-notif-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(3px); z-index:2147483660; justify-content:center; align-items:center; }
+        .nt-content { background:white; width:95%; max-width:500px; border-radius:16px; padding:0; box-shadow:0 15px 50px rgba(0,0,0,0.3); animation: popIn 0.3s; display:flex; flex-direction:column; max-height:85vh; min-height: 500px; overflow:hidden; position:relative; }
         .nt-header { background: linear-gradient(135deg, #FF9800, #F57C00); padding: 15px; color: white; font-weight: bold; font-size: 16px; display: flex; align-items: center; gap: 10px; }
         .nt-body { padding: 15px; overflow-y: auto; flex: 1; background: #f4f6f8; }
         .nt-footer { padding: 15px; background: white; border-top: 1px solid #eee; display: flex; gap: 10px; }
         
-        .nt-btn-close { position:absolute; top:10px; right:15px; background:none; border:none; font-size:28px; color:rgba(255,255,255,0.8); cursor:pointer; line-height:1; }
+        .nt-btn-close { position:absolute; top:10px; right:15px; background:none; border:none; font-size:28px; color:rgba(255,255,255,0.8); cursor:pointer; line-height:1; z-index: 10; }
         .nt-btn-close:hover { color: white; }
 
         .nt-input-area { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px; }
@@ -23,13 +22,12 @@
         
         .nt-list-header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; font-size: 13px; font-weight: bold; color: #555; }
         
-        /* CSS cho thanh tìm kiếm */
         .nt-search-box { margin-bottom: 10px; position: relative; }
         .nt-search-input { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 8px 12px 8px 32px; font-family: inherit; font-size: 13px; box-sizing: border-box; transition: 0.2s; }
         .nt-search-input:focus { outline: none; border-color: #FF9800; box-shadow: 0 0 0 2px rgba(255,152,0,0.2); }
         .nt-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 14px; opacity: 0.5; pointer-events: none; }
 
-        .nt-list-container { background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow: hidden; }
+        .nt-list-container { background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #eee; }
         .nt-user-row { display: flex; align-items: center; padding: 10px 15px; border-bottom: 1px solid #f0f0f0; transition: 0.2s; cursor: pointer; }
         .nt-user-row:last-child { border-bottom: none; }
         .nt-user-row:hover { background: #fff8e1; }
@@ -53,6 +51,66 @@
         .nt-loader { text-align: center; padding: 30px; color: #888; font-size: 13px; }
         .nt-spin { display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(0,0,0,0.1); border-top-color: #FF9800; border-radius: 50%; animation: nt-spin 1s linear infinite; vertical-align: middle; margin-right: 5px; }
         @keyframes nt-spin { to { transform: rotate(360deg); } }
+
+        /* --- GLASS UI THEME (Kích hoạt khi body có class glass-ui-mode) --- */
+        body.glass-ui-mode #tgdd-notif-modal {
+            background: rgba(15, 23, 42, 0.6) !important;
+        }
+        body.glass-ui-mode .nt-content {
+            background: rgba(255, 255, 255, 0.1) !important;
+            backdrop-filter: blur(25px) !important;
+            -webkit-backdrop-filter: blur(25px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+            color: #fff !important;
+        }
+        body.glass-ui-mode .nt-header {
+            background: transparent !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+        }
+        body.glass-ui-mode .nt-header svg { fill: #FFD700 !important; filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.5)); }
+        
+        body.glass-ui-mode .nt-body { background: transparent !important; }
+        body.glass-ui-mode .nt-footer { background: transparent !important; border-top: 1px solid rgba(255, 255, 255, 0.1) !important; }
+
+        body.glass-ui-mode .nt-input-area,
+        body.glass-ui-mode .nt-list-container {
+            background: rgba(0, 0, 0, 0.2) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.1) !important;
+        }
+        
+        body.glass-ui-mode .nt-textarea, 
+        body.glass-ui-mode .nt-search-input {
+            background: rgba(0, 0, 0, 0.3) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            color: white !important;
+        }
+        body.glass-ui-mode .nt-textarea::placeholder, 
+        body.glass-ui-mode .nt-search-input::placeholder { color: rgba(255,255,255,0.5); }
+
+        body.glass-ui-mode .nt-list-header { color: rgba(255,255,255,0.8) !important; }
+        body.glass-ui-mode .nt-btn-reload { color: #81d4fa !important; }
+        body.glass-ui-mode .nt-search-icon { color: rgba(255,255,255,0.6); }
+
+        body.glass-ui-mode .nt-user-row { border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important; }
+        body.glass-ui-mode .nt-user-row:hover { background: rgba(255, 255, 255, 0.1) !important; }
+        body.glass-ui-mode .nt-user-name { color: #fff !important; }
+        body.glass-ui-mode .nt-user-status span { color: rgba(255,255,255,0.7) !important; }
+        
+        body.glass-ui-mode .nt-badge-empty { background: rgba(255,255,255,0.1) !important; color: #aaa !important; border:none !important; }
+        
+        body.glass-ui-mode .nt-btn-send {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.8), rgba(255, 140, 0, 0.8)) !important;
+            backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        body.glass-ui-mode .nt-btn-clear {
+            background: rgba(255, 255, 255, 0.1) !important;
+            color: #ddd !important; border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+        body.glass-ui-mode .nt-btn-clear:hover { background: rgba(255, 255, 255, 0.2) !important; }
     `;
 
     const runTool = () => {
@@ -98,15 +156,14 @@
                             }
                         }
                         renderUserList();
-                        // Reset thanh tìm kiếm sau khi tải lại
                         const searchInput = document.getElementById('nt-search-input');
                         if (searchInput) searchInput.value = "";
                     } else {
-                        if(container) container.innerHTML = '<div class="nt-loader" style="color:red">❌ Lỗi tải dữ liệu!</div>';
+                        if(container) container.innerHTML = '<div class="nt-loader" style="color:#ff6b6b">❌ Lỗi tải dữ liệu!</div>';
                     }
                 },
                 onerror: () => {
-                    if(container) container.innerHTML = '<div class="nt-loader" style="color:red">❌ Lỗi kết nối mạng!</div>';
+                    if(container) container.innerHTML = '<div class="nt-loader" style="color:#ff6b6b">❌ Lỗi kết nối mạng!</div>';
                 }
             });
         };
@@ -134,7 +191,7 @@
                         msgPreview = u.notif.msg;
                     } else {
                         badgeHtml = '<span class="nt-badge nt-badge-unread">🔴 Chưa xem</span>';
-                        msgPreview = `<b style="color:#c62828">${u.notif.msg}</b>`;
+                        msgPreview = `<b style="color:#e53935">${u.notif.msg}</b>`;
                     }
                 }
 
@@ -157,7 +214,7 @@
             });
         };
 
-        // --- UI ---
+        // --- UI STRUCTURE ---
         modal = document.createElement('div');
         modal.id = modalId;
         modal.innerHTML = `
@@ -170,7 +227,7 @@
                 
                 <div class="nt-body">
                     <div class="nt-input-area">
-                        <label style="font-weight:bold; color:#333; display:block; margin-bottom:5px;">Nội dung tin nhắn:</label>
+                        <label style="font-weight:bold; color:inherit; display:block; margin-bottom:5px;">Nội dung tin nhắn:</label>
                         <textarea id="nt-msg-input" class="nt-textarea" placeholder="Nhập thông báo muốn gửi..."></textarea>
                     </div>
 
@@ -182,10 +239,9 @@
                         </div>
                     </div>
 
-                    <!-- THÊM THANH TÌM KIẾM Ở ĐÂY -->
                     <div class="nt-search-box">
                         <span class="nt-search-icon">🔍</span>
-                        <input type="text" id="nt-search-input" class="nt-search-input" placeholder="Nhập tên để tìm kiếm nhanh...">
+                        <input type="text" id="nt-search-input" class="nt-search-input" placeholder="Tìm tên người dùng...">
                     </div>
 
                     <div class="nt-list-container" id="nt-list-body">
@@ -201,19 +257,22 @@
         `;
         document.body.appendChild(modal);
 
-        // --- BINDING EVENTS ---
-        document.getElementById('btn-nt-close').onclick = () => { modal.style.display = 'none'; toggleBottomNav(true); };
+        // --- EVENTS ---
+        document.getElementById('btn-nt-close').onclick = () => { 
+            modal.style.display = 'none'; 
+        };
         document.getElementById('btn-nt-reload').onclick = loadUsers;
         
-        // --- TÌM KIẾM REAL-TIME ---
+        // --- TÌM KIẾM TIẾNG VIỆT (Fix lỗi dấu) ---
         document.getElementById('nt-search-input').addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase().trim();
+            const searchTerm = UTILS.toUltraSlug(e.target.value); // Dùng hàm khử dấu của main script
             const rows = document.querySelectorAll('.nt-user-row');
             
             rows.forEach(row => {
-                const userName = row.querySelector('.nt-user-name').innerText.toLowerCase();
-                // Nếu tên chứa từ khóa tìm kiếm thì hiện, không thì ẩn bằng CSS
-                if (userName.includes(searchTerm)) {
+                const userNameRaw = row.querySelector('.nt-user-name').innerText;
+                const userNameSlug = UTILS.toUltraSlug(userNameRaw);
+                
+                if (userNameSlug.includes(searchTerm)) {
                     row.style.display = 'flex';
                 } else {
                     row.style.display = 'none';
@@ -221,11 +280,9 @@
             });
         });
         
-        // --- CHỌN TẤT CẢ (ĐÃ CẢI TIẾN ĐỂ CHỈ CHỌN NHỮNG DÒNG ĐANG HIỂN THỊ) ---
         let isAllSelected = false;
         document.getElementById('btn-nt-select-all').onclick = () => {
             isAllSelected = !isAllSelected;
-            // Chỉ lấy các rows đang hiển thị (không bị ẩn bởi ô tìm kiếm)
             const visibleRows = Array.from(document.querySelectorAll('.nt-user-row')).filter(row => row.style.display !== 'none');
             
             visibleRows.forEach(row => {
@@ -233,34 +290,6 @@
                 if(chk) chk.checked = isAllSelected;
             });
             document.getElementById('btn-nt-select-all').innerText = isAllSelected ? "Bỏ chọn" : "Chọn tất cả";
-        };
-
-        // GỬI THÔNG BÁO
-        document.getElementById('btn-nt-send').onclick = () => {
-            const msg = document.getElementById('nt-msg-input').value.trim();
-            if(!msg) return alert("Vui lòng nhập nội dung thông báo!");
-
-            const selectedUsers = [];
-            document.querySelectorAll('.nt-chk:checked').forEach(chk => {
-                selectedUsers.push(chk.value);
-            });
-
-            if(selectedUsers.length === 0) return alert("Vui lòng chọn ít nhất 1 người nhận!");
-            if(!confirm(`Bạn có chắc muốn gửi thông báo cho ${selectedUsers.length} người?`)) return;
-
-            updateColumnG(selectedUsers, msg, false);
-        };
-
-        // XÓA THÔNG BÁO
-        document.getElementById('btn-nt-reset').onclick = () => {
-             const selectedUsers = [];
-            document.querySelectorAll('.nt-chk:checked').forEach(chk => {
-                selectedUsers.push(chk.value);
-            });
-            if(selectedUsers.length === 0) return alert("Chọn người cần xóa thông báo!");
-            if(!confirm(`Xóa thông báo của ${selectedUsers.length} người này?`)) return;
-
-            updateColumnG(selectedUsers, "", true);
         };
 
         const updateColumnG = (targetUserNames, message, isClear) => {
@@ -306,9 +335,34 @@
             });
         };
 
-        // --- MAIN START ---
+        document.getElementById('btn-nt-send').onclick = () => {
+            const msg = document.getElementById('nt-msg-input').value.trim();
+            if(!msg) return alert("Vui lòng nhập nội dung thông báo!");
+
+            const selectedUsers = [];
+            document.querySelectorAll('.nt-chk:checked').forEach(chk => {
+                selectedUsers.push(chk.value);
+            });
+
+            if(selectedUsers.length === 0) return alert("Vui lòng chọn ít nhất 1 người nhận!");
+            if(!confirm(`Bạn có chắc muốn gửi thông báo cho ${selectedUsers.length} người?`)) return;
+
+            updateColumnG(selectedUsers, msg, false);
+        };
+
+        document.getElementById('btn-nt-reset').onclick = () => {
+             const selectedUsers = [];
+            document.querySelectorAll('.nt-chk:checked').forEach(chk => {
+                selectedUsers.push(chk.value);
+            });
+            if(selectedUsers.length === 0) return alert("Chọn người cần xóa thông báo!");
+            if(!confirm(`Xóa thông báo của ${selectedUsers.length} người này?`)) return;
+
+            updateColumnG(selectedUsers, "", true);
+        };
+
+        // --- START ---
         modal.style.display = 'flex';
-        toggleBottomNav(false);
         loadUsers();
     };
 
