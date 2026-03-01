@@ -180,7 +180,6 @@
             margin-top: 15px !important;
         }
     `;
-    `;
 
     const runTool = () => {
         const modalId = 'tgdd-reminder-modal';
