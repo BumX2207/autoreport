@@ -36,58 +36,120 @@
         .dp-icon-btn { cursor:pointer; padding:5px; font-size:16px; }
         .dp-loader { text-align:center; padding:20px; color:#666; font-size:12px; font-style:italic;}
 
-        /* --- GLASS UI THEME --- */
+        /* =========================================================
+           --- GLASS UI THEME (ĐỒNG BỘ VỚI MAIN SCRIPT) ---
+           ========================================================= */
+        
+        /* 1. Nền Overlay ngoài cùng (Gradient tối + Mờ) */
         body.glass-ui-mode #tgdd-deploy-tool-modal {
-            background: rgba(15, 23, 42, 0.6) !important;
+            background: radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.25), transparent 50%),
+                        radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.25), transparent 50%),
+                        rgba(15, 23, 42, 0.8) !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
         }
+
+        /* 2. Vỏ Modal Glass (Khung viền mờ trong suốt) */
         body.glass-ui-mode .dp-content {
-            background: rgba(255, 255, 255, 0.1) !important;
+            position: relative !important;
+            background: rgba(255, 255, 255, 0.2) !important;
             backdrop-filter: blur(25px) !important;
             -webkit-backdrop-filter: blur(25px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
-            color: #fff !important;
+            border: 1px solid rgba(255, 255, 255, 0.6) !important;
+            border-radius: 28px !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255,255,255,0.3) !important;
+            padding: 32px 24px 24px 24px !important;
+            z-index: 1;
+            color: #333 !important; /* Chữ tối vì lõi màu trắng */
         }
+
+        /* 3. Lõi Modal Trắng (Tạo hiệu ứng viền kính) */
+        body.glass-ui-mode .dp-content::before {
+            content: "" !important; position: absolute !important;
+            top: 8px !important; left: 8px !important; right: 8px !important; bottom: 8px !important;
+            background: #ffffff !important; border-radius: 20px !important;
+            z-index: -1 !important; box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
+        }
+        body.glass-ui-mode .dp-content > * { position: relative; z-index: 2; }
+
+        /* 4. Nút Đóng (X) - Tròn, nền xám nhạt, đổi màu khi hover */
+        body.glass-ui-mode .dp-btn-close {
+            position: absolute !important; top: 16px !important; right: 16px !important;
+            background: #f1f3f5 !important; width: 32px !important; height: 32px !important;
+            border-radius: 50% !important; display: flex !important; justify-content: center !important; align-items: center !important;
+            font-size: 18px !important; color: #555 !important; box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
+            border: none !important; cursor: pointer !important; z-index: 10 !important;
+            transition: all 0.2s ease !important;
+        }
+        body.glass-ui-mode .dp-btn-close:hover { background: #fee2e2 !important; color: #ef4444 !important; transform: scale(1.1); }
+
+        /* 5. Header (Tút lại mượt hơn) */
         body.glass-ui-mode .dp-header {
             background: transparent !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-            color: #FFD700 !important;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+            border-bottom: 2px solid rgba(0,0,0,0.05) !important;
+            color: #28a745 !important;
+            text-shadow: none !important;
+            padding-top: 5px !important;
         }
+
+        /* 6. Danh sách & Item (Đưa về tone sáng cho hợp với lõi trắng) */
         body.glass-ui-mode .dp-list-container {
-            background: rgba(0, 0, 0, 0.2) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            box-shadow: inset 0 2px 5px rgba(0,0,0,0.1) !important;
+            background: #f8f9fa !important;
+            border: 1px solid rgba(0,0,0,0.05) !important;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.02) !important;
         }
         body.glass-ui-mode .dp-item {
-            background: rgba(255, 255, 255, 0.1) !important;
-            border: 1px solid rgba(255, 255, 255, 0.05) !important;
-            color: #fff !important;
+            background: #ffffff !important;
+            border: 1px solid #eee !important;
+            color: #333 !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
         }
-        body.glass-ui-mode .dp-item:hover { background: rgba(255, 255, 255, 0.2) !important; border-color: #FFD700 !important; }
-        body.glass-ui-mode .dp-item.editing { background: rgba(40, 167, 69, 0.2) !important; border-color: #28a745 !important; }
+        body.glass-ui-mode .dp-item:hover { background: #f1f3f5 !important; border-color: #007bff !important; }
+        body.glass-ui-mode .dp-item.editing { background: #e8f5e9 !important; border-color: #28a745 !important; }
         
-        body.glass-ui-mode .dp-text { color: #fff !important; }
-        body.glass-ui-mode .dp-time { color: #FFD700 !important; }
-        body.glass-ui-mode .dp-badge { background: rgba(40, 167, 69, 0.8) !important; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        
-        body.glass-ui-mode .dp-form { background: transparent !important; border-top: 1px solid rgba(255, 255, 255, 0.1) !important; }
-        body.glass-ui-mode .dp-label { color: rgba(255,255,255,0.8) !important; }
-        body.glass-ui-mode .dp-toggle { color: #00e676 !important; }
+        body.glass-ui-mode .dp-text { color: #333 !important; }
+        body.glass-ui-mode .dp-time { color: #2e7d32 !important; }
+        body.glass-ui-mode .dp-badge { background: #28a745 !important; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
+        /* 7. Form & Input */
+        body.glass-ui-mode .dp-form { background: transparent !important; border-top: 1px solid rgba(0,0,0,0.05) !important; }
+        body.glass-ui-mode .dp-label { color: #555 !important; }
         
         body.glass-ui-mode .dp-input,
         body.glass-ui-mode .dp-group-box {
-            background: rgba(0, 0, 0, 0.3) !important;
-            border: 1px solid rgba(255, 255, 255, 0.15) !important;
-            color: white !important;
+            background: #fff !important;
+            border: 1px solid #ddd !important;
+            color: #333 !important;
         }
-        body.glass-ui-mode .dp-group-box { background: rgba(0, 0, 0, 0.2) !important; }
+        body.glass-ui-mode .dp-group-box { background: #f8f9fa !important; }
         
-        body.glass-ui-mode .dp-icon-btn { color: #fff !important; }
-        body.glass-ui-mode #dp-del-btn { color: #ef5350 !important; }
+        /* 8. Nút Icon nhỏ */
+        body.glass-ui-mode .dp-icon-btn { color: #888 !important; }
+        body.glass-ui-mode .dp-icon-btn:hover { color: #007bff !important; }
+        body.glass-ui-mode [id^="dp-del-"] { color: #ef5350 !important; }
 
-        body.glass-ui-mode .dp-btn-add { background: linear-gradient(135deg, #4caf50, #2e7d32) !important; box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3); }
-        body.glass-ui-mode .dp-btn-save { background: linear-gradient(135deg, #2196f3, #1565c0) !important; box-shadow: 0 4px 10px rgba(33, 150, 243, 0.3); }
+        /* 9. Nút Bấm Chính (Add, Save) - Form dáng hiện đại, có gradient và bo góc sâu */
+        body.glass-ui-mode .dp-btn {
+            border-radius: 12px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            font-weight: bold !important;
+            border: none !important;
+            transition: transform 0.2s, box-shadow 0.2s !important;
+        }
+        body.glass-ui-mode .dp-btn:active { transform: scale(0.96) !important; }
+
+        body.glass-ui-mode .dp-btn-add { 
+            background: linear-gradient(135deg, #28a745, #218838) !important; 
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3) !important; 
+        }
+        body.glass-ui-mode .dp-btn-save { 
+            background: linear-gradient(135deg, #007bff, #0056b3) !important; 
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.35) !important; 
+            border-radius: 16px !important; /* Nút save to và bo tròn nhiều hơn chút */
+            padding: 12px !important;
+            margin-top: 15px !important;
+        }
     `;
 
     const runTool = () => {
