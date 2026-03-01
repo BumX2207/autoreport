@@ -31,18 +31,6 @@
     const runTool = () => {
         const modalId = 'tgdd-deploy-tool-modal';
         let modal = document.getElementById(modalId);
-        
-        // --- LOGIC ẨN/HIỆN BOTTOM NAV ---
-        const toggleBottomNav = (show) => {
-            const bottomNav = document.getElementById('tgdd-bottom-nav');
-            if (bottomNav) {
-                if (show) {
-                    bottomNav.classList.add('show-nav'); // Hiện lại (trượt lên)
-                } else {
-                    bottomNav.classList.remove('show-nav'); // Ẩn đi (trượt xuống)
-                }
-            }
-        };
 
         if (modal) {
             modal.remove();
