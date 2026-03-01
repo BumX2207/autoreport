@@ -53,76 +53,131 @@
         .nt-spin { display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(0,0,0,0.1); border-top-color: #FF9800; border-radius: 50%; animation: nt-spin 1s linear infinite; vertical-align: middle; margin-right: 5px; }
         @keyframes nt-spin { to { transform: rotate(360deg); } }
 
-        /* --- GLASS UI THEME (Kích hoạt khi body có class glass-ui-mode) --- */
+        /* =========================================================
+           --- GLASS UI THEME (ĐỒNG BỘ VỚI MAIN SCRIPT) ---
+           ========================================================= */
+        
+        /* 1. Nền Overlay ngoài cùng (Gradient tối + Mờ) */
         body.glass-ui-mode #tgdd-notif-modal {
-            background: rgba(15, 23, 42, 0.6) !important;
+            background: radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.25), transparent 50%),
+                        radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.25), transparent 50%),
+                        rgba(15, 23, 42, 0.8) !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
         }
+
+        /* 2. Vỏ Modal Glass (Khung viền mờ trong suốt) */
         body.glass-ui-mode .nt-content {
-            background: rgba(255, 255, 255, 0.1) !important;
+            position: relative !important;
+            background: rgba(255, 255, 255, 0.2) !important;
             backdrop-filter: blur(25px) !important;
             -webkit-backdrop-filter: blur(25px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
-            color: #fff !important;
+            border: 1px solid rgba(255, 255, 255, 0.6) !important;
+            border-radius: 28px !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255,255,255,0.3) !important;
+            padding: 32px 24px 24px 24px !important;
+            z-index: 1;
+            color: #333 !important; /* Chữ tối vì lõi màu trắng */
         }
+
+        /* 3. Lõi Modal Trắng (Tạo hiệu ứng viền kính) */
+        body.glass-ui-mode .nt-content::before {
+            content: "" !important; position: absolute !important;
+            top: 8px !important; left: 8px !important; right: 8px !important; bottom: 8px !important;
+            background: #ffffff !important; border-radius: 20px !important;
+            z-index: -1 !important; box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
+        }
+        body.glass-ui-mode .nt-content > * { position: relative; z-index: 2; }
+
+        /* 4. Nút Đóng (X) - Tròn, nền xám nhạt, đổi màu khi hover */
+        body.glass-ui-mode .nt-btn-close {
+            position: absolute !important; top: 16px !important; right: 16px !important;
+            background: #f1f3f5 !important; width: 32px !important; height: 32px !important;
+            border-radius: 50% !important; display: flex !important; justify-content: center !important; align-items: center !important;
+            font-size: 18px !important; color: #555 !important; box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
+            border: none !important; cursor: pointer !important; z-index: 10 !important;
+            transition: all 0.2s ease !important;
+        }
+        body.glass-ui-mode .nt-btn-close:hover { background: #fee2e2 !important; color: #ef4444 !important; transform: scale(1.1); }
+
+        /* 5. Header (Bỏ nền cam khối, dùng màu cam cho chữ và icon) */
         body.glass-ui-mode .nt-header {
             background: transparent !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+            border-bottom: 2px solid rgba(0,0,0,0.05) !important;
+            color: #ff9800 !important;
+            text-shadow: none !important;
+            padding: 5px 0 15px 0 !important; /* Gọn lại do có padding của khung vỏ */
         }
-        body.glass-ui-mode .nt-header svg { fill: #FFD700 !important; filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.5)); }
+        body.glass-ui-mode .nt-header svg { fill: #ff9800 !important; filter: none !important; }
         
-        body.glass-ui-mode .nt-body { background: transparent !important; }
-        body.glass-ui-mode .nt-footer { background: transparent !important; border-top: 1px solid rgba(255, 255, 255, 0.1) !important; }
+        body.glass-ui-mode .nt-body { background: transparent !important; padding: 15px 0 !important; }
+        body.glass-ui-mode .nt-footer { background: transparent !important; border-top: 1px solid rgba(0,0,0,0.05) !important; padding: 15px 0 0 0 !important; }
 
+        /* 6. Form, Khung danh sách và Input (Đưa về tone sáng, chữ tối) */
         body.glass-ui-mode .nt-input-area,
         body.glass-ui-mode .nt-list-container {
-            background: rgba(0, 0, 0, 0.2) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            box-shadow: inset 0 2px 5px rgba(0,0,0,0.1) !important;
+            background: #f8f9fa !important;
+            border: 1px solid rgba(0,0,0,0.05) !important;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.02) !important;
         }
         
         body.glass-ui-mode .nt-textarea, 
         body.glass-ui-mode .nt-search-input {
-            background: rgba(0, 0, 0, 0.3) !important;
-            border: 1px solid rgba(255, 255, 255, 0.15) !important;
-            color: white !important;
+            background: #fff !important;
+            border: 1px solid #ddd !important;
+            color: #333 !important;
         }
         body.glass-ui-mode .nt-textarea::placeholder, 
-        body.glass-ui-mode .nt-search-input::placeholder { color: rgba(255,255,255,0.5); }
+        body.glass-ui-mode .nt-search-input::placeholder { color: #aaa !important; }
 
-        body.glass-ui-mode .nt-list-header { color: rgba(255,255,255,0.8) !important; }
-        body.glass-ui-mode .nt-btn-reload { color: #81d4fa !important; }
-        body.glass-ui-mode .nt-search-icon { color: rgba(255,255,255,0.6); }
+        body.glass-ui-mode .nt-list-header { color: #555 !important; }
+        body.glass-ui-mode .nt-btn-reload { color: #007bff !important; }
+        body.glass-ui-mode .nt-search-icon { color: #999 !important; }
 
-        body.glass-ui-mode .nt-user-row { border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important; }
-        body.glass-ui-mode .nt-user-row:hover { background: rgba(255, 255, 255, 0.1) !important; }
-        body.glass-ui-mode .nt-user-name { color: #fff !important; }
-        body.glass-ui-mode .nt-user-status span { color: rgba(255,255,255,0.7) !important; }
+        /* 7. Danh sách User */
+        body.glass-ui-mode .nt-user-row { border-bottom: 1px solid #eee !important; background: #fff !important; }
+        body.glass-ui-mode .nt-user-row:hover { background: #f1f3f5 !important; }
+        body.glass-ui-mode .nt-user-name { color: #333 !important; }
+        body.glass-ui-mode .nt-user-status span:not([class^="nt-badge"]) { color: #777 !important; }
         
-        /* FIX MÀU BADGE CHO GLASS MODE: Dùng màu sáng để nổi trên nền tối */
+        /* 8. Fix Màu Badge (Dùng màu sắc nét nổi trên nền trắng) */
         body.glass-ui-mode .nt-badge-read { 
-            background: rgba(0, 230, 118, 0.15) !important; 
-            color: #00e676 !important; /* Xanh lá sáng */
-            border: 1px solid rgba(0, 230, 118, 0.4) !important; 
+            background: #e8f5e9 !important; 
+            color: #2e7d32 !important; 
+            border: 1px solid #c8e6c9 !important; 
         }
         body.glass-ui-mode .nt-badge-unread { 
-            background: rgba(255, 82, 82, 0.15) !important; 
-            color: #ff5252 !important; /* Đỏ sáng */
-            border: 1px solid rgba(255, 82, 82, 0.4) !important; 
+            background: #ffebee !important; 
+            color: #c62828 !important; 
+            border: 1px solid #ffcdd2 !important; 
         }
-        body.glass-ui-mode .nt-badge-empty { background: rgba(255,255,255,0.1) !important; color: #aaa !important; border:none !important; }
+        body.glass-ui-mode .nt-badge-empty { background: #f5f5f5 !important; color: #999 !important; border: 1px solid #eee !important; }
         
+        /* 9. Các Nút Bấm Chính (Bo góc sâu, gradient hiện đại) */
+        body.glass-ui-mode .nt-btn {
+            border-radius: 12px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            font-weight: bold !important;
+            border: none !important;
+            transition: transform 0.2s, box-shadow 0.2s !important;
+        }
+        body.glass-ui-mode .nt-btn:active { transform: scale(0.96) !important; }
+
         body.glass-ui-mode .nt-btn-send {
-            background: linear-gradient(135deg, rgba(255, 215, 0, 0.8), rgba(255, 140, 0, 0.8)) !important;
-            backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);
-            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            background: linear-gradient(135deg, #ff9800, #e65100) !important; 
+            box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3) !important; 
+            color: #fff !important;
+            text-shadow: none !important;
         }
+        
         body.glass-ui-mode .nt-btn-clear {
-            background: rgba(255, 255, 255, 0.1) !important;
-            color: #ddd !important; border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            background: #f1f3f5 !important;
+            color: #555 !important; 
+            border: 1px solid #ddd !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important;
         }
-        body.glass-ui-mode .nt-btn-clear:hover { background: rgba(255, 255, 255, 0.2) !important; }
+        body.glass-ui-mode .nt-btn-clear:hover { background: #e2e6ea !important; color: #333 !important;}
     `;
 
     const runTool = () => {
