@@ -60,14 +60,6 @@
         let modal = document.getElementById(modalId);
         let userList = []; 
 
-        const toggleBottomNav = (show) => {
-            const bottomNav = document.getElementById('tgdd-bottom-nav');
-            if (bottomNav) {
-                if (show) bottomNav.classList.add('show-nav');
-                else bottomNav.classList.remove('show-nav');
-            }
-        };
-
         if (modal) modal.remove();
 
         const loadUsers = () => {
