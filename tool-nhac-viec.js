@@ -57,18 +57,6 @@
         const modalId = 'tgdd-reminder-modal';
         let modal = document.getElementById(modalId);
 
-        // --- LOGIC ẨN/HIỆN BOTTOM NAV ---
-        const toggleBottomNav = (show) => {
-            const bottomNav = document.getElementById('tgdd-bottom-nav');
-            if (bottomNav) {
-                if (show) {
-                    bottomNav.classList.add('show-nav'); // Hiện lại (trượt lên)
-                } else {
-                    bottomNav.classList.remove('show-nav'); // Ẩn đi (trượt xuống)
-                }
-            }
-        };
-
         // Phá hủy modal cũ nếu đã tồn tại để tránh dính "Zombie Closure"
         if (modal) {
             modal.remove();
