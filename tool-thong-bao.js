@@ -1,6 +1,7 @@
 /* 
-   MODULE: QUẢN LÝ THÔNG BÁO (NOTIFICATION MANAGER) - GLASS UI EDITION
-   - Clean: Đã bỏ logic ẩn/hiện Bottom Nav (để Main Script tự quản lý)
+   MODULE: QUẢN LÝ THÔNG BÁO (NOTIFICATION MANAGER) - GLASS UI V2
+   - Clean: Không can thiệp Bottom Nav.
+   - Fix CSS: Badge Đã xem/Chưa xem có màu nổi bật trên nền Glass.
 */
 ((context) => {
     const { UI, UTILS, DATA, CONSTANTS, AUTH_STATE, GM_xmlhttpRequest } = context;
@@ -99,6 +100,17 @@
         body.glass-ui-mode .nt-user-name { color: #fff !important; }
         body.glass-ui-mode .nt-user-status span { color: rgba(255,255,255,0.7) !important; }
         
+        /* FIX MÀU BADGE CHO GLASS MODE: Dùng màu sáng để nổi trên nền tối */
+        body.glass-ui-mode .nt-badge-read { 
+            background: rgba(0, 230, 118, 0.15) !important; 
+            color: #00e676 !important; /* Xanh lá sáng */
+            border: 1px solid rgba(0, 230, 118, 0.4) !important; 
+        }
+        body.glass-ui-mode .nt-badge-unread { 
+            background: rgba(255, 82, 82, 0.15) !important; 
+            color: #ff5252 !important; /* Đỏ sáng */
+            border: 1px solid rgba(255, 82, 82, 0.4) !important; 
+        }
         body.glass-ui-mode .nt-badge-empty { background: rgba(255,255,255,0.1) !important; color: #aaa !important; border:none !important; }
         
         body.glass-ui-mode .nt-btn-send {
