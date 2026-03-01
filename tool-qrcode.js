@@ -75,6 +75,128 @@
         .qr-result-box { width:100%; background:#f1f3f5; padding:15px; border-radius:10px; display:flex; gap:10px; align-items:center; box-sizing:border-box; }
         .qr-res-text { flex:1; font-family:monospace; font-size:14px; color:#333; word-break:break-all; font-weight:bold; }
         .qr-btn-copy { background:#007bff; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:11px; white-space:nowrap; }
+
+        /* =========================================================
+           --- GLASS UI THEME (ĐỒNG BỘ VỚI MAIN SCRIPT) ---
+           ========================================================= */
+        
+        /* 1. Nền Overlay ngoài cùng (Gradient tối + Mờ) */
+        body.glass-ui-mode #tgdd-qrcode-modal {
+            background: radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.25), transparent 50%),
+                        radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.25), transparent 50%),
+                        rgba(15, 23, 42, 0.8) !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+        }
+
+        /* 2. Vỏ Modal Glass (Khung viền mờ trong suốt) */
+        body.glass-ui-mode .qr-content {
+            position: relative !important;
+            background: rgba(255, 255, 255, 0.2) !important;
+            backdrop-filter: blur(25px) !important;
+            -webkit-backdrop-filter: blur(25px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.6) !important;
+            border-radius: 28px !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255,255,255,0.3) !important;
+            padding: 32px 24px 24px 24px !important;
+            z-index: 1;
+            color: #333 !important;
+        }
+
+        /* 3. Lõi Modal Trắng (Tạo hiệu ứng viền kính) */
+        body.glass-ui-mode .qr-content::before {
+            content: "" !important; position: absolute !important;
+            top: 8px !important; left: 8px !important; right: 8px !important; bottom: 8px !important;
+            background: #ffffff !important; border-radius: 20px !important;
+            z-index: -1 !important; box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
+        }
+        body.glass-ui-mode .qr-content > * { position: relative; z-index: 2; }
+
+        /* 4. Nút Đóng (X) - Tròn, nền xám nhạt */
+        body.glass-ui-mode .qr-close {
+            position: absolute !important; top: 16px !important; right: 16px !important;
+            background: #f1f3f5 !important; width: 32px !important; height: 32px !important;
+            border-radius: 50% !important; display: flex !important; justify-content: center !important; align-items: center !important;
+            font-size: 18px !important; color: #555 !important; box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
+            border: none !important; cursor: pointer !important; z-index: 10 !important;
+            transition: all 0.2s ease !important; line-height: 1 !important; margin: 0 !important;
+        }
+        body.glass-ui-mode .qr-close:hover { background: #fee2e2 !important; color: #ef4444 !important; transform: scale(1.1); }
+
+        /* 5. Header (Căn giữa do nút close đã bị absolute) */
+        body.glass-ui-mode .qr-header {
+            background: transparent !important;
+            border-bottom: 2px solid rgba(0,0,0,0.05) !important;
+            color: #333 !important;
+            padding: 5px 0 15px 0 !important;
+            justify-content: center !important;
+        }
+
+        /* 6. Tabs chuyển đổi */
+        body.glass-ui-mode .qr-tabs { background: transparent !important; border-bottom: 1px solid rgba(0,0,0,0.05) !important; padding: 15px 0 !important; }
+        body.glass-ui-mode .qr-tab { background: #f8f9fa !important; border-radius: 12px !important; border: 1px solid #eee !important; color: #777 !important; }
+        body.glass-ui-mode .qr-tab.active { 
+            background: #fff !important; 
+            color: #007bff !important; 
+            border-color: #007bff !important; 
+            box-shadow: 0 4px 10px rgba(0,123,255,0.15) !important; 
+        }
+
+        /* 7. Nội dung Body & Inputs */
+        body.glass-ui-mode .qr-body { padding: 20px 0 0 0 !important; }
+        
+        body.glass-ui-mode .qr-input {
+            background: #fff !important; border: 1px solid #ddd !important; border-radius: 12px !important; color: #333 !important;
+        }
+        body.glass-ui-mode .qr-input:focus { border-color: #007bff !important; box-shadow: 0 0 0 3px rgba(0,123,255,0.1) !important; }
+
+        /* Loại mã (QR/Barcode) */
+        body.glass-ui-mode .qr-radio-label { background: #f8f9fa !important; border: 1px solid #eee !important; border-radius: 12px !important; color: #555 !important; }
+        body.glass-ui-mode .qr-radio-label:has(input:checked) {
+            background: linear-gradient(135deg, #007bff, #0056b3) !important;
+            color: #fff !important; border-color: transparent !important;
+            box-shadow: 0 4px 12px rgba(0,123,255,0.3) !important;
+        }
+
+        /* Khu vực hiển thị mã (Canvas) */
+        body.glass-ui-mode .qr-preview-area {
+            background: #f8f9fa !important;
+            border: 2px dashed #ccc !important;
+            border-radius: 16px !important;
+        }
+
+        /* Khu vực Scanner */
+        body.glass-ui-mode #qr-reader { border-radius: 16px !important; border: none !important; box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important; }
+        body.glass-ui-mode .qr-result-box { background: #f8f9fa !important; border: 1px solid #eee !important; border-radius: 12px !important; }
+
+        /* 8. Các Nút Bấm Chính (Bo góc sâu, gradient) */
+        body.glass-ui-mode .qr-btn,
+        body.glass-ui-mode #btn-scan-stop {
+            border-radius: 12px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            font-weight: bold !important;
+            border: none !important;
+            transition: transform 0.2s, box-shadow 0.2s !important;
+        }
+        body.glass-ui-mode .qr-btn:active, body.glass-ui-mode #btn-scan-stop:active { transform: scale(0.96) !important; }
+
+        /* Nút Tải Ảnh */
+        body.glass-ui-mode .qr-btn-dl { 
+            background: linear-gradient(135deg, #28a745, #218838) !important; 
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3) !important; 
+        }
+        /* Nút Copy kết quả quét */
+        body.glass-ui-mode .qr-btn-copy {
+            background: linear-gradient(135deg, #007bff, #0056b3) !important;
+            border-radius: 8px !important;
+            box-shadow: 0 2px 8px rgba(0,123,255,0.3) !important;
+        }
+        /* Nút Dừng Camera */
+        body.glass-ui-mode #btn-scan-stop {
+            background: linear-gradient(135deg, #dc3545, #c82333) !important;
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3) !important;
+        }
     `;
 
     // --- 2. CÁC HÀM HỖ TRỢ ---
