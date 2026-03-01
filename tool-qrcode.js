@@ -114,17 +114,21 @@
 
         /* 4. Nút Đóng (X) - Tròn, nền xám nhạt */
         body.glass-ui-mode .qr-close {
-            position: absolute !important; top: 16px !important; right: 16px !important;
+            position: absolute !important; 
+            top: 14px !important; /* Kéo sát lên góc viền */
+            right: 14px !important;
             background: #f1f3f5 !important; width: 32px !important; height: 32px !important;
             border-radius: 50% !important; display: flex !important; justify-content: center !important; align-items: center !important;
-            font-size: 18px !important; color: #555 !important; box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
+            font-size: 20px !important; color: #555 !important; box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
             border: none !important; cursor: pointer !important; z-index: 10 !important;
             transition: all 0.2s ease !important; line-height: 1 !important; margin: 0 !important;
+            padding-bottom: 2px !important; /* Căn giữa lại trọng tâm của dấu nhân (x) */
         }
         body.glass-ui-mode .qr-close:hover { background: #fee2e2 !important; color: #ef4444 !important; transform: scale(1.1); }
 
         /* 5. Header (Căn giữa do nút close đã bị absolute) */
         body.glass-ui-mode .qr-header {
+            position: static !important; /* Ép trình duyệt lấy Modal làm gốc toạ độ thay vì Header */
             background: transparent !important;
             border-bottom: 2px solid rgba(0,0,0,0.05) !important;
             color: #333 !important;
