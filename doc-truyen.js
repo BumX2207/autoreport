@@ -1,3 +1,5 @@
+--- START OF FILE doc-truyen.js ---
+
 ((context) => {
     // ===============================================================
     // 1. CẤU HÌNH DATA SHEET & BIẾN CƠ SỞ
@@ -174,25 +176,28 @@
 
         /* =========================================================
            --- GLASS UI THEME (GIAO DIỆN IPAD LƠ LỬNG) ---
+           CHỈNH SỬA: ĐÃ BỎ VIỀN TRONG SUỐT ĐỂ CHIẾM TOÀN MÀN HÌNH
            ========================================================= */
         
-        /* 1. Nền Overlay ngoài cùng (Gradient tối + Mờ) & Padding tạo viền kính */
+        /* 1. Nền Overlay ngoài cùng (Gradient tối + Mờ) & Padding đã bị xóa */
         body.glass-ui-mode #truyen-app {
             background: radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.25), transparent 50%),
                         radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.25), transparent 50%),
-                        rgba(15, 23, 42, 0.8) !important;
+                        rgba(15, 23, 42, 0.95) !important;
             backdrop-filter: blur(12px) !important;
             -webkit-backdrop-filter: blur(12px) !important;
-            padding: 12px !important; /* Tạo khoảng trống để làm viền kính */
+            padding: 0 !important; /* Xóa padding để full màn hình */
         }
 
-        /* 2. Lõi Trắng (Tạo hiệu ứng thiết bị lơ lửng) */
+        /* 2. Lõi Trắng (Đã được mở rộng full màn hình) */
         body.glass-ui-mode #truyen-app::before {
             content: "" !important; position: absolute !important;
-            top: 12px !important; left: 12px !important; right: 12px !important; bottom: 12px !important;
-            background: #ffffff !important; border-radius: 24px !important;
-            z-index: 0 !important; box-shadow: 0 15px 50px rgba(0,0,0,0.4) !important;
-            border: 1px solid rgba(255,255,255,0.4) !important;
+            top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; /* Kéo dãn hết cỡ */
+            background: #ffffff !important; 
+            border-radius: 0 !important; /* Bỏ bo góc */
+            z-index: 0 !important; 
+            box-shadow: none !important;
+            border: none !important;
         }
         
         /* Nâng toàn bộ content lên trên lớp lõi trắng */
@@ -202,7 +207,7 @@
         body.glass-ui-mode .tr-header {
             background: transparent !important; box-shadow: none !important;
             border-bottom: 2px solid rgba(0,0,0,0.05) !important;
-            border-top-left-radius: 24px !important; border-top-right-radius: 24px !important;
+            border-radius: 0 !important; /* Bỏ bo góc */
         }
         
         body.glass-ui-mode .tr-btn-close,
@@ -238,7 +243,7 @@
         body.glass-ui-mode .tr-btn-view-all:hover { background: linear-gradient(135deg, #ff9ff3, #e17055) !important; color: #fff !important; border-color: transparent !important; box-shadow: 0 4px 10px rgba(225, 112, 85, 0.3) !important;}
 
         /* 7. Reader View (Trang đọc truyện) */
-        body.glass-ui-mode .tr-reader-view { background: transparent !important; border-bottom-left-radius: 24px !important; border-bottom-right-radius: 24px !important; }
+        body.glass-ui-mode .tr-reader-view { background: transparent !important; border-radius: 0 !important; /* Bỏ bo góc */ }
         body.glass-ui-mode .tr-reader-info-bar { background: rgba(255,255,255,0.8) !important; backdrop-filter: blur(15px) !important; -webkit-backdrop-filter: blur(15px) !important; box-shadow: 0 2px 10px rgba(0,0,0,0.02) !important; border-bottom: 1px solid rgba(0,0,0,0.05) !important; }
         body.glass-ui-mode .tr-reader-content-wrap { background: transparent !important; }
         body.glass-ui-mode .tr-paper { border: 1px solid rgba(0,0,0,0.05) !important; box-shadow: 0 5px 25px rgba(0,0,0,0.05) !important; border-radius: 16px !important;}
@@ -247,7 +252,7 @@
         body.glass-ui-mode .tr-reader-tools {
             background: rgba(255, 255, 255, 0.85) !important; backdrop-filter: blur(15px) !important; -webkit-backdrop-filter: blur(15px) !important;
             border-top: 1px solid rgba(0,0,0,0.05) !important; box-shadow: 0 -5px 25px rgba(0,0,0,0.05) !important;
-            border-bottom-left-radius: 24px !important; border-bottom-right-radius: 24px !important;
+            border-radius: 0 !important; /* Bỏ bo góc */
         }
 
         body.glass-ui-mode .tr-btn-tool {
