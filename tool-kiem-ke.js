@@ -852,7 +852,7 @@
             const item = STORE.editingItem; 
             const diff = item.stock - item.totalCount; 
             if (diff !== 0) { 
-                if(confirm(`Xác nhận bù ${Math.abs(diff)} cái?`)) { 
+                if(confirm(`Xác nhận nhập số lượng: ${Math.abs(diff)}?`)) { 
                     const nowTime = new Date().toTimeString().split(' ')[0]; 
                     const existIdx = STORE.countData.findIndex(i => i.sku === item.sku && i.status === item.status); 
                     let newTotal = item.totalCount + diff;
