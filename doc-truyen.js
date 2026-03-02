@@ -1,5 +1,3 @@
---- START OF FILE doc-truyen.js ---
-
 ((context) => {
     // ===============================================================
     // 1. CẤU HÌNH DATA SHEET & BIẾN CƠ SỞ
