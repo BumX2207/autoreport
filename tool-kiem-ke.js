@@ -102,6 +102,12 @@
         .inv-edit-input { width:60px; padding:4px; text-align:center; border:1px solid #ccc; border-radius:4px; }
         .inv-edit-actions { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top: auto; }
         .inv-btn-del-all { background:#dc3545; flex:1; justify-content:center; } .inv-btn-fill { background:#28a745; flex:1; justify-content:center; } .inv-btn-save { background:#007bff; flex:1; justify-content:center; }
+
+        /* --- BỔ SUNG CSS SỬA LỖI POPUP --- */
+        .inv-edit-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+        .inv-edit-header span:first-child { font-weight: 800; font-size: 16px; color: #333; }
+        .inv-edit-close { font-size: 28px; font-weight: bold; color: #aaa; cursor: pointer; line-height: 20px; padding: 0 5px; }
+        .inv-edit-close:hover { color: red; }
         
         #inv-scanner-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:black; z-index:200; display:none; flex-direction:column; }
         #inv-reader { width:100%; height:100%; object-fit:cover; }
@@ -862,101 +868,93 @@
         }
 
         // TẠO BẢNG TỔNG HỢP CỦA TẤT CẢ USER
+    // TẠO BẢNG TỔNG HỢP (ĐÃ FIX LỖI CLICK)
         function renderSummary() {
-    // Lấy giá trị các bộ lọc
-    const fGroup = document.querySelector('.inv-filter-select[data-col="group"]').value; 
-    const fName = document.querySelector('.inv-filter-select[data-col="name"]').value; 
-    const fStatus = document.querySelector('.inv-filter-select[data-col="status"]').value; 
-    const fCount = document.querySelector('.inv-filter-select[data-col="count"]').value; 
-    const fDiff = document.querySelector('.inv-filter-select[data-col="diff"]').value;
-    
-    const tbody = document.querySelector('#tbl-summary tbody'); 
-    let html = '';
-    
-    // --- LOGIC GỘP DỮ LIỆU (CORE FIX) ---
-    // Tạo một Map để lưu trữ dữ liệu hợp nhất: Key = SKU + Status
-    let finalMap = {};
+            const fGroup = document.querySelector('.inv-filter-select[data-col="group"]').value; 
+            const fName = document.querySelector('.inv-filter-select[data-col="name"]').value; 
+            const fStatus = document.querySelector('.inv-filter-select[data-col="status"]').value; 
+            const fCount = document.querySelector('.inv-filter-select[data-col="count"]').value; 
+            const fDiff = document.querySelector('.inv-filter-select[data-col="diff"]').value;
+            
+            const tbody = document.querySelector('#tbl-summary tbody'); 
+            let html = '';
+            
+            // --- LOGIC GỘP DỮ LIỆU ---
+            let finalMap = {};
+            
+            // 1. Lấy khung từ tồn kho
+            STORE.importData.forEach(item => {
+                let key = item.sku + '_' + item.status;
+                finalMap[key] = { ...item, realQty: 0 };
+            });
 
-    // 1. Đưa tất cả Tồn kho vào Map trước (Làm nền)
-    STORE.importData.forEach(item => {
-        let key = item.sku + '_' + item.status;
-        finalMap[key] = {
-            group: item.group,
-            sku: item.sku,
-            name: item.name,
-            status: item.status,
-            stock: parseInt(item.stock) || 0,
-            realQty: 0 // Ban đầu chưa ai đếm
-        };
-    });
-
-    // 2. Duyệt qua dữ liệu đếm của TẤT CẢ USER và CỘNG DỒN
-    // STORE.allCountData chứa: {user: 'User1', sku: 'A', qty: 10}, {user: 'User2', sku: 'A', qty: 30}
-    if (STORE.allCountData && STORE.allCountData.length > 0) {
-        STORE.allCountData.forEach(cnt => {
-            let key = cnt.sku + '_' + cnt.status;
-            let qty = parseInt(cnt.qty) || 0;
-
-            if (finalMap[key]) {
-                // Nếu đã có trong kho, cộng thêm vào số thực tế
-                finalMap[key].realQty += qty;
-            } else {
-                // Nếu sản phẩm này KHÔNG CÓ trong file tồn kho (Hàng mới/Lạ)
-                // Vẫn phải hiển thị ra
-                finalMap[key] = {
-                    group: 'N/A', // Không xác định nhóm
-                    sku: cnt.sku,
-                    name: cnt.name || 'Sản phẩm mới',
-                    status: cnt.status,
-                    stock: 0, // Không có tồn
-                    realQty: qty
-                };
+            // 2. Cộng dồn từ dữ liệu đếm của tất cả user
+            if (STORE.allCountData && STORE.allCountData.length > 0) {
+                STORE.allCountData.forEach(cnt => {
+                    let key = cnt.sku + '_' + cnt.status;
+                    let qty = parseInt(cnt.qty) || 0;
+                    if (finalMap[key]) {
+                        finalMap[key].realQty += qty;
+                    } else {
+                        // Hàng không có trong kho nhưng có người đếm
+                        finalMap[key] = { group: 'N/A', sku: cnt.sku, name: cnt.name || 'Sản phẩm mới', status: cnt.status, stock: 0, realQty: qty };
+                    }
+                });
             }
-        });
-    }
 
-    // 3. Render ra bảng từ finalMap
-    Object.values(finalMap).forEach(item => {
-        // Áp dụng bộ lọc
-        if (fGroup !== 'all' && item.group !== fGroup) return; 
-        if (fName !== 'all' && item.name !== fName) return; 
-        if (fStatus !== 'all' && item.status !== fStatus) return;
-        
-        // Tính lệch
-        const diff = item.stock - item.realQty; // Tồn - Thực tế
-        
-        // Lọc theo trạng thái kiểm (Đã kiểm / Chưa kiểm)
-        if (fCount === 'checked' && item.realQty === 0) return; 
-        if (fCount === 'unchecked' && item.realQty > 0) return; 
-        
-        // Lọc theo trạng thái lệch (Đủ / Thừa / Thiếu)
-        if (fDiff === 'ok' && diff !== 0) return; 
-        if (fDiff === 'thua' && diff >= 0) return; // Thừa là Thực tế > Tồn => Diff < 0
-        if (fDiff === 'thieu' && diff <= 0) return; // Thiếu là Thực tế < Tồn => Diff > 0
+            // 3. Render HTML
+            Object.values(finalMap).forEach(item => {
+                // Filter logic
+                if (fGroup !== 'all' && item.group !== fGroup) return; 
+                if (fName !== 'all' && item.name !== fName) return; 
+                if (fStatus !== 'all' && item.status !== fStatus) return;
+                
+                const diff = item.stock - item.realQty;
+                
+                if (fCount === 'checked' && item.realQty === 0) return; 
+                if (fCount === 'unchecked' && item.realQty > 0) return; 
+                
+                if (fDiff === 'ok' && diff !== 0) return; 
+                if (fDiff === 'thua' && diff >= 0) return; 
+                if (fDiff === 'thieu' && diff <= 0) return;
 
-        // Tạo HTML hiển thị lệch
-        let diffText = `<span class="st-ok">0</span>`; 
-        if (diff > 0) diffText = `<span class="st-missing">Thiếu ${formatNumber(diff)}</span>`; 
-        else if (diff < 0) diffText = `<span class="st-surplus">Thừa ${formatNumber(Math.abs(diff))}</span>`;
+                let diffText = `<span class="st-ok">0</span>`; 
+                if (diff > 0) diffText = `<span class="st-missing">Thiếu ${formatNumber(diff)}</span>`; 
+                else if (diff < 0) diffText = `<span class="st-surplus">Thừa ${formatNumber(Math.abs(diff))}</span>`;
 
-        // Tô màu dòng nếu chưa kiểm
-        let rowStyle = item.realQty === 0 ? 'background:#fff5f5;' : '';
+                let rowStyle = item.realQty === 0 ? 'background:#fff5f5;' : '';
 
-        html += `
-            <tr style="${rowStyle}">
-                <td>${item.group}</td>
-                <td style="font-weight:bold;">${item.sku}</td>
-                <td>${item.name}</td>
-                <td>${item.status}</td>
-                <td>${formatNumber(item.stock)}</td>
-                <td style="font-weight:bold; color: #007bff; font-size:14px;">${formatNumber(item.realQty)}</td>
-                <td>${diffText}</td>
-            </tr>`;
-    });
+                // Lưu ý: data-sku và data-status dùng để định danh khi click
+                html += `
+                    <tr class="summary-row" data-sku="${item.sku}" data-status="${item.status}" style="${rowStyle}">
+                        <td>${item.group}</td>
+                        <td style="font-weight:bold;">${item.sku}</td>
+                        <td>${item.name}</td>
+                        <td>${item.status}</td>
+                        <td>${formatNumber(item.stock)}</td>
+                        <td style="font-weight:bold; color: #007bff; font-size:14px;">${formatNumber(item.realQty)}</td>
+                        <td>${diffText}</td>
+                    </tr>`;
+            });
 
-    if (html === '') html = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#999;">Không có dữ liệu phù hợp bộ lọc</td></tr>';
-    tbody.innerHTML = html;
-}
+            if (html === '') html = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#999;">Không có dữ liệu phù hợp bộ lọc</td></tr>';
+            tbody.innerHTML = html;
+
+            // 4. GÁN SỰ KIỆN CLICK (QUAN TRỌNG)
+            // Sau khi innerHTML xong thì mới tìm được phần tử để gán sự kiện
+            const rows = tbody.querySelectorAll('.summary-row');
+            rows.forEach(row => {
+                row.onclick = function() {
+                    const sku = this.getAttribute('data-sku');
+                    const status = this.getAttribute('data-status');
+                    
+                    // Gọi hàm mở popup. 
+                    // Lưu ý: Nó sẽ mở popup chỉnh sửa cho USER HIỆN TẠI.
+                    // Nếu user hiện tại chưa đếm sản phẩm này bao giờ, nó sẽ hiện số lượng là 0.
+                    openEditPopup({ sku: sku, status: status });
+                };
+            });
+        }
 
         function startScanner() { const overlay = document.getElementById('inv-scanner-overlay'); if(STORE.isScannerRunning) return; overlay.style.display = 'flex'; STORE.isScannerRunning = true; const html5QrCode = new Html5Qrcode("inv-reader"); STORE.scannerObj = html5QrCode; html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (txt) => { if(navigator.vibrate) navigator.vibrate(200); addCountItem(txt); stopScanner(); }, () => {}).catch(err => { alert("Lỗi Camera: " + err); stopScanner(); }); }
         function stopScanner() { const overlay = document.getElementById('inv-scanner-overlay'); if (STORE.scannerObj) { STORE.scannerObj.stop().then(() => { STORE.scannerObj.clear(); STORE.scannerObj = null; STORE.isScannerRunning = false; overlay.style.display = 'none'; }).catch(() => {}); } else { overlay.style.display = 'none'; STORE.isScannerRunning = false; } }
