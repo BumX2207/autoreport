@@ -1,7 +1,7 @@
 /* 
-   MODULE: KIỂM KÊ KHO (V2.5 - GLASS UI EXTREME)
-   - Fix: Bỏ logic ẩn/hiện Nav.
-   - New: Giao diện Glassmorphism toàn màn hình (Dark Mode Premium).
+   MODULE: KIỂM KÊ KHO (V2.6 - FIX UI GLASS & REALTIME SUMMARY)
+   - Fix: Màu chữ/nền trong Glass Mode ở Tab Tổng hợp & Popup.
+   - New: Cập nhật ngay lập tức số liệu Tab Tổng hợp khi chỉnh sửa xong.
 */
 ((context) => {
     const { UI, UTILS, AUTH_STATE, CONSTANTS, GM_xmlhttpRequest } = context;
@@ -82,6 +82,10 @@
         .inv-table tr:hover { background:#f9f9f9; cursor: pointer; }
         .inv-table tr.highlight { background:#fff9c4; animation: highlightFade 2s forwards; }
         
+        /* STYLE CHO DÒNG CHƯA KIỂM (Fix lỗi hiển thị) */
+        .row-unchecked { background: #fff5f5; }
+        .row-new-entry { background: #e3f2fd; }
+
         .inv-btn { padding:8px 12px; border:none; border-radius:6px; font-weight:bold; color:white; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s; white-space:nowrap; font-size: 13px; height: 36px; }
         .inv-btn:active { transform:scale(0.95); }
         .btn-import { background:#28a745; } .btn-scan { background:#343a40; } .btn-cloud-load { background:#6f42c1; } .btn-sync { background:#17a2b8; } .btn-danger { background:#dc3545; } .btn-export { background:#218838; }
@@ -200,6 +204,10 @@
         }
         body.glass-ui-mode .inv-table tr:hover { background: rgba(255, 255, 255, 0.1) !important; }
         body.glass-ui-mode .inv-table tr.highlight { background: rgba(255, 215, 0, 0.15) !important; }
+        
+        /* FIX: Dòng chưa kiểm trong Glass Mode */
+        body.glass-ui-mode .row-unchecked { background: rgba(255, 82, 82, 0.15) !important; }
+        body.glass-ui-mode .row-unchecked td { color: #ff8a80 !important; } /* Chữ đỏ sáng */
 
         /* BUTTONS */
         body.glass-ui-mode .inv-btn { box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); }
@@ -246,6 +254,10 @@
             border: 1px solid rgba(255,255,255,0.2) !important;
         }
         body.glass-ui-mode .inv-edit-close { color: #fff !important; }
+        
+        /* FIX: Dòng nhập mới trong Glass Mode */
+        body.glass-ui-mode .row-new-entry { background: rgba(33, 150, 243, 0.15) !important; }
+        body.glass-ui-mode .row-new-entry span { color: #4fc3f7 !important; }
     `;
 
     // --- 2. GLOBAL STATE ---
@@ -357,10 +369,6 @@
         if(shops.length > 0) STORE.currentShopId = shops[0].name;
         else STORE.currentShopId = "SHOP_UNK";
 
-        // --- BỎ LOGIC ẨN BOTTOM NAV TẠI ĐÂY ---
-        // const bottomNav = document.getElementById('tgdd-bottom-nav');
-        // if(bottomNav) bottomNav.style.display = 'none';
-
         const modalId = 'tgdd-inventory-modal';
         const oldModal = document.getElementById(modalId);
         if (oldModal) oldModal.remove();
@@ -415,7 +423,7 @@
                 </div>
 
                 <div class="inv-header">
-                    <div class="inv-title">📦Hệ thống Kiểm kê V2</div>
+                    <div class="inv-title">📦Hệ thống Kiểm kê</div>
                     <div class="inv-tabs">
                         <div class="inv-tab active" data-tab="tab-input">Nhập liệu</div>
                         <div class="inv-tab" data-tab="tab-count">Kiểm kê</div>
@@ -651,13 +659,11 @@
             const oldCode = localStorage.getItem('inv_active_session_code_' + STORE.currentUser);
             if(oldCode) showSessionInfo(oldCode);
             
-            // LOGIC MỚI: Không ẩn ngay, hiện loading text -> gọi autoLoad -> xong mới ẩn
             const lblStatus = document.getElementById('startup-loading-status');
             lblStatus.style.display = 'block';
             lblStatus.innerText = "⏳ Đang tải dữ liệu tồn kho & kiểm kê...";
             
             autoLoadData(() => {
-                // Callback chạy khi tải xong
                 overlay.style.display = 'none'; 
                 lblStatus.style.display = 'none';
                 UI.showToast("✅ Đã tải xong dữ liệu!");
@@ -673,7 +679,6 @@
                             if(sessionRes.status === 'success') {
                                 localStorage.setItem('inv_active_session_code_' + STORE.currentUser, sessionRes.code);
                                 showSessionInfo(sessionRes.code);
-                                // Kỳ mới thì không cần load data cũ, ẩn luôn
                                 overlay.style.display = 'none'; 
                                 STORE.countData = []; STORE.importData =[]; STORE.allCountData =[];
                                 renderImportTable(); renderCountTable(); renderSummary(); 
@@ -704,8 +709,6 @@
                     STORE.customSheetId = res.sheet_id;
                     showSessionInfo(code);
                     UI.showToast(`✅ Đã tham gia phòng của: ${res.owner}`);
-                    
-                    // Logic mới: Tải xong mới ẩn
                     autoLoadData(() => {
                         overlay.style.display = 'none';
                         lblStatus.style.display = 'none';
@@ -749,7 +752,6 @@
 
         document.getElementById('btn-export-excel').onclick = exportToExcel;
         
-        // SỰ KIỆN NÚT ĐÓNG (ĐÃ BỎ LOGIC NAV)
         document.getElementById('btn-inv-close').onclick = () => { 
             if(STORE.isScannerRunning) stopScanner(); 
             if(STORE.countData.length > 0 && STORE.isLoggedIn && STORE.customSheetId) { 
@@ -774,7 +776,6 @@
                 
                 if (t.dataset.tab === 'tab-count') setTimeout(() => document.getElementById('inp-search-sku').focus(), 100); 
                 
-                // LOGIC MỚI CHO TAB TỔNG HỢP
                 if (t.dataset.tab === 'tab-sum') { 
                     if(!STORE.customSheetId) {
                         UI.showToast("❌ Chưa có kết nối Sheet!");
@@ -832,11 +833,113 @@
         document.getElementById('btn-close-scan').onclick = stopScanner;
         document.querySelectorAll('.inv-filter-select').forEach(el => el.addEventListener('change', renderSummary));
         
-        // --- EDIT MODAL ---
+        // --- EDIT MODAL & SYNC LOGIC ---
+        // Hàm này sẽ cập nhật số liệu cục bộ cho Summary Tab ngay lập tức
+        const syncLocalToGlobal = (sku, status, newTotal) => {
+            // 1. Xóa dữ liệu cũ của user hiện tại với SKU này khỏi STORE.allCountData
+            STORE.allCountData = STORE.allCountData.filter(x => !(x.user === STORE.currentUser && x.sku === sku && x.status === status));
+            
+            // 2. Thêm dữ liệu mới (nếu > 0)
+            if(newTotal > 0) {
+                STORE.allCountData.push({
+                    user: STORE.currentUser,
+                    sku: sku,
+                    status: status,
+                    qty: newTotal,
+                    // Các trường phụ có thể lấy từ importData nếu cần hiển thị chi tiết
+                    name: STORE.editingItem.name || '',
+                    group: STORE.editingItem.group || ''
+                });
+            }
+
+            // 3. Nếu đang ở tab Tổng hợp, vẽ lại ngay lập tức
+            if(document.getElementById('tab-sum').classList.contains('active')) {
+                renderSummary();
+            }
+        };
+
         document.getElementById('btn-edit-close-x').onclick = () => document.getElementById('inv-edit-modal').style.display = 'none';
-        document.getElementById('btn-edit-delete').onclick = () => { if(confirm("Xóa sản phẩm này khỏi danh sách CỦA BẠN?")) { STORE.countData = STORE.countData.filter(i => !(i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status)); document.getElementById('inv-edit-modal').style.display = 'none'; renderCountTable(); UI.showToast("Đã xóa!"); triggerAutoSync(); } };
-        document.getElementById('btn-edit-fill').onclick = () => { const item = STORE.editingItem; const diff = item.stock - item.totalCount; if (diff !== 0) { if(confirm(`Xác nhận bù ${Math.abs(diff)} cái?`)) { const nowTime = new Date().toTimeString().split(' ')[0]; const existIdx = STORE.countData.findIndex(i => i.sku === item.sku && i.status === item.status); if (existIdx === -1) { STORE.countData.unshift({ ...item, history: [{ ts: nowTime, qty: diff }], totalCount: diff, counted: diff }); } else { const realItem = STORE.countData[existIdx]; realItem.history.unshift({ ts: nowTime, qty: diff }); realItem.totalCount += diff; } document.getElementById('inv-edit-modal').style.display = 'none'; renderCountTable(); UI.showToast("Đã cập nhật!"); triggerAutoSync(); } } };
-        document.getElementById('btn-edit-save').onclick = () => { const inputs = document.querySelectorAll('.inv-history-qty'); let newHistory =[]; let newTotal = 0; const nowTime = new Date().toTimeString().split(' ')[0]; inputs.forEach((inp, idx) => { const val = parseInt(inp.value) || 0; if (val !== 0) { let currentTs = nowTime; if (STORE.editingItem.history && STORE.editingItem.history[idx]) currentTs = STORE.editingItem.history[idx].ts; newHistory.push({ ts: currentTs, qty: val }); newTotal += val; } }); if (newTotal === 0) { if(confirm("Số lượng bằng 0. Xóa?")) STORE.countData = STORE.countData.filter(i => !(i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status)); else return; } else { const existIdx = STORE.countData.findIndex(i => i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status); if (existIdx !== -1) { STORE.countData[existIdx].history = newHistory; STORE.countData[existIdx].totalCount = newTotal; } else { STORE.countData.unshift({ ...STORE.editingItem, history: newHistory, totalCount: newTotal }); } } document.getElementById('inv-edit-modal').style.display = 'none'; renderCountTable(); UI.showToast("Đã lưu thay đổi!"); triggerAutoSync(); };
+        
+        // Nút Xóa
+        document.getElementById('btn-edit-delete').onclick = () => { 
+            if(confirm("Xóa sản phẩm này khỏi danh sách CỦA BẠN?")) { 
+                const sku = STORE.editingItem.sku;
+                const status = STORE.editingItem.status;
+                STORE.countData = STORE.countData.filter(i => !(i.sku === sku && i.status === status)); 
+                document.getElementById('inv-edit-modal').style.display = 'none'; 
+                
+                renderCountTable(); 
+                syncLocalToGlobal(sku, status, 0); // Sync về 0
+                UI.showToast("Đã xóa!"); 
+                triggerAutoSync(); 
+            } 
+        };
+        
+        // Nút Nhập Đủ
+        document.getElementById('btn-edit-fill').onclick = () => { 
+            const item = STORE.editingItem; 
+            const diff = item.stock - item.totalCount; 
+            if (diff !== 0) { 
+                if(confirm(`Xác nhận bù ${Math.abs(diff)} cái?`)) { 
+                    const nowTime = new Date().toTimeString().split(' ')[0]; 
+                    const existIdx = STORE.countData.findIndex(i => i.sku === item.sku && i.status === item.status); 
+                    let newTotal = item.totalCount + diff;
+
+                    if (existIdx === -1) { 
+                        STORE.countData.unshift({ ...item, history: [{ ts: nowTime, qty: diff }], totalCount: diff, counted: diff }); 
+                        newTotal = diff;
+                    } else { 
+                        const realItem = STORE.countData[existIdx]; 
+                        realItem.history.unshift({ ts: nowTime, qty: diff }); 
+                        realItem.totalCount += diff; 
+                        newTotal = realItem.totalCount;
+                    } 
+                    document.getElementById('inv-edit-modal').style.display = 'none'; 
+                    renderCountTable(); 
+                    syncLocalToGlobal(item.sku, item.status, newTotal); // Sync số mới
+                    UI.showToast("Đã cập nhật!"); 
+                    triggerAutoSync(); 
+                } 
+            } 
+        };
+        
+        // Nút Lưu (Chỉnh sửa history)
+        document.getElementById('btn-edit-save').onclick = () => { 
+            const inputs = document.querySelectorAll('.inv-history-qty'); 
+            let newHistory =[]; 
+            let newTotal = 0; 
+            const nowTime = new Date().toTimeString().split(' ')[0]; 
+            
+            inputs.forEach((inp, idx) => { 
+                const val = parseInt(inp.value) || 0; 
+                if (val !== 0) { 
+                    let currentTs = nowTime; 
+                    if (STORE.editingItem.history && STORE.editingItem.history[idx]) currentTs = STORE.editingItem.history[idx].ts; 
+                    newHistory.push({ ts: currentTs, qty: val }); 
+                    newTotal += val; 
+                } 
+            }); 
+            
+            if (newTotal === 0) { 
+                if(confirm("Số lượng bằng 0. Xóa?")) {
+                    STORE.countData = STORE.countData.filter(i => !(i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status)); 
+                    syncLocalToGlobal(STORE.editingItem.sku, STORE.editingItem.status, 0);
+                } else return; 
+            } else { 
+                const existIdx = STORE.countData.findIndex(i => i.sku === STORE.editingItem.sku && i.status === STORE.editingItem.status); 
+                if (existIdx !== -1) { 
+                    STORE.countData[existIdx].history = newHistory; 
+                    STORE.countData[existIdx].totalCount = newTotal; 
+                } else { 
+                    STORE.countData.unshift({ ...STORE.editingItem, history: newHistory, totalCount: newTotal }); 
+                } 
+                syncLocalToGlobal(STORE.editingItem.sku, STORE.editingItem.status, newTotal);
+            } 
+            document.getElementById('inv-edit-modal').style.display = 'none'; 
+            renderCountTable(); 
+            UI.showToast("Đã lưu thay đổi!"); 
+            triggerAutoSync(); 
+        };
 
         // --- CORE FUNCTIONS ---
         function triggerAutoSync() { if(!STORE.customSheetId) return; STORE.syncCounter++; if (STORE.syncCounter >= 5) { STORE.syncCounter = 0; API.saveCount(STORE.countData, () => { console.log("Auto synced"); }); } }
@@ -875,7 +978,6 @@
             });
         }
 
-        // Xuất Excel GỘP của tất cả nhân viên
         function exportToExcel() {
             if (STORE.importData.length === 0 && STORE.allCountData.length === 0) { UI.showToast("⚠️ Không có dữ liệu để xuất!"); return; }
             let aggregatedCount = {};
@@ -968,7 +1070,9 @@
             let html = '';
             if (realItem.history.length === 0) { html = '<div style="text-align:center; padding:10px; color:#999; font-style:italic;">Chưa có lịch sử nhập.</div>'; } 
             else { realItem.history.forEach((h, idx) => { html += `<div class="inv-edit-item"><span>Lần nhập lúc ${h.ts}</span><input type="number" class="inv-edit-input inv-history-qty" value="${h.qty}"></div>`; }); }
-            html += `<div class="inv-edit-item" style="background:#e3f2fd"><span style="font-weight:bold; color:#007bff">Nhập mới:</span><input type="number" class="inv-edit-input inv-history-qty" value="" placeholder="SL"></div>`;
+            
+            // Fix UI Class cho dòng nhập mới
+            html += `<div class="inv-edit-item row-new-entry"><span style="font-weight:bold; color:#007bff">Nhập mới:</span><input type="number" class="inv-edit-input inv-history-qty" value="" placeholder="SL"></div>`;
             list.innerHTML = html; modal.style.display = 'flex';
         }
 
@@ -1021,9 +1125,11 @@
                 let diffText = `<span class="st-ok">0</span>`; 
                 if (diff > 0) diffText = `<span class="st-missing">Thiếu ${formatNumber(diff)}</span>`; 
                 else if (diff < 0) diffText = `<span class="st-surplus">Thừa ${formatNumber(Math.abs(diff))}</span>`;
-                let rowStyle = item.realQty === 0 ? 'background:#fff5f5;' : '';
+                
+                // Fix UI Class cho dòng chưa kiểm
+                let rowClass = item.realQty === 0 ? 'summary-row row-unchecked' : 'summary-row';
 
-                html += `<tr class="summary-row" data-sku="${item.sku}" data-status="${item.status}" style="${rowStyle}"><td>${item.group}</td><td style="font-weight:bold;">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td>${formatNumber(item.stock)}</td><td style="font-weight:bold; color: #007bff; font-size:14px;">${formatNumber(item.realQty)}</td><td>${diffText}</td></tr>`;
+                html += `<tr class="${rowClass}" data-sku="${item.sku}" data-status="${item.status}"><td>${item.group}</td><td style="font-weight:bold;">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td>${formatNumber(item.stock)}</td><td style="font-weight:bold; color: #007bff; font-size:14px;">${formatNumber(item.realQty)}</td><td>${diffText}</td></tr>`;
             });
 
             if (html === '') html = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#999;">Không có dữ liệu phù hợp bộ lọc</td></tr>';
@@ -1043,7 +1149,7 @@
     };
 
     return {
-        name: "Kiểm kê",
+        name: "Kiểm kê V1",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z" fill="white"/></svg>`,
         bgColor: "#6c757d",
         css: MY_CSS,
