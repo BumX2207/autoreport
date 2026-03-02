@@ -13,22 +13,27 @@
         #tgdd-inventory-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); z-index:2147483601; justify-content:center; align-items:center; }
         #tgdd-toast-notification { z-index: 2147483705 !important; }
 
+        /* Content để relative để Overlay absolute bám theo */
         .inv-content { background:#fff; width:100%; height:100%; box-shadow:0 20px 60px rgba(0,0,0,0.4); display:flex; flex-direction:column; overflow:hidden; animation: popIn 0.3s; font-family: sans-serif; position: relative; }
         @media (max-width: 768px) { .inv-content { width: 100% !important; height: 100% !important; max-width: none !important; border-radius: 0 !important; } }
 
-        .inv-header { display:flex; background:#f8f9fa; border-bottom:1px solid #ddd; padding:0 10px; align-items:center; justify-content:space-between; height: 75px; flex-shrink: 0; }
+        /* OVERLAYS - BLACK STYLE (FULL SCREEN COVER) */
+        /* Z-Index 3000 để cao hơn Header (z-index header thường thấp hơn) */
+        #inv-startup-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:3000; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:15px; animation:fadeIn 0.3s; color: white; overflow-y:auto; padding: 20px;}
+        
+        .inv-header { display:flex; background:#f8f9fa; border-bottom:1px solid #ddd; padding:0 10px; align-items:center; justify-content:space-between; height: 50px; flex-shrink: 0; }
         .inv-title { font-weight:800; font-size:16px; color:#333; display:flex; align-items:center; gap:5px; }
         .inv-close { font-size:24px; cursor:pointer; color:#999; padding:0 15px; font-weight:bold; transition: 0.2s; } .inv-close:hover { color:red; transform: scale(1.1); }
         
         .inv-sub-header { background:#e9ecef; padding:8px 15px; font-size:12px; color:#333; border-bottom:1px solid #ddd; display:flex; align-items:center; flex-wrap: wrap; gap: 10px; }
-        .inv-shop-select { padding: 4px; border-radius: 4px; border: 1px solid #007bff; font-weight: bold; color: #0056b3; outline: none; font-size: 12px; max-width: 110px; }
+        /* Đã xóa class inv-shop-select */
         
         .inv-user-info { display:flex; align-items:center; gap:10px; margin-left: auto; }
         .inv-user-name { color:#d63031; font-weight:bold; } .inv-user-name.ready { color:#007bff; }
         .inv-auth-btns { display:flex; gap:5px; }
         .inv-btn-auth { border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold; color:white; }
 
-        .inv-tabs { display:flex; gap:5px; height:33px; align-items:flex-end; }
+        .inv-tabs { display:flex; gap:5px; height:100%; align-items:flex-end; }
         .inv-tab { padding:10px 20px; cursor:pointer; font-weight:bold; color:#666; border-bottom:3px solid transparent; transition:0.2s; font-size:13px; white-space:nowrap; }
         .inv-tab:hover { background:#eee; }
         .inv-tab.active { color:#007bff; border-bottom:3px solid #007bff; background:white; border-radius: 5px 5px 0 0; }
@@ -37,8 +42,6 @@
         .inv-view { display:none; height:100%; flex-direction:column; padding:15px; box-sizing:border-box; }
         .inv-view.active { display:flex; }
 
-        /* OVERLAYS - BLACK STYLE */
-        #inv-startup-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:2005; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:15px; animation:fadeIn 0.3s; color: white; overflow-y:auto; padding: 20px;}
         .inv-startup-title { font-size:22px; font-weight:900; color:#FFD700; text-transform:uppercase; letter-spacing:1px; margin-bottom: 10px; text-shadow: 0 2px 10px rgba(255,215,0,0.5);}
         .inv-session-code-display { font-size: 16px; background: rgba(40,167,69,0.2); border: 1px solid #28a745; color: #00e676; padding: 8px 15px; border-radius: 20px; font-weight: bold; margin-bottom: 10px; display:none; letter-spacing: 2px;}
 
@@ -239,8 +242,50 @@
         modal.id = modalId;
         modal.innerHTML = `
             <div class="inv-content">
+                <!-- STARTUP OVERLAY (MOVED TO TOP FOR FULL COVERAGE) -->
+                <div id="inv-startup-overlay" style="display:flex;">
+                    <div class="inv-startup-title">ĐĂNG NHẬP KIỂM KÊ</div>
+                    <div id="lbl-startup-session" class="inv-session-code-display"></div>
+                    
+                    <!-- New Loading Status Label -->
+                    <div id="startup-loading-status" style="color:#00e676; font-size:14px; font-weight:bold; margin-bottom:10px; display:none;"></div>
+
+                    <div class="inv-split-box">
+                        <!-- KHU VỰC NHÂN VIÊN (JOIN) -->
+                        <div class="inv-box-panel">
+                            <div class="inv-panel-title">👥 Dành cho Nhân viên</div>
+                            <div style="font-size:12px; color:#aaa; margin-bottom:5px;">Nhập mã 6 số do Quản lý cung cấp để cùng kiểm kê:</div>
+                            <div class="inv-input-group">
+                                <input type="number" id="inp-join-code" class="inv-overlay-input" placeholder="Ví dụ: 123456" autocomplete="off">
+                                <button id="btn-join-session" class="inv-btn-overlay btn-mode-join">Tham gia</button>
+                            </div>
+                        </div>
+
+                        <!-- KHU VỰC QUẢN LÝ (CREATE/LOAD) -->
+                        <div class="inv-box-panel">
+                            <div class="inv-panel-title">👑 Dành cho Quản lý</div>
+                            <div style="font-size:12px; color:#aaa; margin-bottom:5px;">ID File Sheet chứa dữ liệu Tồn kho:</div>
+                            
+                            <div id="mgr-loading-msg" style="color: yellow; font-size: 12px; font-style: italic; margin-bottom: 10px; text-align:center;">
+                                ⏳ Đang tải thông tin cấu hình...
+                            </div>
+
+                            <div id="mgr-input-area" style="display:none;">
+                                <div class="inv-input-group">
+                                    <input type="text" id="inp-startup-sheet-id" class="inv-overlay-input" placeholder="ID Google Sheet..." autocomplete="off">
+                                    <button id="btn-startup-save-id" class="inv-btn-overlay btn-mode-save">Lưu ID</button>
+                                </div>
+                                <div id="startup-actions" style="display:none; flex-direction:column; margin-top:10px;">
+                                    <button class="inv-btn-overlay btn-mode-continue" id="btn-start-load">📥 Tiếp tục kỳ cũ</button>
+                                    <button class="inv-btn-overlay btn-mode-new" id="btn-start-new">🆕 Tạo kỳ kiểm kê mới</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="inv-header">
-                    <div class="inv-title">📦Hệ thống Kiểm kê</div>
+                    <div class="inv-title">📦Hệ thống Kiểm kê V2</div>
                     <div class="inv-tabs">
                         <div class="inv-tab active" data-tab="tab-input">Nhập liệu</div>
                         <div class="inv-tab" data-tab="tab-count">Kiểm kê</div>
@@ -250,7 +295,7 @@
                 </div>
                 
                 <div class="inv-sub-header">
-                    <select id="inv-shop-select" class="inv-shop-select">${shopOpts}</select>
+                    <!-- REMOVED SHOP SELECT -->
                     <span id="lbl-header-session" style="font-weight:bold; color:#28a745; margin-left:10px; display:none;">Kỳ KK: <span id="val-header-session"></span></span>
                     
                     <div class="inv-user-info">
@@ -258,48 +303,8 @@
                         <div id="inv-auth-btns" class="inv-auth-btns"></div>
                     </div>
                 </div>
-
+                
                 <div class="inv-body">
-                    <!-- STARTUP OVERLAY -->
-                    <div id="inv-startup-overlay" style="display:flex;">
-                        <div class="inv-startup-title">ĐĂNG NHẬP KIỂM KÊ</div>
-                        <div id="lbl-startup-session" class="inv-session-code-display"></div>
-                        
-                        <div class="inv-split-box">
-                            <!-- KHU VỰC NHÂN VIÊN (JOIN) -->
-                            <div class="inv-box-panel">
-                                <div class="inv-panel-title">👥 Dành cho Nhân viên</div>
-                                <div style="font-size:12px; color:#aaa; margin-bottom:5px;">Nhập mã 6 số do Quản lý cung cấp để cùng kiểm kê:</div>
-                                <div class="inv-input-group">
-                                    <input type="number" id="inp-join-code" class="inv-overlay-input" placeholder="Ví dụ: 123456" autocomplete="off">
-                                    <button id="btn-join-session" class="inv-btn-overlay btn-mode-join">Tham gia</button>
-                                </div>
-                            </div>
-
-                            <!-- KHU VỰC QUẢN LÝ (CREATE/LOAD) -->
-                            <div class="inv-box-panel">
-                                <div class="inv-panel-title">👑 Dành cho Quản lý</div>
-                                <div style="font-size:12px; color:#aaa; margin-bottom:5px;">ID File Sheet chứa dữ liệu Tồn kho:</div>
-                                
-                                <!-- Loading Message Mới -->
-                                <div id="mgr-loading-msg" style="color: yellow; font-size: 12px; font-style: italic; margin-bottom: 10px; text-align:center;">
-                                    ⏳ Đang tải thông tin cấu hình...
-                                </div>
-
-                                <div id="mgr-input-area" style="display:none;">
-                                    <div class="inv-input-group">
-                                        <input type="text" id="inp-startup-sheet-id" class="inv-overlay-input" placeholder="ID Google Sheet..." autocomplete="off">
-                                        <button id="btn-startup-save-id" class="inv-btn-overlay btn-mode-save">Lưu ID</button>
-                                    </div>
-                                    <div id="startup-actions" style="display:none; flex-direction:column; margin-top:10px;">
-                                        <button class="inv-btn-overlay btn-mode-continue" id="btn-start-load">📥 Tiếp tục kỳ cũ</button>
-                                        <button class="inv-btn-overlay btn-mode-new" id="btn-start-new">🆕 Tạo kỳ kiểm kê mới</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- TAB 1: NHẬP LIỆU -->
                     <div class="inv-view active" id="tab-input">
                         <div class="inv-controls tab1-controls">
@@ -342,7 +347,7 @@
                     </div>
                 </div>
             </div>
-            <!-- CÁC POPUP KHÁC GIỮ NGUYÊN -->
+            <!-- CÁC POPUP KHÁC -->
             <div id="inv-edit-modal">
                 <div class="inv-edit-content">
                     <div class="inv-edit-header"><span>Điều chỉnh số lượng</span><span class="inv-edit-close" id="btn-edit-close-x" title="Đóng">×</span></div>
@@ -511,23 +516,32 @@
 
         document.getElementById('btn-start-load').onclick = () => { 
             if(!STORE.customSheetId) return;
-            // Tiếp tục kỳ cũ -> Check localStorage xem có mã session không
             const oldCode = localStorage.getItem('inv_active_session_code_' + STORE.currentUser);
             if(oldCode) showSessionInfo(oldCode);
-            overlay.style.display = 'none'; 
-            autoLoadData(); 
+            
+            // LOGIC MỚI: Không ẩn ngay, hiện loading text -> gọi autoLoad -> xong mới ẩn
+            const lblStatus = document.getElementById('startup-loading-status');
+            lblStatus.style.display = 'block';
+            lblStatus.innerText = "⏳ Đang tải dữ liệu tồn kho & kiểm kê...";
+            
+            autoLoadData(() => {
+                // Callback chạy khi tải xong
+                overlay.style.display = 'none'; 
+                lblStatus.style.display = 'none';
+                UI.showToast("✅ Đã tải xong dữ liệu!");
+            });
         };
         
         document.getElementById('btn-start-new').onclick = () => {
             if(!STORE.customSheetId) return;
             if(confirm(`TẠO KỲ KIỂM KÊ MỚI?\n\nDữ liệu CŨ trong file Sheet sẽ bị xóa để đếm lại từ đầu.`)) {
-                // Xóa dữ liệu cũ -> Tạo session mới
                 API.deleteData('all', (res) => {
                     if(res.status === 'success') { 
                         API.createSession(STORE.customSheetId, (sessionRes) => {
                             if(sessionRes.status === 'success') {
                                 localStorage.setItem('inv_active_session_code_' + STORE.currentUser, sessionRes.code);
                                 showSessionInfo(sessionRes.code);
+                                // Kỳ mới thì không cần load data cũ, ẩn luôn
                                 overlay.style.display = 'none'; 
                                 STORE.countData = []; STORE.importData =[]; STORE.allCountData =[];
                                 renderImportTable(); renderCountTable(); renderSummary(); 
@@ -549,28 +563,29 @@
             const code = inpJoinCode.value.trim();
             if(!code || code.length !== 6) { alert("Vui lòng nhập đúng 6 số!"); return; }
             
+            const lblStatus = document.getElementById('startup-loading-status');
+            lblStatus.style.display = 'block';
+            lblStatus.innerText = "⏳ Đang tham gia & tải dữ liệu...";
+
             API.joinSession(code, (res) => {
                 if (res.status === 'success') {
                     STORE.customSheetId = res.sheet_id;
                     showSessionInfo(code);
                     UI.showToast(`✅ Đã tham gia phòng của: ${res.owner}`);
-                    overlay.style.display = 'none';
-                    autoLoadData();
-                    modal.querySelector('.inv-tab[data-tab="tab-count"]').click(); 
+                    
+                    // Logic mới: Tải xong mới ẩn
+                    autoLoadData(() => {
+                        overlay.style.display = 'none';
+                        lblStatus.style.display = 'none';
+                        modal.querySelector('.inv-tab[data-tab="tab-count"]').click(); 
+                    });
                 } else {
                     alert("❌ Lỗi: " + res.message);
+                    lblStatus.style.display = 'none';
                 }
             });
         };
 
-        // --- CHUYỂN SHOP ---
-        document.getElementById('inv-shop-select').onchange = (e) => { 
-            STORE.currentShopId = e.target.value; 
-            STORE.importData = []; STORE.countData =[]; STORE.allCountData =[];
-            renderImportTable(); renderCountTable(); renderSummary(); 
-            UI.showToast(`Đã chuyển: ${STORE.currentShopId}`); 
-            autoLoadData();
-        };
 
         // --- BUTTONS ---
         document.getElementById('btn-load-stock-cloud').onclick = () => { 
@@ -691,18 +706,37 @@
         function triggerAutoSync() { if(!STORE.customSheetId) return; STORE.syncCounter++; if (STORE.syncCounter >= 5) { STORE.syncCounter = 0; API.saveCount(STORE.countData, () => { console.log("Auto synced"); }); } }
         function syncStockToCountData() { if (STORE.importData.length === 0) return; STORE.countData.forEach(cItem => { const stockItem = STORE.importData.find(s => s.sku === cItem.sku && s.status === cItem.status); if (stockItem) { cItem.stock = stockItem.stock; cItem.group = stockItem.group; } }); }
         
-        function autoLoadData() {
+        function autoLoadData(onComplete) {
             if (!STORE.isLoggedIn) return;
             if (!STORE.customSheetId) return;
 
+            const lblStatus = document.getElementById('startup-loading-status');
+            
+            // 1. Tải tồn kho
+            if(lblStatus) lblStatus.innerText = "⏳ Đang tải tồn kho (1/2)...";
             API.getStock((data) => {
                 if(data.length > 0) { 
-                    STORE.importData = data; renderImportTable(); updateFilters();
-                } 
+                    STORE.importData = data; 
+                    renderImportTable(); 
+                    updateFilters();
+                }
+                
+                // 2. Tải kiểm kê
+                if(lblStatus) lblStatus.innerText = "⏳ Đang tải kiểm kê (2/2)...";
                 API.getCount((cData) => {
                     STORE.allCountData = cData;
-                    STORE.countData = cData.filter(i => i.user === STORE.currentUser).map(i => ({ ...i, history:[{ts:i.time, qty:i.qty}], totalCount: i.qty, stock: (STORE.importData.find(s => s.sku === i.sku && s.status === i.status) || {}).stock || 0 }));
-                    renderCountTable(); renderSummary(); 
+                    STORE.countData = cData.filter(i => i.user === STORE.currentUser).map(i => ({ 
+                        ...i, 
+                        history:[{ts:i.time, qty:i.qty}], 
+                        totalCount: i.qty, 
+                        stock: (STORE.importData.find(s => s.sku === i.sku && s.status === i.status) || {}).stock || 0 
+                    }));
+                    
+                    renderCountTable(); 
+                    renderSummary(); 
+                    
+                    // Xong hết thì gọi callback
+                    if (onComplete) onComplete();
                 });
             });
         }
