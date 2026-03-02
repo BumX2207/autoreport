@@ -149,7 +149,7 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2);
         }
         .inv-btn:active { transform:scale(0.95); }
-        .btn-import { background: linear-gradient(135deg, #2e7d32, #1b5e20); } 
+        .btn-import { background: linear-gradient(135deg, #2e7d32, #1b5e20); margin-bottom: 0;} 
         .btn-scan { background: linear-gradient(135deg, #37474f, #263238); } 
         .btn-cloud-load { background:#6f42c1; } 
         .btn-sync { background: linear-gradient(135deg, #0277bd, #01579b); } 
@@ -242,7 +242,7 @@
 
         /* RESPONSIVE */
         @media (max-width: 768px) {
-            .inv-header { flex-wrap: wrap; height: auto !important; padding: 10px 5px !important; gap: 5px; }
+            .inv-header { flex-wrap: wrap; padding: 10px 5px !important; gap: 5px; }
             .inv-title { width: 100%; justify-content: center; font-size: 18px; margin-bottom: 5px; }
             .inv-tabs { width: 100%; justify-content: center; border: none; }
             .inv-tab { flex: 1; text-align: center; padding: 8px 5px; font-size: 13px; border-radius: 4px; }
