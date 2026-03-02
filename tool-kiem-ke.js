@@ -377,8 +377,8 @@
                     <div class="inv-split-box">
                         <!-- KHU VỰC NHÂN VIÊN (JOIN) -->
                         <div class="inv-box-panel">
-                            <div class="inv-panel-title">👥 Dành cho Nhân viên</div>
-                            <div style="font-size:12px; color:#aaa; margin-bottom:5px;">Nhập mã 6 số do Quản lý cung cấp để cùng kiểm kê:</div>
+                            <div class="inv-panel-title">👥 Tham gia kỳ kiểm kê</div>
+                            <div style="font-size:12px; color:#aaa; margin-bottom:5px;">Nhập mã 6 số do người tạo cung cấp để cùng kiểm kê:</div>
                             <div class="inv-input-group">
                                 <input type="number" id="inp-join-code" class="inv-overlay-input" placeholder="Ví dụ: 123456" autocomplete="off">
                                 <button id="btn-join-session" class="inv-btn-overlay btn-mode-join">Tham gia</button>
@@ -387,8 +387,8 @@
 
                         <!-- KHU VỰC QUẢN LÝ (CREATE/LOAD) -->
                         <div class="inv-box-panel">
-                            <div class="inv-panel-title">👑 Dành cho Quản lý</div>
-                            <div style="font-size:12px; color:#aaa; margin-bottom:5px;">ID File Sheet chứa dữ liệu Tồn kho:</div>
+                            <div class="inv-panel-title">👑 Tạo kỳ kiểm kê</div>
+                            <div style="font-size:12px; color:#aaa; margin-bottom:5px;">ID File Google Sheet</div>
                             <div id="mgr-loading-msg" style="color: yellow; font-size: 12px; font-style: italic; margin-bottom: 10px; text-align:center;">⏳ Đang tải thông tin cấu hình...</div>
                             <div id="mgr-input-area" style="display:none;">
                                 <div class="inv-input-group">
@@ -396,7 +396,7 @@
                                     <button id="btn-startup-save-id" class="inv-btn-overlay btn-mode-save">Lưu ID</button>
                                 </div>
                                 <div id="startup-actions" style="display:none; flex-direction:column; margin-top:10px;">
-                                    <button class="inv-btn-overlay btn-mode-continue" id="btn-start-load">📥 Tiếp tục kỳ cũ</button>
+                                    <button class="inv-btn-overlay btn-mode-continue" id="btn-start-load">📥 Tiếp tục kỳ kiểm kê cũ</button>
                                     <button class="inv-btn-overlay btn-mode-new" id="btn-start-new">🆕 Tạo kỳ kiểm kê mới</button>
                                 </div>
                             </div>
@@ -444,7 +444,9 @@
                                 <input type="text" id="inp-search-sku" class="inv-input" placeholder="Nhập tên/mã..." autocomplete="off">
                             </div>
                             <label class="inv-chk-manual"><input type="checkbox" id="chk-manual-input"> Nhập tay</label>
-                            <button class="inv-btn btn-scan" id="btn-open-scan">📷</button>
+                            <button class="inv-btn btn-scan" id="btn-open-scan" style="padding: 5px 12px;">
+                               <svg viewBox="0 0 24 24" style="width:20px; height:20px; fill:white;"><path d="M9.5 6.5v11h-1v-11h1zm3 11v-11h-1v11h1zm3 0v-11h-1v11h1zm3 0v-11h-1v11h1zM5 22h4v-2H5v-4H3v4c0 1.1 0.9 2 2 2zM5 2h4v2H5v4H3V4c0-1.1 0.9-2 2-2zM19 2h-4v2h4v4h2V4c0-1.1-0.9-2-2-2zM19 22h-4v-2h4v-4h2v4c0 1.1-0.9 2-2 2z"/></svg>
+                           </button>
                             <button class="inv-btn btn-sync" id="btn-sync-cloud">☁️ Lưu</button>
                             <div class="inv-suggestions" id="box-suggestions"></div>
                         </div>
