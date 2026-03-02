@@ -242,7 +242,7 @@
 
         /* RESPONSIVE */
         @media (max-width: 768px) {
-            .inv-header { flex-wrap: wrap; height: auto !important; padding: 10px 5px !important; gap: 5px; }
+            .inv-header { flex-wrap: wrap; padding: 10px 5px !important; gap: 5px; }
             .inv-title { width: 100%; justify-content: center; font-size: 18px; margin-bottom: 5px; }
             .inv-tabs { width: 100%; justify-content: center; border: none; }
             .inv-tab { flex: 1; text-align: center; padding: 8px 5px; font-size: 13px; border-radius: 4px; }
