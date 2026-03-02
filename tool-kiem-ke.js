@@ -1,7 +1,8 @@
 /* 
-   MODULE: KIỂM KÊ KHO (V2.6 - FIX UI GLASS & REALTIME SUMMARY)
-   - Fix: Màu chữ/nền trong Glass Mode ở Tab Tổng hợp & Popup.
-   - New: Cập nhật ngay lập tức số liệu Tab Tổng hợp khi chỉnh sửa xong.
+   MODULE: KIỂM KÊ KHO (V3.0 - ULTIMATE GLASS ONLY)
+   - Force Glass Theme: Giao diện mặc định là kính tối màu.
+   - Fix UX: Bỏ auto-focus ô tìm kiếm.
+   - Fix UI: Bảng gợi ý tìm kiếm rộng full bề ngang.
 */
 ((context) => {
     const { UI, UTILS, AUTH_STATE, CONSTANTS, GM_xmlhttpRequest } = context;
@@ -10,51 +11,223 @@
     let API_URL = "";
     try { API_URL = CONSTANTS.GSHEET.CONFIG_API; } catch(e) {}
 
-    // --- 1. CSS ---
+    // --- 1. CSS (GLASS ONLY - NO CLASSIC THEME) ---
     const MY_CSS = `
-        /* STANDARD CSS (MẶC ĐỊNH) */
-        #tgdd-inventory-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); z-index:2147483601; justify-content:center; align-items:center; }
+        /* BASE OVERLAY */
+        #tgdd-inventory-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:2147483601; justify-content:center; align-items:center; }
         #tgdd-toast-notification { z-index: 2147483705 !important; }
 
-        .inv-content { background:#fff; width:100%; height:100%; box-shadow:0 20px 60px rgba(0,0,0,0.4); display:flex; flex-direction:column; overflow:hidden; animation: popIn 0.3s; font-family: sans-serif; position: relative; }
-        @media (max-width: 768px) { .inv-content { width: 100% !important; height: 100% !important; max-width: none !important; border-radius: 0 !important; } }
+        /* MAIN CONTAINER - GLASS EFFECT ALWAYS ON */
+        .inv-content { 
+            background: radial-gradient(circle at 10% 20%, rgb(30, 30, 40) 0%, rgb(10, 10, 15) 90%);
+            width:100%; height:100%; 
+            box-shadow:0 20px 60px rgba(0,0,0,0.6); 
+            display:flex; flex-direction:column; overflow:hidden; 
+            animation: popIn 0.3s; font-family: sans-serif; position: relative; 
+            color: #fff;
+        }
 
-        /* OVERLAYS */
+        /* STARTUP OVERLAY */
         #inv-startup-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:3000; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:15px; animation:fadeIn 0.3s; color: white; overflow-y:auto; padding: 20px;}
         
         /* HEADER */
-        .inv-header { display:flex; background:#f8f9fa; border-bottom:1px solid #ddd; padding:0 10px; align-items:center; justify-content:space-between; height: 75px !important; flex-shrink: 0; }
-        .inv-title { font-weight:800; font-size:16px; color:#333; display:flex; align-items:center; gap:5px; }
-        .inv-close { font-size:24px; cursor:pointer; color:#999; padding:0 15px; font-weight:bold; transition: 0.2s; } .inv-close:hover { color:red; transform: scale(1.1); }
+        .inv-header { 
+            display:flex; 
+            background: rgba(255, 255, 255, 0.05); 
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1); 
+            padding:0 10px; align-items:center; justify-content:space-between; 
+            height: 75px !important; flex-shrink: 0; 
+        }
+        .inv-title { font-weight:800; font-size:16px; color:#FFD700; display:flex; align-items:center; gap:5px; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+        .inv-close { font-size:24px; cursor:pointer; color:rgba(255,255,255,0.7); padding:0 15px; font-weight:bold; transition: 0.2s; } 
+        .inv-close:hover { color:#ff5252; transform: scale(1.1); }
         
-        .inv-sub-header { background:#e9ecef; padding:8px 15px; font-size:12px; color:#333; border-bottom:1px solid #ddd; display:flex; align-items:center; flex-wrap: wrap; gap: 10px; }
+        /* SUB HEADER */
+        .inv-sub-header { 
+            background: rgba(255, 255, 255, 0.03); 
+            padding:8px 15px; font-size:12px; color:#fff; 
+            border-bottom:1px solid rgba(255, 255, 255, 0.1); 
+            display:flex; align-items:center; flex-wrap: wrap; gap: 10px; 
+        }
         .inv-user-info { display:flex; align-items:center; gap:10px; margin-left: auto; }
-        .inv-user-name { color:#d63031; font-weight:bold; } .inv-user-name.ready { color:#007bff; }
+        .inv-user-name { color:#d63031; font-weight:bold; } 
+        .inv-user-name.ready { color:#4fc3f7; }
         .inv-auth-btns { display:flex; gap:5px; }
         .inv-btn-auth { border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold; color:white; }
 
         /* TABS */
         .inv-tabs { display:flex; gap:5px; height: 35px; align-items:flex-end; align-self: flex-end; }
-        .inv-tab { padding:8px 20px; cursor:pointer; font-weight:bold; color:#666; border-bottom:3px solid transparent; transition:0.2s; font-size:13px; white-space:nowrap; height: 100%; display: flex; align-items: center; box-sizing: border-box;}
-        .inv-tab:hover { background:#eee; }
-        .inv-tab.active { color:#007bff; border-bottom:3px solid #007bff; background:white; border-radius: 5px 5px 0 0; }
+        .inv-tab { 
+            padding:8px 20px; cursor:pointer; font-weight:bold; 
+            color: rgba(255,255,255,0.6); 
+            border-bottom:3px solid transparent; transition:0.2s; font-size:13px; 
+            white-space:nowrap; height: 100%; display: flex; align-items: center; box-sizing: border-box;
+        }
+        .inv-tab:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .inv-tab.active { 
+            background: rgba(255, 255, 255, 0.15);
+            color: #00e676;
+            border-bottom: 3px solid #00e676;
+            backdrop-filter: blur(5px);
+            border-radius: 5px 5px 0 0; 
+        }
 
-        .inv-body { flex:1; overflow:hidden; position:relative; background:white; }
-        .inv-view { display:none; height:100%; flex-direction:column; padding:15px; box-sizing:border-box; }
+        /* BODY & VIEWS */
+        .inv-body { flex:1; overflow:hidden; position:relative; background:transparent; }
+        .inv-view { display:none; height:100%; flex-direction:column; padding:15px; box-sizing:border-box; color: #fff; }
         .inv-view.active { display:flex; }
 
-        /* STARTUP STYLES */
+        /* INPUTS & CONTROLS */
+        .inv-controls { 
+            display:flex; gap:10px; margin-bottom:15px; align-items:center; flex-wrap: nowrap; 
+            position: relative; /* Quan trọng cho suggestions */
+        }
+        .inv-input { 
+            padding:8px; border-radius:6px; font-size:14px; 
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+        .inv-input::placeholder { color: rgba(255,255,255,0.4); }
+        .inv-search-box { flex: 1; min-width: 0; } 
+        #inp-search-sku { width: 100%; box-sizing: border-box; }
+
+        /* STATUS FILTERS */
+        .inv-status-group { 
+            display:flex; gap:8px; padding:10px 5px; 
+            background: transparent; 
+            border-bottom: 1px solid rgba(255,255,255,0.1); 
+            overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; 
+        }
+        .inv-status-group::-webkit-scrollbar { display: none; } 
+        .inv-radio-lbl { 
+            flex: 0 0 auto; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; padding:6px 12px; border-radius:20px; transition:0.2s; 
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+        }
+        .inv-radio-lbl:hover { background: rgba(255, 255, 255, 0.15); }
+        .inv-radio-lbl:has(input:checked) { 
+            background: linear-gradient(135deg, rgba(0, 123, 255, 0.8), rgba(0, 86, 179, 0.8));
+            color: white; border: 1px solid #0056b3;
+            box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+        }
+        .inv-radio-lbl input { display:none; }
+
+        /* TABLE */
+        .inv-table-wrapper { 
+            flex:1; overflow:auto; border-radius:8px; 
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
+        }
+        .inv-table { width:100%; border-collapse:collapse; font-size:12px; }
+        .inv-table th { 
+            background: rgba(30, 30, 40, 0.95);
+            position:sticky; top:0; z-index:10; padding:10px; text-align:left; 
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            color: #FFD700; vertical-align: top; white-space: nowrap; 
+        }
+        .inv-table td { 
+            padding:8px 10px; 
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.9);
+        }
+        .inv-table tr:hover { background: rgba(255, 255, 255, 0.1); cursor: pointer; }
+        .inv-table tr.highlight { background: rgba(255, 215, 0, 0.15); animation: highlightFade 2s forwards; }
+        
+        /* COLOR CLASSES */
+        .st-ok { color: #00e676; font-weight:bold; }
+        .st-missing { color: #ff5252; font-weight:bold; }
+        .st-surplus { color: #ffab40; font-weight:bold; }
+        .row-unchecked { background: rgba(255, 82, 82, 0.15); }
+        .row-unchecked td { color: #ff8a80 !important; }
+
+        /* BUTTONS */
+        .inv-btn { 
+            padding:8px 12px; border:none; border-radius:6px; font-weight:bold; color:white; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s; white-space:nowrap; font-size: 13px; height: 36px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2);
+        }
+        .inv-btn:active { transform:scale(0.95); }
+        .btn-import { background: linear-gradient(135deg, #2e7d32, #1b5e20); } 
+        .btn-scan { background: linear-gradient(135deg, #37474f, #263238); } 
+        .btn-cloud-load { background:#6f42c1; } 
+        .btn-sync { background: linear-gradient(135deg, #0277bd, #01579b); } 
+        .btn-danger { background: linear-gradient(135deg, #c62828, #b71c1c); } 
+        .btn-export { background:#218838; }
+        
+        /* DROPDOWN FILTER */
+        .inv-filter-select {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff; padding: 2px;
+        }
+
+        /* --- SUGGESTIONS POPUP (FIXED WIDTH) --- */
+        .inv-suggestions { 
+            position:absolute; 
+            top:100%; /* Ngay dưới thanh controls */
+            left:0; right: 0; /* Full width của .inv-controls */
+            width: auto; /* Tự động theo left/right */
+            background: rgba(30, 30, 40, 0.98); 
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 0 0 8px 8px; 
+            box-shadow:0 10px 30px rgba(0,0,0,0.8); 
+            z-index:2000; max-height:300px; overflow-y:auto; 
+            display:none; 
+        }
+        .inv-sug-item { padding:12px 10px; border-bottom:1px solid rgba(255,255,255,0.1); cursor:pointer; font-size:13px; line-height: 1.4; color: #fff; }
+        .inv-sug-item:hover { background: rgba(255,255,255,0.15); color: #81d4fa; }
+        .inv-sug-code { font-weight:bold; color: #FFD700; }
+        .inv-sug-sub { font-size:11px; color: #aaa; font-style: italic; }
+
+        /* EDIT MODAL */
+        #inv-edit-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:2147483750; justify-content:center; align-items:center; backdrop-filter:blur(5px); }
+        .inv-edit-content { 
+            background: rgba(30, 30, 40, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            width:90%; max-width:400px; border-radius:12px; padding:20px; 
+            box-shadow:0 20px 60px rgba(0,0,0,0.6); 
+            animation: popIn 0.2s; display:flex; flex-direction:column; color: #fff;
+        }
+        .inv-chk-manual { font-size:12px; font-weight:bold; color: #ccc; display:flex; align-items:center; gap:4px; cursor:pointer; padding:0 5px; white-space: nowrap; user-select: none; }
+        .inv-chk-manual input { width:16px; height:16px; accent-color:#007bff; cursor:pointer; }
+        
+        .inv-edit-list { 
+            max-height:200px; overflow-y:auto; margin-bottom:15px; 
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius:6px;
+        }
+        .inv-edit-item { display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid rgba(255,255,255,0.05); align-items:center; font-size:13px; }
+        .inv-edit-input { 
+            width:60px; padding:4px; text-align:center; border-radius:4px; 
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .inv-edit-actions { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top: auto; }
+        .inv-btn-del-all { background:#dc3545; flex:1; justify-content:center; } .inv-btn-fill { background:#28a745; flex:1; justify-content:center; } .inv-btn-save { background:#007bff; flex:1; justify-content:center; }
+
+        .inv-edit-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; margin-bottom: 10px; }
+        .inv-edit-header span:first-child { font-weight: 800; font-size: 16px; color: #FFD700; }
+        .inv-edit-close { font-size: 28px; font-weight: bold; color: #fff; cursor: pointer; line-height: 20px; padding: 0 5px; }
+        .inv-edit-close:hover { color: red; }
+        #edit-prod-name { color: #81d4fa; }
+        
+        .row-new-entry { background: rgba(33, 150, 243, 0.15); }
+        .row-new-entry span { color: #4fc3f7 !important; }
+
+        /* STARTUP PANEL STYLES */
         .inv-startup-title { font-size:22px; font-weight:900; color:#FFD700; text-transform:uppercase; letter-spacing:1px; margin-bottom: 10px; text-shadow: 0 2px 10px rgba(255,215,0,0.5);}
         .inv-session-code-display { font-size: 16px; background: rgba(40,167,69,0.2); border: 1px solid #28a745; color: #00e676; padding: 8px 15px; border-radius: 20px; font-weight: bold; margin-bottom: 10px; display:none; letter-spacing: 2px;}
-
         .inv-split-box { display:flex; flex-direction:column; gap:20px; width: 100%; max-width: 400px;}
         .inv-box-panel { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; display:flex; flex-direction:column; gap:10px;}
         .inv-panel-title { font-size: 14px; font-weight: bold; color: #81d4fa; margin-bottom: 5px; text-transform: uppercase;}
-        
         .inv-input-group { display: flex; gap: 8px; width: 100%; }
         .inv-overlay-input { flex: 1; padding: 12px; border-radius: 6px; border: none; font-family: monospace; font-size: 14px; outline:none; background:rgba(255,255,255,0.9); color:#333; }
         .inv-overlay-input:disabled { background: #bbb; cursor: not-allowed; }
-        
         .inv-btn-overlay { padding:12px 20px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:0.2s; font-size: 14px; }
         .btn-mode-join { background: #28a745; color: white; } .btn-mode-join:hover { background: #218838; }
         .btn-mode-save { background: #007bff; color: white; } .btn-mode-save:hover { background: #0056b3; }
@@ -62,209 +235,27 @@
         .btn-mode-new { background: #dc3545; color: white; margin-top: 5px;} .btn-mode-new:hover { background: #c82333; }
         .btn-mode-continue { background: #17a2b8; color: white; margin-top: 5px;} .btn-mode-continue:hover { background: #138496; }
 
-        /* CONTROLS & TABLES */
-        .inv-controls { display:flex; gap:10px; margin-bottom:15px; align-items:center; flex-wrap: nowrap; position: relative; }
-        .inv-input { padding:8px; border:1px solid #ccc; border-radius:6px; font-size:14px; }
-        .inv-search-box { position:relative; flex: 1; min-width: 0; } 
-        #inp-search-sku { width: 100%; box-sizing: border-box; }
-
-        .inv-status-group { display:flex; gap:8px; padding:10px 5px; background:#fff; border-bottom:1px solid #eee; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
-        .inv-status-group::-webkit-scrollbar { display: none; } 
-        .inv-radio-lbl { flex: 0 0 auto; font-size:12px; font-weight:bold; color:#555; cursor:pointer; display:flex; align-items:center; gap:5px; background:#f1f3f5; padding:6px 12px; border-radius:20px; border:1px solid #ddd; transition:0.2s; }
-        .inv-radio-lbl:hover { background:#e2e6ea; }
-        .inv-radio-lbl:has(input:checked) { background:#007bff; color:white; border-color:#0056b3; box-shadow:0 2px 5px rgba(0,123,255,0.3); }
-        .inv-radio-lbl input { display:none; }
-
-        .inv-table-wrapper { flex:1; overflow:auto; border:1px solid #eee; border-radius:8px; box-shadow:inset 0 0 10px rgba(0,0,0,0.05); }
-        .inv-table { width:100%; border-collapse:collapse; font-size:12px; }
-        .inv-table th { background:#f1f1f1; position:sticky; top:0; z-index:10; padding:10px; text-align:left; border-bottom:2px solid #ddd; color:#444; vertical-align: top; white-space: nowrap; }
-        .inv-table td { padding:8px 10px; border-bottom:1px solid #eee; color:#333; }
-        .inv-table tr:hover { background:#f9f9f9; cursor: pointer; }
-        .inv-table tr.highlight { background:#fff9c4; animation: highlightFade 2s forwards; }
-        
-        /* STYLE CHO DÒNG CHƯA KIỂM (Fix lỗi hiển thị) */
-        .row-unchecked { background: #fff5f5; }
-        .row-new-entry { background: #e3f2fd; }
-
-        .inv-btn { padding:8px 12px; border:none; border-radius:6px; font-weight:bold; color:white; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.2s; white-space:nowrap; font-size: 13px; height: 36px; }
-        .inv-btn:active { transform:scale(0.95); }
-        .btn-import { background:#28a745; } .btn-scan { background:#343a40; } .btn-cloud-load { background:#6f42c1; } .btn-sync { background:#17a2b8; } .btn-danger { background:#dc3545; } .btn-export { background:#218838; }
-        
-        /* POPUPS */
-        .inv-suggestions { position:absolute; top:100%; left:0; width:100%; background:white; border:1px solid #ddd; border-radius:0 0 8px 8px; box-shadow:0 10px 20px rgba(0,0,0,0.2); z-index:2000; max-height:300px; overflow-y:auto; display:none; }
-        .inv-sug-item { padding:8px 10px; border-bottom:1px solid #f0f0f0; cursor:pointer; font-size:13px; line-height: 1.4; }
-        .inv-sug-item:hover { background:#f0f8ff; color:#007bff; }
-        .inv-sug-code { font-weight:bold; color:#d63031; }
-        .inv-sug-sub { font-size:11px; color:#666; font-style: italic; }
-
-        #inv-edit-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2147483750; justify-content:center; align-items:center; backdrop-filter:blur(2px); }
-        .inv-edit-content { background:white; width:90%; max-width:400px; border-radius:12px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.3); animation: popIn 0.2s; display:flex; flex-direction:column; }
-        .inv-chk-manual { font-size:12px; font-weight:bold; color:#555; display:flex; align-items:center; gap:4px; cursor:pointer; padding:0 5px; white-space: nowrap; user-select: none; }
-        .inv-chk-manual input { width:16px; height:16px; accent-color:#007bff; cursor:pointer; }
-        
-        .inv-edit-list { max-height:200px; overflow-y:auto; border:1px solid #eee; border-radius:6px; margin-bottom:15px; }
-        .inv-edit-item { display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #f9f9f9; align-items:center; font-size:13px; }
-        .inv-edit-input { width:60px; padding:4px; text-align:center; border:1px solid #ccc; border-radius:4px; }
-        .inv-edit-actions { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top: auto; }
-        .inv-btn-del-all { background:#dc3545; flex:1; justify-content:center; } .inv-btn-fill { background:#28a745; flex:1; justify-content:center; } .inv-btn-save { background:#007bff; flex:1; justify-content:center; }
-
-        .inv-edit-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
-        .inv-edit-header span:first-child { font-weight: 800; font-size: 16px; color: #333; }
-        .inv-edit-close { font-size: 28px; font-weight: bold; color: #aaa; cursor: pointer; line-height: 20px; padding: 0 5px; }
-        .inv-edit-close:hover { color: red; }
-        
+        /* SCANNER */
         #inv-scanner-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:black; z-index:200; display:none; flex-direction:column; }
         #inv-reader { width:100%; height:100%; object-fit:cover; }
-        .inv-scan-close { position:absolute; top:20px; right:20px; background:white; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; z-index:201; box-shadow:0 0 10px rgba(0,0,0,0.5); }
-        
-        .st-surplus { color:#28a745; font-weight:bold; } .st-missing { color:#dc3545; font-weight:bold; } .st-ok { color:#007bff; font-weight:bold; }
+        .inv-scan-close { position:absolute; top:20px; right:20px; background:white; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; z-index:201; box-shadow:0 0 10px rgba(0,0,0,0.5); color: #333; }
 
+        /* RESPONSIVE */
         @media (max-width: 768px) {
             .inv-header { flex-wrap: wrap; height: auto !important; padding: 10px 5px !important; gap: 5px; }
             .inv-title { width: 100%; justify-content: center; font-size: 18px; margin-bottom: 5px; }
             .inv-tabs { width: 100%; justify-content: center; border: none; }
             .inv-tab { flex: 1; text-align: center; padding: 8px 5px; font-size: 13px; border-radius: 4px; }
-            .inv-tab.active { border-bottom: none; background: #e3f2fd; color: #007bff; }
+            .inv-tab.active { border-bottom: none; background: rgba(33, 150, 243, 0.2); color: #00e676; }
             .inv-close { position: absolute; top: 10px; right: 10px; padding: 0; }
         }
-
-        /* =========================================================
-           GLASS UI THEME (DARK MODE PREMIUM) - TOOL KIỂM KÊ
-           ========================================================= */
-        body.glass-ui-mode .inv-content {
-            background: radial-gradient(circle at 10% 20%, rgb(30, 30, 40) 0%, rgb(10, 10, 15) 90%) !important;
-            color: #fff !important;
-        }
-
-        /* HEADER & SUB-HEADER */
-        body.glass-ui-mode .inv-header,
-        body.glass-ui-mode .inv-sub-header {
-            background: rgba(255, 255, 255, 0.05) !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-            color: #fff !important;
-        }
-        body.glass-ui-mode .inv-title { color: #FFD700 !important; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
-        body.glass-ui-mode .inv-user-name { color: #4fc3f7 !important; }
-        body.glass-ui-mode .inv-close { color: rgba(255,255,255,0.7) !important; }
-        body.glass-ui-mode .inv-close:hover { color: #ff5252 !important; }
-
-        /* TABS */
-        body.glass-ui-mode .inv-tabs { border: none !important; }
-        body.glass-ui-mode .inv-tab { color: rgba(255,255,255,0.6) !important; }
-        body.glass-ui-mode .inv-tab:hover { background: rgba(255,255,255,0.1) !important; color: #fff !important; }
-        body.glass-ui-mode .inv-tab.active {
-            background: rgba(255, 255, 255, 0.15) !important;
-            color: #00e676 !important;
-            border-bottom: 3px solid #00e676 !important;
-            backdrop-filter: blur(5px);
-        }
-
-        /* BODY & VIEWS */
-        body.glass-ui-mode .inv-body { background: transparent !important; }
-        body.glass-ui-mode .inv-view { color: #fff !important; }
-
-        /* INPUTS & SELECTS & CONTROLS */
-        body.glass-ui-mode .inv-controls { background: transparent !important; }
-        body.glass-ui-mode .inv-input,
-        body.glass-ui-mode .inv-filter-select {
-            background: rgba(0, 0, 0, 0.3) !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
-            color: #fff !important;
-        }
-        body.glass-ui-mode .inv-input::placeholder { color: rgba(255,255,255,0.4); }
-        
-        /* STATUS FILTER BAR */
-        body.glass-ui-mode .inv-status-group { background: transparent !important; border-bottom: 1px solid rgba(255,255,255,0.1) !important; }
-        body.glass-ui-mode .inv-radio-lbl {
-            background: rgba(255, 255, 255, 0.05) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            color: rgba(255, 255, 255, 0.8) !important;
-        }
-        body.glass-ui-mode .inv-radio-lbl:hover { background: rgba(255, 255, 255, 0.15) !important; }
-        body.glass-ui-mode .inv-radio-lbl:has(input:checked) {
-            background: linear-gradient(135deg, rgba(0, 123, 255, 0.8), rgba(0, 86, 179, 0.8)) !important;
-            color: white !important; border: 1px solid #0056b3 !important;
-            box-shadow: 0 0 10px rgba(0, 123, 255, 0.5) !important;
-        }
-
-        /* TABLE STYLES IN GLASS MODE */
-        body.glass-ui-mode .inv-table-wrapper {
-            background: rgba(0, 0, 0, 0.2) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.3) !important;
-        }
-        body.glass-ui-mode .inv-table th {
-            background: rgba(30, 30, 40, 0.95) !important;
-            color: #FFD700 !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
-        }
-        body.glass-ui-mode .inv-table td {
-            color: rgba(255, 255, 255, 0.9) !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
-        }
-        body.glass-ui-mode .inv-table tr:hover { background: rgba(255, 255, 255, 0.1) !important; }
-        body.glass-ui-mode .inv-table tr.highlight { background: rgba(255, 215, 0, 0.15) !important; }
-        
-        /* FIX: Dòng chưa kiểm trong Glass Mode */
-        body.glass-ui-mode .row-unchecked { background: rgba(255, 82, 82, 0.15) !important; }
-        body.glass-ui-mode .row-unchecked td { color: #ff8a80 !important; } /* Chữ đỏ sáng */
-
-        /* BUTTONS */
-        body.glass-ui-mode .inv-btn { box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); }
-        body.glass-ui-mode .btn-import { background: linear-gradient(135deg, #2e7d32, #1b5e20) !important; }
-        body.glass-ui-mode .btn-scan { background: linear-gradient(135deg, #37474f, #263238) !important; }
-        body.glass-ui-mode .btn-sync { background: linear-gradient(135deg, #0277bd, #01579b) !important; }
-        body.glass-ui-mode .btn-danger { background: linear-gradient(135deg, #c62828, #b71c1c) !important; }
-
-        /* TEXT COLORS */
-        body.glass-ui-mode .st-ok { color: #00e676 !important; } /* Xanh sáng */
-        body.glass-ui-mode .st-missing { color: #ff5252 !important; } /* Đỏ sáng */
-        body.glass-ui-mode .st-surplus { color: #ffab40 !important; } /* Cam sáng */
-        body.glass-ui-mode .inv-chk-manual { color: #ccc !important; }
-
-        /* POPUP: SUGGESTIONS */
-        body.glass-ui-mode .inv-suggestions {
-            background: rgba(30, 30, 40, 0.95) !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        }
-        body.glass-ui-mode .inv-sug-item { color: #fff !important; border-bottom: 1px solid rgba(255,255,255,0.1) !important; }
-        body.glass-ui-mode .inv-sug-item:hover { background: rgba(255,255,255,0.15) !important; color: #81d4fa !important; }
-        body.glass-ui-mode .inv-sug-code { color: #FFD700 !important; }
-        body.glass-ui-mode .inv-sug-sub { color: #aaa !important; }
-
-        /* POPUP: EDIT MODAL */
-        body.glass-ui-mode .inv-edit-content {
-            background: rgba(30, 30, 40, 0.85) !important;
-            backdrop-filter: blur(20px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.3) !important;
-            color: #fff !important;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.6) !important;
-        }
-        body.glass-ui-mode .inv-edit-header { border-bottom: 1px solid rgba(255,255,255,0.2) !important; }
-        body.glass-ui-mode .inv-edit-header span:first-child { color: #FFD700 !important; }
-        body.glass-ui-mode #edit-prod-name { color: #81d4fa !important; }
-        body.glass-ui-mode .inv-edit-list {
-            background: rgba(0,0,0,0.2) !important;
-            border: 1px solid rgba(255,255,255,0.1) !important;
-        }
-        body.glass-ui-mode .inv-edit-item { border-bottom: 1px solid rgba(255,255,255,0.05) !important; }
-        body.glass-ui-mode .inv-edit-input {
-            background: rgba(255,255,255,0.1) !important;
-            color: #fff !important;
-            border: 1px solid rgba(255,255,255,0.2) !important;
-        }
-        body.glass-ui-mode .inv-edit-close { color: #fff !important; }
-        
-        /* FIX: Dòng nhập mới trong Glass Mode */
-        body.glass-ui-mode .row-new-entry { background: rgba(33, 150, 243, 0.15) !important; }
-        body.glass-ui-mode .row-new-entry span { color: #4fc3f7 !important; }
     `;
 
     // --- 2. GLOBAL STATE ---
     let STORE = {
         importData: [],
-        countData:[],    // Dữ liệu kiểm kê của USER HIỆN TẠI
-        allCountData:[], // Dữ liệu kiểm kê của TẤT CẢ USER (Dùng cho tab Tổng hợp)
+        countData:[],    
+        allCountData:[], 
         currentStatus: "Mới",
         currentShopId: "",
         currentUser: "---", 
@@ -297,7 +288,6 @@
             if(!API_URL) { if(UI.showToast) UI.showToast("❌ Chưa có API URL."); return; }
             if(params.loadingMsg && UI.showToast) UI.showToast(params.loadingMsg);
 
-            // Bỏ qua check User nếu là tạo tài khoản
             if (params.action !== 'get_stock' && !params.action.includes('user_sheet_id') && !params.action.includes('inv_session') && !params.action.includes('_guest') && (STORE.currentUser === "---" || !STORE.currentUser)) {
                 if(UI.showToast) UI.showToast("❌ Lỗi: Chưa xác định được Nhân viên!");
                 return;
@@ -322,7 +312,6 @@
             });
         },
         
-        // --- CÁC HÀM CŨ ---
         getUserSheetId: (cb) => { API.call({ action: 'get_user_sheet_id', user: STORE.currentUser, forceMainConfig: true }, cb); },
         saveUserSheetId: (sheetId, cb) => { API.call({ action: 'save_user_sheet_id', user: STORE.currentUser, new_sheet_id: sheetId, forceMainConfig: true, loadingMsg: "💾 Đang lưu cấu hình..." }, cb); },
         initCustomSheet: (sheetId, cb) => { API.call({ action: 'init_custom_sheet', target_id: sheetId, loadingMsg: "⚙️ Đang khởi tạo các Sheet..." }, cb); },
@@ -347,7 +336,6 @@
         },
         deleteData: (mode, cb) => { if(!STORE.customSheetId) return; API.call({action: 'delete_data', mode: mode, loadingMsg: "⏳ Đang xóa dữ liệu..."}, cb); },
 
-        // --- CÁC HÀM MỚI ---
         createSession: (sheetId, cb) => {
             API.call({ action: 'create_inv_session', sheet_id: sheetId, user: STORE.currentUser, forceMainConfig: true, loadingMsg: "⏳ Đang tạo Mã kỳ kiểm kê..." }, cb);
         },
@@ -380,12 +368,10 @@
         modal.id = modalId;
         modal.innerHTML = `
             <div class="inv-content">
-                <!-- STARTUP OVERLAY (MOVED TO TOP FOR FULL COVERAGE) -->
+                <!-- STARTUP OVERLAY -->
                 <div id="inv-startup-overlay" style="display:flex;">
                     <div class="inv-startup-title">ĐĂNG NHẬP KIỂM KÊ</div>
                     <div id="lbl-startup-session" class="inv-session-code-display"></div>
-                    
-                    <!-- New Loading Status Label -->
                     <div id="startup-loading-status" style="color:#00e676; font-size:14px; font-weight:bold; margin-bottom:10px; display:none;"></div>
 
                     <div class="inv-split-box">
@@ -403,11 +389,7 @@
                         <div class="inv-box-panel">
                             <div class="inv-panel-title">👑 Dành cho Quản lý</div>
                             <div style="font-size:12px; color:#aaa; margin-bottom:5px;">ID File Sheet chứa dữ liệu Tồn kho:</div>
-                            
-                            <div id="mgr-loading-msg" style="color: yellow; font-size: 12px; font-style: italic; margin-bottom: 10px; text-align:center;">
-                                ⏳ Đang tải thông tin cấu hình...
-                            </div>
-
+                            <div id="mgr-loading-msg" style="color: yellow; font-size: 12px; font-style: italic; margin-bottom: 10px; text-align:center;">⏳ Đang tải thông tin cấu hình...</div>
                             <div id="mgr-input-area" style="display:none;">
                                 <div class="inv-input-group">
                                     <input type="text" id="inp-startup-sheet-id" class="inv-overlay-input" placeholder="ID Google Sheet..." autocomplete="off">
@@ -423,7 +405,7 @@
                 </div>
 
                 <div class="inv-header">
-                    <div class="inv-title">📦Hệ thống Kiểm kê</div>
+                    <div class="inv-title">📦Hệ thống Kiểm kê V2</div>
                     <div class="inv-tabs">
                         <div class="inv-tab active" data-tab="tab-input">Nhập liệu</div>
                         <div class="inv-tab" data-tab="tab-count">Kiểm kê</div>
@@ -433,11 +415,9 @@
                 </div>
                 
                 <div class="inv-sub-header">
-                    <!-- ĐÃ THÊM LẠI MÃ KỲ KIỂM KÊ -->
                     <span id="lbl-header-session" style="font-weight:bold; color:#28a745; display:none; font-size: 13px;">
                         🔖 Mã kỳ KK: <span id="val-header-session" style="color:#d63031; padding: 2px 5px; border: 1px dashed #d63031; border-radius: 4px;"></span>
                     </span>
-                    
                     <div class="inv-user-info">
                         👤 <span id="lbl-current-user" class="inv-user-name">...</span>
                         <div id="inv-auth-btns" class="inv-auth-btns"></div>
@@ -451,7 +431,7 @@
                             <label class="inv-btn btn-import">📂 Nhập Excel<input type="file" id="inp-excel-file" accept=".xlsx, .xls" style="display:none;"></label>
                             <button class="inv-btn btn-cloud-load" id="btn-load-stock-cloud">☁️ Tải tồn kho</button>
                         </div>
-                        <div style="padding:0 10px 10px; font-size:12px; color:#666;" id="lbl-file-name">Chưa có dữ liệu</div>
+                        <div style="padding:0 10px 10px; font-size:12px; color:#aaa;" id="lbl-file-name">Chưa có dữ liệu</div>
                         <div class="inv-table-wrapper"><table class="inv-table" id="tbl-import"><thead><tr><th>#</th><th>Nhóm</th><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>Tồn kho</th></tr></thead><tbody></tbody></table></div>
                     </div>
                     <!-- TAB 2: KIỂM KÊ -->
@@ -459,25 +439,30 @@
                         <div class="inv-status-group" id="inv-status-container">
                             <label class="inv-radio-lbl"><input type="radio" name="inv-status-radio" value="All"> Tất cả</label>
                         </div>
+                        <!-- CẤU TRÚC HTML MỚI CHO THANH TÌM KIẾM (Đưa suggestions ra ngoài) -->
                         <div class="inv-controls">
-                            <div class="inv-search-box"><input type="text" id="inp-search-sku" class="inv-input" placeholder="Nhập tên/mã..." autocomplete="off"><div class="inv-suggestions" id="box-suggestions"></div></div>
+                            <div class="inv-search-box">
+                                <input type="text" id="inp-search-sku" class="inv-input" placeholder="Nhập tên/mã..." autocomplete="off">
+                            </div>
                             <label class="inv-chk-manual"><input type="checkbox" id="chk-manual-input"> Nhập tay</label>
                             <button class="inv-btn btn-scan" id="btn-open-scan">📷</button>
                             <button class="inv-btn btn-sync" id="btn-sync-cloud">☁️ Lưu</button>
+                            <!-- Suggestions Box nằm ở đây, ngang hàng với input và buttons, style position absolute sẽ phủ lên -->
+                            <div class="inv-suggestions" id="box-suggestions"></div>
                         </div>
                         <div class="inv-table-wrapper"><table class="inv-table" id="tbl-counting"><thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>Tồn</th><th>Đã kiểm</th><th>Lệch</th></tr></thead><tbody></tbody></table></div>
                         <div id="inv-scanner-overlay"><div class="inv-scan-close" id="btn-close-scan">×</div><div id="inv-reader"></div></div>
                     </div>
                     <!-- TAB 3: TỔNG HỢP -->
                     <div class="inv-view" id="tab-sum">
-                        <div class="inv-controls" style="justify-content:space-between; background:#f8f9fa; padding:5px; border-radius:5px;">
+                        <div class="inv-controls" style="justify-content:space-between; background:rgba(255,255,255,0.05); padding:5px; border-radius:5px;">
                             <div style="display:flex; gap:5px;">
                                 <select id="sel-delete-mode" class="inv-input" style="padding:4px; font-size:11px;"><option value="none">-- Chọn hành động xóa --</option><option value="stock">Xóa dữ liệu tồn kho</option><option value="count">Xóa dữ liệu kiểm kê</option><option value="all">Xóa tất cả</option></select>
                                 <button class="inv-btn btn-danger" id="btn-delete-exec" style="padding:4px 10px;">Xóa dữ liệu</button>
                             </div>
                             <button class="inv-btn btn-export" id="btn-export-excel">📤 Xuất Excel</button>
                         </div>
-                        <div style="font-size:11px; color:#888; margin-bottom:10px; font-style:italic;">* Dữ liệu Tổng hợp là tổng số lượng của TẤT CẢ nhân viên trong kỳ kiểm kê này.</div>
+                        <div style="font-size:11px; color:#aaa; margin-bottom:10px; font-style:italic;">* Dữ liệu Tổng hợp là tổng số lượng của TẤT CẢ nhân viên trong kỳ kiểm kê này.</div>
                         <div class="inv-table-wrapper">
                             <table class="inv-table" id="tbl-summary">
                                 <thead><tr><th>Nhóm hàng<br><select class="inv-filter-select" data-col="group"><option value="all">Tất cả</option></select></th><th>Mã SP</th><th>Tên sản phẩm<br><select class="inv-filter-select" data-col="name"><option value="all">Tất cả</option></select></th><th>Trạng thái<br><select class="inv-filter-select" data-col="status"><option value="all">Tất cả</option></select></th><th>Tồn kho</th><th>Tổng đã kiểm<br><select class="inv-filter-select" data-col="count"><option value="all">Tất cả</option><option value="checked">Đã kiểm</option><option value="unchecked">Chưa kiểm</option></select></th><th>Chênh lệch<br><select class="inv-filter-select" data-col="diff"><option value="all">Tất cả</option><option value="ok">Đủ</option><option value="thua">Thừa</option><option value="thieu">Thiếu</option></select></th></tr></thead>
@@ -487,13 +472,13 @@
                     </div>
                 </div>
             </div>
-            <!-- CÁC POPUP KHÁC -->
+            <!-- POPUP EDIT -->
             <div id="inv-edit-modal">
                 <div class="inv-edit-content">
                     <div class="inv-edit-header"><span>Điều chỉnh số lượng</span><span class="inv-edit-close" id="btn-edit-close-x" title="Đóng">×</span></div>
                     <div style="font-size:13px; margin-bottom:5px;">Sản phẩm: <b id="edit-prod-name">...</b></div>
-                    <div style="font-size:12px; color:#666; margin-bottom:10px;">Mã: <span id="edit-prod-sku"></span> | Trạng thái: <span id="edit-prod-status"></span></div>
-                    <div style="font-size:12px; color:blue; margin-bottom:10px;">Tồn kho: <b id="edit-prod-stock">0</b> | Đã kiểm: <b id="edit-prod-count">0</b></div>
+                    <div style="font-size:12px; color:#aaa; margin-bottom:10px;">Mã: <span id="edit-prod-sku"></span> | Trạng thái: <span id="edit-prod-status"></span></div>
+                    <div style="font-size:12px; color:#4fc3f7; margin-bottom:10px;">Tồn kho: <b id="edit-prod-stock">0</b> | Đã kiểm: <b id="edit-prod-count">0</b></div>
                     <div class="inv-edit-list" id="edit-history-list"></div>
                     <div class="inv-edit-actions"><button class="inv-btn inv-btn-del-all" id="btn-edit-delete">🗑️ Xóa</button><button class="inv-btn inv-btn-fill" id="btn-edit-fill" style="display:none;">⚡ Nhập đủ</button><button class="inv-btn inv-btn-save" id="btn-edit-save">Lưu</button></div>
                 </div>
@@ -536,7 +521,6 @@
                 document.getElementById('inv-btn-login').onclick = () => showAuthModal('login');
                 document.getElementById('inv-btn-register').onclick = () => showAuthModal('register');
             } else {
-                // Nếu không phải là user MWG gốc thì cho phép Đăng xuất
                 if (!(AUTH_STATE && AUTH_STATE.isAuthorized)) {
                     btnContainer.innerHTML = `<button id="inv-btn-logout" class="inv-btn-auth" style="background:#dc3545;">Đăng xuất</button>`;
                     document.getElementById('inv-btn-logout').onclick = () => {
@@ -547,8 +531,6 @@
                         }
                     };
                 } else { btnContainer.innerHTML = ''; }
-                
-                // Tự động kiểm tra Config nếu đã đăng nhập
                 fetchUserConfig();
             }
         };
@@ -598,20 +580,16 @@
             STORE.sessionCode = code;
             document.getElementById('lbl-header-session').style.display = 'inline';
             document.getElementById('val-header-session').innerText = code;
-            
             lblSessionDisplay.style.display = 'block';
             lblSessionDisplay.innerText = "KỲ KIỂM KÊ: " + code;
         };
 
         const fetchUserConfig = () => {
             if(!STORE.isLoggedIn) return;
-            
-            // Hiện loading, ẩn input
             document.getElementById('mgr-loading-msg').style.display = 'block';
             document.getElementById('mgr-input-area').style.display = 'none';
 
             API.getUserSheetId((res) => {
-                // Tắt loading, hiện input
                 document.getElementById('mgr-loading-msg').style.display = 'none';
                 document.getElementById('mgr-input-area').style.display = 'block';
 
@@ -774,7 +752,8 @@
                 document.querySelectorAll('.inv-view').forEach(v => v.classList.remove('active')); 
                 document.getElementById(t.dataset.tab).classList.add('active'); 
                 
-                if (t.dataset.tab === 'tab-count') setTimeout(() => document.getElementById('inp-search-sku').focus(), 100); 
+                // [FIX] BỎ AUTO FOCUS (User requested)
+                // if (t.dataset.tab === 'tab-count') setTimeout(() => document.getElementById('inp-search-sku').focus(), 100); 
                 
                 if (t.dataset.tab === 'tab-sum') { 
                     if(!STORE.customSheetId) {
@@ -811,7 +790,7 @@
         document.getElementById('chk-manual-input').onchange = (e) => STORE.isManualInput = e.target.checked;
         document.getElementById('inp-excel-file').addEventListener('change', handleFileImport, false);
 
-        // --- SEARCH LOGIC ---
+        // --- SEARCH LOGIC (Suggestions box width fixed by CSS) ---
         const searchInput = document.getElementById('inp-search-sku');
         const sugBox = document.getElementById('box-suggestions');
         searchInput.addEventListener('input', (e) => {
@@ -828,31 +807,27 @@
                 sugBox.querySelectorAll('.inv-sug-item').forEach(el => { el.onclick = () => { addCountItem(el.dataset.sku, el.dataset.status); searchInput.value = ''; sugBox.style.display = 'none'; searchInput.focus(); }; });
             } else sugBox.style.display = 'none';
         });
-        document.addEventListener('click', (e) => { if (!e.target.closest('.inv-search-box')) sugBox.style.display = 'none'; });
+        document.addEventListener('click', (e) => { 
+            // Fix click outside: Do sugBox giờ nằm ngoài .inv-search-box, nên phải check closest .inv-controls
+            if (!e.target.closest('.inv-controls')) sugBox.style.display = 'none'; 
+        });
         document.getElementById('btn-open-scan').onclick = startScanner;
         document.getElementById('btn-close-scan').onclick = stopScanner;
         document.querySelectorAll('.inv-filter-select').forEach(el => el.addEventListener('change', renderSummary));
         
-        // --- EDIT MODAL & SYNC LOGIC ---
-        // Hàm này sẽ cập nhật số liệu cục bộ cho Summary Tab ngay lập tức
+        // --- EDIT MODAL & REALTIME SYNC ---
         const syncLocalToGlobal = (sku, status, newTotal) => {
-            // 1. Xóa dữ liệu cũ của user hiện tại với SKU này khỏi STORE.allCountData
             STORE.allCountData = STORE.allCountData.filter(x => !(x.user === STORE.currentUser && x.sku === sku && x.status === status));
-            
-            // 2. Thêm dữ liệu mới (nếu > 0)
             if(newTotal > 0) {
                 STORE.allCountData.push({
                     user: STORE.currentUser,
                     sku: sku,
                     status: status,
                     qty: newTotal,
-                    // Các trường phụ có thể lấy từ importData nếu cần hiển thị chi tiết
                     name: STORE.editingItem.name || '',
                     group: STORE.editingItem.group || ''
                 });
             }
-
-            // 3. Nếu đang ở tab Tổng hợp, vẽ lại ngay lập tức
             if(document.getElementById('tab-sum').classList.contains('active')) {
                 renderSummary();
             }
@@ -860,22 +835,19 @@
 
         document.getElementById('btn-edit-close-x').onclick = () => document.getElementById('inv-edit-modal').style.display = 'none';
         
-        // Nút Xóa
         document.getElementById('btn-edit-delete').onclick = () => { 
             if(confirm("Xóa sản phẩm này khỏi danh sách CỦA BẠN?")) { 
                 const sku = STORE.editingItem.sku;
                 const status = STORE.editingItem.status;
                 STORE.countData = STORE.countData.filter(i => !(i.sku === sku && i.status === status)); 
                 document.getElementById('inv-edit-modal').style.display = 'none'; 
-                
                 renderCountTable(); 
-                syncLocalToGlobal(sku, status, 0); // Sync về 0
+                syncLocalToGlobal(sku, status, 0); 
                 UI.showToast("Đã xóa!"); 
                 triggerAutoSync(); 
             } 
         };
         
-        // Nút Nhập Đủ
         document.getElementById('btn-edit-fill').onclick = () => { 
             const item = STORE.editingItem; 
             const diff = item.stock - item.totalCount; 
@@ -896,14 +868,13 @@
                     } 
                     document.getElementById('inv-edit-modal').style.display = 'none'; 
                     renderCountTable(); 
-                    syncLocalToGlobal(item.sku, item.status, newTotal); // Sync số mới
+                    syncLocalToGlobal(item.sku, item.status, newTotal); 
                     UI.showToast("Đã cập nhật!"); 
                     triggerAutoSync(); 
                 } 
             } 
         };
         
-        // Nút Lưu (Chỉnh sửa history)
         document.getElementById('btn-edit-save').onclick = () => { 
             const inputs = document.querySelectorAll('.inv-history-qty'); 
             let newHistory =[]; 
@@ -951,7 +922,6 @@
 
             const lblStatus = document.getElementById('startup-loading-status');
             
-            // 1. Tải tồn kho
             if(lblStatus) lblStatus.innerText = "⏳ Đang tải tồn kho (1/2)...";
             API.getStock((data) => {
                 if(data.length > 0) { 
@@ -960,7 +930,6 @@
                     updateFilters();
                 }
                 
-                // 2. Tải kiểm kê
                 if(lblStatus) lblStatus.innerText = "⏳ Đang tải kiểm kê (2/2)...";
                 API.getCount((cData) => {
                     STORE.allCountData = cData;
@@ -1030,7 +999,7 @@
         }
 
         function updateFilters() { const getUnique = (key) => [...new Set(STORE.importData.map(i => i[key]))].filter(Boolean); const fillSelect = (col, vals) => { const sel = document.querySelector(`.inv-filter-select[data-col="${col}"]`); const options = ['all', ...vals]; if(sel) sel.innerHTML = options.map(v => `<option value="${v}">${v === 'all' ? 'Tất cả' : v}</option>`).join(''); }; fillSelect('status', getUnique('status')); fillSelect('group', getUnique('group')); fillSelect('name', getUnique('name').sort()); }
-        function renderImportTable() { const tbody = document.querySelector('#tbl-import tbody'); let html = ''; STORE.importData.slice(0, 200).forEach((item, idx) => { html += `<tr><td>${idx+1}</td><td>${item.group}</td><td style="font-weight:bold;color:#d63031">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td>${item.stock}</td></tr>`; }); tbody.innerHTML = html; }
+        function renderImportTable() { const tbody = document.querySelector('#tbl-import tbody'); let html = ''; STORE.importData.slice(0, 200).forEach((item, idx) => { html += `<tr><td>${idx+1}</td><td>${item.group}</td><td style="font-weight:bold;color:#FFD700">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td>${item.stock}</td></tr>`; }); tbody.innerHTML = html; }
         
         function addCountItem(sku, specificStatus) {
             if(!STORE.customSheetId) return;
@@ -1068,11 +1037,10 @@
             const btnFill = document.getElementById('btn-edit-fill'); const diff = (realItem.stock || 0) - realItem.totalCount;
             if (diff !== 0) { btnFill.style.display = 'flex'; const sign = diff > 0 ? '+' : ''; btnFill.innerText = `⚡ Nhập đủ (${sign}${diff})`; } else { btnFill.style.display = 'none'; }
             let html = '';
-            if (realItem.history.length === 0) { html = '<div style="text-align:center; padding:10px; color:#999; font-style:italic;">Chưa có lịch sử nhập.</div>'; } 
+            if (realItem.history.length === 0) { html = '<div style="text-align:center; padding:10px; color:#aaa; font-style:italic;">Chưa có lịch sử nhập.</div>'; } 
             else { realItem.history.forEach((h, idx) => { html += `<div class="inv-edit-item"><span>Lần nhập lúc ${h.ts}</span><input type="number" class="inv-edit-input inv-history-qty" value="${h.qty}"></div>`; }); }
             
-            // Fix UI Class cho dòng nhập mới
-            html += `<div class="inv-edit-item row-new-entry"><span style="font-weight:bold; color:#007bff">Nhập mới:</span><input type="number" class="inv-edit-input inv-history-qty" value="" placeholder="SL"></div>`;
+            html += `<div class="inv-edit-item row-new-entry"><span style="font-weight:bold; color:#4fc3f7">Nhập mới:</span><input type="number" class="inv-edit-input inv-history-qty" value="" placeholder="SL"></div>`;
             list.innerHTML = html; modal.style.display = 'flex';
         }
 
@@ -1084,7 +1052,7 @@
                 let diffText = `<span class="st-ok">Đủ</span>`;
                 if (stockVal > 0) { if (diff > 0) diffText = `<span class="st-missing">Thiếu ${formatNumber(diff)}</span>`; else if (diff < 0) diffText = `<span class="st-surplus">Thừa ${formatNumber(Math.abs(diff))}</span>`; } 
                 else if (stockVal === 0 && item.totalCount > 0) { diffText = `<span class="st-surplus">Thừa ${formatNumber(item.totalCount)}</span>`; }
-                html += `<tr class="${idx===0?'highlight':''}" onclick="document.getElementById('edit-trigger-${idx}').click()"><td style="font-weight:bold;color:#d63031">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td>${formatNumber(stockVal)}</td><td style="font-weight:bold;font-size:14px;color:#007bff">${formatNumber(item.totalCount)}</td><td>${diffText}</td><td style="display:none"><button id="edit-trigger-${idx}"></button></td></tr>`;
+                html += `<tr class="${idx===0?'highlight':''}" onclick="document.getElementById('edit-trigger-${idx}').click()"><td style="font-weight:bold;color:#FFD700">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td>${formatNumber(stockVal)}</td><td style="font-weight:bold;font-size:14px;color:#007bff">${formatNumber(item.totalCount)}</td><td>${diffText}</td><td style="display:none"><button id="edit-trigger-${idx}"></button></td></tr>`;
             });
             tbody.innerHTML = html;
             STORE.countData.forEach((item, idx) => { document.getElementById(`edit-trigger-${idx}`).onclick = () => openEditPopup(item); });
@@ -1126,7 +1094,6 @@
                 if (diff > 0) diffText = `<span class="st-missing">Thiếu ${formatNumber(diff)}</span>`; 
                 else if (diff < 0) diffText = `<span class="st-surplus">Thừa ${formatNumber(Math.abs(diff))}</span>`;
                 
-                // Fix UI Class cho dòng chưa kiểm
                 let rowClass = item.realQty === 0 ? 'summary-row row-unchecked' : 'summary-row';
 
                 html += `<tr class="${rowClass}" data-sku="${item.sku}" data-status="${item.status}"><td>${item.group}</td><td style="font-weight:bold;">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td>${formatNumber(item.stock)}</td><td style="font-weight:bold; color: #007bff; font-size:14px;">${formatNumber(item.realQty)}</td><td>${diffText}</td></tr>`;
@@ -1149,7 +1116,7 @@
     };
 
     return {
-        name: "Kiểm kê V1",
+        name: "Kiểm kê",
         icon: `<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z" fill="white"/></svg>`,
         bgColor: "#6c757d",
         css: MY_CSS,
