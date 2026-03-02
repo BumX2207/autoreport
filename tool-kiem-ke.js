@@ -23,7 +23,6 @@
         .inv-sub-header { background:#e9ecef; padding:8px 15px; font-size:12px; color:#333; border-bottom:1px solid #ddd; display:flex; align-items:center; flex-wrap: wrap; gap: 10px; }
         .inv-shop-select { padding: 4px; border-radius: 4px; border: 1px solid #007bff; font-weight: bold; color: #0056b3; outline: none; font-size: 12px; max-width: 110px; }
         
-        /* User Bar */
         .inv-user-info { display:flex; align-items:center; gap:10px; margin-left: auto; }
         .inv-user-name { color:#d63031; font-weight:bold; } .inv-user-name.ready { color:#007bff; }
         .inv-auth-btns { display:flex; gap:5px; }
@@ -38,10 +37,9 @@
         .inv-view { display:none; height:100%; flex-direction:column; padding:15px; box-sizing:border-box; }
         .inv-view.active { display:flex; }
 
-        /* OVERLAYS - BLACK STYLE (Split UI) */
+        /* OVERLAYS - BLACK STYLE */
         #inv-startup-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:2005; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:15px; animation:fadeIn 0.3s; color: white; overflow-y:auto; padding: 20px;}
         .inv-startup-title { font-size:22px; font-weight:900; color:#FFD700; text-transform:uppercase; letter-spacing:1px; margin-bottom: 10px; text-shadow: 0 2px 10px rgba(255,215,0,0.5);}
-        
         .inv-session-code-display { font-size: 16px; background: rgba(40,167,69,0.2); border: 1px solid #28a745; color: #00e676; padding: 8px 15px; border-radius: 20px; font-weight: bold; margin-bottom: 10px; display:none; letter-spacing: 2px;}
 
         .inv-split-box { display:flex; flex-direction:column; gap:20px; width: 100%; max-width: 400px;}
@@ -83,12 +81,12 @@
         .inv-btn:active { transform:scale(0.95); }
         .btn-import { background:#28a745; } .btn-scan { background:#343a40; } .btn-cloud-load { background:#6f42c1; } .btn-sync { background:#17a2b8; } .btn-danger { background:#dc3545; } .btn-export { background:#218838; }
         
-        /* SEARCH SUGGESTIONS & POPUPS */
+        /* POPUPS */
         .inv-suggestions { position:absolute; top:100%; left:0; width:100%; background:white; border:1px solid #ddd; border-radius:0 0 8px 8px; box-shadow:0 10px 20px rgba(0,0,0,0.2); z-index:2000; max-height:300px; overflow-y:auto; display:none; }
         .inv-sug-item { padding:8px 10px; border-bottom:1px solid #f0f0f0; cursor:pointer; font-size:13px; line-height: 1.4; }
         .inv-sug-item:hover { background:#f0f8ff; color:#007bff; }
         .inv-sug-code { font-weight:bold; color:#d63031; }
-        .inv-sug-sub { font-size:11px; color:#0076ff; font-style: italic; }
+        .inv-sug-sub { font-size:11px; color:#666; font-style: italic; }
 
         #inv-edit-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2147483750; justify-content:center; align-items:center; backdrop-filter:blur(2px); }
         .inv-edit-content { background:white; width:90%; max-width:400px; border-radius:12px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.3); animation: popIn 0.2s; display:flex; flex-direction:column; }
@@ -106,6 +104,16 @@
         .inv-scan-close { position:absolute; top:20px; right:20px; background:white; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; z-index:201; box-shadow:0 0 10px rgba(0,0,0,0.5); }
         
         .st-surplus { color:#28a745; font-weight:bold; } .st-missing { color:#dc3545; font-weight:bold; } .st-ok { color:#007bff; font-weight:bold; }
+
+        /* --- MOBILE RESPONSIVE FIX --- */
+        @media (max-width: 768px) {
+            .inv-header { flex-wrap: wrap; height: auto !important; padding: 10px 5px !important; gap: 5px; }
+            .inv-title { width: 100%; justify-content: center; font-size: 18px; margin-bottom: 5px; }
+            .inv-tabs { width: 100%; justify-content: center; border: none; }
+            .inv-tab { flex: 1; text-align: center; padding: 8px 5px; font-size: 13px; border-radius: 4px; }
+            .inv-tab.active { border-bottom: none; background: #e3f2fd; color: #007bff; }
+            .inv-close { position: absolute; top: 10px; right: 10px; padding: 0; }
+        }
     `;
 
     // --- 2. GLOBAL STATE ---
@@ -272,13 +280,21 @@
                             <div class="inv-box-panel">
                                 <div class="inv-panel-title">👑 Dành cho Quản lý</div>
                                 <div style="font-size:12px; color:#aaa; margin-bottom:5px;">ID File Sheet chứa dữ liệu Tồn kho:</div>
-                                <div class="inv-input-group">
-                                    <input type="text" id="inp-startup-sheet-id" class="inv-overlay-input" placeholder="ID Google Sheet..." autocomplete="off">
-                                    <button id="btn-startup-save-id" class="inv-btn-overlay btn-mode-save">Lưu ID</button>
+                                
+                                <!-- Loading Message Mới -->
+                                <div id="mgr-loading-msg" style="color: yellow; font-size: 12px; font-style: italic; margin-bottom: 10px; text-align:center;">
+                                    ⏳ Đang tải thông tin cấu hình...
                                 </div>
-                                <div id="startup-actions" style="display:none; flex-direction:column; margin-top:10px;">
-                                    <button class="inv-btn-overlay btn-mode-continue" id="btn-start-load">📥 Tiếp tục kỳ cũ</button>
-                                    <button class="inv-btn-overlay btn-mode-new" id="btn-start-new">🆕 Tạo kỳ kiểm kê mới</button>
+
+                                <div id="mgr-input-area" style="display:none;">
+                                    <div class="inv-input-group">
+                                        <input type="text" id="inp-startup-sheet-id" class="inv-overlay-input" placeholder="ID Google Sheet..." autocomplete="off">
+                                        <button id="btn-startup-save-id" class="inv-btn-overlay btn-mode-save">Lưu ID</button>
+                                    </div>
+                                    <div id="startup-actions" style="display:none; flex-direction:column; margin-top:10px;">
+                                        <button class="inv-btn-overlay btn-mode-continue" id="btn-start-load">📥 Tiếp tục kỳ cũ</button>
+                                        <button class="inv-btn-overlay btn-mode-new" id="btn-start-new">🆕 Tạo kỳ kiểm kê mới</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -444,7 +460,16 @@
 
         const fetchUserConfig = () => {
             if(!STORE.isLoggedIn) return;
+            
+            // Hiện loading, ẩn input
+            document.getElementById('mgr-loading-msg').style.display = 'block';
+            document.getElementById('mgr-input-area').style.display = 'none';
+
             API.getUserSheetId((res) => {
+                // Tắt loading, hiện input
+                document.getElementById('mgr-loading-msg').style.display = 'none';
+                document.getElementById('mgr-input-area').style.display = 'block';
+
                 if (res.status === 'success' && res.sheet_id) {
                     STORE.customSheetId = res.sheet_id;
                     inpSheetId.value = res.sheet_id;
