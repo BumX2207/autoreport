@@ -10,7 +10,7 @@
 
     // --- 1. CSS ---
     const MY_CSS = `
-        #tgdd-inventory-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); z-index:2147483600; justify-content:center; align-items:center; }
+        #tgdd-inventory-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); z-index:2147483601; justify-content:center; align-items:center; }
         #tgdd-toast-notification { z-index: 2147483705 !important; }
 
         .inv-content { background:#fff; width:100%; height:100%; box-shadow:0 20px 60px rgba(0,0,0,0.4); display:flex; flex-direction:column; overflow:hidden; animation: popIn 0.3s; font-family: sans-serif; position: relative; }
@@ -243,7 +243,7 @@
                 
                 <div class="inv-sub-header">
                     <select id="inv-shop-select" class="inv-shop-select">${shopOpts}</select>
-                    <span id="lbl-header-session" style="font-weight:bold; color:#28a745; margin-left:10px; display:none;">Mã Phiên: <span id="val-header-session"></span></span>
+                    <span id="lbl-header-session" style="font-weight:bold; color:#28a745; margin-left:10px; display:none;">Kỳ KK: <span id="val-header-session"></span></span>
                     
                     <div class="inv-user-info">
                         👤 <span id="lbl-current-user" class="inv-user-name">...</span>
@@ -278,7 +278,7 @@
                                 </div>
                                 <div id="startup-actions" style="display:none; flex-direction:column; margin-top:10px;">
                                     <button class="inv-btn-overlay btn-mode-continue" id="btn-start-load">📥 Tiếp tục kỳ cũ</button>
-                                    <button class="inv-btn-overlay btn-mode-new" id="btn-start-new">🆕 Tạo kỳ kiểm kê mới (Phát sinh Mã)</button>
+                                    <button class="inv-btn-overlay btn-mode-new" id="btn-start-new">🆕 Tạo kỳ kiểm kê mới</button>
                                 </div>
                             </div>
                         </div>
