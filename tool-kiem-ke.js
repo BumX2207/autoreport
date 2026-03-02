@@ -686,7 +686,7 @@
                 if (res.status === 'success') {
                     STORE.customSheetId = res.sheet_id;
                     showSessionInfo(code);
-                    UI.showToast(`✅ Đã tham gia phòng của: ${res.owner}`);
+                    UI.showToast(`✅ Đã tham gia kỳ kiểm kê của: ${res.owner}`);
                     autoLoadData(() => {
                         overlay.style.display = 'none';
                         lblStatus.style.display = 'none';
