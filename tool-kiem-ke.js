@@ -39,7 +39,7 @@
             height: 75px !important; flex-shrink: 0; 
         }
         .inv-title { font-weight:800; font-size:16px; color:#FFD700; display:flex; align-items:center; gap:5px; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
-        .inv-close { font-size:24px; cursor:pointer; color:rgba(255,255,255,0.7); padding:0 15px; font-weight:bold; transition: 0.2s; } 
+        .inv-close { font-size:24px; cursor:pointer; color:rgba(255,255,255,0.7); padding:0 15px; font-weight:bold; transition: 0.2s; z-index: 1000000;} 
         .inv-close:hover { color:#ff5252; transform: scale(1.1); }
         
         /* SUB HEADER */
