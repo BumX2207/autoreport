@@ -581,34 +581,54 @@
         // TABS LOGIC
         const tabs = modal.querySelectorAll('.inv-tab'); 
         tabs.forEach(t => { 
-            t.onclick = () => { 
-                tabs.forEach(x => x.classList.remove('active')); t.classList.add('active'); 
-                document.querySelectorAll('.inv-view').forEach(v => v.classList.remove('active')); 
-                document.getElementById(t.dataset.tab).classList.add('active'); 
+    t.onclick = () => { 
+        tabs.forEach(x => x.classList.remove('active')); 
+        t.classList.add('active'); 
+        document.querySelectorAll('.inv-view').forEach(v => v.classList.remove('active')); 
+        document.getElementById(t.dataset.tab).classList.add('active'); 
+        
+        if (t.dataset.tab === 'tab-count') setTimeout(() => document.getElementById('inp-search-sku').focus(), 100); 
+        
+        // LOGIC MỚI CHO TAB TỔNG HỢP (FIXED)
+        if (t.dataset.tab === 'tab-sum') { 
+            if(!STORE.customSheetId) {
+                UI.showToast("❌ Chưa có kết nối Sheet!");
+                return;
+            }
+
+            t.innerText = "⏳ Đang đồng bộ...";
+            
+            // BƯỚC 1: Đẩy dữ liệu của User hiện tại lên Cloud trước
+            API.saveCount(STORE.countData, (resSave) => {
+                if(resSave.status !== 'success') {
+                     UI.showToast("❌ Lỗi lưu dữ liệu cá nhân!");
+                     t.innerText = "Tổng hợp (Lỗi)";
+                     return;
+                }
+
+                t.innerText = "⏳ Đang gộp số liệu...";
                 
-                if (t.dataset.tab === 'tab-count') setTimeout(() => document.getElementById('inp-search-sku').focus(), 100); 
-                
-                // LOGIC MỚI: Bấm qua Tổng hợp -> Đồng bộ -> Tải dữ liệu của tất cả -> Tính toán
-                if (t.dataset.tab === 'tab-sum') { 
-                    if(!STORE.customSheetId) return;
-                    t.innerText = "⏳ Đang gộp...";
-                    // 1. Lưu dữ liệu của mình lên trước
-                    API.saveCount(STORE.countData, () => {
-                        // 2. Kéo dữ liệu của TẤT CẢ mọi người về
-                        API.getCount((cData) => {
-                            STORE.allCountData = cData; // Lưu raw list của tất cả user
-                            
-                            // Cập nhật lại list của mình nhỡ có người khác sửa
-                            STORE.countData = cData.filter(i => i.user === STORE.currentUser).map(i => ({ ...i, history:[{ts:i.time, qty:i.qty}], totalCount: i.qty, stock: (STORE.importData.find(s => s.sku === i.sku && s.status === i.status) || {}).stock || 0 }));
-                            
-                            renderSummary(); 
-                            t.innerText = "Tổng hợp";
-                            UI.showToast("✅ Đã cập nhật số liệu tổng hợp!");
-                        });
-                    });
-                } 
-            }; 
-        });
+                // BƯỚC 2: Tải dữ liệu kiểm kê của TẤT CẢ USER về
+                API.getCount((cData) => {
+                    STORE.allCountData = cData; // Đây là mảng chứa dữ liệu của User 1, User 2, User 3...
+                    
+                    // Cập nhật lại list cá nhân (đề phòng trôi lệch) nhưng giữ nguyên logic hiển thị
+                    STORE.countData = cData.filter(i => i.user === STORE.currentUser).map(i => ({ 
+                        ...i, 
+                        history: [{ts:i.time, qty:i.qty}], 
+                        totalCount: i.qty, 
+                        stock: (STORE.importData.find(s => s.sku === i.sku && s.status === i.status) || {}).stock || 0 
+                    }));
+                    
+                    // BƯỚC 3: Gọi hàm hiển thị đã được viết lại logic cộng gộp
+                    renderSummary(); 
+                    t.innerText = "Tổng hợp";
+                    UI.showToast("✅ Đã gộp dữ liệu từ tất cả nhân viên!");
+                });
+            });
+        } 
+    }; 
+});
 
         document.querySelectorAll('input[name="inv-status-radio"]').forEach(r => { r.onchange = (e) => { STORE.currentStatus = e.target.value; document.getElementById('inp-search-sku').value = ''; document.getElementById('box-suggestions').style.display = 'none'; }; });
         document.getElementById('chk-manual-input').onchange = (e) => STORE.isManualInput = e.target.checked;
@@ -781,32 +801,100 @@
 
         // TẠO BẢNG TỔNG HỢP CỦA TẤT CẢ USER
         function renderSummary() {
-            const fGroup = document.querySelector('.inv-filter-select[data-col="group"]').value; const fName = document.querySelector('.inv-filter-select[data-col="name"]').value; const fStatus = document.querySelector('.inv-filter-select[data-col="status"]').value; const fCount = document.querySelector('.inv-filter-select[data-col="count"]').value; const fDiff = document.querySelector('.inv-filter-select[data-col="diff"]').value;
-            const tbody = document.querySelector('#tbl-summary tbody'); let html = '';
-            
-            // Gộp tất cả data đếm được (allCountData)
-            let aggregatedCount = {};
-            STORE.allCountData.forEach(item => {
-                let key = item.sku + '_' + item.status;
-                if(!aggregatedCount[key]) aggregatedCount[key] = 0;
-                aggregatedCount[key] += parseInt(item.qty) || 0;
-            });
+    // Lấy giá trị các bộ lọc
+    const fGroup = document.querySelector('.inv-filter-select[data-col="group"]').value; 
+    const fName = document.querySelector('.inv-filter-select[data-col="name"]').value; 
+    const fStatus = document.querySelector('.inv-filter-select[data-col="status"]').value; 
+    const fCount = document.querySelector('.inv-filter-select[data-col="count"]').value; 
+    const fDiff = document.querySelector('.inv-filter-select[data-col="diff"]').value;
+    
+    const tbody = document.querySelector('#tbl-summary tbody'); 
+    let html = '';
+    
+    // --- LOGIC GỘP DỮ LIỆU (CORE FIX) ---
+    // Tạo một Map để lưu trữ dữ liệu hợp nhất: Key = SKU + Status
+    let finalMap = {};
 
-            STORE.importData.forEach((item, idx) => {
-                if (fGroup !== 'all' && item.group !== fGroup) return; if (fName !== 'all' && item.name !== fName) return; if (fStatus !== 'all' && item.status !== fStatus) return;
-                
-                let key = item.sku + '_' + item.status;
-                const countedVal = aggregatedCount[key] || 0;
-                const diff = item.stock - countedVal;
-                
-                if (fCount === 'checked' && countedVal === 0) return; if (fCount === 'unchecked' && countedVal > 0) return; 
-                if (fDiff === 'ok' && diff !== 0) return; if (fDiff === 'thua' && diff >= 0) return; if (fDiff === 'thieu' && diff <= 0) return;
-                
-                let diffText = `<span class="st-ok">0</span>`; if (diff > 0) diffText = `<span class="st-missing">Thiếu ${formatNumber(diff)}</span>`; else if (diff < 0) diffText = `<span class="st-surplus">Thừa ${formatNumber(Math.abs(diff))}</span>`;
-                html += `<tr style="${countedVal === 0 ? 'background:#fff5f5;' : ''}"><td>${item.group}</td><td style="font-weight:bold;">${item.sku}</td><td>${item.name}</td><td>${item.status}</td><td>${formatNumber(item.stock)}</td><td style="font-weight:bold; color: #007bff;">${formatNumber(countedVal)}</td><td>${diffText}</td></tr>`;
-            });
-            tbody.innerHTML = html;
-        }
+    // 1. Đưa tất cả Tồn kho vào Map trước (Làm nền)
+    STORE.importData.forEach(item => {
+        let key = item.sku + '_' + item.status;
+        finalMap[key] = {
+            group: item.group,
+            sku: item.sku,
+            name: item.name,
+            status: item.status,
+            stock: parseInt(item.stock) || 0,
+            realQty: 0 // Ban đầu chưa ai đếm
+        };
+    });
+
+    // 2. Duyệt qua dữ liệu đếm của TẤT CẢ USER và CỘNG DỒN
+    // STORE.allCountData chứa: {user: 'User1', sku: 'A', qty: 10}, {user: 'User2', sku: 'A', qty: 30}
+    if (STORE.allCountData && STORE.allCountData.length > 0) {
+        STORE.allCountData.forEach(cnt => {
+            let key = cnt.sku + '_' + cnt.status;
+            let qty = parseInt(cnt.qty) || 0;
+
+            if (finalMap[key]) {
+                // Nếu đã có trong kho, cộng thêm vào số thực tế
+                finalMap[key].realQty += qty;
+            } else {
+                // Nếu sản phẩm này KHÔNG CÓ trong file tồn kho (Hàng mới/Lạ)
+                // Vẫn phải hiển thị ra
+                finalMap[key] = {
+                    group: 'N/A', // Không xác định nhóm
+                    sku: cnt.sku,
+                    name: cnt.name || 'Sản phẩm mới',
+                    status: cnt.status,
+                    stock: 0, // Không có tồn
+                    realQty: qty
+                };
+            }
+        });
+    }
+
+    // 3. Render ra bảng từ finalMap
+    Object.values(finalMap).forEach(item => {
+        // Áp dụng bộ lọc
+        if (fGroup !== 'all' && item.group !== fGroup) return; 
+        if (fName !== 'all' && item.name !== fName) return; 
+        if (fStatus !== 'all' && item.status !== fStatus) return;
+        
+        // Tính lệch
+        const diff = item.stock - item.realQty; // Tồn - Thực tế
+        
+        // Lọc theo trạng thái kiểm (Đã kiểm / Chưa kiểm)
+        if (fCount === 'checked' && item.realQty === 0) return; 
+        if (fCount === 'unchecked' && item.realQty > 0) return; 
+        
+        // Lọc theo trạng thái lệch (Đủ / Thừa / Thiếu)
+        if (fDiff === 'ok' && diff !== 0) return; 
+        if (fDiff === 'thua' && diff >= 0) return; // Thừa là Thực tế > Tồn => Diff < 0
+        if (fDiff === 'thieu' && diff <= 0) return; // Thiếu là Thực tế < Tồn => Diff > 0
+
+        // Tạo HTML hiển thị lệch
+        let diffText = `<span class="st-ok">0</span>`; 
+        if (diff > 0) diffText = `<span class="st-missing">Thiếu ${formatNumber(diff)}</span>`; 
+        else if (diff < 0) diffText = `<span class="st-surplus">Thừa ${formatNumber(Math.abs(diff))}</span>`;
+
+        // Tô màu dòng nếu chưa kiểm
+        let rowStyle = item.realQty === 0 ? 'background:#fff5f5;' : '';
+
+        html += `
+            <tr style="${rowStyle}">
+                <td>${item.group}</td>
+                <td style="font-weight:bold;">${item.sku}</td>
+                <td>${item.name}</td>
+                <td>${item.status}</td>
+                <td>${formatNumber(item.stock)}</td>
+                <td style="font-weight:bold; color: #007bff; font-size:14px;">${formatNumber(item.realQty)}</td>
+                <td>${diffText}</td>
+            </tr>`;
+    });
+
+    if (html === '') html = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#999;">Không có dữ liệu phù hợp bộ lọc</td></tr>';
+    tbody.innerHTML = html;
+}
 
         function startScanner() { const overlay = document.getElementById('inv-scanner-overlay'); if(STORE.isScannerRunning) return; overlay.style.display = 'flex'; STORE.isScannerRunning = true; const html5QrCode = new Html5Qrcode("inv-reader"); STORE.scannerObj = html5QrCode; html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (txt) => { if(navigator.vibrate) navigator.vibrate(200); addCountItem(txt); stopScanner(); }, () => {}).catch(err => { alert("Lỗi Camera: " + err); stopScanner(); }); }
         function stopScanner() { const overlay = document.getElementById('inv-scanner-overlay'); if (STORE.scannerObj) { STORE.scannerObj.stop().then(() => { STORE.scannerObj.clear(); STORE.scannerObj = null; STORE.isScannerRunning = false; overlay.style.display = 'none'; }).catch(() => {}); } else { overlay.style.display = 'none'; STORE.isScannerRunning = false; } }
