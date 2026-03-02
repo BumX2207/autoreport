@@ -405,7 +405,7 @@
                 </div>
 
                 <div class="inv-header">
-                    <div class="inv-title">📦Hệ thống Kiểm kê V2</div>
+                    <div class="inv-title">📦Hệ thống Kiểm kê</div>
                     <div class="inv-tabs">
                         <div class="inv-tab active" data-tab="tab-input">Nhập liệu</div>
                         <div class="inv-tab" data-tab="tab-count">Kiểm kê</div>
@@ -450,7 +450,7 @@
                             <!-- Suggestions Box nằm ở đây, ngang hàng với input và buttons, style position absolute sẽ phủ lên -->
                             <div class="inv-suggestions" id="box-suggestions"></div>
                         </div>
-                        <div class="inv-table-wrapper"><table class="inv-table" id="tbl-counting"><thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>Tồn</th><th>Đã kiểm</th><th>Lệch</th></tr></thead><tbody></tbody></table></div>
+                        <div class="inv-table-wrapper"><table class="inv-table" id="tbl-counting"><thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>Tồn</th><th>Đã kiểm</th><th>Chênh lệch</th></tr></thead><tbody></tbody></table></div>
                         <div id="inv-scanner-overlay"><div class="inv-scan-close" id="btn-close-scan">×</div><div id="inv-reader"></div></div>
                     </div>
                     <!-- TAB 3: TỔNG HỢP -->
