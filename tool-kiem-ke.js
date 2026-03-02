@@ -13,28 +13,28 @@
         #tgdd-inventory-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); z-index:2147483601; justify-content:center; align-items:center; }
         #tgdd-toast-notification { z-index: 2147483705 !important; }
 
-        /* Content để relative để Overlay absolute bám theo */
         .inv-content { background:#fff; width:100%; height:100%; box-shadow:0 20px 60px rgba(0,0,0,0.4); display:flex; flex-direction:column; overflow:hidden; animation: popIn 0.3s; font-family: sans-serif; position: relative; }
         @media (max-width: 768px) { .inv-content { width: 100% !important; height: 100% !important; max-width: none !important; border-radius: 0 !important; } }
 
-        /* OVERLAYS - BLACK STYLE (FULL SCREEN COVER) */
-        /* Z-Index 3000 để cao hơn Header (z-index header thường thấp hơn) */
+        /* OVERLAYS */
         #inv-startup-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:3000; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:15px; animation:fadeIn 0.3s; color: white; overflow-y:auto; padding: 20px;}
         
-        .inv-header { display:flex; background:#f8f9fa; border-bottom:1px solid #ddd; padding:0 10px; align-items:center; justify-content:space-between; height: 50px; flex-shrink: 0; }
+        /* --- HEADER CHỈNH SỬA THEO YÊU CẦU --- */
+        .inv-header { display:flex; background:#f8f9fa; border-bottom:1px solid #ddd; padding:0 10px; align-items:center; justify-content:space-between; height: 75px !important; flex-shrink: 0; }
+        
         .inv-title { font-weight:800; font-size:16px; color:#333; display:flex; align-items:center; gap:5px; }
         .inv-close { font-size:24px; cursor:pointer; color:#999; padding:0 15px; font-weight:bold; transition: 0.2s; } .inv-close:hover { color:red; transform: scale(1.1); }
         
         .inv-sub-header { background:#e9ecef; padding:8px 15px; font-size:12px; color:#333; border-bottom:1px solid #ddd; display:flex; align-items:center; flex-wrap: wrap; gap: 10px; }
-        /* Đã xóa class inv-shop-select */
         
         .inv-user-info { display:flex; align-items:center; gap:10px; margin-left: auto; }
         .inv-user-name { color:#d63031; font-weight:bold; } .inv-user-name.ready { color:#007bff; }
         .inv-auth-btns { display:flex; gap:5px; }
         .inv-btn-auth { border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold; color:white; }
 
-        .inv-tabs { display:flex; gap:5px; height:100%; align-items:flex-end; }
-        .inv-tab { padding:10px 20px; cursor:pointer; font-weight:bold; color:#666; border-bottom:3px solid transparent; transition:0.2s; font-size:13px; white-space:nowrap; }
+        /* --- TABS CHỈNH SỬA THEO YÊU CẦU --- */
+        .inv-tabs { display:flex; gap:5px; height: 35px; align-items:flex-end; align-self: flex-end; }
+        .inv-tab { padding:8px 20px; cursor:pointer; font-weight:bold; color:#666; border-bottom:3px solid transparent; transition:0.2s; font-size:13px; white-space:nowrap; height: 100%; display: flex; align-items: center; box-sizing: border-box;}
         .inv-tab:hover { background:#eee; }
         .inv-tab.active { color:#007bff; border-bottom:3px solid #007bff; background:white; border-radius: 5px 5px 0 0; }
 
@@ -42,6 +42,7 @@
         .inv-view { display:none; height:100%; flex-direction:column; padding:15px; box-sizing:border-box; }
         .inv-view.active { display:flex; }
 
+        /* STARTUP STYLES */
         .inv-startup-title { font-size:22px; font-weight:900; color:#FFD700; text-transform:uppercase; letter-spacing:1px; margin-bottom: 10px; text-shadow: 0 2px 10px rgba(255,215,0,0.5);}
         .inv-session-code-display { font-size: 16px; background: rgba(40,167,69,0.2); border: 1px solid #28a745; color: #00e676; padding: 8px 15px; border-radius: 20px; font-weight: bold; margin-bottom: 10px; display:none; letter-spacing: 2px;}
 
@@ -295,8 +296,10 @@
                 </div>
                 
                 <div class="inv-sub-header">
-                    <!-- REMOVED SHOP SELECT -->
-                    <span id="lbl-header-session" style="font-weight:bold; color:#28a745; margin-left:10px; display:none;">Kỳ KK: <span id="val-header-session"></span></span>
+                    <!-- ĐÃ THÊM LẠI MÃ KỲ KIỂM KÊ -->
+                    <span id="lbl-header-session" style="font-weight:bold; color:#28a745; display:none; font-size: 13px;">
+                        🔖 Mã kỳ KK: <span id="val-header-session" style="color:#d63031; padding: 2px 5px; border: 1px dashed #d63031; border-radius: 4px;"></span>
+                    </span>
                     
                     <div class="inv-user-info">
                         👤 <span id="lbl-current-user" class="inv-user-name">...</span>
