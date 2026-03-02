@@ -56,7 +56,7 @@
         .inv-btn-auth { border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold; color:white; }
 
         /* TABS */
-        .inv-tabs { display:flex; gap:5px; height: 35px; align-items:flex-end; align-self: flex-end; }
+        .inv-tabs { display:flex; gap:5px; height: 35px; align-items:flex-end; align-self: flex-end; background: rgb(72 72 96 / 60%);}
         .inv-tab { 
             padding:8px 20px; cursor:pointer; font-weight:bold; 
             color: rgba(255,255,255,0.6); 
