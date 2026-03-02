@@ -88,7 +88,7 @@
         .inv-sug-item { padding:8px 10px; border-bottom:1px solid #f0f0f0; cursor:pointer; font-size:13px; line-height: 1.4; }
         .inv-sug-item:hover { background:#f0f8ff; color:#007bff; }
         .inv-sug-code { font-weight:bold; color:#d63031; }
-        .inv-sug-sub { font-size:11px; color:#666; font-style: italic; }
+        .inv-sug-sub { font-size:11px; color:#0076ff; font-style: italic; }
 
         #inv-edit-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2147483750; justify-content:center; align-items:center; backdrop-filter:blur(2px); }
         .inv-edit-content { background:white; width:90%; max-width:400px; border-radius:12px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.3); animation: popIn 0.2s; display:flex; flex-direction:column; }
