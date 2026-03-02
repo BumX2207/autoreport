@@ -10,7 +10,7 @@
 
     // --- 1. CSS ---
     const MY_CSS = `
-        #tgdd-inventory-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); z-index:2147483700; justify-content:center; align-items:center; }
+        #tgdd-inventory-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); z-index:2147483600; justify-content:center; align-items:center; }
         #tgdd-toast-notification { z-index: 2147483705 !important; }
 
         .inv-content { background:#fff; width:100%; height:100%; box-shadow:0 20px 60px rgba(0,0,0,0.4); display:flex; flex-direction:column; overflow:hidden; animation: popIn 0.3s; font-family: sans-serif; position: relative; }
