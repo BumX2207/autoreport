@@ -1,8 +1,8 @@
 /* 
-   MODULE: KIỂM KÊ KHO (V3.1 - FIX JOIN SESSION BUG)
-   - Fix: Lỗi không hiện dữ liệu sau khi tham gia kỳ kiểm kê.
-   - Update: Cơ chế autoLoadData tin cậy hơn.
-   - UI: Glass Theme Only.
+   MODULE: KIỂM KÊ KHO (V3.2 - FIX LOGIN FLOW & GLASS UI)
+   - Fix: Tách biệt màn hình Đăng nhập và Màn hình Chọn kỳ kiểm kê.
+   - Fix: Chỉ tải Config (Sheet ID) sau khi đã đăng nhập.
+   - UI: Form đăng nhập tích hợp trực tiếp vào Overlay Glass.
 */
 ((context) => {
     const { UI, UTILS, AUTH_STATE, CONSTANTS, GM_xmlhttpRequest } = context;
@@ -149,7 +149,7 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2);
         }
         .inv-btn:active { transform:scale(0.95); }
-        .btn-import { background: linear-gradient(135deg, #2e7d32, #1b5e20); margin-bottom:0;} 
+        .btn-import { background: linear-gradient(135deg, #2e7d32, #1b5e20); } 
         .btn-scan { background: linear-gradient(135deg, #37474f, #263238); } 
         .btn-cloud-load { background:#6f42c1; } 
         .btn-sync { background: linear-gradient(135deg, #0277bd, #01579b); } 
@@ -240,9 +240,20 @@
         #inv-reader { width:100%; height:100%; object-fit:cover; }
         .inv-scan-close { position:absolute; top:20px; right:20px; background:white; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; z-index:201; box-shadow:0 0 10px rgba(0,0,0,0.5); color: #333; }
 
+        /* LOGIN PANEL */
+        .inv-login-panel { width: 100%; max-width: 350px; background: rgba(30, 30, 40, 0.9); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 25px; display: none; flex-direction: column; gap: 15px; box-shadow: 0 15px 40px rgba(0,0,0,0.5); }
+        .inv-login-title { font-size: 20px; font-weight: bold; color: #FFD700; text-align: center; text-transform: uppercase; margin-bottom: 5px; }
+        .inv-login-btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; transition: 0.2s; margin-top: 5px; }
+        .inv-login-btn-primary { background: linear-gradient(135deg, #0277bd, #01579b); color: white; }
+        .inv-login-btn-success { background: linear-gradient(135deg, #2e7d32, #1b5e20); color: white; }
+        .inv-login-input { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: white; outline: none; box-sizing: border-box; }
+        .inv-login-input:focus { border-color: #FFD700; }
+        .inv-login-link { text-align: center; font-size: 12px; color: #4fc3f7; cursor: pointer; margin-top: 10px; }
+        .inv-login-link:hover { text-decoration: underline; color: #fff; }
+
         /* RESPONSIVE */
         @media (max-width: 768px) {
-            .inv-header { flex-wrap: wrap; padding: 10px 5px !important; gap: 5px; }
+            .inv-header { flex-wrap: wrap; height: auto !important; padding: 10px 5px !important; gap: 5px; }
             .inv-title { width: 100%; justify-content: center; font-size: 18px; margin-bottom: 5px; }
             .inv-tabs { width: 100%; justify-content: center; border: none; }
             .inv-tab { flex: 1; text-align: center; padding: 8px 5px; font-size: 13px; border-radius: 4px; }
@@ -288,6 +299,7 @@
             if(!API_URL) { if(UI.showToast) UI.showToast("❌ Chưa có API URL."); return; }
             if(params.loadingMsg && UI.showToast) UI.showToast(params.loadingMsg);
 
+            // Bỏ qua check User nếu là tạo tài khoản
             if (params.action !== 'get_stock' && !params.action.includes('user_sheet_id') && !params.action.includes('inv_session') && !params.action.includes('_guest') && (STORE.currentUser === "---" || !STORE.currentUser)) {
                 if(UI.showToast) UI.showToast("❌ Lỗi: Chưa xác định được Nhân viên!");
                 return;
@@ -374,7 +386,26 @@
                     <div id="lbl-startup-session" class="inv-session-code-display"></div>
                     <div id="startup-loading-status" style="color:#00e676; font-size:14px; font-weight:bold; margin-bottom:10px; display:none;"></div>
 
-                    <div class="inv-split-box">
+                    <!-- 1. LOGIN CONTAINER (Dành cho người chưa đăng nhập) -->
+                    <div id="inv-login-panel" class="inv-login-panel">
+                        <div class="inv-login-title">🔐 ĐĂNG NHẬP</div>
+                        <input type="text" id="inp-login-user" class="inv-login-input" placeholder="Tên đăng nhập (không dấu)">
+                        <input type="password" id="inp-login-pass" class="inv-login-input" placeholder="Mật khẩu">
+                        <button id="btn-do-login" class="inv-login-btn inv-login-btn-primary">ĐĂNG NHẬP</button>
+                        <div id="link-to-register" class="inv-login-link">Chưa có tài khoản? Đăng ký ngay</div>
+                    </div>
+
+                    <!-- 2. REGISTER CONTAINER -->
+                    <div id="inv-register-panel" class="inv-login-panel">
+                        <div class="inv-login-title">📝 ĐĂNG KÝ</div>
+                        <input type="text" id="inp-reg-user" class="inv-login-input" placeholder="Tên đăng nhập (không dấu)">
+                        <input type="password" id="inp-reg-pass" class="inv-login-input" placeholder="Mật khẩu">
+                        <button id="btn-do-register" class="inv-login-btn inv-login-btn-success">ĐĂNG KÝ</button>
+                        <div id="link-to-login" class="inv-login-link">Đã có tài khoản? Đăng nhập</div>
+                    </div>
+
+                    <!-- 3. SESSION CONTAINER (Dành cho người ĐÃ đăng nhập) -->
+                    <div id="inv-session-panel" class="inv-split-box" style="display:none;">
                         <!-- KHU VỰC NHÂN VIÊN (JOIN) -->
                         <div class="inv-box-panel">
                             <div class="inv-panel-title">👥 Tham gia kỳ kiểm kê</div>
@@ -405,7 +436,7 @@
                 </div>
 
                 <div class="inv-header">
-                    <div class="inv-title">📦Hệ thống Kiểm kê</div>
+                    <div class="inv-title">📦Hệ thống Kiểm kê V2</div>
                     <div class="inv-tabs">
                         <div class="inv-tab active" data-tab="tab-input">Nhập liệu</div>
                         <div class="inv-tab" data-tab="tab-count">Kiểm kê</div>
@@ -498,6 +529,12 @@
             const lblUser = document.getElementById('lbl-current-user');
             const btnContainer = document.getElementById('inv-auth-btns');
             
+            // Các Panels trong Overlay
+            const loginPanel = document.getElementById('inv-login-panel');
+            const sessionPanel = document.getElementById('inv-session-panel');
+            const registerPanel = document.getElementById('inv-register-panel');
+
+            // 1. Kiểm tra trạng thái đăng nhập
             if(AUTH_STATE && AUTH_STATE.isAuthorized && AUTH_STATE.userName !== "---") {
                 STORE.currentUser = AUTH_STATE.userName;
                 STORE.isLoggedIn = true;
@@ -516,10 +553,10 @@
             lblUser.innerText = STORE.currentUser;
             if (STORE.isLoggedIn) lblUser.classList.add('ready'); else lblUser.classList.remove('ready');
 
+            // 2. Cập nhật nút Đăng nhập/Đăng xuất ở góc phải (Header)
             if (!STORE.isLoggedIn) {
-                btnContainer.innerHTML = `<button id="inv-btn-login" class="inv-btn-auth" style="background:#0984e3;">Đăng nhập</button><button id="inv-btn-register" class="inv-btn-auth" style="background:#28a745;">Đăng ký</button>`;
-                document.getElementById('inv-btn-login').onclick = () => showAuthModal('login');
-                document.getElementById('inv-btn-register').onclick = () => showAuthModal('register');
+                // Nếu chưa đăng nhập thì ẩn nút trên header (vì đang ở màn hình chặn rồi)
+                btnContainer.innerHTML = ``;
             } else {
                 if (!(AUTH_STATE && AUTH_STATE.isAuthorized)) {
                     btnContainer.innerHTML = `<button id="inv-btn-logout" class="inv-btn-auth" style="background:#dc3545;">Đăng xuất</button>`;
@@ -531,42 +568,71 @@
                         }
                     };
                 } else { btnContainer.innerHTML = ''; }
-                fetchUserConfig();
+            }
+
+            // 3. Điều khiển hiển thị Overlay
+            if (STORE.isLoggedIn) {
+                // ĐÃ ĐĂNG NHẬP: Hiện màn hình chọn Session, Tải Config
+                loginPanel.style.display = 'none';
+                registerPanel.style.display = 'none';
+                sessionPanel.style.display = 'flex';
+                fetchUserConfig(); // Chỉ tải config khi đã đăng nhập
+            } else {
+                // CHƯA ĐĂNG NHẬP: Hiện màn hình Login, Ẩn Session
+                loginPanel.style.display = 'flex';
+                sessionPanel.style.display = 'none';
+                registerPanel.style.display = 'none';
             }
         };
 
-        const showAuthModal = (mode) => {
-            const isLogin = mode === 'login'; const title = isLogin ? '🔐 ĐĂNG NHẬP' : '📝 TẠO TÀI KHOẢN';
-            const htmlContent = `<div style="text-align:left; font-size:13px; margin-bottom:10px;"><div style="margin-bottom:8px;"><label style="font-weight:bold; color:#555;">Tài khoản:</label><input type="text" id="inv-auth-user" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; margin-top:4px;" placeholder="Tên đăng nhập không dấu..."></div><div style="margin-bottom:20px;"><label style="font-weight:bold; color:#555;">Mật khẩu:</label><input type="password" id="inv-auth-pass" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; margin-top:4px;" placeholder="Nhập mật khẩu..."></div><button id="inv-auth-submit" style="width:100%; padding: 10px; border:none; border-radius: 8px; color: white; font-weight: bold; cursor:pointer; background: ${isLogin ? '#0984e3' : '#28a745'};">${isLogin ? 'Đăng Nhập' : 'Đăng Ký'}</button></div>`;
-            UI.showMsg(title, htmlContent, 'info');
-
-            setTimeout(() => {
-                const btnSubmit = document.getElementById('inv-auth-submit');
-                if(btnSubmit) {
-                    btnSubmit.onclick = () => {
-                        const u = document.getElementById('inv-auth-user').value.trim(); const p = document.getElementById('inv-auth-pass').value.trim();
-                        if(!u || !p) { alert("⚠️ Vui lòng nhập đầy đủ!"); return; }
-                        btnSubmit.innerText = "⏳ Đang xử lý..."; btnSubmit.disabled = true;
-
-                        GM_xmlhttpRequest({
-                            method: "POST", url: API_URL, data: JSON.stringify({ action: isLogin ? 'login_guest' : 'register_guest', user: u, password: p }),
-                            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                            onload: (res) => { 
-                                try {
-                                    const json = JSON.parse(res.responseText);
-                                    if(json.status === 'success') {
-                                        document.getElementById('tgdd-msg-modal').style.display = 'none';
-                                        localStorage.setItem('tgdd_guest_account', JSON.stringify({user: u, pass: p}));
-                                        UI.showToast("✅ Thành công!");
-                                        updateAuthUI();
-                                    } else { alert("❌ Lỗi: " + json.message); btnSubmit.innerText = isLogin ? 'Đăng Nhập' : 'Đăng Ký'; btnSubmit.disabled = false; }
-                                } catch(e) { alert("❌ Lỗi mạng!"); btnSubmit.disabled = false; }
-                            }, onerror: () => { alert("❌ Lỗi kết nối!"); btnSubmit.disabled = false; }
-                        });
-                    };
-                }
-            }, 100);
+        // --- XỬ LÝ SỰ KIỆN CHUYỂN ĐỔI LOGIN / REGISTER TRÊN OVERLAY ---
+        document.getElementById('link-to-register').onclick = () => {
+            document.getElementById('inv-login-panel').style.display = 'none';
+            document.getElementById('inv-register-panel').style.display = 'flex';
         };
+        document.getElementById('link-to-login').onclick = () => {
+            document.getElementById('inv-register-panel').style.display = 'none';
+            document.getElementById('inv-login-panel').style.display = 'flex';
+        };
+
+        // --- XỬ LÝ API LOGIN / REGISTER ---
+        const handleAuthAction = (action) => {
+            const isLogin = action === 'login_guest';
+            const userInp = isLogin ? document.getElementById('inp-login-user') : document.getElementById('inp-reg-user');
+            const passInp = isLogin ? document.getElementById('inp-login-pass') : document.getElementById('inp-reg-pass');
+            const btn = isLogin ? document.getElementById('btn-do-login') : document.getElementById('btn-do-register');
+
+            const u = userInp.value.trim();
+            const p = passInp.value.trim();
+
+            if(!u || !p) { UI.showToast("⚠️ Vui lòng nhập đầy đủ!"); return; }
+            
+            const oldText = btn.innerText;
+            btn.innerText = "⏳ Đang xử lý..."; btn.disabled = true;
+
+            GM_xmlhttpRequest({
+                method: "POST", url: API_URL, data: JSON.stringify({ action: action, user: u, password: p }),
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                onload: (res) => { 
+                    btn.innerText = oldText; btn.disabled = false;
+                    try {
+                        const json = JSON.parse(res.responseText);
+                        if(json.status === 'success') {
+                            localStorage.setItem('tgdd_guest_account', JSON.stringify({user: u, pass: p}));
+                            UI.showToast("✅ Thành công!");
+                            updateAuthUI(); // Tự động chuyển sang màn hình Session
+                        } else { 
+                            alert("❌ Lỗi: " + json.message); 
+                        }
+                    } catch(e) { alert("❌ Lỗi mạng!"); }
+                }, 
+                onerror: () => { alert("❌ Lỗi kết nối!"); btn.innerText = oldText; btn.disabled = false; }
+            });
+        };
+
+        document.getElementById('btn-do-login').onclick = () => handleAuthAction('login_guest');
+        document.getElementById('btn-do-register').onclick = () => handleAuthAction('register_guest');
+
 
         // --- OVERLAY LOGIC ---
         const overlay = document.getElementById('inv-startup-overlay');
@@ -854,7 +920,7 @@
             const item = STORE.editingItem; 
             const diff = item.stock - item.totalCount; 
             if (diff !== 0) { 
-                if(confirm(`Xác nhận nhập số lượng: ${Math.abs(diff)}?`)) { 
+                if(confirm(`Xác nhận bù ${Math.abs(diff)} cái?`)) { 
                     const nowTime = new Date().toTimeString().split(' ')[0]; 
                     const existIdx = STORE.countData.findIndex(i => i.sku === item.sku && i.status === item.status); 
                     let newTotal = item.totalCount + diff;
