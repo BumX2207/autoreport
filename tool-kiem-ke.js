@@ -1,8 +1,8 @@
 /* 
-   MODULE: KIỂM KÊ KHO (V3.0 - ULTIMATE GLASS ONLY)
-   - Force Glass Theme: Giao diện mặc định là kính tối màu.
-   - Fix UX: Bỏ auto-focus ô tìm kiếm.
-   - Fix UI: Bảng gợi ý tìm kiếm rộng full bề ngang.
+   MODULE: KIỂM KÊ KHO (V3.1 - FIX JOIN SESSION BUG)
+   - Fix: Lỗi không hiện dữ liệu sau khi tham gia kỳ kiểm kê.
+   - Update: Cơ chế autoLoadData tin cậy hơn.
+   - UI: Glass Theme Only.
 */
 ((context) => {
     const { UI, UTILS, AUTH_STATE, CONSTANTS, GM_xmlhttpRequest } = context;
@@ -11,13 +11,13 @@
     let API_URL = "";
     try { API_URL = CONSTANTS.GSHEET.CONFIG_API; } catch(e) {}
 
-    // --- 1. CSS (GLASS ONLY - NO CLASSIC THEME) ---
+    // --- 1. CSS (GLASS ONLY) ---
     const MY_CSS = `
         /* BASE OVERLAY */
         #tgdd-inventory-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:2147483601; justify-content:center; align-items:center; }
         #tgdd-toast-notification { z-index: 2147483705 !important; }
 
-        /* MAIN CONTAINER - GLASS EFFECT ALWAYS ON */
+        /* MAIN CONTAINER */
         .inv-content { 
             background: radial-gradient(circle at 10% 20%, rgb(30, 30, 40) 0%, rgb(10, 10, 15) 90%);
             width:100%; height:100%; 
@@ -56,7 +56,7 @@
         .inv-btn-auth { border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold; color:white; }
 
         /* TABS */
-        .inv-tabs { display:flex; gap:5px; height: 35px; align-items:flex-end; align-self: flex-end; background: rgb(72 72 96 / 60%);}
+        .inv-tabs { display:flex; gap:5px; height: 35px; align-items:flex-end; align-self: flex-end; }
         .inv-tab { 
             padding:8px 20px; cursor:pointer; font-weight:bold; 
             color: rgba(255,255,255,0.6); 
@@ -80,7 +80,7 @@
         /* INPUTS & CONTROLS */
         .inv-controls { 
             display:flex; gap:10px; margin-bottom:15px; align-items:center; flex-wrap: nowrap; 
-            position: relative; /* Quan trọng cho suggestions */
+            position: relative; 
         }
         .inv-input { 
             padding:8px; border-radius:6px; font-size:14px; 
@@ -149,7 +149,7 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2);
         }
         .inv-btn:active { transform:scale(0.95); }
-        .btn-import { background: linear-gradient(135deg, #2e7d32, #1b5e20); margin-bottom: 0;} 
+        .btn-import { background: linear-gradient(135deg, #2e7d32, #1b5e20); } 
         .btn-scan { background: linear-gradient(135deg, #37474f, #263238); } 
         .btn-cloud-load { background:#6f42c1; } 
         .btn-sync { background: linear-gradient(135deg, #0277bd, #01579b); } 
@@ -163,12 +163,12 @@
             color: #fff; padding: 2px;
         }
 
-        /* --- SUGGESTIONS POPUP (FIXED WIDTH) --- */
+        /* SUGGESTIONS POPUP (FIXED WIDTH) */
         .inv-suggestions { 
             position:absolute; 
-            top:100%; /* Ngay dưới thanh controls */
-            left:0; right: 0; /* Full width của .inv-controls */
-            width: auto; /* Tự động theo left/right */
+            top:100%; 
+            left:0; right: 0; 
+            width: auto; 
             background: rgba(30, 30, 40, 0.98); 
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 0 0 8px 8px; 
@@ -242,7 +242,7 @@
 
         /* RESPONSIVE */
         @media (max-width: 768px) {
-            .inv-header { flex-wrap: wrap; padding: 10px 5px !important; gap: 5px; }
+            .inv-header { flex-wrap: wrap; height: auto !important; padding: 10px 5px !important; gap: 5px; }
             .inv-title { width: 100%; justify-content: center; font-size: 18px; margin-bottom: 5px; }
             .inv-tabs { width: 100%; justify-content: center; border: none; }
             .inv-tab { flex: 1; text-align: center; padding: 8px 5px; font-size: 13px; border-radius: 4px; }
@@ -405,7 +405,7 @@
                 </div>
 
                 <div class="inv-header">
-                    <div class="inv-title">📦Hệ thống Kiểm kê</div>
+                    <div class="inv-title">📦Hệ thống Kiểm kê V2</div>
                     <div class="inv-tabs">
                         <div class="inv-tab active" data-tab="tab-input">Nhập liệu</div>
                         <div class="inv-tab" data-tab="tab-count">Kiểm kê</div>
@@ -439,7 +439,6 @@
                         <div class="inv-status-group" id="inv-status-container">
                             <label class="inv-radio-lbl"><input type="radio" name="inv-status-radio" value="All"> Tất cả</label>
                         </div>
-                        <!-- CẤU TRÚC HTML MỚI CHO THANH TÌM KIẾM (Đưa suggestions ra ngoài) -->
                         <div class="inv-controls">
                             <div class="inv-search-box">
                                 <input type="text" id="inp-search-sku" class="inv-input" placeholder="Nhập tên/mã..." autocomplete="off">
@@ -447,10 +446,9 @@
                             <label class="inv-chk-manual"><input type="checkbox" id="chk-manual-input"> Nhập tay</label>
                             <button class="inv-btn btn-scan" id="btn-open-scan">📷</button>
                             <button class="inv-btn btn-sync" id="btn-sync-cloud">☁️ Lưu</button>
-                            <!-- Suggestions Box nằm ở đây, ngang hàng với input và buttons, style position absolute sẽ phủ lên -->
                             <div class="inv-suggestions" id="box-suggestions"></div>
                         </div>
-                        <div class="inv-table-wrapper"><table class="inv-table" id="tbl-counting"><thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>Tồn</th><th>Đã kiểm</th><th>Chênh lệch</th></tr></thead><tbody></tbody></table></div>
+                        <div class="inv-table-wrapper"><table class="inv-table" id="tbl-counting"><thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>Tồn</th><th>Đã kiểm</th><th>Lệch</th></tr></thead><tbody></tbody></table></div>
                         <div id="inv-scanner-overlay"><div class="inv-scan-close" id="btn-close-scan">×</div><div id="inv-reader"></div></div>
                     </div>
                     <!-- TAB 3: TỔNG HỢP -->
@@ -672,7 +670,7 @@
             }
         };
 
-        // EVENT NHÂN VIÊN (JOIN)
+        // EVENT NHÂN VIÊN (JOIN) - FIX VALIDATE & LOAD
         document.getElementById('btn-join-session').onclick = () => {
             if(!STORE.isLoggedIn) { UI.showToast("❌ Vui lòng đăng nhập!"); return; }
             const code = inpJoinCode.value.trim();
@@ -683,17 +681,17 @@
             lblStatus.innerText = "⏳ Đang tham gia & tải dữ liệu...";
 
             API.joinSession(code, (res) => {
-                if (res.status === 'success') {
-                    STORE.customSheetId = res.sheet_id;
+                if (res.status === 'success' && res.sheet_id) {
+                    STORE.customSheetId = res.sheet_id; // QUAN TRỌNG
                     showSessionInfo(code);
-                    UI.showToast(`✅ Đã tham gia kỳ kiểm kê của: ${res.owner}`);
+                    UI.showToast(`✅ Đã tham gia phòng của: ${res.owner}`);
                     autoLoadData(() => {
                         overlay.style.display = 'none';
                         lblStatus.style.display = 'none';
                         modal.querySelector('.inv-tab[data-tab="tab-count"]').click(); 
                     });
                 } else {
-                    alert("❌ Lỗi: " + res.message);
+                    alert("❌ Lỗi: " + (res.message || "Không tìm thấy mã này!"));
                     lblStatus.style.display = 'none';
                 }
             });
@@ -703,7 +701,11 @@
         // --- BUTTONS ---
         document.getElementById('btn-load-stock-cloud').onclick = () => { 
             if(!STORE.customSheetId) { UI.showToast("⛔ Lỗi ID Sheet"); return; }
-            API.getStock((data) => { STORE.importData = data; renderImportTable(); updateFilters(); syncStockToCountData(); renderCountTable(); renderSummary(); if(UI.showToast) UI.showToast(`✅ Đã tải ${data.length} dòng Tồn kho!`); }); 
+            API.getStock((data) => { 
+                STORE.importData = Array.isArray(data) ? data : []; 
+                renderImportTable(); updateFilters(); syncStockToCountData(); renderCountTable(); renderSummary(); 
+                if(UI.showToast) UI.showToast(`✅ Đã tải ${STORE.importData.length} dòng Tồn kho!`); 
+            }); 
         };
         
         document.getElementById('btn-sync-cloud').onclick = () => { 
@@ -752,8 +754,7 @@
                 document.querySelectorAll('.inv-view').forEach(v => v.classList.remove('active')); 
                 document.getElementById(t.dataset.tab).classList.add('active'); 
                 
-                // [FIX] BỎ AUTO FOCUS (User requested)
-                // if (t.dataset.tab === 'tab-count') setTimeout(() => document.getElementById('inp-search-sku').focus(), 100); 
+                // NO AUTO FOCUS
                 
                 if (t.dataset.tab === 'tab-sum') { 
                     if(!STORE.customSheetId) {
@@ -808,7 +809,6 @@
             } else sugBox.style.display = 'none';
         });
         document.addEventListener('click', (e) => { 
-            // Fix click outside: Do sugBox giờ nằm ngoài .inv-search-box, nên phải check closest .inv-controls
             if (!e.target.closest('.inv-controls')) sugBox.style.display = 'none'; 
         });
         document.getElementById('btn-open-scan').onclick = startScanner;
@@ -918,22 +918,22 @@
         
         function autoLoadData(onComplete) {
             if (!STORE.isLoggedIn) return;
-            if (!STORE.customSheetId) return;
+            if (!STORE.customSheetId) return; // Must have Sheet ID
 
             const lblStatus = document.getElementById('startup-loading-status');
             
+            // 1. Tải tồn kho
             if(lblStatus) lblStatus.innerText = "⏳ Đang tải tồn kho (1/2)...";
             API.getStock((data) => {
-                if(data.length > 0) { 
-                    STORE.importData = data; 
-                    renderImportTable(); 
-                    updateFilters();
-                }
+                STORE.importData = Array.isArray(data) ? data : [];
+                renderImportTable(); 
+                updateFilters();
                 
+                // 2. Tải kiểm kê
                 if(lblStatus) lblStatus.innerText = "⏳ Đang tải kiểm kê (2/2)...";
                 API.getCount((cData) => {
-                    STORE.allCountData = cData;
-                    STORE.countData = cData.filter(i => i.user === STORE.currentUser).map(i => ({ 
+                    STORE.allCountData = Array.isArray(cData) ? cData : [];
+                    STORE.countData = STORE.allCountData.filter(i => i.user === STORE.currentUser).map(i => ({ 
                         ...i, 
                         history:[{ts:i.time, qty:i.qty}], 
                         totalCount: i.qty, 
