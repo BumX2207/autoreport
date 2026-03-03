@@ -158,26 +158,42 @@
     };
 
     // Hàm đào link Iframe Server phát video
+    // Hàm đào link Iframe Server phát video (Nâng cấp)
     const getVideoSrc = async (epUrl) => {
-        const htmlText = await fetchHtml(epUrl);
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlText, 'text/html');
-        
-        // 1. Tìm Iframe (Cách phổ biến nhất của các web anime)
-        let iframes = doc.querySelectorAll('iframe');
-        for(let iframe of iframes) {
-            let src = iframe.src || iframe.getAttribute('data-src');
-            // Bỏ qua iframe rác của MXH
-            if(src && !src.includes('facebook') && !src.includes('youtube') && !src.includes('google')) {
-                if(src.startsWith('/')) src = 'https://hoathinh3d.ee' + src;
-                return src;
+        try {
+            const htmlText = await fetchHtml(epUrl);
+            
+            // 1. Ưu tiên cao nhất: Dùng Regex quét trực tiếp toàn bộ HTML tìm thẻ iframe
+            const iframeRegex = /<iframe[^>]+src=["']([^"']+)["']/gi;
+            let match;
+            while ((match = iframeRegex.exec(htmlText)) !== null) {
+                let src = match[1];
+                // Bỏ qua các iframe quảng cáo, facebook, google
+                if (src && !src.includes('facebook') && !src.includes('youtube') && !src.includes('google') && !src.includes('googletagmanager')) {
+                    return src.startsWith('//') ? 'https:' + src : (src.startsWith('/') ? 'https://hoathinh3d.ee' + src : src);
+                }
             }
+
+            // 2. Dùng DOM Parser moi link giấu trong thuộc tính data-src
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlText, 'text/html');
+            const elementsWithDataSrc = doc.querySelectorAll('[data-src], [data-iframe]');
+            for (let el of elementsWithDataSrc) {
+                let src = el.getAttribute('data-src') || el.getAttribute('data-iframe');
+                if (src && (src.includes('player') || src.includes('embed') || src.includes('phim'))) {
+                    return src.startsWith('//') ? 'https:' + src : (src.startsWith('/') ? 'https://hoathinh3d.ee' + src : src);
+                }
+            }
+
+            // 3. Tìm link giấu trong thẻ Script (Biến JS)
+            const scriptMatch = htmlText.match(/(?:link_play|url_play|iframe_url|file)\s*[:=]\s*["']([^"']+)["']/i);
+            if (scriptMatch && scriptMatch[1]) {
+                 let src = scriptMatch[1];
+                 return src.startsWith('//') ? 'https:' + src : (src.startsWith('/') ? 'https://hoathinh3d.ee' + src : src);
+            }
+        } catch(e) {
+            console.error("Lỗi cào link video:", e);
         }
-        
-        // 2. Quét mây mù (Regex tìm trực tiếp)
-        const iframeMatch = htmlText.match(/<iframe[^>]+src=["']([^"']+)["']/i);
-        if (iframeMatch && !iframeMatch[1].includes('facebook')) return iframeMatch[1];
-        
         return null; 
     };
     
@@ -433,22 +449,20 @@
             try {
                 const iframeSrc = await getVideoSrc(epUrl);
                 if(iframeSrc) {
-                    // CỐT LÕI CHỐNG QUẢNG CÁO POPUP NẰM Ở THUỘC TÍNH SANDBOX NÀY:
-                    // allow-scripts: cho phép chạy video
-                    // allow-same-origin: cho phép stream server cấp quyền token
-                    // allow-presentation: cho phép chiếu fullscreen
-                    // => VẮNG MẶT "allow-popups" SẼ KHIẾN MOI NÚT BẤM QUẢNG CÁO TAB MỚI BỊ TÊ LIỆT!
-                    $('mv-video-container').innerHTML = `<iframe class="mv-video-iframe" src="${iframeSrc}" sandbox="allow-scripts allow-same-origin allow-presentation" allowfullscreen></iframe>`;
+                    // Đã gỡ thuộc tính sandbox để Player bên thứ 3 (Hydrax, Ophim) không tự sập
+                    // Lưu ý: Việc gỡ Sandbox đồng nghĩa video có thể nhảy tab quảng cáo. 
+                    // => Bạn nên cài tiện ích "uBlock Origin" trên trình duyệt để chặn quảng cáo triệt để.
+                    $('mv-video-container').innerHTML = `<iframe class="mv-video-iframe" src="${iframeSrc}" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true"></iframe>`;
                 } else {
-                    $('mv-video-container').innerHTML = `<div style="color:#d63031; text-align:center; padding: 50px;">❌ Cổng Server xem phim hiện đang bảo trì, không đào được link!</div>`;
+                    $('mv-video-container').innerHTML = `<div style="color:#d63031; text-align:center; padding: 50px; font-weight:bold;">❌ Không đào được link Video từ Server. Trang web có thể đã đổi cấu trúc!</div>`;
                 }
                 
                 // Lưu lịch sử xem phim
                 localProgressData[currentMovie.link] = { epNum: epNum, time: Date.now() };
                 setLocalVal(getProgressKey(), localProgressData);
                 
-                // Lợi dụng API Cloud để push lên
-                if(Math.random() > 0.5) saveCloudHistory(); // Random lưu để đỡ request API quá nhiều lần liên tục
+                // Random lưu để đỡ request API quá nhiều lần liên tục
+                if(Math.random() > 0.5) saveCloudHistory(); 
                 
             } catch(e) {
                 $('mv-video-container').innerHTML = `<div style="color:red; text-align:center; padding: 50px;">❌ Mất kết nối tới máy chủ chiếu phim!</div>`;
