@@ -70,8 +70,10 @@
         
         /* KHU VỰC VIDEO & DANH SÁCH TẬP */
         .mv-player-content-wrap { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; align-items:center; }
-        .mv-video-wrapper { width:100%; max-width:1000px; aspect-ratio:16/9; background:#000; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,0.5); overflow:hidden; position:relative; }
-        .mv-video-iframe { width:100%; height:100%; border:none; outline:none; background:#000; }
+        /* KHU VỰC VIDEO & DANH SÁCH TẬP */
+        .mv-player-content-wrap { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; align-items:center; }
+        .mv-video-wrapper { width:100%; max-width:1000px; aspect-ratio:16/9; min-height: 250px; background:#000; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,0.5); overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center; }
+        .mv-video-iframe { width:100%; height:100%; min-height: 250px; border:none; outline:none; background:#000; display:block; }
         
         .mv-episodes-panel { width:100%; max-width:1000px; background:#222; padding:20px; border-radius:8px; margin-top:20px; }
         .mv-ep-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(70px, 1fr)); gap:10px; }
@@ -157,7 +159,6 @@
         return episodeList;
     };
 
-    // Hàm đào link Iframe Server phát video
     // Hàm đào link Iframe Server phát video (Nâng cấp)
     const getVideoSrc = async (epUrl) => {
         try {
