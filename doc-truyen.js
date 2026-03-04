@@ -681,7 +681,6 @@
                                 if (isReading) {
                                     stopTTS();
                                     saveCloudHistory();
-                                    alert("Đã hết thời gian hẹn giờ nghe truyện! Truyện đã tự động dừng.");
                                 }
                             }
                         }, 1000);
