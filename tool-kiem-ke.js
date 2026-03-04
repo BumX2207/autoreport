@@ -436,7 +436,7 @@
                 </div>
 
                 <div class="inv-header">
-                    <div class="inv-title">📦Hệ thống Kiểm kê V2</div>
+                    <div class="inv-title">📦Hệ thống Kiểm</div>
                     <div class="inv-tabs">
                         <div class="inv-tab active" data-tab="tab-input">Nhập liệu</div>
                         <div class="inv-tab" data-tab="tab-count">Kiểm kê</div>
@@ -920,7 +920,7 @@
             const item = STORE.editingItem; 
             const diff = item.stock - item.totalCount; 
             if (diff !== 0) { 
-                if(confirm(`Xác nhận bù ${Math.abs(diff)} cái?`)) { 
+                if(confirm(`Xác nhận nhập số lượng: ${Math.abs(diff)}?`)) { 
                     const nowTime = new Date().toTimeString().split(' ')[0]; 
                     const existIdx = STORE.countData.findIndex(i => i.sku === item.sku && i.status === item.status); 
                     let newTotal = item.totalCount + diff;
