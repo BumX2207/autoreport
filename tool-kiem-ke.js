@@ -149,7 +149,7 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2);
         }
         .inv-btn:active { transform:scale(0.95); }
-        .btn-import { background: linear-gradient(135deg, #2e7d32, #1b5e20); } 
+        .btn-import { background: linear-gradient(135deg, #2e7d32, #1b5e20); margin-bottom: 0; } 
         .btn-scan { background: linear-gradient(135deg, #37474f, #263238); } 
         .btn-cloud-load { background:#6f42c1; } 
         .btn-sync { background: linear-gradient(135deg, #0277bd, #01579b); } 
@@ -481,7 +481,7 @@
                             <button class="inv-btn btn-sync" id="btn-sync-cloud">☁️ Lưu</button>
                             <div class="inv-suggestions" id="box-suggestions"></div>
                         </div>
-                        <div class="inv-table-wrapper"><table class="inv-table" id="tbl-counting"><thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>Tồn</th><th>Đã kiểm</th><th>Lệch</th></tr></thead><tbody></tbody></table></div>
+                        <div class="inv-table-wrapper"><table class="inv-table" id="tbl-counting"><thead><tr><th>Mã SP</th><th>Tên sản phẩm</th><th>Trạng thái</th><th>Tồn</th><th>Đã kiểm</th><th>Chênh lệch</th></tr></thead><tbody></tbody></table></div>
                         <div id="inv-scanner-overlay"><div class="inv-scan-close" id="btn-close-scan">×</div><div id="inv-reader"></div></div>
                     </div>
                     <!-- TAB 3: TỔNG HỢP -->
