@@ -436,7 +436,7 @@
                 </div>
 
                 <div class="inv-header">
-                    <div class="inv-title">📦Hệ thống Kiểm</div>
+                    <div class="inv-title">📦Hệ thống Kiểm kê</div>
                     <div class="inv-tabs">
                         <div class="inv-tab active" data-tab="tab-input">Nhập liệu</div>
                         <div class="inv-tab" data-tab="tab-count">Kiểm kê</div>
