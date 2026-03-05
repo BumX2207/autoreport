@@ -723,7 +723,7 @@
         app.style.display = 'flex';
     
         // -----------------------------------------------------
-        // ĐỒNG BỘ CLOUD -> LOCAL
+        // ĐỒNG BỘ CLOUD -> LOCAL (Đã Sửa Cache Offline)
         // -----------------------------------------------------
         const syncCloudHistory = () => {
             return new Promise((resolve) => {
@@ -747,13 +747,18 @@
                                         let cloudTime = item.timestamp || 0;
                                         let lData = localProgressData[story.link];
                                         let localTime = lData ? (lData.time || 0) : 0;
-                                        if (!lData || cloudTime >= localTime) {
+                                        
+                                        // NẾU CLOUD MỚI HƠN: Ưu tiên tải chương mới và phải XÓA BỘ ĐỆM (cachedContent)
+                                        if (!lData || cloudTime > localTime) {
                                             localProgressData[story.link] = { 
                                                 chap: parseInt(item.chapter) || 1, 
                                                 sentence: parseInt(item.sentence) || 0,
-                                                time: cloudTime 
+                                                time: cloudTime,
+                                                cachedContent: null 
                                             };
                                         }
+                                        // NẾU THỜI GIAN CLOUD = LOCAL: Tức là không có thiết bị khác đọc lướt lên trước
+                                        // Ta giữ nguyên lData ở máy để có thể lấy được cachedContent ra đọc siêu tốc.
                                     }
                                 });
                                 setLocalVal(getProgressKey(), localProgressData);
@@ -924,7 +929,7 @@
         $('tr-filter').onchange = () => { currentCategoryView = null; renderHome(); };
     
         // -----------------------------------------------------
-        // LOGIC ĐỌC TRUYỆN & SESSION KEY
+        // LOGIC ĐỌC TRUYỆN & SESSION KEY (Thêm Cache)
         // -----------------------------------------------------
         const getChapterUrl = (baseLink, chapNum) => {
             if(baseLink.match(/chuong-\d+/)) return baseLink.replace(/chuong-\d+/, `chuong-${chapNum}`);
@@ -982,8 +987,22 @@
             $('tr-loading').style.display = 'flex';
             try {
                 let data = null;
-                if (preloadedData.chapNum === currentChapter) { data = { cleanArr: preloadedData.contentArr }; } 
-                else { const targetUrl = getChapterUrl(currentStory.link, currentChapter); const htmlText = await fetchWithFallbacks(targetUrl); data = parseChapterHTML(htmlText); }
+                let savedData = localProgressData[currentStory.link];
+
+                // 1. Kiểm tra Preload (Chương kế tiếp đã được tải ngầm)
+                if (preloadedData.chapNum === currentChapter && preloadedData.contentArr) { 
+                    data = { cleanArr: preloadedData.contentArr }; 
+                } 
+                // 2. Kiểm tra Local Cache (Bộ đệm lưu nội dung offline trên máy)
+                else if (savedData && savedData.chap === currentChapter && savedData.cachedContent) {
+                    data = { cleanArr: savedData.cachedContent };
+                } 
+                // 3. Nếu không có cache, tiến hành tải mạng
+                else { 
+                    const targetUrl = getChapterUrl(currentStory.link, currentChapter); 
+                    const htmlText = await fetchWithFallbacks(targetUrl); 
+                    data = parseChapterHTML(htmlText); 
+                }
                 
                 $('tr-read-title').innerText = currentStory.name; $('tr-read-chap').innerText = `Chương ${currentChapter} / ${currentStory.total}`;
                 updateNavUI(); 
@@ -1013,7 +1032,9 @@
                 $('tr-read-text').innerHTML = builtHtml;
                 
                 if (!isResuming) { currentSentenceIndex = 0; }
-                updateLocalSessionKey(currentChapter, currentSentenceIndex);
+                
+                // Truyền data.cleanArr để lưu lại Cache nội dung truyện vào LocalStorage
+                updateLocalSessionKey(currentChapter, currentSentenceIndex, data.cleanArr);
 
                 $('tr-loading').style.display = 'none';
                 
@@ -1038,10 +1059,33 @@
             } catch (e) { $('tr-loading').style.display = 'none'; $('tr-read-text').innerHTML = `<p style="color:red;">Lỗi tải chương: ${e.message}</p>`; }
         };
 
-        const updateLocalSessionKey = (chap, sentence) => {
+        const updateLocalSessionKey = (chap, sentence, contentArr = null) => {
             if(!currentStory) return;
             activeSession = { link: currentStory.link, chap: chap, sentence: sentence };
-            localProgressData[currentStory.link] = { chap: chap, sentence: sentence, time: Date.now() };
+            
+            let existing = localProgressData[currentStory.link] || {};
+            localProgressData[currentStory.link] = { 
+                chap: chap, 
+                sentence: sentence, 
+                time: Date.now(),
+                // Nếu contentArr truyền vào có dữ liệu thì cập nhật cache mới, nếu không thì giữ nguyên cache cũ
+                cachedContent: contentArr ? contentArr : existing.cachedContent
+            };
+
+            // DỌN DẸP BỘ NHỚ: Chỉ giữ nội dung truyện (cache) của 10 bộ truyện đọc gần đây nhất
+            // Điều này đảm bảo Local Storage không bao giờ bị vượt quá mức giới hạn 5MB
+            let allKeys = Object.keys(localProgressData);
+            if (allKeys.length > 10) {
+                // Sắp xếp các truyện theo thời gian đọc gần nhất
+                allKeys.sort((a, b) => (localProgressData[b].time || 0) - (localProgressData[a].time || 0));
+                // Xóa nội dung truyện của những bộ cũ hơn mốc 10 (chỉ xóa cache nội dung, vẫn giữ tiến độ lịch sử đọc)
+                for (let i = 10; i < allKeys.length; i++) {
+                    if (localProgressData[allKeys[i]].cachedContent) {
+                        delete localProgressData[allKeys[i]].cachedContent;
+                    }
+                }
+            }
+
             setLocalVal(getProgressKey(), localProgressData);
         };
 
@@ -1099,6 +1143,7 @@
             synth.cancel(); 
             
             currentSentenceIndex = idx;
+            // updateLocalSessionKey tự động dùng cache cũ không cần truyền mảng vào lại
             updateLocalSessionKey(currentChapter, currentSentenceIndex);
             
             const spans = $('tr-read-text').querySelectorAll('.tr-sent');
