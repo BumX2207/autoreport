@@ -1,3 +1,5 @@
+--- START OF FILE doc-truyen.js ---
+
 ((context) => {
     // ===============================================================
     // 1. CẤU HÌNH DATA SHEET & BIẾN CƠ SỞ
@@ -552,12 +554,14 @@
                 contentWrap.addEventListener('scroll', updateProgressBar, {passive: true});
             }
 
+            // FIX: Nới lỏng thời gian Double Click và gọi JumpToSentence
             let lastClickTime = 0;
             $('tr-read-text').addEventListener('click', (e) => {
                 const now = new Date().getTime();
-                if (now - lastClickTime < 350) { 
+                if (now - lastClickTime < 400) { // 400ms dễ bấm trên đt
                     let target = e.target.closest('.tr-sent');
                     if (target) {
+                        e.preventDefault();
                         let idx = parseInt(target.getAttribute('data-idx'));
                         jumpToSentence(idx);
                     }
@@ -723,7 +727,7 @@
         app.style.display = 'flex';
     
         // -----------------------------------------------------
-        // ĐỒNG BỘ CLOUD -> LOCAL (Đã Sửa Cache Offline)
+        // ĐỒNG BỘ CLOUD -> LOCAL
         // -----------------------------------------------------
         const syncCloudHistory = () => {
             return new Promise((resolve) => {
@@ -748,7 +752,6 @@
                                         let lData = localProgressData[story.link];
                                         let localTime = lData ? (lData.time || 0) : 0;
                                         
-                                        // NẾU CLOUD MỚI HƠN: Ưu tiên tải chương mới và phải XÓA BỘ ĐỆM (cachedContent)
                                         if (!lData || cloudTime > localTime) {
                                             localProgressData[story.link] = { 
                                                 chap: parseInt(item.chapter) || 1, 
@@ -757,8 +760,6 @@
                                                 cachedContent: null 
                                             };
                                         }
-                                        // NẾU THỜI GIAN CLOUD = LOCAL: Tức là không có thiết bị khác đọc lướt lên trước
-                                        // Ta giữ nguyên lData ở máy để có thể lấy được cachedContent ra đọc siêu tốc.
                                     }
                                 });
                                 setLocalVal(getProgressKey(), localProgressData);
@@ -773,22 +774,78 @@
             });
         };
 
+        // NEW: Load dữ liệu siêu tốc bằng bộ đệm + fetch ngầm
         const loadDataFromSheet = async () => {
+            const CACHE_KEY = 'tgdd_truyen_list_cache';
+
+            // 1. Lấy ngay lập tức danh sách truyện từ bộ đệm trình duyệt để hiển thị Tức Thì
+            let cachedStories = getLocalVal(CACHE_KEY,[]);
+            if (cachedStories && cachedStories.length > 0) {
+                stories = cachedStories;
+                genres.clear();
+                stories.forEach(s => { if (s.genre) genres.add(s.genre); });
+
+                localProgressData = getLocalVal(getProgressKey(), {});
+                renderFilters();
+                renderHome(); // Vẽ liền lên giao diện
+            } else {
+                $('tr-home-content').innerHTML = `<div style="width:100%; text-align:center; padding:50px; color:#888;">⏳ Đang tải dữ liệu truyện lần đầu...</div>`;
+            }
+
+            // Sync mây ngầm
+            let syncPromise = null;
+            if (IS_LOGGED_IN && !window._hasSyncedTruyenCloud) {
+                window._hasSyncedTruyenCloud = true;
+                syncPromise = syncCloudHistory().then(() => {
+                    if ($('tr-view-home').style.display !== 'none') {
+                        const homeBody = $('tr-home-content');
+                        let currentScroll = homeBody.scrollTop;
+                        renderHome();
+                        homeBody.scrollTop = currentScroll;
+                    }
+                });
+            }
+
+            // 2. Fetch ngầm dữ liệu danh sách truyện mới nhất từ Server
             try {
-                const res = await fetch(CSV_URL); const csvText = await res.text(); const rows = parseCSV(csvText);
-                stories =[]; genres.clear();
+                const res = await fetch(CSV_URL); 
+                const csvText = await res.text(); 
+                const rows = parseCSV(csvText);
+                
+                let freshStories =[]; 
+                let freshGenres = new Set();
+                
                 for(let i = 1; i < rows.length; i++) {
                     const r = rows[i];
                     if(r.length >= 4 && r[0].trim() !== "") {
-                        genres.add(r[1].trim());
-                        stories.push({ name: r[0].trim(), genre: r[1].trim(), link: r[2].trim(), total: parseInt(r[3].trim()) || 1, cover: (r.length > 4 && r[4].trim() !== "") ? r[4].trim() : null });
+                        freshGenres.add(r[1].trim());
+                        freshStories.push({ name: r[0].trim(), genre: r[1].trim(), link: r[2].trim(), total: parseInt(r[3].trim()) || 1, cover: (r.length > 4 && r[4].trim() !== "") ? r[4].trim() : null });
                     }
                 }
+
+                stories = freshStories;
+                genres = freshGenres;
+                
+                // Cập nhật lại vào bộ nhớ trình duyệt cho lần sau
+                setLocalVal(CACHE_KEY, stories);
                 renderFilters(); 
                 localProgressData = getLocalVal(getProgressKey(), {}); 
-                if (IS_LOGGED_IN) { await syncCloudHistory(); }
-                renderHome(); 
-            } catch (e) { console.error(e); $('tr-home-content').innerHTML = `<div style="color:red; width:100%; text-align:center;">Lỗi tải dữ liệu.</div>`; }
+                
+                if (syncPromise) await syncPromise;
+
+                // CHỈ VẼ LẠI NẾU NGƯỜI DÙNG ĐANG Ở TRANG CHỦ, GIỮ NGUYÊN VỊ TRÍ CUỘN CHUỘT
+                if ($('tr-view-home').style.display !== 'none') {
+                    const homeBody = $('tr-home-content');
+                    let currentScroll = homeBody.scrollTop;
+                    renderHome(); 
+                    homeBody.scrollTop = currentScroll;
+                }
+            } catch (e) { 
+                console.error("Lỗi fetch danh sách: ", e); 
+                if (stories.length === 0) {
+                    $('tr-home-content').innerHTML = `<div style="color:red; width:100%; text-align:center;">Lỗi tải dữ liệu. Hãy kiểm tra kết nối mạng.</div>`; 
+                }
+            }
         };
 
         const renderFilters = () => {
@@ -929,7 +986,7 @@
         $('tr-filter').onchange = () => { currentCategoryView = null; renderHome(); };
     
         // -----------------------------------------------------
-        // LOGIC ĐỌC TRUYỆN & SESSION KEY (Thêm Cache)
+        // LOGIC ĐỌC TRUYỆN & SESSION KEY
         // -----------------------------------------------------
         const getChapterUrl = (baseLink, chapNum) => {
             if(baseLink.match(/chuong-\d+/)) return baseLink.replace(/chuong-\d+/, `chuong-${chapNum}`);
@@ -989,15 +1046,12 @@
                 let data = null;
                 let savedData = localProgressData[currentStory.link];
 
-                // 1. Kiểm tra Preload (Chương kế tiếp đã được tải ngầm)
                 if (preloadedData.chapNum === currentChapter && preloadedData.contentArr) { 
                     data = { cleanArr: preloadedData.contentArr }; 
                 } 
-                // 2. Kiểm tra Local Cache (Bộ đệm lưu nội dung offline trên máy)
                 else if (savedData && savedData.chap === currentChapter && savedData.cachedContent) {
                     data = { cleanArr: savedData.cachedContent };
                 } 
-                // 3. Nếu không có cache, tiến hành tải mạng
                 else { 
                     const targetUrl = getChapterUrl(currentStory.link, currentChapter); 
                     const htmlText = await fetchWithFallbacks(targetUrl); 
@@ -1033,7 +1087,6 @@
                 
                 if (!isResuming) { currentSentenceIndex = 0; }
                 
-                // Truyền data.cleanArr để lưu lại Cache nội dung truyện vào LocalStorage
                 updateLocalSessionKey(currentChapter, currentSentenceIndex, data.cleanArr);
 
                 $('tr-loading').style.display = 'none';
@@ -1068,17 +1121,12 @@
                 chap: chap, 
                 sentence: sentence, 
                 time: Date.now(),
-                // Nếu contentArr truyền vào có dữ liệu thì cập nhật cache mới, nếu không thì giữ nguyên cache cũ
                 cachedContent: contentArr ? contentArr : existing.cachedContent
             };
 
-            // DỌN DẸP BỘ NHỚ: Chỉ giữ nội dung truyện (cache) của 10 bộ truyện đọc gần đây nhất
-            // Điều này đảm bảo Local Storage không bao giờ bị vượt quá mức giới hạn 5MB
             let allKeys = Object.keys(localProgressData);
             if (allKeys.length > 10) {
-                // Sắp xếp các truyện theo thời gian đọc gần nhất
                 allKeys.sort((a, b) => (localProgressData[b].time || 0) - (localProgressData[a].time || 0));
-                // Xóa nội dung truyện của những bộ cũ hơn mốc 10 (chỉ xóa cache nội dung, vẫn giữ tiến độ lịch sử đọc)
                 for (let i = 10; i < allKeys.length; i++) {
                     if (localProgressData[allKeys[i]].cachedContent) {
                         delete localProgressData[allKeys[i]].cachedContent;
@@ -1119,7 +1167,7 @@
         $('sel-chap').onchange = (e) => { isResuming=false; shouldReadChapterTitle=true; loadAndDisplayChapter(parseInt(e.target.value), true); };
     
         // -----------------------------------------------------
-        // LOGIC TTS (ĐỌC TRUYỆN) & JUMP DOUBLE CLICK
+        // FIX: CHẶN LỖI TTS (ĐỌC TRUYỆN) OVERLAPPING TẠO TIẾNG VANG
         // -----------------------------------------------------
         const getVoice = () => {
             if (ttsVoiceIndex >= 0 && availableVoices[ttsVoiceIndex]) return availableVoices[ttsVoiceIndex];
@@ -1138,12 +1186,12 @@
             let u = setupUtterance(text, true); u.onend = () => { if(callback) callback(); }; synth.speak(u);
         };
     
+        // FIX: Đảm bảo nhảy câu không bị chạy đè
         const jumpToSentence = (idx) => {
             isJumping = true;
-            synth.cancel(); 
-            
+            synth.cancel(); // Lệnh này có thể làm câu cũ bị kích hoạt sự kiện u.onend
+
             currentSentenceIndex = idx;
-            // updateLocalSessionKey tự động dùng cache cũ không cần truyền mảng vào lại
             updateLocalSessionKey(currentChapter, currentSentenceIndex);
             
             const spans = $('tr-read-text').querySelectorAll('.tr-sent');
@@ -1158,7 +1206,12 @@
             updatePlayPauseUI(true);
             requestWakeLock();
             updateProgressBar(); 
-            setTimeout(() => { isJumping = false; speakNextSentence(); }, 150);
+            
+            // Đợi 1 chút xíu để sự kiện cancel dọn dẹp xong hoàn toàn rồi mới đọc câu mới
+            setTimeout(() => { 
+                isJumping = false; 
+                speakNextSentence(); 
+            }, 250);
         };
 
         const speakNextSentence = () => {
@@ -1167,7 +1220,7 @@
             if (currentSentenceIndex === 0 && shouldReadChapterTitle) {
                 shouldReadChapterTitle = false;
                 speakSystemMsg(`Chương ${currentChapter}`, () => {
-                    if (isReading) speakNextSentence(); 
+                    if (isReading && !isJumping) speakNextSentence(); 
                 });
                 return; 
             }
@@ -1177,7 +1230,8 @@
 
             let u = setupUtterance(cleanText);
             u.onend = () => { 
-                if(!isReading) return; 
+                // FIX: Chặn ngay nếu người dùng vừa mới bấm nhảy sang câu khác (isJumping)
+                if(!isReading || isJumping) return; 
                 currentSentenceIndex++; 
                 updateLocalSessionKey(currentChapter, currentSentenceIndex); 
                 speakNextSentence(); 
