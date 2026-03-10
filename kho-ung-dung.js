@@ -196,7 +196,7 @@
                 <div class="dl-body" id="dl-body-content">
                     <div class="dl-loading">
                         <div class="dl-spinner"></div>
-                        Đang đồng bộ dữ liệu từ Google...
+                        Loading ...
                     </div>
                 </div>
 
@@ -374,7 +374,7 @@
                                             ${iconHtml}
                                         </div>
                                         <div class="dl-app-name" title="${app.name}">${app.name}</div>
-                                        <div class="dl-app-desc">Bấm để tải về</div>
+                                        <div class="dl-app-desc">Bấm để xem chi tiết!</div>
                                     </div>
                                 `;
                             });
