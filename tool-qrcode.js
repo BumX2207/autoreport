@@ -290,7 +290,6 @@
                 stopScanner(); 
                 modal.style.display = 'none'; 
                 document.body.classList.remove('tgdd-body-lock');
-                toggleBottomNav(true); // Hiện lại Nav
             };
 
             const tabs = modal.querySelectorAll('.qr-tab');
@@ -467,7 +466,6 @@
 
         // --- START ---
         modal.style.display = 'flex';
-        toggleBottomNav(false); // Ẩn Nav ngay khi mở modal
         document.querySelector('.qr-tab[data-tab="create"]').click();
         inputEl.focus();
     };
