@@ -311,7 +311,6 @@
             document.body.appendChild(app);
             const style = document.createElement('style'); style.innerHTML = MY_CSS; document.head.appendChild(style);
 
-            // Hàm Get DOM ngắn gọn
             const $ = (id) => app.querySelector('#' + id);
             const $$ = (sel) => app.querySelectorAll(sel);
 
@@ -340,15 +339,19 @@
             // Xử lý đóng App
             $('bh-btn-close').onclick = () => { app.style.display = 'none'; };
 
-            // Gắn event tính toán cho các thay đổi['bh-nhomhang', 'bh-phidongtien', 'bh-kieutratruoc', 'bh-laisuat', 'bh-kygop', 
-             'rad-rv-6t', 'rad-rv-12t', 'rad-mr-12t', 'rad-mr-24t'].forEach(id => {
+            // === PHẦN SỬA LỖI Ở ĐÂY: KHAI BÁO MẢNG ĐÚNG CHUẨN ===
+            const idsToWatch =[
+                'bh-nhomhang', 'bh-phidongtien', 'bh-kieutratruoc', 'bh-laisuat', 'bh-kygop', 
+                'rad-rv-6t', 'rad-rv-12t', 'rad-mr-12t', 'rad-mr-24t'
+            ];
+            idsToWatch.forEach(id => {
                 $(id).addEventListener('change', calculateAll);
             });
+            // ===================================================
+
             $('bh-laisuat').addEventListener('input', calculateAll);
 
-            // Hàm Tính Toán Chính
             function calculateAll() {
-                // Đọc thông số đầu vào
                 let nhomhang = parseInt($('bh-nhomhang').value);
                 let giagoc = parseInt($('bh-giagoc').value.replace(/\./g, '')) || 0;
                 let giaban = parseInt($('bh-giaban').value.replace(/\./g, '')) || 0;
@@ -359,18 +362,16 @@
                 let soKy = parseInt($('bh-kygop').value);
                 let tileKvay = checkTiLe(soKy);
 
-                // Biến chứa kết quả Bảo Hiểm
-                let rv6t = 0, rv12t = 0, mr12t = 0, mr24t = 0, bh11 = 0, phi11 = 0;
+                let rv6t = 0, rv12t = 0, mr12t = 0, mr24t = 0, bh11 = 0;
 
-                // Xác định biểu phí theo Nhóm Hàng
                 switch(nhomhang) {
-                    case 1: // Điện thoại
+                    case 1: 
                         rv6t = roundCustom((5.96 / 100) * giagoc); rv12t = roundCustom((9.93 / 100) * giagoc);
                         mr12t = giagoc < 1000000 ? 0 : DATA.dienthoai1[getPhiDienThoai(giagoc)];
                         mr24t = giagoc < 1000000 ? 0 : DATA.dienthoai2[getPhiDienThoai(giagoc)];
                         bh11 = roundCustom(0.0462 * giagoc); bh11 = bh11 < 200000 ? 200000 : bh11; break;
-                    case 2: // Tablet
-                    case 3: // Laptop
+                    case 2: 
+                    case 3: 
                         rv6t = roundCustom((5.92 / 100) * giagoc); rv12t = roundCustom((9.87 / 100) * giagoc);
                         let arr1 = nhomhang === 2 ? DATA.dienthoai1 : DATA.laptop1;
                         let arr2 = nhomhang === 2 ? DATA.dienthoai2 : DATA.laptop2;
@@ -378,47 +379,44 @@
                         mr12t = giagoc < 1000000 ? 0 : arr1[func(giagoc)];
                         mr24t = giagoc < 1000000 ? 0 : arr2[func(giagoc)];
                         bh11 = roundCustom(0.06 * giagoc); bh11 = bh11 < 200000 ? 200000 : bh11; break;
-                    case 4: // Smart Watch
+                    case 4: 
                         rv6t = roundCustom((5.16 / 100) * giagoc); rv12t = roundCustom((8.6 / 100) * giagoc);
                         mr12t = Math.max(70000, roundCustom(giagoc * 0.05));
                         mr24t = Math.max(70000, roundCustom(giagoc * 0.08)); break;
-                    case 5: // Tivi
+                    case 5: 
                         mr12t = giagoc < 1000000 ? 0 : DATA.tivi1[getPhiTivi(giagoc)];
                         mr24t = giagoc < 1000000 ? 0 : DATA.tivi2[getPhiTivi(giagoc)];
                         bh11 = roundCustom(0.07 * giagoc); break;
-                    case 6: case 7: case 8: // Tủ lạnh, Tủ đông, Tủ mát
+                    case 6: case 7: case 8: 
                         mr12t = giagoc < 1000000 ? 0 : DATA.tulanh1[getPhiKhac(giagoc)];
                         mr24t = giagoc < 1000000 ? 0 : (nhomhang===8 ? DATA.tulanh1[getPhiKhac(giagoc)] : DATA.tulanh2[getPhiKhac(giagoc)]);
                         bh11 = roundCustom(0.06 * giagoc); break;
-                    case 9: case 10: case 11: // Máy giặt, sấy, rửa chén
+                    case 9: case 10: case 11: 
                         mr12t = giagoc < 1000000 ? 0 : DATA.maygiat1[getPhiKhac(giagoc)];
                         mr24t = giagoc < 1000000 ? 0 : DATA.maygiat2[getPhiKhac(giagoc)];
                         bh11 = roundCustom(0.06 * giagoc); break;
-                    case 12: // Loa
+                    case 12: 
                         mr12t = giagoc < 1000000 ? 0 : DATA.tivi1[getPhiDienThoai(giagoc)];
                         mr24t = giagoc < 1000000 ? 0 : DATA.tivi2[getPhiDienThoai(giagoc)];
                         bh11 = Math.max(100000, roundCustom(0.06 * giagoc)); break;
-                    case 13: // Máy lạnh
+                    case 13: 
                         mr12t = giagoc < 1000000 ? 0 : DATA.maylanh1[getPhiKhac(giagoc)];
                         mr24t = giagoc < 1000000 ? 0 : DATA.maylanh2[getPhiKhac(giagoc)];
                         bh11 = roundCustom(0.06 * giagoc); break;
-                    case 14: case 15: // Máy lọc nước, Gia dụng
+                    case 14: case 15: 
                         mr12t = Math.max(70000, roundCustom(giagoc * 0.05));
                         mr24t = Math.max(70000, roundCustom(giagoc * 0.08));
                         bh11 = Math.max(100000, roundCustom(0.06 * giagoc)); break;
                 }
 
-                // Tiền mặt trả trước
                 let tienTraTruoc = kieuTraTruoc === 2 ? roundCustom(tratruoc) : roundCustom(giaban * (tratruoc / 100));
                 let noLaiGoc = roundCustom(giaban - tienTraTruoc);
 
-                // Chốt giá trị BH được chọn
                 let val_bhkv = $('cb-bhkv').checked ? (noLaiGoc <= 5000000 ? roundCustom(5000000 * tileKvay) : roundCustom(noLaiGoc * tileKvay)) : 0;
                 let val_bhrv = $('cb-bhrv').checked ? ($('rad-rv-6t').checked ? rv6t : rv12t) : 0;
                 let val_bhmr = $('cb-bhmr').checked ? ($('rad-mr-12t').checked ? mr12t : mr24t) : 0;
                 let val_bh11 = $('cb-bh11').checked ? bh11 : 0;
 
-                // Cập nhật DOM hiển thị biểu phí
                 $('out-rv-6t').innerText = rv6t ? formatNum(rv6t) : "N/A";
                 $('out-rv-12t').innerText = rv12t ? formatNum(rv12t) : "N/A";
                 $('out-mr-12t').innerText = mr12t ? formatNum(mr12t) : "N/A";
@@ -426,14 +424,12 @@
                 $('out-kv').innerText = formatNum(val_bhkv);
                 $('out-bh11').innerText = formatNum(bh11);
 
-                // Tính toán Tài chính cuối cùng
                 let tongGopDau = roundCustom(tienTraTruoc + val_bhkv + val_bhrv + val_bhmr + val_bh11);
                 let tienLaiMoiThang = noLaiGoc * laiSuat;
                 let gopMoiThang = roundCustom((noLaiGoc / soKy) + tienLaiMoiThang + phiDongTien);
                 let tongTienPhaiTra = (gopMoiThang * soKy) + tongGopDau;
                 let chenhLech = roundCustom(tongTienPhaiTra - giaban);
 
-                // Render kết quả
                 $('out-phithuho').innerText = formatNum(phiDongTien);
                 $('out-tongtratruoc').innerText = formatNum(tongGopDau);
                 $('out-nolai').innerText = formatNum(noLaiGoc);
@@ -441,7 +437,6 @@
                 $('out-tongtien').innerText = formatNum(tongTienPhaiTra);
                 $('out-chenhlech').innerText = formatNum(chenhLech);
 
-                // Xử lý ghi chú
                 let msgBox = $('bh-note-msg');
                 let arrMsg =[];
                 if (val_bhkv) arrMsg.push(`Khoản vay: ${formatNum(val_bhkv)}`);
@@ -451,17 +446,13 @@
                 
                 if (arrMsg.length > 0) {
                     msgBox.style.display = 'block';
-                    msgBox.innerText = `* Số tiền trả trước đã cộng dồn phí bảo hiểm: [ ${arrMsg.join(' | ')} ]`;
+                    msgBox.innerText = `* Trả trước đã bao gồm: [ ${arrMsg.join(' | ')} ]`;
                 } else {
                     msgBox.style.display = 'none';
                 }
             }
-            
-            // Chạy tính toán lần đầu
             calculateAll();
         }
-        
-        // Hiển thị app
         app.style.display = 'flex';
     };
 
