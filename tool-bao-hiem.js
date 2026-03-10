@@ -42,25 +42,49 @@
         .bh-table td { padding: 8px 10px; border-bottom: 1px solid #f1f2f6; vertical-align: middle; }
         .bh-table tr:last-child td { border-bottom: none; }
         
-        .bh-label { width: 45%; font-weight: 500; color: #636e72; }
-        .bh-input-td { width: 55%; position: relative; }
+        .bh-label { width: 40%; font-weight: 500; color: #636e72; }
+        .bh-input-td { width: 60%; position: relative; }
         
-        .bh-table input[type="text"], .bh-table input[type="number"], .bh-table select { width: 100%; padding: 6px 10px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; outline: none; background: #fff; transition:0.2s; }
+        /* Đồng nhất Box Model cho tất cả thẻ input, select và thẻ giả lập */
+        .bh-table input[type="text"], 
+        .bh-table input[type="number"], 
+        .bh-table select, 
+        .bh-fake-input { 
+            width: 100%; 
+            padding: 6px 10px; 
+            border: 1px solid #dfe6e9; 
+            border-radius: 6px; 
+            font-size: 14px; 
+            outline: none; 
+            background: #fff; 
+            transition: 0.2s; 
+            box-sizing: border-box;
+            display: block;
+        }
+        
+        .bh-fake-input {
+            background: #f8f9fa; /* Màu nền cho ô chỉ đọc */
+            border-color: transparent; /* Bỏ viền để nhìn giống text tĩnh nhưng vẫn giữ kích thước chuẩn */
+            text-align: right;
+            font-weight: bold;
+        }
+
         .bh-table input[type="text"]:focus, .bh-table select:focus { border-color: #0984e3; box-shadow: 0 0 5px rgba(9, 132, 227, 0.2); }
         .bh-table input.txt-right { text-align: right; }
         .bh-table input.txt-center { text-align: center; }
+
+        /* Wrapper để flex cho các hàng có nhiều thành phần */
+        .bh-input-wrapper { display: flex; gap: 5px; width: 100%; align-items: center; }
+        .bh-input-wrapper input, .bh-input-wrapper select { flex: 1; min-width: 0; } /* Ép full chiều ngang mảng còn lại */
 
         .bh-group-title { font-weight: bold; text-align: center; padding: 10px !important; color: #2d3436; border-radius: 6px; margin-top: 10px; }
         .bg-kv { background: #ffeaa7; }
         .bg-rv { background: #fab1a0; }
         .bg-mr { background: #81ecec; }
         .bg-11 { background: #a29bfe; color: white !important;}
-
-        .bh-result { background: #f8f9fa; font-weight: bold; color: #d63031; text-align: right; border-radius: 6px; }
         
         .bh-note { color: #d63031; font-size: 13px; font-style: italic; margin-top: 10px; text-align: center; line-height: 1.5; display:none; }
 
-        /* Animation ẩn hiện dòng */
         .bh-hide { display: none !important; }
         .bh-flex-row { display: flex; align-items: center; justify-content: space-between; gap: 5px; }
         
@@ -78,39 +102,21 @@
     };
 
     const getPhiDienThoai = (x) => {
-        if (x <= 2000000) return 0;
-        if (x <= 5000000) return 1;
-        if (x <= 10000000) return 2;
-        if (x <= 15000000) return 3;
-        if (x <= 20000000) return 4;
-        if (x <= 25000000) return 5;
-        if (x <= 30000000) return 6;
-        if (x <= 40000000) return 7;
-        return 8;
+        if (x <= 2000000) return 0; if (x <= 5000000) return 1; if (x <= 10000000) return 2;
+        if (x <= 15000000) return 3; if (x <= 20000000) return 4; if (x <= 25000000) return 5;
+        if (x <= 30000000) return 6; if (x <= 40000000) return 7; return 8;
     };
 
     const getPhiTivi = (x) => {
-        if (x <= 5000000) return 0;
-        if (x <= 10000000) return 1;
-        if (x <= 15000000) return 2;
-        if (x <= 20000000) return 3;
-        if (x <= 25000000) return 4;
-        if (x <= 30000000) return 5;
-        if (x <= 40000000) return 6;
-        if (x <= 50000000) return 7;
-        return 8;
+        if (x <= 5000000) return 0; if (x <= 10000000) return 1; if (x <= 15000000) return 2;
+        if (x <= 20000000) return 3; if (x <= 25000000) return 4; if (x <= 30000000) return 5;
+        if (x <= 40000000) return 6; if (x <= 50000000) return 7; return 8;
     };
 
     const getPhiKhac = (x) => {
-        if (x <= 5000000) return 0;
-        if (x <= 10000000) return 1;
-        if (x <= 15000000) return 2;
-        if (x <= 20000000) return 3;
-        if (x <= 25000000) return 4;
-        if (x <= 30000000) return 5;
-        if (x <= 40000000) return 6;
-        if (x <= 50000000) return 7;
-        return 8;
+        if (x <= 5000000) return 0; if (x <= 10000000) return 1; if (x <= 15000000) return 2;
+        if (x <= 20000000) return 3; if (x <= 25000000) return 4; if (x <= 30000000) return 5;
+        if (x <= 40000000) return 6; if (x <= 50000000) return 7; return 8;
     };
 
     const checkTiLe = (a) => {
@@ -124,7 +130,6 @@
     // 4. KHỞI TẠO TIỆN ÍCH CHÍNH
     // ===============================================================
     const runTool = () => {
-        // 1. Dựng UI
         let app = document.getElementById('bh-app');
         if (!app) {
             app = document.createElement('div');
@@ -168,7 +173,6 @@
                                 </td>
                             </tr>
                             
-                            <!-- Nhóm BHKV -->
                             <tr class="row-bhkv bh-hide"><td colspan="2" class="bh-group-title bg-kv">Bảo hiểm khoản vay</td></tr>
                             <tr class="row-bhkv bh-hide">
                                 <td colspan="2">
@@ -179,7 +183,6 @@
                                 </td>
                             </tr>
 
-                            <!-- Nhóm BHRV -->
                             <tr class="row-bhrv bh-hide"><td colspan="2" class="bh-group-title bg-rv">Bảo hiểm rơi vỡ</td></tr>
                             <tr class="row-bhrv bh-hide">
                                 <td colspan="2">
@@ -196,7 +199,6 @@
                                 </td>
                             </tr>
 
-                            <!-- Nhóm BHMR -->
                             <tr class="row-bhmr bh-hide"><td colspan="2" class="bh-group-title bg-mr">Bảo hiểm mở rộng</td></tr>
                             <tr class="row-bhmr bh-hide">
                                 <td colspan="2">
@@ -213,7 +215,6 @@
                                 </td>
                             </tr>
 
-                            <!-- Nhóm BH1-1 -->
                             <tr class="row-bh11 bh-hide"><td colspan="2" class="bh-group-title bg-11">Bảo hiểm 1 đổi 1</td></tr>
                             <tr class="row-bh11 bh-hide">
                                 <td colspan="2">
@@ -226,19 +227,25 @@
                         </table>
                     </div>
 
-                    <!-- Bảng 2: Thông số tài chính -->
+                    <!-- Bảng 2: Thông số tài chính (ĐÃ CẤU TRÚC LẠI ĐỂ THẲNG MÉP 100%) -->
                     <div class="bh-card">
                         <table class="bh-table">
                             <tr>
-                                <td colspan="2"><input type="text" class="txt-center" placeholder="Nhập tên sản phẩm (Không bắt buộc)" style="background:#f8f9fa;"></td>
+                                <td colspan="2">
+                                    <input type="text" class="txt-center" placeholder="Nhập tên sản phẩm (Không bắt buộc)" style="background:#f8f9fa;">
+                                </td>
                             </tr>
                             <tr>
                                 <td class="bh-label">Giá gốc:</td>
-                                <td class="bh-input-td"><input type="text" id="bh-giagoc" class="txt-right" placeholder="0" inputmode="numeric"></td>
+                                <td class="bh-input-td">
+                                    <input type="text" id="bh-giagoc" class="txt-right" placeholder="0" inputmode="numeric">
+                                </td>
                             </tr>
                             <tr>
                                 <td class="bh-label">Giá bán:</td>
-                                <td class="bh-input-td"><input type="text" id="bh-giaban" class="txt-right" placeholder="0" inputmode="numeric"></td>
+                                <td class="bh-input-td">
+                                    <input type="text" id="bh-giaban" class="txt-right" placeholder="0" inputmode="numeric">
+                                </td>
                             </tr>
                             <tr>
                                 <td class="bh-label">Ngân hàng:</td>
@@ -252,56 +259,77 @@
                             </tr>
                             <tr>
                                 <td class="bh-label">Phí thu hộ:</td>
-                                <td class="bh-result"><span id="out-phithuho">11.000</span></td>
+                                <td class="bh-input-td">
+                                    <!-- Dùng class bh-fake-input để ô này to bằng y hệt ô input -->
+                                    <div id="out-phithuho" class="bh-fake-input" style="color: #d63031;">11.000</div>
+                                </td>
                             </tr>
                             <tr>
                                 <td class="bh-label">Trả trước:</td>
-                                <td class="bh-input-td bh-flex-row">
-                                    <input type="text" id="bh-tratruoc" class="txt-right" value="30" inputmode="numeric">
-                                    <select id="bh-kieutratruoc" style="width: 60px;">
-                                        <option value="1">%</option>
-                                        <option value="2">VND</option>
-                                    </select>
+                                <td class="bh-input-td">
+                                    <!-- Wrapper ép ô input dài ra, select ngắn lại -->
+                                    <div class="bh-input-wrapper">
+                                        <input type="text" id="bh-tratruoc" class="txt-right" value="30" inputmode="numeric">
+                                        <select id="bh-kieutratruoc" style="flex: 0 0 65px;">
+                                            <option value="1">%</option>
+                                            <option value="2">VND</option>
+                                        </select>
+                                    </div>
                                 </td>
                             </tr>
                             <tr>
                                 <td class="bh-label">Tổng trả trước:</td>
-                                <td class="bh-result"><span id="out-tongtratruoc">0</span></td>
+                                <td class="bh-input-td">
+                                    <div id="out-tongtratruoc" class="bh-fake-input" style="color: #d63031;">0</div>
+                                </td>
                             </tr>
                             <tr>
                                 <td class="bh-label">Nợ lại:</td>
-                                <td class="bh-result"><span id="out-nolai">0</span></td>
+                                <td class="bh-input-td">
+                                    <div id="out-nolai" class="bh-fake-input">0</div>
+                                </td>
                             </tr>
                             <tr>
                                 <td class="bh-label">Lãi suất phẳng:</td>
-                                <td class="bh-input-td bh-flex-row">
-                                    <input type="number" id="bh-laisuat" class="txt-right" value="0" step="0.1" min="0"> <span style="font-weight:bold;">%</span>
+                                <td class="bh-input-td">
+                                    <div class="bh-input-wrapper">
+                                        <input type="number" id="bh-laisuat" class="txt-right" value="0" step="0.1" min="0"> 
+                                        <span style="font-weight:bold; width: 25px; text-align:center;">%</span>
+                                    </div>
                                 </td>
                             </tr>
                             <tr>
                                 <td class="bh-label">Số kỳ góp:</td>
-                                <td class="bh-input-td bh-flex-row">
-                                    <select id="bh-kygop" class="txt-center">
-                                        <option value="4">4</option> <option value="5">5</option>
-                                        <option value="6" selected>6</option> <option value="7">7</option>
-                                        <option value="8">8</option> <option value="9">9</option>
-                                        <option value="10">10</option> <option value="11">11</option>
-                                        <option value="12">12</option>
-                                    </select>
-                                    <span style="font-size:13px;">tháng</span>
+                                <td class="bh-input-td">
+                                    <div class="bh-input-wrapper">
+                                        <select id="bh-kygop" class="txt-center">
+                                            <option value="4">4</option> <option value="5">5</option>
+                                            <option value="6" selected>6</option> <option value="7">7</option>
+                                            <option value="8">8</option> <option value="9">9</option>
+                                            <option value="10">10</option> <option value="11">11</option>
+                                            <option value="12">12</option>
+                                        </select>
+                                        <span style="font-size:13px; width: 40px; text-align:center;">tháng</span>
+                                    </div>
                                 </td>
                             </tr>
                             <tr>
                                 <td class="bh-label">Góp mỗi tháng:</td>
-                                <td class="bh-result"><span id="out-gopthang">0</span></td>
+                                <td class="bh-input-td">
+                                    <div id="out-gopthang" class="bh-fake-input" style="color: #d63031;">0</div>
+                                </td>
                             </tr>
                             <tr>
-                                <td class="bh-label">Tổng tiền phải trả:</td>
-                                <td class="bh-result" style="color:#0984e3;"><span id="out-tongtien">0</span></td>
+                                <td class="bh-label">Tổng phải trả:</td>
+                                <td class="bh-input-td">
+                                    <div id="out-tongtien" class="bh-fake-input" style="color:#0984e3;">0</div>
+                                </td>
                             </tr>
                             <tr>
                                 <td class="bh-label">Chênh lệch:</td>
-                                <td class="bh-result"><span id="out-chenhlech">0</span></td>
+                                <td class="bh-input-td">
+                                    <div id="out-chenhlech" class="bh-fake-input" style="color: #d63031;">0</div>
+                                </td>
                             </tr>
                         </table>
                         <div id="bh-note-msg" class="bh-note"></div>
@@ -309,12 +337,15 @@
                 </div>
             `;
             document.body.appendChild(app);
-            const style = document.createElement('style'); style.innerHTML = MY_CSS; document.head.appendChild(style);
+            
+            // XÓA STYLE CŨ, THÊM STYLE MỚI
+            const style = document.createElement('style'); 
+            style.innerHTML = MY_CSS; 
+            document.head.appendChild(style);
 
             const $ = (id) => app.querySelector('#' + id);
             const $$ = (sel) => app.querySelectorAll(sel);
 
-            // Xử lý ẩn hiện Tabs Bảo Hiểm
             const toggleRow = (chkId, rowClass) => {
                 $(chkId).addEventListener('change', (e) => {
                     $$(rowClass).forEach(el => el.classList.toggle('bh-hide', !e.target.checked));
@@ -326,7 +357,7 @@
             toggleRow('cb-bhmr', '.row-bhmr');
             toggleRow('cb-bh11', '.row-bh11');
 
-            // Format input mask (có dấu phẩy)
+            // Format input mask: SỬA THÀNH CHỈ LẤY SỐ (\D) ĐỂ TRÁNH LỖI PHÂN TÍCH
             const handleNumInput = (e) => {
                 let val = e.target.value.replace(/\D/g, '');
                 e.target.value = val ? Number(val).toLocaleString('vi-VN') : '';
@@ -336,10 +367,8 @@
             $('bh-giaban').addEventListener('input', handleNumInput);
             $('bh-tratruoc').addEventListener('input', handleNumInput);
 
-            // Xử lý đóng App
             $('bh-btn-close').onclick = () => { app.style.display = 'none'; };
 
-            // === PHẦN SỬA LỖI Ở ĐÂY: KHAI BÁO MẢNG ĐÚNG CHUẨN ===
             const idsToWatch =[
                 'bh-nhomhang', 'bh-phidongtien', 'bh-kieutratruoc', 'bh-laisuat', 'bh-kygop', 
                 'rad-rv-6t', 'rad-rv-12t', 'rad-mr-12t', 'rad-mr-24t'
@@ -347,15 +376,17 @@
             idsToWatch.forEach(id => {
                 $(id).addEventListener('change', calculateAll);
             });
-            // ===================================================
 
             $('bh-laisuat').addEventListener('input', calculateAll);
 
             function calculateAll() {
                 let nhomhang = parseInt($('bh-nhomhang').value);
-                let giagoc = parseInt($('bh-giagoc').value.replace(/\./g, '')) || 0;
-                let giaban = parseInt($('bh-giaban').value.replace(/\./g, '')) || 0;
-                let tratruoc = parseInt($('bh-tratruoc').value.replace(/\./g, '')) || 0;
+                
+                // Lọc cực gắt, chỉ lấy số để tính toán, gạt bỏ mọi loại dấu chấm dấu phẩy
+                let giagoc = parseInt($('bh-giagoc').value.replace(/\D/g, '')) || 0;
+                let giaban = parseInt($('bh-giaban').value.replace(/\D/g, '')) || 0;
+                let tratruoc = parseInt($('bh-tratruoc').value.replace(/\D/g, '')) || 0;
+                
                 let phiDongTien = parseInt($('bh-phidongtien').value) || 0;
                 let kieuTraTruoc = parseInt($('bh-kieutratruoc').value);
                 let laiSuat = parseFloat($('bh-laisuat').value) / 100 || 0;
@@ -409,6 +440,7 @@
                         bh11 = Math.max(100000, roundCustom(0.06 * giagoc)); break;
                 }
 
+                // Tính toán tiền trả trước
                 let tienTraTruoc = kieuTraTruoc === 2 ? roundCustom(tratruoc) : roundCustom(giaban * (tratruoc / 100));
                 let noLaiGoc = roundCustom(giaban - tienTraTruoc);
 
