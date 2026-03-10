@@ -249,7 +249,7 @@
                                 <div class="dl-version-item">
                                     <div class="dl-ver-info">
                                         <div class="dl-ver-name">${ver.name}</div>
-                                        <div class="dl-ver-meta">Link tải từ ${ver.link.includes('drive') ? 'Google Drive' : (ver.link.includes('onedrive') ? 'OneDrive' : 'Máy chủ')}</div>
+                                        <div class="dl-ver-meta">Link tải từ ${ver.link.includes('Google') ? 'Google Drive' : (ver.link.includes('onedrive') ? 'OneDrive' : 'Máy chủ')}</div>
                                     </div>
                                     <button class="dl-btn-download" data-link="${ver.link}">
                                         <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
