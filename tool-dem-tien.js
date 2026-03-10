@@ -64,8 +64,8 @@
             .kq-body { padding: 10px 15px; gap: 10px; }
             .kq-card { padding: 8px 10px; }
             .kq-table-row { padding: 6px 10px; gap: 8px; }
-            .kq-col-label { flex: 0 0 75px; font-size: 14px; }
-            .kq-col-input { flex: 0 0 75px; }
+            .kq-col-label { flex: 0 0 100px; font-size: 14px; }
+            .kq-col-input { flex: 0 0 170px; }
             .kq-input { font-size: 14px; padding: 4px; }
             .kq-col-total { font-size: 14px; }
             
