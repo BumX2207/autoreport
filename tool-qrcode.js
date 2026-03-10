@@ -467,7 +467,6 @@
         // --- START ---
         modal.style.display = 'flex';
         document.querySelector('.qr-tab[data-tab="create"]').click();
-        inputEl.focus();
     };
 
     return {
