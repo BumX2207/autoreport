@@ -159,39 +159,87 @@
         return episodeList;
     };
 
-    // Hàm đào link Iframe Server phát video (Nâng cấp)
+    // Hàm chuẩn hóa link URL (Sửa lỗi escape string \/)
+    const formatUrl = (src) => {
+        if (!src) return null;
+        src = src.replace(/\\\//g, '/'); // Xóa dấu escape \/ nếu có trong cấu trúc JSON
+        if (src.startsWith('//')) return 'https:' + src;
+        if (src.startsWith('/')) return 'https://hoathinh3d.ee' + src;
+        return src;
+    };
+
+    // Hàm đào link Iframe (Nâng cấp: Giải mã Base64, Regex JSON mở rộng)
     const getVideoSrc = async (epUrl) => {
         try {
             const htmlText = await fetchHtml(epUrl);
+            let resultSrc = null;
             
-            // 1. Ưu tiên cao nhất: Dùng Regex quét trực tiếp toàn bộ HTML tìm thẻ iframe
+            // 1. Quét tìm thẻ iframe trực tiếp
             const iframeRegex = /<iframe[^>]+src=["']([^"']+)["']/gi;
             let match;
             while ((match = iframeRegex.exec(htmlText)) !== null) {
                 let src = match[1];
-                // Bỏ qua các iframe quảng cáo, facebook, google
                 if (src && !src.includes('facebook') && !src.includes('youtube') && !src.includes('google') && !src.includes('googletagmanager')) {
-                    return src.startsWith('//') ? 'https:' + src : (src.startsWith('/') ? 'https://hoathinh3d.ee' + src : src);
+                    resultSrc = src; 
+                    break;
                 }
             }
 
-            // 2. Dùng DOM Parser moi link giấu trong thuộc tính data-src
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(htmlText, 'text/html');
-            const elementsWithDataSrc = doc.querySelectorAll('[data-src], [data-iframe]');
-            for (let el of elementsWithDataSrc) {
-                let src = el.getAttribute('data-src') || el.getAttribute('data-iframe');
-                if (src && (src.includes('player') || src.includes('embed') || src.includes('phim'))) {
-                    return src.startsWith('//') ? 'https:' + src : (src.startsWith('/') ? 'https://hoathinh3d.ee' + src : src);
+            // 2. DOM Parser moi link giấu trong data-src (Hỗ trợ giải mã Base64)
+            if (!resultSrc) {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(htmlText, 'text/html');
+                const elementsWithDataSrc = doc.querySelectorAll('[data-src],[data-iframe], [data-video], #box-player, .player-video');
+                
+                for (let el of elementsWithDataSrc) {
+                    let src = el.getAttribute('data-src') || el.getAttribute('data-iframe') || el.getAttribute('data-video');
+                    if (src) {
+                        // Nếu chuỗi không chứa "http" và không bắt đầu bằng "/" -> Khả năng cao là Base64
+                        if (!src.includes('http') && !src.startsWith('/')) {
+                            try { src = atob(src); } catch(e) {} // Thử giải mã
+                        }
+                        
+                        // Nếu giải mã ra nguyên 1 cụm HTML chứa <iframe ...>
+                        if (src.includes('iframe')) {
+                            let m = src.match(/src=["']([^"']+)["']/);
+                            if (m) src = m[1];
+                        }
+                        
+                        if (src.includes('http') || src.startsWith('//') || src.includes('player')) {
+                            resultSrc = src;
+                            break;
+                        }
+                    }
                 }
             }
 
-            // 3. Tìm link giấu trong thẻ Script (Biến JS)
-            const scriptMatch = htmlText.match(/(?:link_play|url_play|iframe_url|file)\s*[:=]\s*["']([^"']+)["']/i);
-            if (scriptMatch && scriptMatch[1]) {
-                 let src = scriptMatch[1];
-                 return src.startsWith('//') ? 'https:' + src : (src.startsWith('/') ? 'https://hoathinh3d.ee' + src : src);
+            // 3. Tìm link giấu trong thẻ Script (Biến JS hoặc JSON API)
+            if (!resultSrc) {
+                const scriptPatterns =[
+                    /"link"\s*:\s*["']([^"']+)["']/i,
+                    /"url"\s*:\s*["']([^"']+)["']/i,
+                    /"iframe"\s*:\s*["']([^"']+)["']/i,
+                    /(?:link_play|url_play|iframe_url|file|src)\s*[:=]\s*["']([^"']+)["']/i
+                ];
+                for (let pattern of scriptPatterns) {
+                    const m = htmlText.match(pattern);
+                    if (m && m[1]) {
+                        let tempSrc = m[1];
+                        // Nếu là dạng text HTML sinh ra từ JSON
+                        if (tempSrc.includes('<iframe')) {
+                            let im = tempSrc.match(/src=\\?["']([^"'\\]+)\\?["']/);
+                            if (im) tempSrc = im[1];
+                        }
+                        if (tempSrc.includes('http') || tempSrc.startsWith('//') || tempSrc.includes('player')) {
+                            resultSrc = tempSrc;
+                            break;
+                        }
+                    }
+                }
             }
+
+            return formatUrl(resultSrc);
+            
         } catch(e) {
             console.error("Lỗi cào link video:", e);
         }
@@ -450,10 +498,8 @@
             try {
                 const iframeSrc = await getVideoSrc(epUrl);
                 if(iframeSrc) {
-                    // Đã gỡ thuộc tính sandbox để Player bên thứ 3 (Hydrax, Ophim) không tự sập
-                    // Lưu ý: Việc gỡ Sandbox đồng nghĩa video có thể nhảy tab quảng cáo. 
-                    // => Bạn nên cài tiện ích "uBlock Origin" trên trình duyệt để chặn quảng cáo triệt để.
-                    $('mv-video-container').innerHTML = `<iframe class="mv-video-iframe" src="${iframeSrc}" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true"></iframe>`;
+                    // THÊM referrerpolicy="no-referrer" ĐỂ BYPASS LỖI HOST TỪ CHỐI PHÁT (403)
+                    $('mv-video-container').innerHTML = `<iframe class="mv-video-iframe" src="${iframeSrc}" referrerpolicy="no-referrer" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true"></iframe>`;
                 } else {
                     $('mv-video-container').innerHTML = `<div style="color:#d63031; text-align:center; padding: 50px; font-weight:bold;">❌ Không đào được link Video từ Server. Trang web có thể đã đổi cấu trúc!</div>`;
                 }
