@@ -5,7 +5,7 @@
     // 1. CẤU HÌNH DATA SHEET & API
     // ===============================================================
     const SHEET_ID = '1PegpCNhjqXrZCGle3iKpY5lvsE6XQC5WnBQRr2BoyOY';
-    const SHEET_GID = '425309150';
+    const SHEET_GID = '0'; // Đã sửa thành 0 (Tab chứa dữ liệu đề thi)
     const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SHEET_GID}`;
     let API_URL = CONSTANTS?.GSHEET?.CONFIG_API || "";
 
@@ -13,8 +13,8 @@
     let IS_LOGGED_IN = false;
     
     // State App
-    let QUIZ_LIST =[]; // Danh sách đề thi
-    let CURRENT_QUIZ = null; // Đề đang thi
+    let QUIZ_LIST =[]; 
+    let CURRENT_QUIZ = null; 
     let USER_ANSWERS =[];
     let CURRENT_Q_IDX = 0;
     let QUIZ_HISTORY =[];
@@ -74,7 +74,7 @@
         .qz-btn-prev { background:#64748b; } .qz-btn-prev:disabled { opacity:0.5; cursor:not-allowed; }
         .qz-btn-next { background:#3b82f6; } .qz-btn-next.disabled { background:#94a3b8; pointer-events:none; }
 
-        /* QUIZ TYPES CORE CSS (Adapted from V19) */
+        /* QUIZ TYPES CORE CSS */
         .qz-opts { display:flex; gap:15px; flex-wrap:wrap; }
         .qz-opt-label { border:2px solid #e2e8f0; border-radius:10px; padding:15px; cursor:pointer; display:flex; align-items:center; width:calc(50% - 8px); transition:0.2s; color:#333; font-weight:600;}
         .qz-opt-label:hover { background:#f8fafc; border-color:#cbd5e1; }
@@ -164,7 +164,7 @@
                     let img = qI && qI.includes('drive.google') ? qI.replace(/\/file\/d\/(.+?)\/view.*/, '/uc?export=view&id=$1') : qI;
 
                     if(type === 'match') {
-                        let ps = []; 
+                        let ps =[]; 
                         [cl(rows[r+3]?.[c]), cl(rows[r+4]?.[c]), cl(rows[r+5]?.[c]), cl(rows[r+6]?.[c])].forEach(x => { 
                             if(x && x.includes('|')) { let p = x.split('|'); ps.push({left:p[0].trim(), right:p[1].trim()}); } 
                         });
