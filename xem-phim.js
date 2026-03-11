@@ -499,7 +499,7 @@
                 const iframeSrc = await getVideoSrc(epUrl);
                 if(iframeSrc) {
                     // THÊM referrerpolicy="no-referrer" ĐỂ BYPASS LỖI HOST TỪ CHỐI PHÁT (403)
-                    $('mv-video-container').innerHTML = `<iframe class="mv-video-iframe" src="${iframeSrc}" referrerpolicy="no-referrer" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true"></iframe>`;
+                    $('mv-video-container').innerHTML = `<iframe class="mv-video-iframe" src="${iframeSrc}" referrerpolicy="origin" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true"></iframe>`;
                 } else {
                     $('mv-video-container').innerHTML = `<div style="color:#d63031; text-align:center; padding: 50px; font-weight:bold;">❌ Không đào được link Video từ Server. Trang web có thể đã đổi cấu trúc!</div>`;
                 }
