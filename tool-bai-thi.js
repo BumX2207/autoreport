@@ -141,6 +141,35 @@
         .qz-explain { background:#fffbeb; padding:15px; margin-top:15px; border-radius:8px; border-left:4px solid #f59e0b; color:#b45309; font-size:14px; font-weight:600;}
 
         @keyframes fadeIn { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }
+
+        /* --- BẢN CẬP NHẬT CỐ ĐỊNH MÀN HÌNH REVIEW --- */
+        #sc-review {
+            display: none; 
+            flex-direction: column;
+            height: calc(100vh - 80px); /* Cố định chiều cao bằng màn hình trừ đi thanh Top Header */
+            padding-bottom: 10px; /* Cách mép dưới đúng 10px */
+            overflow: hidden; /* Cấm cuộn toàn trang ở màn hình này */
+        }
+        #sc-review.active {
+            display: flex; /* Khi active thì bật Flexbox */
+        }
+        #sc-review .qz-page-title {
+            flex-shrink: 0; /* Đóng băng tiêu đề, không cho bị bóp nhỏ */
+        }
+        #qz-review-content {
+            flex-grow: 1; /* Chiếm toàn bộ không gian còn lại */
+            overflow-y: auto; /* Chỉ cuộn nội dung bên trong box này */
+            background: rgba(30, 41, 59, 0.8); /* Màu nền kính Dark Mode */
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px; 
+            padding: 20px; 
+            color: #fff;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+        }
+        /* Làm đẹp thanh cuộn bên trong khung Review */
+        #qz-review-content::-webkit-scrollbar { width: 6px; }
+        #qz-review-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
     `;
 
     // ===============================================================
@@ -398,7 +427,8 @@
                         <span>🔍 CHI TIẾT ĐÁP ÁN</span>
                         <button class="qz-btn-history" id="btn-qz-rev-home">⬅ Đóng</button>
                     </div>
-                    <div id="qz-review-content" style="background:rgba(255,255,255,0.95); border-radius:16px; padding:20px; color:#333;"></div>
+                    <!-- Đã bỏ style cứng, chuyển sang dùng CSS Flexbox để cuộn mượt mà -->
+                    <div id="qz-review-content"></div>
                 </div>
 
             `;
