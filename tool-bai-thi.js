@@ -408,8 +408,8 @@
                 <!-- SCREEN 6: HISTORY -->
                 <div class="qz-screen" id="sc-history">
                     <div class="qz-page-title">
-                        <span>📜 LỊCH SỬ THI CỦA BẠN</span>
-                        <button class="qz-btn-history" id="btn-qz-his-home">⬅ Quay lại</button>
+                        <span>📜 LỊCH SỬ</span>
+                        <button class="qz-btn-history" id="btn-qz-his-home">Quay lại</button>
                     </div>
                     <div style="overflow-x:auto;">
                         <table class="qz-history-table">
