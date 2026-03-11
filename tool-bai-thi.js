@@ -5,7 +5,7 @@
     // 1. CẤU HÌNH DATA SHEET & API
     // ===============================================================
     const SHEET_ID = '1PegpCNhjqXrZCGle3iKpY5lvsE6XQC5WnBQRr2BoyOY';
-    const SHEET_GID = '0'; // Đã sửa thành 0 (Tab chứa dữ liệu đề thi)
+    const SHEET_GID = '0'; // Tab chứa dữ liệu đề thi
     const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SHEET_GID}`;
     let API_URL = CONSTANTS?.GSHEET?.CONFIG_API || "";
 
@@ -126,63 +126,112 @@
     `;
 
     // ===============================================================
-    // 3. PARSE CSV THEO CỘT LÀM ĐỀ THI
+    // 3. PARSE CSV (ĐÃ SỬA DÙNG GM_xmlhttpRequest VÀ ĐỌC CHUẨN 9 DÒNG)
     // ===============================================================
-    const fetchAndParseQuizzes = async () => {
-        try {
-            const res = await fetch(CSV_URL);
-            const text = await res.text();
-            
-            const rows = []; let row =[], curr = '', inQuotes = false;
-            for (let i = 0; i < text.length; i++) {
-                let char = text[i];
-                if (inQuotes) { if (char === '"') { if (text[i + 1] === '"') { curr += '"'; i++; } else { inQuotes = false; } } else { curr += char; } } 
-                else { if (char === '"') { inQuotes = true; } else if (char === ',') { row.push(curr); curr = ''; } else if (char === '\n' || char === '\r') { if (char === '\r' && text[i + 1] === '\n') i++; row.push(curr); rows.push(row); row =[]; curr = ''; } else { curr += char; } }
+    const parseCSV = (text) => {
+        const rows = []; let row =[], curr = '', inQuotes = false;
+        for (let i = 0; i < text.length; i++) {
+            let char = text[i];
+            if (inQuotes) {
+                if (char === '"') { if (text[i + 1] === '"') { curr += '"'; i++; } else { inQuotes = false; } } 
+                else { curr += char; }
+            } else {
+                if (char === '"') { inQuotes = true; } 
+                else if (char === ',') { row.push(curr); curr = ''; } 
+                else if (char === '\n' || char === '\r') {
+                    if (char === '\r' && text[i + 1] === '\n') i++;
+                    row.push(curr); rows.push(row); row =[]; curr = '';
+                } else { curr += char; }
             }
-            if (curr !== '' || row.length > 0) { row.push(curr); rows.push(row); }
-
-            const quizzes =[];
-            if(rows.length === 0) return quizzes;
-
-            const numCols = rows[0].length;
-            const cl = (s) => { if(!s)return""; let t=s.trim(); if(t.startsWith('"')&&t.endsWith('"')) t=t.slice(1,-1).replace(/""/g,'"'); return t; };
-
-            // Quét từng cột
-            for (let c = 0; c < numCols; c++) {
-                let quizName = cl(rows[0][c]);
-                if (!quizName) continue;
-
-                let questions =[];
-                // Bắt đầu từ dòng 1, mỗi câu chiếm 9 dòng
-                for (let r = 1; r < rows.length; r += 9) {
-                    if (r + 8 >= rows.length) break;
-                    let type = cl(rows[r]?.[c]); 
-                    if (!type) continue;
-
-                    let r2 = cl(rows[r+1]?.[c]), r3 = cl(rows[r+2]?.[c]), qT, qI;
-                    if((r2.startsWith('http') && !r3.startsWith('http'))) { qI=r2; qT=r3; } else { qT=r2; qI=r3; }
-                    let img = qI && qI.includes('drive.google') ? qI.replace(/\/file\/d\/(.+?)\/view.*/, '/uc?export=view&id=$1') : qI;
-
-                    if(type === 'match') {
-                        let ps =[]; 
-                        [cl(rows[r+3]?.[c]), cl(rows[r+4]?.[c]), cl(rows[r+5]?.[c]), cl(rows[r+6]?.[c])].forEach(x => { 
-                            if(x && x.includes('|')) { let p = x.split('|'); ps.push({left:p[0].trim(), right:p[1].trim()}); } 
-                        });
-                        questions.push({ type:'match', question:qT, image:img, matchPairs:ps, matchRightOrder:ps.map((_,k)=>k).sort(()=>0.5-Math.random()), explain:cl(rows[r+8]?.[c]), correct:[] });
-                    } else {
-                        let op = [cl(rows[r+3]?.[c]), cl(rows[r+4]?.[c]), cl(rows[r+5]?.[c]), cl(rows[r+6]?.[c])].filter(o=>o!=="");
-                        let crRaw = cl(rows[r+7]?.[c]);
-                        let cr = (type==='text'||type==='underline') ? crRaw.split(',').map(s=>s.trim()) : crRaw.split(',').map(s=>parseInt(s.trim())).filter(n=>!isNaN(n));
-                        questions.push({ type:type, question:qT, image:img, options:op, correct:cr, explain:cl(rows[r+8]?.[c]) });
-                    }
-                }
-                if(questions.length > 0) quizzes.push({ name: quizName, questions: questions });
-            }
-            return quizzes;
-        } catch (e) {
-            console.error("Lỗi tải đề thi:", e);
-            return[];
         }
+        if (curr !== '' || row.length > 0) { row.push(curr); rows.push(row); }
+        return rows;
+    };
+
+    const fetchAndParseQuizzes = () => {
+        return new Promise((resolve) => {
+            GM_xmlhttpRequest({
+                method: "GET",
+                url: CSV_URL,
+                onload: (res) => {
+                    if (res.status === 200) {
+                        try {
+                            const text = res.responseText;
+                            const rows = parseCSV(text);
+                            const quizzes =[];
+                            
+                            if(rows.length < 2) return resolve([]);
+                            const numCols = rows[0].length;
+                            const cl = (s) => { if(!s) return ""; let t = s.trim(); if(t.startsWith('"') && t.endsWith('"')) t = t.slice(1,-1).replace(/""/g,'"'); return t; };
+
+                            // Quét từng cột (Mỗi cột là 1 bài thi)
+                            for (let c = 0; c < numCols; c++) {
+                                let quizName = cl(rows[0][c]);
+                                if (!quizName) continue; // Nếu dòng 1 (Tên) rỗng thì bỏ qua cột này
+
+                                let questions =[];
+                                // Từ dòng index 1 trở đi, mỗi câu gồm đúng 9 dòng
+                                for (let r = 1; r < rows.length; r += 9) {
+                                    let type = cl(rows[r]?.[c]); 
+                                    if (!type) break; // Nếu không có loại câu hỏi thì coi như cột này đã hết câu hỏi
+
+                                    // MAP ĐÚNG VỚI FORMAT BẠN ĐÃ MÔ TẢ
+                                    let qT = cl(rows[r+1]?.[c]); // Nội dung câu hỏi
+                                    let qI = cl(rows[r+2]?.[c]); // Link ảnh
+                                    
+                                    // Đổi link drive view thành link ảnh trực tiếp
+                                    let img = (qI && qI.includes('drive.google')) ? qI.replace(/\/file\/d\/(.+?)\/view.*/, '/uc?export=view&id=$1') : qI;
+
+                                    if(type === 'match') {
+                                        let ps = []; 
+                                        // 4 dòng tùy chọn nối[cl(rows[r+3]?.[c]), cl(rows[r+4]?.[c]), cl(rows[r+5]?.[c]), cl(rows[r+6]?.[c])].forEach(x => { 
+                                            if(x && x.includes('|')) { 
+                                                let p = x.split('|'); 
+                                                ps.push({left: p[0].trim(), right: p[1].trim()}); 
+                                            } 
+                                        });
+                                        questions.push({ 
+                                            type: 'match', 
+                                            question: qT, 
+                                            image: img, 
+                                            matchPairs: ps, 
+                                            matchRightOrder: ps.map((_,k)=>k).sort(()=>0.5-Math.random()), 
+                                            explain: cl(rows[r+8]?.[c]), 
+                                            correct:[] 
+                                        });
+                                    } else {
+                                        // 4 dòng tùy chọn ABCD
+                                        let op =[cl(rows[r+3]?.[c]), cl(rows[r+4]?.[c]), cl(rows[r+5]?.[c]), cl(rows[r+6]?.[c])].filter(o=>o!=="");
+                                        let crRaw = cl(rows[r+7]?.[c]); // Đáp án đúng
+                                        let explainTxt = cl(rows[r+8]?.[c]); // Giải thích
+                                        
+                                        let cr = (type === 'text' || type === 'underline') ? crRaw.split(',').map(s=>s.trim()) : crRaw.split(',').map(s=>parseInt(s.trim())).filter(n=>!isNaN(n));
+                                        
+                                        questions.push({ 
+                                            type: type, 
+                                            question: qT, 
+                                            image: img, 
+                                            options: op, 
+                                            correct: cr, 
+                                            explain: explainTxt 
+                                        });
+                                    }
+                                }
+                                if(questions.length > 0) quizzes.push({ name: quizName, questions: questions });
+                            }
+                            resolve(quizzes);
+                        } catch (e) {
+                            console.error("Lỗi parse dữ liệu đề thi:", e);
+                            resolve([]);
+                        }
+                    } else {
+                        console.error("Lỗi mạng khi tải CSV đề thi");
+                        resolve([]);
+                    }
+                },
+                onerror: () => resolve([])
+            });
+        });
     };
 
     // ===============================================================
@@ -479,7 +528,7 @@
             const switchScreen = (id) => { document.querySelectorAll('.qz-screen').forEach(s => s.classList.remove('active')); $(id).classList.add('active'); };
 
             // ==========================================
-            // LOGIC AUTH (Đăng nhập giống Kiểm Kê)
+            // LOGIC AUTH
             // ==========================================
             const checkAuth = () => {
                 let saved = localStorage.getItem('tgdd_guest_account');
@@ -532,19 +581,21 @@
                 // 1. Tải danh sách bài thi từ Sheet
                 QUIZ_LIST = await fetchAndParseQuizzes();
                 
-                // 2. Đồng bộ lịch sử (Dùng tạm biến config chung của User qua API)
-                GM_xmlhttpRequest({
-                    method: "GET", url: `${API_URL}?action=get_config&type=quiz_history&user=${USER_NAME}`,
-                    onload: (res) => {
-                        try {
-                            let json = JSON.parse(res.responseText);
-                            if (json.data) QUIZ_HISTORY = typeof json.data === 'string' ? JSON.parse(json.data) : json.data;
-                        } catch(e) {}
-                    }
-                });
+                // 2. Đồng bộ lịch sử 
+                if(API_URL) {
+                    GM_xmlhttpRequest({
+                        method: "GET", url: `${API_URL}?action=get_config&type=quiz_history&user=${USER_NAME}`,
+                        onload: (res) => {
+                            try {
+                                let json = JSON.parse(res.responseText);
+                                if (json.data) QUIZ_HISTORY = typeof json.data === 'string' ? JSON.parse(json.data) : json.data;
+                            } catch(e) {}
+                        }
+                    });
+                }
 
                 $('qz-loading-text').style.display = 'none';
-                if(QUIZ_LIST.length === 0) { $('qz-quiz-grid').innerHTML = '<div style="color:#ef4444;">Không có bài thi nào!</div>'; return; }
+                if(QUIZ_LIST.length === 0) { $('qz-quiz-grid').innerHTML = '<div style="color:#ef4444;">Không có bài thi nào! Vui lòng kiểm tra lại Google Sheet.</div>'; return; }
 
                 QUIZ_LIST.forEach((quiz, idx) => {
                     $('qz-quiz-grid').innerHTML += `
@@ -630,14 +681,18 @@
                 QUIZ_HISTORY.unshift(hisRecord);
                 
                 // Đồng bộ lên Cloud
-                $('qz-sync-status').innerText = "⏳ Đang lưu kết quả...";
-                $('qz-sync-status').style.color = "#FFD700";
-                
-                GM_xmlhttpRequest({
-                    method: "POST", url: API_URL, data: JSON.stringify({ action: 'save_config', type: 'quiz_history', user: USER_NAME, config: QUIZ_HISTORY.slice(0, 20) }),
-                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                    onload: () => { $('qz-sync-status').innerText = "✅ Đã lưu kết quả thành công!"; $('qz-sync-status').style.color = "#00e676"; }
-                });
+                if (API_URL) {
+                    $('qz-sync-status').innerText = "⏳ Đang lưu kết quả...";
+                    $('qz-sync-status').style.color = "#FFD700";
+                    
+                    GM_xmlhttpRequest({
+                        method: "POST", url: API_URL, data: JSON.stringify({ action: 'save_config', type: 'quiz_history', user: USER_NAME, config: QUIZ_HISTORY.slice(0, 20) }),
+                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                        onload: () => { $('qz-sync-status').innerText = "✅ Đã lưu kết quả thành công!"; $('qz-sync-status').style.color = "#00e676"; }
+                    });
+                } else {
+                    $('qz-sync-status').innerText = "⚠️ Không lưu được lịch sử (Chưa có API).";
+                }
             };
 
             $('btn-qz-gohome').onclick = () => switchScreen('sc-home');
@@ -721,7 +776,7 @@
     return {
         name: "Luyện Thi",
         icon: `<svg viewBox="0 0 24 24"><path fill="white" d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2.12-1.15-.31-1.39-1.81.98L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72l5 2.73 5-2.73v3.72z"/></svg>`,
-        bgColor: "#10b981", // Màu xanh lá ngầu
+        bgColor: "#10b981", 
         action: runTool
     };
 })
