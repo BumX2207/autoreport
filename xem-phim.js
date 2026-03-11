@@ -95,7 +95,7 @@
     `;
     
     // ===============================================================
-    // 3. BỘ CÀO PHIM SIÊU VIỆT (VƯỢT AJAX VÀ X-FRAME-OPTIONS)
+    // 3. BỘ CÀO PHIM TIA X - GIẢI MÃ BASE64, XUYÊN THỦNG AJAX
     // ===============================================================
     
     const fetchHtml = (targetUrl) => {
@@ -107,17 +107,6 @@
                 onerror: () => reject(new Error("Mất mạng!"))
             });
         });
-    };
-
-    const parseCSV = (text) => {
-        const rows =[]; let row =[], curr = '', inQuotes = false;
-        for (let i = 0; i < text.length; i++) {
-            let char = text[i];
-            if (inQuotes) { if (char === '"') { if (text[i + 1] === '"') { curr += '"'; i++; } else inQuotes = false; } else curr += char; } 
-            else { if (char === '"') inQuotes = true; else if (char === ',') { row.push(curr); curr = ''; } 
-                else if (char === '\n' || char === '\r') { if (char === '\r' && text[i + 1] === '\n') i++; row.push(curr); rows.push(row); row =[]; curr = ''; } else curr += char; }
-        }
-        if (curr !== '' || row.length > 0) { row.push(curr); rows.push(row); } return rows;
     };
 
     const getEpisodes = async (movieUrl) => {
@@ -148,7 +137,6 @@
     const isValidLink = (url) => {
         if (!url || url.length < 5 || url === '/' || url === '#') return false;
         if (url.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/i)) return false;
-        // QUAN TRỌNG: Chặn lấy nhầm iframe ẩn của trang chủ gây lỗi X-Frame-Options
         let cleanUrl = url.replace(/\/$/, '');
         if (cleanUrl === 'https://hoathinh3d.ee' || cleanUrl === 'http://hoathinh3d.ee') return false;
         return true;
@@ -158,80 +146,118 @@
         try {
             const baseUrl = 'https://hoathinh3d.ee';
             let htmlText = await fetchHtml(epUrl);
-            
-            // 1. DÒ TÌM m3u8 TRỰC TIẾP
+            let extractedLink = null;
+
+            // TIA X 1: QUÉT TRỰC TIẾP M3U8/MP4 DÙ CHÚNG NẰM Ở ĐÂU
             let m3u8Match = htmlText.match(/(https?:\/\/[^\s"'<>]+\.(?:m3u8|mp4)[^\s"'<>]*)/i);
-            if (m3u8Match) return m3u8Match[1].replace(/\\/g, '');
+            if (m3u8Match) extractedLink = m3u8Match[1];
 
-            // 2. DÒ TÌM GỌI API AJAX (chuẩn Halim theme - Web VN hay dùng cái này)
-            let ajaxUrlMatch = htmlText.match(/["']?ajax_url["']?\s*:\s*["']([^"']+)["']/i);
-            let postIdMatch = htmlText.match(/["']?post_id["']?\s*:\s*["']?(\d+)["']?/i) || htmlText.match(/data-post_id=["'](\d+)["']/i) || htmlText.match(/data-id=["'](\d+)["']/i);
-            
-            if (ajaxUrlMatch && postIdMatch) {
-                let ajaxUrl = ajaxUrlMatch[1].replace(/\\/g, '');
-                if (!ajaxUrl.startsWith('http')) ajaxUrl = baseUrl + (ajaxUrl.startsWith('/') ? '' : '/') + ajaxUrl;
-                
-                let postData = `action=halim_ajax_player&episode=&server=&post_id=${postIdMatch[1]}`;
-                let ajaxRes = await new Promise((resolve) => {
-                    context.GM_xmlhttpRequest({
-                        method: "POST", url: ajaxUrl, data: postData,
-                        headers: { "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest", "Referer": epUrl },
-                        onload: (r) => resolve(r.responseText), onerror: () => resolve("")
-                    });
-                });
-                
-                if (ajaxRes) {
-                    let ajaxM3u8 = ajaxRes.match(/(https?:\/\/[^\s"'<>]+\.(?:m3u8|mp4)[^\s"'<>]*)/i);
-                    if (ajaxM3u8) return ajaxM3u8[1].replace(/\\/g, '');
-                    let ajaxIframe = ajaxRes.match(/<iframe[^>]+src=\\?["']([^"'\\]+)\\?["']/i);
-                    if (ajaxIframe) return formatUrl(ajaxIframe[1], baseUrl);
-                }
-            }
-
-            // 3. DÒ TÌM IFRAME TRONG MÃ HTML GỐC
-            let iframeRegex = /<iframe[^>]+src=["']([^"']+)["']/gi;
-            let match; let extractedLink = null;
-            while ((match = iframeRegex.exec(htmlText)) !== null) {
-                let src = match[1];
-                if (isValidLink(src) && !src.includes('facebook') && !src.includes('youtube') && !src.includes('google')) { 
-                    extractedLink = src; break; 
-                }
-            }
-            
-            // 4. DÒ TÌM TRONG data-src CỦA HTML (Trường hợp web giấu link)
+            // TIA X 2: TÌM URL M3U8 BỊ GIẤU TRONG QUERY STRING (Ví dụ: player?url=https...)
             if (!extractedLink) {
-                const doc = new DOMParser().parseFromString(htmlText, 'text/html');
-                const els = doc.querySelectorAll('[data-src], [data-iframe],[data-video], #box-player, .player-video');
-                for (let el of els) {
-                    let src = el.getAttribute('data-src') || el.getAttribute('data-iframe') || el.getAttribute('data-video');
-                    if (isValidLink(src)) {
-                        if (!src.includes('http') && !src.startsWith('/')) { try { src = atob(src); } catch(e) {} }
-                        if (src.includes('iframe')) { let m = src.match(/src=["']([^"']+)["']/); if (m) src = m[1]; }
-                        if (isValidLink(src)) { extractedLink = src; break; }
+                let queryMatch = htmlText.match(/url=([^&"'>\s]+\.(?:m3u8|mp4))/i);
+                if (queryMatch) extractedLink = decodeURIComponent(queryMatch[1]);
+            }
+
+            // TIA X 3: TÌM IFRAME BỊ ESCAPE KỸ CÀNG TRONG JSON
+            if (!extractedLink) {
+                let iframeRegex = /<iframe[^>]+src\s*=\s*\\?["']([^"'>]+)\\?["']/gi;
+                let match;
+                while ((match = iframeRegex.exec(htmlText)) !== null) {
+                    let src = match[1].replace(/\\/g, '');
+                    if (isValidLink(src) && !src.includes('facebook') && !src.includes('youtube') && !src.includes('google')) { 
+                        extractedLink = src; break; 
+                    }
+                }
+            }
+
+            // TIA X 4: TÌM BIẾN JAVASCRIPT & JSON
+            if (!extractedLink) {
+                let scriptLinks =[...htmlText.matchAll(/(?:url_play|link_play|iframe_url|file|src|url|link|player_url|videoUrl)\s*[:=]\s*\\?["'](https?:\/\/[^"'\\]+)\\?["']/gi)];
+                for (let match of scriptLinks) {
+                    let src = match[1].replace(/\\/g, '');
+                    if (src.includes('player') || src.includes('embed') || src.includes('.m3u8') || src.includes('.mp4')) {
+                        extractedLink = src; break;
                     }
                 }
             }
             
-            // 5. Nếu có extractedLink nội bộ, ta đào sâu thêm 1 lớp
+            // TIA X 5: GIẢI MÃ TẤT CẢ BASE64 CÓ MẶT TRÊN WEB (Tuyệt kỹ chống giấu link)
+            if (!extractedLink) {
+                let b64Strings = htmlText.match(/[A-Za-z0-9+/]{40,}={0,2}/g) ||[];
+                for (let b64 of b64Strings) {
+                    try {
+                        let decoded = atob(b64);
+                        if (decoded.includes('http') && (decoded.includes('.m3u8') || decoded.includes('.mp4') || decoded.includes('player') || decoded.includes('embed'))) {
+                            let linkMatch = decoded.match(/(https?:\/\/[^\s"'<>]+)/);
+                            if (linkMatch) { extractedLink = linkMatch[1]; break; }
+                        }
+                        if (decoded.includes('<iframe')) {
+                            let srcMatch = decoded.match(/src\s*=\s*["']([^"']+)["']/i);
+                            if (srcMatch) { extractedLink = srcMatch[1]; break; }
+                        }
+                    } catch(e) {}
+                }
+            }
+
+            // TIA X 6: MÔ PHỎNG AJAX BẮT ĐẾN TẬN SERVER CỦA HOATHINH3D
+            if (!extractedLink) {
+                let ajaxUrlMatch = htmlText.match(/ajax_url\s*:\s*\\?["']([^"'\\]+)\\?["']/i);
+                let postIdMatch = htmlText.match(/post_id\s*:\s*\\?["']?(\d+)\\?["']?/i) || htmlText.match(/data-id\s*=\s*\\?["'](\d+)\\?["']/i);
+                
+                if (postIdMatch) {
+                    let ajaxUrl = ajaxUrlMatch ? ajaxUrlMatch[1].replace(/\\/g, '') : (baseUrl + "/ajax/player");
+                    if (!ajaxUrl.startsWith('http')) ajaxUrl = baseUrl + (ajaxUrl.startsWith('/') ? '' : '/') + ajaxUrl;
+                    
+                    let ajaxRes = await new Promise((resolve) => {
+                        context.GM_xmlhttpRequest({
+                            method: "POST", url: ajaxUrl, 
+                            data: `action=halim_ajax_player&episode=&server=&post_id=${postIdMatch[1]}`,
+                            headers: { "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest", "Referer": epUrl },
+                            onload: (r) => resolve(r.responseText), onerror: () => resolve("")
+                        });
+                    });
+                    
+                    if (ajaxRes) {
+                        let innerM3u8 = ajaxRes.match(/(https?:\/\/[^\s"'<>]+\.(?:m3u8|mp4)[^\s"'<>]*)/i);
+                        if (innerM3u8) extractedLink = innerM3u8[1];
+                        else {
+                            let innerIframe = ajaxRes.match(/<iframe[^>]+src\s*=\s*\\?["']([^"'\\]+)\\?["']/i);
+                            if (innerIframe) extractedLink = innerIframe[1];
+                            else if (ajaxRes.startsWith('http')) extractedLink = ajaxRes; 
+                        }
+                    }
+                }
+            }
+
+            // GIAI ĐOẠN 2: XUYÊN PHÁ LỚP BỌC X-FRAME-OPTIONS (Tương tự code đợt trước)
             if (extractedLink) {
-                let finalUrl = formatUrl(extractedLink, baseUrl);
-                if (finalUrl.includes(baseUrl)) {
+                let finalUrl = formatUrl(extractedLink.replace(/\\/g, ''), baseUrl);
+                let maxDepth = 2, depth = 0;
+                while (finalUrl && finalUrl.includes(baseUrl) && depth < maxDepth) {
                     try {
                         let innerHtml = await fetchHtml(finalUrl);
                         let innerM3u8 = innerHtml.match(/(https?:\/\/[^\s"'<>]+\.(?:m3u8|mp4)[^\s"'<>]*)/i);
                         if (innerM3u8) return innerM3u8[1].replace(/\\/g, '');
                         
-                        let innerIframe = innerHtml.match(/<iframe[^>]+src=["']([^"']+)["']/i);
-                        if (innerIframe && isValidLink(innerIframe[1]) && !innerIframe[1].includes(baseUrl)) {
-                            return formatUrl(innerIframe[1], baseUrl);
+                        let innerIframe = innerHtml.match(/<iframe[^>]+src\s*=\s*\\?["']([^"'\\]+)\\?["']/i);
+                        if (innerIframe) {
+                            let inSrc = innerIframe[1].replace(/\\/g, '');
+                            if (isValidLink(inSrc) && !inSrc.includes(baseUrl)) return formatUrl(inSrc, baseUrl);
+                            finalUrl = formatUrl(inSrc, baseUrl);
+                        } else {
+                            break; 
                         }
-                    } catch (err) {}
+                        depth++;
+                    } catch (err) { break; }
                 }
-                return finalUrl; // Nếu không đào được nữa thì trả về chính nó
+                return finalUrl;
             }
-            
+
+            return null; // Bó tay toàn tập (Web đã đổi nền tảng)
+        } catch(e) {
+            console.error("Lỗi cào link video:", e);
             return null;
-        } catch(e) { console.error("Lỗi cào link video:", e); return null; }
+        }
     };
     
     // ===============================================================
@@ -522,8 +548,7 @@
                         $('mv-video-container').appendChild(iframe);
 
                     } else if (iframeSrc.includes('hoathinh3d.ee')) {
-                        // NẾU TRƯỜNG HỢP CỰC ĐOAN: VẪN BỊ TRẢ VỀ LINK NỘI BỘ HOATHINH3D (gây lỗi sameorigin)
-                        // GIẢI PHÁP TỐI THƯỢNG: Hack nạp thẳng mã HTML của họ vào bộ nhớ (srcdoc bypass)
+                        // Trị dứt điểm chứng sameorigin bằng cách cướp luồng DOM (Bypass level max)
                         try {
                             let playerPageHtml = await new Promise((resolve, reject) => {
                                 context.GM_xmlhttpRequest({
@@ -534,9 +559,8 @@
                                 });
                             });
                             
-                            // Bơm thẻ base để các file css/js chạy bình thường như ở trang chủ
                             if (playerPageHtml.includes('<head>')) {
-                                playerPageHtml = playerPageHtml.replace('<head>', '<head><base href="https://hoathinh3d.ee/">');
+                                playerPageHtml = playerPageHtml.replace(/<head>/i, '<head><base href="https://hoathinh3d.ee/">');
                             } else {
                                 playerPageHtml = '<head><base href="https://hoathinh3d.ee/"></head>' + playerPageHtml;
                             }
@@ -549,15 +573,14 @@
                             $('mv-video-container').appendChild(iframe);
                             
                         } catch(err) {
-                            $('mv-video-container').innerHTML = `<div style="color:red; text-align:center; padding: 50px;">❌ Không thể lách qua lớp bảo vệ!</div>`;
+                            $('mv-video-container').innerHTML = `<div style="color:red; text-align:center; padding: 50px;">❌ Cướp luồng thất bại!</div>`;
                         }
-
                     } else {
-                        // Link bên thứ 3 (Hydrax, Ophim...) nhúng hoàn toàn bình thường
+                        // Nhúng bình thường cho link thứ 3
                         $('mv-video-container').innerHTML = `<iframe class="mv-video-iframe" src="${iframeSrc}" referrerpolicy="no-referrer" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" frameborder="0"></iframe>`;
                     }
                 } else {
-                    $('mv-video-container').innerHTML = `<div style="color:#d63031; text-align:center; padding: 50px; font-weight:bold;">❌ Web nguồn thay đổi cấu trúc, không bắt được link!</div>`;
+                    $('mv-video-container').innerHTML = `<div style="color:#d63031; text-align:center; padding: 50px; font-weight:bold;">❌ Thất thủ hoàn toàn! Lập trình viên web đã đổi mới cấu trúc siêu mạnh.</div>`;
                 }
                 
                 localProgressData[currentMovie.link] = { epNum: epNum, time: Date.now() };
@@ -568,12 +591,12 @@
                 $('mv-video-container').innerHTML = `<div style="color:red; text-align:center; padding: 50px;">❌ Mất kết nối tới máy chủ chiếu phim!</div>`;
             }
         };
-    
+        // HẾT HÀM PLAY 1 TẬP CỤ THỂ
         loadDataFromSheet();
     };
     
     return {
-        name: "Xem Phim V1",
+        name: "Xem Phim V1.2",
         icon: `<svg viewBox="0 0 24 24"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-2zm-6.75 11.25L10 12l4.25 3.25L10 18v-2.75z" fill="white"/></svg>`,
         bgColor: "#d63031",
         action: runTool
