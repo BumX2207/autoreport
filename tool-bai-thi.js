@@ -1,18 +1,57 @@
 ((context) => {
-    const { UI, UTILS, CONSTANTS, GM_xmlhttpRequest } = context;
+    // Trích xuất an toàn từ context (Netlify có thể không truyền vào GM_xmlhttpRequest)
+    const { UI, UTILS, CONSTANTS } = context;
+    const GM_xmlhttpRequest = typeof context.GM_xmlhttpRequest !== 'undefined' ? context.GM_xmlhttpRequest : window.GM_xmlhttpRequest;
+
+    // ===============================================================
+    // 0. HÀM GIAO TIẾP MẠNG ĐA NỀN TẢNG (TAMPERMONKEY & NETLIFY)
+    // ===============================================================
+    const universalFetch = async (options) => {
+        return new Promise((resolve, reject) => {
+            // 1. Chạy trên Tampermonkey
+            if (typeof GM_xmlhttpRequest !== 'undefined') {
+                GM_xmlhttpRequest({
+                    method: options.method || "GET",
+                    url: options.url,
+                    data: options.data,
+                    headers: options.headers,
+                    onload: (res) => {
+                        if (res.status >= 200 && res.status < 300) resolve(res.responseText);
+                        else reject(new Error(`HTTP Error: ${res.status}`));
+                    },
+                    onerror: (err) => reject(err)
+                });
+            } 
+            // 2. Chạy trên Netlify / Web tiêu chuẩn
+            else {
+                const fetchOptions = {
+                    method: options.method || "GET",
+                    headers: options.headers || {}
+                };
+                if (options.data) fetchOptions.body = options.data;
+
+                fetch(options.url, fetchOptions)
+                    .then(response => {
+                        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+                        return response.text();
+                    })
+                    .then(text => resolve(text))
+                    .catch(err => reject(err));
+            }
+        });
+    };
 
     // ===============================================================
     // 1. CẤU HÌNH DATA SHEET & API
     // ===============================================================
     const SHEET_ID = '1PegpCNhjqXrZCGle3iKpY5lvsE6XQC5WnBQRr2BoyOY';
-    const SHEET_GID = '0'; // Tab chứa dữ liệu đề thi
+    const SHEET_GID = '0'; 
     const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SHEET_GID}`;
     let API_URL = CONSTANTS?.GSHEET?.CONFIG_API || "";
 
     let USER_NAME = "---";
     let IS_LOGGED_IN = false;
     
-    // State App
     let QUIZ_LIST =[]; 
     let CURRENT_QUIZ = null; 
     let USER_ANSWERS =[];
@@ -22,7 +61,7 @@
     let TIME_LEFT = 0;
 
     // ===============================================================
-    // 2. CSS GIAO DIỆN (GLASSMORPHISM + QUIZ CORE)
+    // 2. CSS GIAO DIỆN
     // ===============================================================
     const MY_CSS = `
         #qz-app-wrapper { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.9); backdrop-filter:blur(15px); -webkit-backdrop-filter:blur(15px); z-index:2147483647; font-family: 'Segoe UI', sans-serif; overflow-y:auto; overflow-x:hidden; box-sizing:border-box; color: #fff; }
@@ -30,7 +69,6 @@
         #qz-app-wrapper::-webkit-scrollbar { width: 6px; }
         #qz-app-wrapper::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
 
-        /* HEADER */
         .qz-top-header { display:flex; justify-content:space-between; align-items:center; padding:15px 25px; background:rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.1); position:sticky; top:0; z-index:100; }
         .qz-logo { font-size:18px; font-weight:900; color:#FFD700; text-transform:uppercase; letter-spacing:1px; }
         .qz-header-right { display:flex; align-items:center; gap:15px; }
@@ -38,11 +76,9 @@
         .qz-btn-close-app { width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.1); color:#fff; border:none; cursor:pointer; font-weight:bold; transition:0.2s; display:flex; justify-content:center; align-items:center; font-size: 16px;}
         .qz-btn-close-app:hover { background:#ef4444; }
 
-        /* SCREENS */
         .qz-screen { display:none; padding:30px 20px; max-width:900px; margin:0 auto; width:100%; animation:fadeIn 0.3s; }
         .qz-screen.active { display:block; }
 
-        /* LOGIN SCREEN */
         .qz-auth-box { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:30px; max-width:350px; margin:50px auto; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5); }
         .qz-input { width:100%; padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.3); color:#fff; margin-bottom:15px; font-size:14px; outline:none; }
         .qz-input:focus { border-color:#FFD700; }
@@ -52,7 +88,6 @@
         .qz-link { font-size:12px; color:#4fc3f7; cursor:pointer; margin-top:10px; display:inline-block; }
         .qz-link:hover { text-decoration:underline; }
 
-        /* HOME SCREEN (QUIZ LIST) */
         .qz-page-title { font-size:24px; font-weight:900; margin-bottom:20px; color:#fff; display:flex; justify-content:space-between; align-items:center; }
         .qz-btn-history { background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:8px 15px; border-radius:20px; font-size:13px; cursor:pointer; transition:0.2s; }
         .qz-btn-history:hover { background:rgba(255,255,255,0.2); }
@@ -63,7 +98,6 @@
         .qz-card-title { font-size:16px; font-weight:bold; color:#FFD700; margin-bottom:5px; line-height:1.4; }
         .qz-card-desc { font-size:12px; color:#aaa; }
 
-        /* PLAY SCREEN */
         .qz-play-header { display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:10px 20px; border-radius:12px; margin-bottom:20px; font-weight:bold; }
         .qz-timer { color:#ff5252; font-size:18px; font-family:monospace; }
         .qz-question-container { background:rgba(255,255,255,0.95); color:#333; border-radius:16px; padding:25px; box-shadow:0 10px 30px rgba(0,0,0,0.2); min-height:300px; }
@@ -74,7 +108,7 @@
         .qz-btn-prev { background:#64748b; } .qz-btn-prev:disabled { opacity:0.5; cursor:not-allowed; }
         .qz-btn-next { background:#3b82f6; } .qz-btn-next.disabled { background:#94a3b8; pointer-events:none; }
 
-        /* QUIZ TYPES CORE CSS */
+        /* QUIZ TYPES */
         .qz-opts { display:flex; gap:15px; flex-wrap:wrap; }
         .qz-opt-label { border:2px solid #e2e8f0; border-radius:10px; padding:15px; cursor:pointer; display:flex; align-items:center; width:calc(50% - 8px); transition:0.2s; color:#333; font-weight:600;}
         .qz-opt-label:hover { background:#f8fafc; border-color:#cbd5e1; }
@@ -110,13 +144,11 @@
         .qz-word.r-wrong { border-bottom-color:#ef4444; color:#b91c1c; background:#fef2f2; text-decoration:line-through; }
         .qz-word.r-missed { border-bottom:2px dashed #10b981; color:#64748b; }
 
-        /* RESULT & HISTORY */
         .qz-score-box { width:120px; height:120px; background:#FFD700; color:#1e293b; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:36px; font-weight:900; margin:0 auto 20px; box-shadow:0 0 20px rgba(255,215,0,0.5); }
         .qz-history-table { width:100%; border-collapse:collapse; margin-top:20px; background:rgba(255,255,255,0.05); border-radius:12px; overflow:hidden; }
         .qz-history-table th { background:rgba(0,0,0,0.5); padding:12px; text-align:left; color:#FFD700; }
         .qz-history-table td { padding:12px; border-bottom:1px solid rgba(255,255,255,0.1); }
         
-        /* REVIEW STYLES */
         .qz-review-opt { padding:12px 15px; margin-bottom:8px; border-radius:8px; border:1px solid #e2e8f0; background:#f8fafc; display:flex; justify-content:space-between; font-weight:600;}
         .qz-review-opt.correct { border-color:#10b981; background:#ecfdf5; color:#047857; }
         .qz-review-opt.wrong { border-color:#ef4444; background:#fef2f2; color:#b91c1c; }
@@ -126,7 +158,7 @@
     `;
 
     // ===============================================================
-    // 3. PARSE CSV (ĐÃ SỬA DÙNG GM_xmlhttpRequest VÀ ĐỌC CHUẨN 9 DÒNG)
+    // 3. PARSE CSV 
     // ===============================================================
     const parseCSV = (text) => {
         const rows = []; let row =[], curr = '', inQuotes = false;
@@ -148,267 +180,103 @@
         return rows;
     };
 
-    const fetchAndParseQuizzes = () => {
-        return new Promise((resolve) => {
-            GM_xmlhttpRequest({
-                method: "GET",
-                url: CSV_URL,
-                onload: (res) => {
-                    if (res.status === 200) {
-                        try {
-                            const text = res.responseText;
-                            const rows = parseCSV(text);
-                            const quizzes =[];
-                            
-                            if(rows.length < 2) return resolve([]);
-                            const numCols = rows[0].length;
-                            const cl = (s) => { if(!s) return ""; let t = s.trim(); if(t.startsWith('"') && t.endsWith('"')) t = t.slice(1,-1).replace(/""/g,'"'); return t; };
+    const fetchAndParseQuizzes = async () => {
+        try {
+            // SỬ DỤNG HÀM MỚI ĐỂ VƯỢT LỖI CORS TRÊN NETLIFY VÀ TAMPERMONKEY
+            const text = await universalFetch({ method: "GET", url: CSV_URL });
+            const rows = parseCSV(text);
+            const quizzes =[];
+            
+            if(rows.length < 2) return quizzes;
+            const numCols = rows[0].length;
+            const cl = (s) => { if(!s) return ""; let t = s.trim(); if(t.startsWith('"') && t.endsWith('"')) t = t.slice(1,-1).replace(/""/g,'"'); return t; };
 
-                            // Quét từng cột (Mỗi cột là 1 bài thi)
-                            for (let c = 0; c < numCols; c++) {
-                                let quizName = cl(rows[0][c]);
-                                if (!quizName) continue; // Nếu dòng 1 (Tên) rỗng thì bỏ qua cột này
+            for (let c = 0; c < numCols; c++) {
+                let quizName = cl(rows[0][c]);
+                if (!quizName) continue; 
 
-                                let questions =[];
-                                // Từ dòng index 1 trở đi, mỗi câu gồm đúng 9 dòng
-                                for (let r = 1; r < rows.length; r += 9) {
-                                    let type = cl(rows[r]?.[c]); 
-                                    if (!type) break; // Nếu không có loại câu hỏi thì coi như cột này đã hết câu hỏi
+                let questions =[];
+                for (let r = 1; r < rows.length; r += 9) {
+                    let type = cl(rows[r]?.[c]); 
+                    if (!type) break; 
 
-                                    // MAP ĐÚNG VỚI FORMAT BẠN ĐÃ MÔ TẢ
-                                    let qT = cl(rows[r+1]?.[c]); // Nội dung câu hỏi
-                                    let qI = cl(rows[r+2]?.[c]); // Link ảnh
-                                    
-                                    // Đổi link drive view thành link ảnh trực tiếp
-                                    let img = (qI && qI.includes('drive.google')) ? qI.replace(/\/file\/d\/(.+?)\/view.*/, '/uc?export=view&id=$1') : qI;
+                    let qT = cl(rows[r+1]?.[c]); 
+                    let qI = cl(rows[r+2]?.[c]); 
+                    let img = (qI && qI.includes('drive.google')) ? qI.replace(/\/file\/d\/(.+?)\/view.*/, '/uc?export=view&id=$1') : qI;
 
-                                    if(type === 'match') {
-                                        let ps = []; 
-                                        // 4 dòng tùy chọn nối[cl(rows[r+3]?.[c]), cl(rows[r+4]?.[c]), cl(rows[r+5]?.[c]), cl(rows[r+6]?.[c])].forEach(x => { 
-                                            if(x && x.includes('|')) { 
-                                                let p = x.split('|'); 
-                                                ps.push({left: p[0].trim(), right: p[1].trim()}); 
-                                            } 
-                                        });
-                                        questions.push({ 
-                                            type: 'match', 
-                                            question: qT, 
-                                            image: img, 
-                                            matchPairs: ps, 
-                                            matchRightOrder: ps.map((_,k)=>k).sort(()=>0.5-Math.random()), 
-                                            explain: cl(rows[r+8]?.[c]), 
-                                            correct:[] 
-                                        });
-                                    } else {
-                                        // 4 dòng tùy chọn ABCD
-                                        let op =[cl(rows[r+3]?.[c]), cl(rows[r+4]?.[c]), cl(rows[r+5]?.[c]), cl(rows[r+6]?.[c])].filter(o=>o!=="");
-                                        let crRaw = cl(rows[r+7]?.[c]); // Đáp án đúng
-                                        let explainTxt = cl(rows[r+8]?.[c]); // Giải thích
-                                        
-                                        let cr = (type === 'text' || type === 'underline') ? crRaw.split(',').map(s=>s.trim()) : crRaw.split(',').map(s=>parseInt(s.trim())).filter(n=>!isNaN(n));
-                                        
-                                        questions.push({ 
-                                            type: type, 
-                                            question: qT, 
-                                            image: img, 
-                                            options: op, 
-                                            correct: cr, 
-                                            explain: explainTxt 
-                                        });
-                                    }
-                                }
-                                if(questions.length > 0) quizzes.push({ name: quizName, questions: questions });
-                            }
-                            resolve(quizzes);
-                        } catch (e) {
-                            console.error("Lỗi parse dữ liệu đề thi:", e);
-                            resolve([]);
-                        }
+                    if(type === 'match') {
+                        let ps = []; 
+                        [cl(rows[r+3]?.[c]), cl(rows[r+4]?.[c]), cl(rows[r+5]?.[c]), cl(rows[r+6]?.[c])].forEach(x => { 
+                            if(x && x.includes('|')) { 
+                                let p = x.split('|'); 
+                                ps.push({left: p[0].trim(), right: p[1].trim()}); 
+                            } 
+                        });
+                        questions.push({ type: 'match', question: qT, image: img, matchPairs: ps, matchRightOrder: ps.map((_,k)=>k).sort(()=>0.5-Math.random()), explain: cl(rows[r+8]?.[c]), correct:[] });
                     } else {
-                        console.error("Lỗi mạng khi tải CSV đề thi");
-                        resolve([]);
+                        let op =[cl(rows[r+3]?.[c]), cl(rows[r+4]?.[c]), cl(rows[r+5]?.[c]), cl(rows[r+6]?.[c])].filter(o=>o!=="");
+                        let crRaw = cl(rows[r+7]?.[c]); 
+                        let explainTxt = cl(rows[r+8]?.[c]); 
+                        let cr = (type === 'text' || type === 'underline') ? crRaw.split(',').map(s=>s.trim()) : crRaw.split(',').map(s=>parseInt(s.trim())).filter(n=>!isNaN(n));
+                        questions.push({ type: type, question: qT, image: img, options: op, correct: cr, explain: explainTxt });
                     }
-                },
-                onerror: () => resolve([])
-            });
-        });
+                }
+                if(questions.length > 0) quizzes.push({ name: quizName, questions: questions });
+            }
+            return quizzes;
+        } catch (e) {
+            console.error("Lỗi tải đề thi:", e);
+            return[];
+        }
     };
 
     // ===============================================================
-    // 4. MODULE LOGIC CÂU HỎI (QUIZ TYPES)
+    // 4. MODULE LOGIC CÂU HỎI (Giữ nguyên)
     // ===============================================================
     const QZ_TYPES = {
         'text': {
-            render: (q, ans, idx) => {
-                let parts = q.question.split('{input}');
-                let html = `<div class="qz-q-text">Câu ${idx+1}: `;
-                for(let i=0; i<parts.length; i++) {
-                    html += parts[i];
-                    if(i < parts.length - 1) {
-                        let val = (ans && ans[i]) ? ans[i] : '';
-                        html += `<input type="text" class="qz-inline-input" oninput="window.QZ_FN.saveAns(${idx}, ${i}, 'text', this.value)" value="${val}" autocomplete="off"/>`;
-                    }
-                }
-                return html + `</div>`;
-            },
-            check: (q, ans) => {
-                if (!ans || !Array.isArray(ans) || ans.length !== q.correct.length) return false;
-                for(let i=0; i<q.correct.length; i++) { if ((ans[i]||"").toLowerCase().trim() !== q.correct[i].toLowerCase().trim()) return false; }
-                return true;
-            },
+            render: (q, ans, idx) => { let parts = q.question.split('{input}'); let html = `<div class="qz-q-text">Câu ${idx+1}: `; for(let i=0; i<parts.length; i++) { html += parts[i]; if(i < parts.length - 1) { let val = (ans && ans[i]) ? ans[i] : ''; html += `<input type="text" class="qz-inline-input" oninput="window.QZ_FN.saveAns(${idx}, ${i}, 'text', this.value)" value="${val}" autocomplete="off"/>`; } } return html + `</div>`; },
+            check: (q, ans) => { if (!ans || !Array.isArray(ans) || ans.length !== q.correct.length) return false; for(let i=0; i<q.correct.length; i++) { if ((ans[i]||"").toLowerCase().trim() !== q.correct[i].toLowerCase().trim()) return false; } return true; },
             hasAnswer: (ans, q) => ans && ans.length === q.correct.length && ans.every(s => s && s.trim() !== "")
         },
         'radio': {
-            render: (q, ans, idx) => {
-                let html = `<div class="qz-opts">`;
-                q.options.forEach((opt, i) => {
-                    let isSel = (ans === i);
-                    html += `<label class="qz-opt-label ${isSel?'selected':''}" onclick="window.QZ_FN.clickOpt(this, 'radio')">
-                             <input type="radio" name="opt-${idx}" value="${i}" ${isSel?'checked':''} onchange="window.QZ_FN.saveAns(${idx}, ${i}, 'radio')"/> ${opt}</label>`;
-                });
-                return html + `</div>`;
-            },
+            render: (q, ans, idx) => { let html = `<div class="qz-opts">`; q.options.forEach((opt, i) => { let isSel = (ans === i); html += `<label class="qz-opt-label ${isSel?'selected':''}" onclick="window.QZ_FN.clickOpt(this, 'radio')"><input type="radio" name="opt-${idx}" value="${i}" ${isSel?'checked':''} onchange="window.QZ_FN.saveAns(${idx}, ${i}, 'radio')"/> ${opt}</label>`; }); return html + `</div>`; },
             check: (q, ans) => ans !== null && ans !== undefined && ans === q.correct[0] - 1,
             hasAnswer: (ans) => ans !== null && ans !== undefined
         },
         'checkbox': {
-            render: (q, ans, idx) => {
-                let html = `<div class="qz-opts">`;
-                q.options.forEach((opt, i) => {
-                    let isSel = (ans && ans.includes(i));
-                    html += `<label class="qz-opt-label ${isSel?'selected':''}" onclick="window.QZ_FN.clickOpt(this, 'checkbox')">
-                             <input type="checkbox" name="opt-${idx}" value="${i}" ${isSel?'checked':''} onchange="window.QZ_FN.saveAns(${idx}, ${i}, 'checkbox')"/> ${opt}</label>`;
-                });
-                return html + `</div>`;
-            },
-            check: (q, ans) => {
-                if (!ans || ans.length === 0) return false;
-                let c = q.correct.map(x => x - 1).sort(); let u = ans.slice().sort();
-                return JSON.stringify(c) === JSON.stringify(u);
-            },
+            render: (q, ans, idx) => { let html = `<div class="qz-opts">`; q.options.forEach((opt, i) => { let isSel = (ans && ans.includes(i)); html += `<label class="qz-opt-label ${isSel?'selected':''}" onclick="window.QZ_FN.clickOpt(this, 'checkbox')"><input type="checkbox" name="opt-${idx}" value="${i}" ${isSel?'checked':''} onchange="window.QZ_FN.saveAns(${idx}, ${i}, 'checkbox')"/> ${opt}</label>`; }); return html + `</div>`; },
+            check: (q, ans) => { if (!ans || ans.length === 0) return false; let c = q.correct.map(x => x - 1).sort(); let u = ans.slice().sort(); return JSON.stringify(c) === JSON.stringify(u); },
             hasAnswer: (ans) => ans && ans.length > 0
         },
         'match': {
-            render: (q, ans, idx) => {
-                let html = `<div class="qz-match-container"><div class="qz-match-col" id="match-col-left"></div><div class="qz-match-col" id="match-col-right"></div></div>`;
-                setTimeout(() => { window.QZ_FN.renderMatchGame(idx, q, ans); window.QZ_FN.drawMatchLines(idx); }, 50);
-                return html;
-            },
-            check: (q, ans) => {
-                if (!ans || Object.keys(ans).length !== q.matchPairs.length) return false;
-                for (let k in ans) { if (parseInt(ans[k]) !== parseInt(k)) return false; }
-                return true;
-            },
+            render: (q, ans, idx) => { let html = `<div class="qz-match-container"><div class="qz-match-col" id="match-col-left"></div><div class="qz-match-col" id="match-col-right"></div></div>`; setTimeout(() => { window.QZ_FN.renderMatchGame(idx, q, ans); window.QZ_FN.drawMatchLines(idx); }, 50); return html; },
+            check: (q, ans) => { if (!ans || Object.keys(ans).length !== q.matchPairs.length) return false; for (let k in ans) { if (parseInt(ans[k]) !== parseInt(k)) return false; } return true; },
             hasAnswer: (ans, q) => ans && Object.keys(ans).length === q.matchPairs.length
         },
         'circle': {
-            render: (q, ans, idx) => {
-                let html = `<div class="qz-circle-container">`;
-                q.options.forEach((opt, i) => {
-                    let clean = opt.replace(/^[A-D][\.\)]\s*/, ''), lbl = String.fromCharCode(65 + i), isSel = (ans === i);
-                    let path = "M 35.8 8.6 c -6.8 -5.6 -22.4 -2 -28.2 8.4 c -4.4 7.9 -1.6 20.4 5.2 26.2 c 8.4 7.1 22.8 5.7 30.6 -2.6 c 6.5 -7 6.1 -19.9 -1.2 -26.6";
-                    html += `<div class="qz-circle-item ${isSel?'selected':''}" onclick="window.QZ_FN.clickOpt(this, 'circle')">
-                             <div class="qz-circle-mark">${lbl}<svg class="qz-circle-svg" viewBox="0 0 50 50"><path d="${path}" class="qz-circle-path"/></svg></div>
-                             <div class="qz-circle-text">${clean}</div>
-                             <input type="radio" name="opt-${idx}" value="${i}" ${isSel?'checked':''} style="display:none" onchange="window.QZ_FN.saveAns(${idx}, ${i}, 'radio')"/></div>`;
-                });
-                return html + `</div>`;
-            },
+            render: (q, ans, idx) => { let html = `<div class="qz-circle-container">`; q.options.forEach((opt, i) => { let clean = opt.replace(/^[A-D][\.\)]\s*/, ''), lbl = String.fromCharCode(65 + i), isSel = (ans === i); let path = "M 35.8 8.6 c -6.8 -5.6 -22.4 -2 -28.2 8.4 c -4.4 7.9 -1.6 20.4 5.2 26.2 c 8.4 7.1 22.8 5.7 30.6 -2.6 c 6.5 -7 6.1 -19.9 -1.2 -26.6"; html += `<div class="qz-circle-item ${isSel?'selected':''}" onclick="window.QZ_FN.clickOpt(this, 'circle')"><div class="qz-circle-mark">${lbl}<svg class="qz-circle-svg" viewBox="0 0 50 50"><path d="${path}" class="qz-circle-path"/></svg></div><div class="qz-circle-text">${clean}</div><input type="radio" name="opt-${idx}" value="${i}" ${isSel?'checked':''} style="display:none" onchange="window.QZ_FN.saveAns(${idx}, ${i}, 'radio')"/></div>`; }); return html + `</div>`; },
             check: (q, ans) => ans !== null && ans !== undefined && ans === q.correct[0] - 1,
             hasAnswer: (ans) => ans !== null && ans !== undefined
         },
         'underline': {
-            render: (q, ans, idx) => {
-                let html = `<div class="qz-underline-box">`;
-                q.options.join(' ').split(/\s+/).forEach((w, i) => {
-                    let cw = w.replace(/[.,!?;:"'()]/g, ""), isSel = (ans && ans.includes(cw + '_' + i));
-                    html += `<span class="qz-word ${isSel?'selected':''}" onclick="window.QZ_FN.underlineClick(this, ${idx}, '${cw}', ${i})">${w}</span> `;
-                });
-                return html + `</div><div style="font-size:12px;color:#94a3b8;margin-top:10px;font-style:italic">👉 Chạm vào từ để gạch chân.</div>`;
-            },
-            check: (q, ans) => {
-                if (!ans || ans.length === 0) return false;
-                let s = ans.map(v => v.split('_')[0].toLowerCase().trim()).sort();
-                let c = q.correct.map(v => v.toLowerCase().trim()).sort();
-                return JSON.stringify(s) === JSON.stringify(c);
-            },
+            render: (q, ans, idx) => { let html = `<div class="qz-underline-box">`; q.options.join(' ').split(/\s+/).forEach((w, i) => { let cw = w.replace(/[.,!?;:"'()]/g, ""), isSel = (ans && ans.includes(cw + '_' + i)); html += `<span class="qz-word ${isSel?'selected':''}" onclick="window.QZ_FN.underlineClick(this, ${idx}, '${cw}', ${i})">${w}</span> `; }); return html + `</div><div style="font-size:12px;color:#94a3b8;margin-top:10px;font-style:italic">👉 Chạm vào từ để gạch chân.</div>`; },
+            check: (q, ans) => { if (!ans || ans.length === 0) return false; let s = ans.map(v => v.split('_')[0].toLowerCase().trim()).sort(); let c = q.correct.map(v => v.toLowerCase().trim()).sort(); return JSON.stringify(s) === JSON.stringify(c); },
             hasAnswer: (ans) => ans && ans.length > 0
         }
     };
 
-    // Hàm toàn cục cho giao diện tương tác
     window.QZ_FN = {
-        saveAns: (qIdx, val, type, extra) => { 
-            if(type==='radio') USER_ANSWERS[qIdx] = parseInt(val);
-            else if(type==='checkbox') { if(!USER_ANSWERS[qIdx]) USER_ANSWERS[qIdx]=[]; let arr=[]; document.getElementsByName('opt-'+qIdx).forEach(i=>{if(i.checked) arr.push(parseInt(i.value))}); USER_ANSWERS[qIdx]=arr; }
-            else if(type==='text') { if(!USER_ANSWERS[qIdx]) USER_ANSWERS[qIdx]=[]; USER_ANSWERS[qIdx][val] = extra.trim(); }
-            window.QZ_FN.checkNextBtn(qIdx);
-        },
-        clickOpt: (el, type) => {
-            if(type==='radio') { el.parentElement.querySelectorAll('.qz-opt-label').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); }
-            else if(type==='checkbox') { setTimeout(() => { let inp=el.querySelector('input'); el.classList.toggle('selected', inp.checked); }, 50); }
-            else if(type==='circle') { el.parentElement.querySelectorAll('.qz-circle-item').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); let inp=el.querySelector('input'); if(inp){inp.checked=true;inp.onchange();} }
-        },
-        underlineClick: (el, idx, txt, wIdx) => {
-            el.classList.toggle('selected'); let val = txt + '_' + wIdx;
-            if(!USER_ANSWERS[idx]) USER_ANSWERS[idx] =[];
-            if(el.classList.contains('selected')) USER_ANSWERS[idx].push(val); else USER_ANSWERS[idx]=USER_ANSWERS[idx].filter(x=>x!==val);
-            window.QZ_FN.checkNextBtn(idx);
-        },
-        checkNextBtn: (idx) => {
-            let h = QZ_TYPES[CURRENT_QUIZ.questions[idx].type]; 
-            let ok = h ? h.hasAnswer(USER_ANSWERS[idx], CURRENT_QUIZ.questions[idx]) : false;
-            let b = document.getElementById('qz-btn-next'); 
-            if(b) { if(ok) b.classList.remove('disabled'); else b.classList.add('disabled'); }
-        },
-        
+        saveAns: (qIdx, val, type, extra) => { if(type==='radio') USER_ANSWERS[qIdx] = parseInt(val); else if(type==='checkbox') { if(!USER_ANSWERS[qIdx]) USER_ANSWERS[qIdx]=[]; let arr=[]; document.getElementsByName('opt-'+qIdx).forEach(i=>{if(i.checked) arr.push(parseInt(i.value))}); USER_ANSWERS[qIdx]=arr; } else if(type==='text') { if(!USER_ANSWERS[qIdx]) USER_ANSWERS[qIdx]=[]; USER_ANSWERS[qIdx][val] = extra.trim(); } window.QZ_FN.checkNextBtn(qIdx); },
+        clickOpt: (el, type) => { if(type==='radio') { el.parentElement.querySelectorAll('.qz-opt-label').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); } else if(type==='checkbox') { setTimeout(() => { let inp=el.querySelector('input'); el.classList.toggle('selected', inp.checked); }, 50); } else if(type==='circle') { el.parentElement.querySelectorAll('.qz-circle-item').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); let inp=el.querySelector('input'); if(inp){inp.checked=true;inp.onchange();} } },
+        underlineClick: (el, idx, txt, wIdx) => { el.classList.toggle('selected'); let val = txt + '_' + wIdx; if(!USER_ANSWERS[idx]) USER_ANSWERS[idx] =[]; if(el.classList.contains('selected')) USER_ANSWERS[idx].push(val); else USER_ANSWERS[idx]=USER_ANSWERS[idx].filter(x=>x!==val); window.QZ_FN.checkNextBtn(idx); },
+        checkNextBtn: (idx) => { let h = QZ_TYPES[CURRENT_QUIZ.questions[idx].type]; let ok = h ? h.hasAnswer(USER_ANSWERS[idx], CURRENT_QUIZ.questions[idx]) : false; let b = document.getElementById('qz-btn-next'); if(b) { if(ok) b.classList.remove('disabled'); else b.classList.add('disabled'); } },
         matchState: {left:null, right:null},
-        renderMatchGame: (idx, q, saved) => {
-            saved = saved || {};
-            const lC = document.getElementById('match-col-left'), rC = document.getElementById('match-col-right');
-            if(!lC) return;
-            lC.innerHTML = q.matchPairs.map((p,i) => `<div class="qz-match-item ${saved.hasOwnProperty(i)?'matched':''}" onclick="window.QZ_FN.matchClick('left',${i},${idx})" id="m-left-${i}">${p.left}</div>`).join('');
-            rC.innerHTML = q.matchRightOrder.map(o => `<div class="qz-match-item ${Object.values(saved).includes(o)?'matched':''}" onclick="window.QZ_FN.matchClick('right',${o},${idx})" id="m-right-${o}">${q.matchPairs[o].right}</div>`).join('');
-            const con = document.querySelector('.qz-match-container');
-            if(con && !con.querySelector('.match-svg')) { let s=document.createElementNS('http://www.w3.org/2000/svg','svg'); s.setAttribute('class','match-svg'); con.appendChild(s); }
-            window.QZ_FN.matchState = {left:null, right:null};
-        },
-        matchClick: (side, id, idx) => {
-            if(!USER_ANSWERS[idx]) USER_ANSWERS[idx] = {};
-            let state = window.QZ_FN.matchState;
-            if(side==='left' && USER_ANSWERS[idx].hasOwnProperty(id)) { delete USER_ANSWERS[idx][id]; window.QZ_FN.updateMatchUI(idx); return; }
-            if(side==='right') { let f=Object.keys(USER_ANSWERS[idx]).find(k=>USER_ANSWERS[idx][k]===id); if(f){ delete USER_ANSWERS[idx][f]; window.QZ_FN.updateMatchUI(idx); return; } }
-            let col = side==='left'?'match-col-left':'match-col-right';
-            document.getElementById(col).querySelectorAll('.qz-match-item').forEach(e=>{ if(!e.classList.contains('matched')) e.classList.remove('active'); });
-            document.getElementById((side==='left'?'m-left-':'m-right-')+id).classList.add('active');
-            state[side] = id;
-            if(state.left!==null && state.right!==null) { USER_ANSWERS[idx][state.left]=state.right; window.QZ_FN.updateMatchUI(idx); }
-        },
-        updateMatchUI: (idx) => {
-            let ans = USER_ANSWERS[idx] || {};
-            document.querySelectorAll('.qz-match-item').forEach(e=>e.className='qz-match-item');
-            window.QZ_FN.matchState={left:null, right:null};
-            for(let l in ans) { document.getElementById('m-left-'+l).className='qz-match-item matched'; document.getElementById('m-right-'+ans[l]).className='qz-match-item matched'; }
-            window.QZ_FN.drawMatchLines(idx); window.QZ_FN.checkNextBtn(idx);
-        },
-        drawMatchLines: (idx) => {
-            const con = document.querySelector('.qz-match-container'); if(!con) return;
-            let svg = con.querySelector('.match-svg'); while(svg.firstChild) svg.removeChild(svg.firstChild);
-            let ans = USER_ANSWERS[idx]; if(!ans) return;
-            const cR = con.getBoundingClientRect();
-            for(let l in ans) {
-                let elL=document.getElementById(`m-left-${l}`), elR=document.getElementById(`m-right-${ans[l]}`);
-                if(elL && elR) {
-                    let rL=elL.getBoundingClientRect(), rR=elR.getBoundingClientRect();
-                    let ln=document.createElementNS('http://www.w3.org/2000/svg','line');
-                    ln.setAttribute('x1', rL.right-cR.left); ln.setAttribute('y1', rL.top+rL.height/2-cR.top);
-                    ln.setAttribute('x2', rR.left-cR.left); ln.setAttribute('y2', rR.top+rR.height/2-cR.top);
-                    ln.setAttribute('class','match-line'); svg.appendChild(ln);
-                }
-            }
-        }
+        renderMatchGame: (idx, q, saved) => { saved = saved || {}; const lC = document.getElementById('match-col-left'), rC = document.getElementById('match-col-right'); if(!lC) return; lC.innerHTML = q.matchPairs.map((p,i) => `<div class="qz-match-item ${saved.hasOwnProperty(i)?'matched':''}" onclick="window.QZ_FN.matchClick('left',${i},${idx})" id="m-left-${i}">${p.left}</div>`).join(''); rC.innerHTML = q.matchRightOrder.map(o => `<div class="qz-match-item ${Object.values(saved).includes(o)?'matched':''}" onclick="window.QZ_FN.matchClick('right',${o},${idx})" id="m-right-${o}">${q.matchPairs[o].right}</div>`).join(''); const con = document.querySelector('.qz-match-container'); if(con && !con.querySelector('.match-svg')) { let s=document.createElementNS('http://www.w3.org/2000/svg','svg'); s.setAttribute('class','match-svg'); con.appendChild(s); } window.QZ_FN.matchState = {left:null, right:null}; },
+        matchClick: (side, id, idx) => { if(!USER_ANSWERS[idx]) USER_ANSWERS[idx] = {}; let state = window.QZ_FN.matchState; if(side==='left' && USER_ANSWERS[idx].hasOwnProperty(id)) { delete USER_ANSWERS[idx][id]; window.QZ_FN.updateMatchUI(idx); return; } if(side==='right') { let f=Object.keys(USER_ANSWERS[idx]).find(k=>USER_ANSWERS[idx][k]===id); if(f){ delete USER_ANSWERS[idx][f]; window.QZ_FN.updateMatchUI(idx); return; } } let col = side==='left'?'match-col-left':'match-col-right'; document.getElementById(col).querySelectorAll('.qz-match-item').forEach(e=>{ if(!e.classList.contains('matched')) e.classList.remove('active'); }); document.getElementById((side==='left'?'m-left-':'m-right-')+id).classList.add('active'); state[side] = id; if(state.left!==null && state.right!==null) { USER_ANSWERS[idx][state.left]=state.right; window.QZ_FN.updateMatchUI(idx); } },
+        updateMatchUI: (idx) => { let ans = USER_ANSWERS[idx] || {}; document.querySelectorAll('.qz-match-item').forEach(e=>e.className='qz-match-item'); window.QZ_FN.matchState={left:null, right:null}; for(let l in ans) { document.getElementById('m-left-'+l).className='qz-match-item matched'; document.getElementById('m-right-'+ans[l]).className='qz-match-item matched'; } window.QZ_FN.drawMatchLines(idx); window.QZ_FN.checkNextBtn(idx); },
+        drawMatchLines: (idx) => { const con = document.querySelector('.qz-match-container'); if(!con) return; let svg = con.querySelector('.match-svg'); while(svg.firstChild) svg.removeChild(svg.firstChild); let ans = USER_ANSWERS[idx]; if(!ans) return; const cR = con.getBoundingClientRect(); for(let l in ans) { let elL=document.getElementById(`m-left-${l}`), elR=document.getElementById(`m-right-${ans[l]}`); if(elL && elR) { let rL=elL.getBoundingClientRect(), rR=elR.getBoundingClientRect(); let ln=document.createElementNS('http://www.w3.org/2000/svg','line'); ln.setAttribute('x1', rL.right-cR.left); ln.setAttribute('y1', rL.top+rL.height/2-cR.top); ln.setAttribute('x2', rR.left-cR.left); ln.setAttribute('y2', rR.top+rR.height/2-cR.top); ln.setAttribute('class','match-line'); svg.appendChild(ln); } } }
     };
-
 
     // ===============================================================
     // 5. MAIN LOGIC FLOW
@@ -478,7 +346,7 @@
                     <div class="qz-auth-box" style="max-width:500px; margin: 20px auto;">
                         <h2 style="color:#FFD700; margin-bottom:20px;">KẾT QUẢ BÀI THI</h2>
                         <div class="qz-score-box" id="qz-final-score">0/10</div>
-                        <p style="color:#cbd5e1; margin-bottom:5px;">Người thi: <b style="color:#fff;">${USER_NAME}</b></p>
+                        <p style="color:#cbd5e1; margin-bottom:5px;">Người thi: <b style="color:#fff;" id="qz-result-user">---</b></p>
                         <p style="color:#cbd5e1; margin-bottom:20px;">Thời gian: <b style="color:#fff;" id="qz-final-time">0 phút</b></p>
                         <p id="qz-sync-status" style="color:#00e676; font-size:13px; margin-bottom:20px;">⏳ Đang lưu kết quả lên hệ thống...</p>
                         
@@ -517,7 +385,6 @@
             `;
             document.body.appendChild(app);
             
-            // Add CSS (với FontAwesome nếu chưa có)
             const style = document.createElement('style'); style.innerHTML = MY_CSS; document.head.appendChild(style);
             if(!document.querySelector('link[href*="font-awesome"]')) {
                 const fa = document.createElement('link'); fa.rel = 'stylesheet'; fa.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css';
@@ -528,7 +395,7 @@
             const switchScreen = (id) => { document.querySelectorAll('.qz-screen').forEach(s => s.classList.remove('active')); $(id).classList.add('active'); };
 
             // ==========================================
-            // LOGIC AUTH
+            // LOGIC AUTH SỬ DỤNG UNIVERSAL FETCH MỚI
             // ==========================================
             const checkAuth = () => {
                 let saved = localStorage.getItem('tgdd_guest_account');
@@ -545,25 +412,30 @@
                 }
             };
 
-            const handleAuthCall = (action, u, p, btnId) => {
+            const handleAuthCall = async (action, u, p, btnId) => {
                 if(!u || !p) { alert("Vui lòng nhập đủ thông tin!"); return; }
                 const btn = $(btnId); const oldText = btn.innerText; btn.innerText = "⏳ Đang xử lý..."; btn.disabled = true;
                 
-                GM_xmlhttpRequest({
-                    method: "POST", url: API_URL, data: JSON.stringify({ action: action, user: u, password: p }),
-                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                    onload: (res) => { 
-                        btn.innerText = oldText; btn.disabled = false;
-                        try {
-                            const json = JSON.parse(res.responseText);
-                            if(json.status === 'success') {
-                                if(action === 'login_guest') { localStorage.setItem('tgdd_guest_account', JSON.stringify({user: u, pass: p})); checkAuth(); }
-                                else { alert("Đăng ký thành công! Hãy đăng nhập."); switchScreen('sc-login'); }
-                            } else alert("❌ Lỗi: " + json.message); 
-                        } catch(e) { alert("❌ Lỗi mạng!"); }
-                    }, 
-                    onerror: () => { alert("❌ Lỗi kết nối!"); btn.innerText = oldText; btn.disabled = false; }
-                });
+                try {
+                    const resText = await universalFetch({
+                        method: "POST", 
+                        url: API_URL, 
+                        data: JSON.stringify({ action: action, user: u, password: p }),
+                        headers: { "Content-Type": "application/x-www-form-urlencoded" }
+                    });
+                    
+                    btn.innerText = oldText; btn.disabled = false;
+                    const json = JSON.parse(resText);
+                    
+                    if(json.status === 'success') {
+                        if(action === 'login_guest') { localStorage.setItem('tgdd_guest_account', JSON.stringify({user: u, pass: p})); checkAuth(); }
+                        else { alert("Đăng ký thành công! Hãy đăng nhập."); switchScreen('sc-login'); }
+                    } else alert("❌ Lỗi: " + json.message); 
+                    
+                } catch (e) {
+                    alert("❌ Lỗi kết nối mạng hoặc API chưa cấu hình CORS!"); 
+                    btn.innerText = oldText; btn.disabled = false;
+                }
             };
 
             $('btn-qz-login').onclick = () => handleAuthCall('login_guest', $('inp-qz-user').value.trim(), $('inp-qz-pass').value.trim(), 'btn-qz-login');
@@ -578,20 +450,16 @@
             const loadHomeData = async () => {
                 $('qz-loading-text').style.display = 'block'; $('qz-quiz-grid').innerHTML = '';
                 
-                // 1. Tải danh sách bài thi từ Sheet
+                // Tải danh sách bài thi (Đã fix gọi qua hàm universalFetch bên trên)
                 QUIZ_LIST = await fetchAndParseQuizzes();
                 
-                // 2. Đồng bộ lịch sử 
+                // Đồng bộ lịch sử (Gọi qua Universal Fetch)
                 if(API_URL) {
-                    GM_xmlhttpRequest({
-                        method: "GET", url: `${API_URL}?action=get_config&type=quiz_history&user=${USER_NAME}`,
-                        onload: (res) => {
-                            try {
-                                let json = JSON.parse(res.responseText);
-                                if (json.data) QUIZ_HISTORY = typeof json.data === 'string' ? JSON.parse(json.data) : json.data;
-                            } catch(e) {}
-                        }
-                    });
+                    try {
+                        const resText = await universalFetch({ method: "GET", url: `${API_URL}?action=get_config&type=quiz_history&user=${USER_NAME}` });
+                        let json = JSON.parse(resText);
+                        if (json.data) QUIZ_HISTORY = typeof json.data === 'string' ? JSON.parse(json.data) : json.data;
+                    } catch(e) { console.log("Không tải được lịch sử", e); }
                 }
 
                 $('qz-loading-text').style.display = 'none';
@@ -619,7 +487,7 @@
                 CURRENT_QUIZ = QUIZ_LIST[idx];
                 USER_ANSWERS = new Array(CURRENT_QUIZ.questions.length).fill(null);
                 CURRENT_Q_IDX = 0;
-                TIME_LEFT = 15 * 60; // Mặc định 15 phút
+                TIME_LEFT = 15 * 60; 
                 
                 switchScreen('sc-play');
                 renderQuestion(0);
@@ -660,7 +528,7 @@
             // ==========================================
             // LOGIC SUBMIT & HISTORY
             // ==========================================
-            const submitQuiz = () => {
+            const submitQuiz = async () => {
                 clearInterval(TIMER_INTERVAL);
                 let score = 0;
                 CURRENT_QUIZ.questions.forEach((q, i) => {
@@ -670,9 +538,9 @@
 
                 $('qz-final-score').innerText = `${score}/${CURRENT_QUIZ.questions.length}`;
                 $('qz-final-time').innerText = `${15 - Math.floor(TIME_LEFT/60)} phút ${60 - (TIME_LEFT%60)} giây`;
+                $('qz-result-user').innerText = USER_NAME;
                 switchScreen('sc-result');
 
-                // Lưu lịch sử
                 let hisRecord = {
                     time: new Date().getTime(),
                     quizName: CURRENT_QUIZ.name,
@@ -680,16 +548,23 @@
                 };
                 QUIZ_HISTORY.unshift(hisRecord);
                 
-                // Đồng bộ lên Cloud
                 if (API_URL) {
                     $('qz-sync-status').innerText = "⏳ Đang lưu kết quả...";
                     $('qz-sync-status').style.color = "#FFD700";
                     
-                    GM_xmlhttpRequest({
-                        method: "POST", url: API_URL, data: JSON.stringify({ action: 'save_config', type: 'quiz_history', user: USER_NAME, config: QUIZ_HISTORY.slice(0, 20) }),
-                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                        onload: () => { $('qz-sync-status').innerText = "✅ Đã lưu kết quả thành công!"; $('qz-sync-status').style.color = "#00e676"; }
-                    });
+                    try {
+                        await universalFetch({
+                            method: "POST", 
+                            url: API_URL, 
+                            data: JSON.stringify({ action: 'save_config', type: 'quiz_history', user: USER_NAME, config: QUIZ_HISTORY.slice(0, 20) }),
+                            headers: { "Content-Type": "application/x-www-form-urlencoded" }
+                        });
+                        $('qz-sync-status').innerText = "✅ Đã lưu kết quả thành công!"; 
+                        $('qz-sync-status').style.color = "#00e676";
+                    } catch (e) {
+                        $('qz-sync-status').innerText = "⚠️ Lưu lịch sử thất bại do lỗi mạng.";
+                        $('qz-sync-status').style.color = "#ef4444";
+                    }
                 } else {
                     $('qz-sync-status').innerText = "⚠️ Không lưu được lịch sử (Chưa có API).";
                 }
