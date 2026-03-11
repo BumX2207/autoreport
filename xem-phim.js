@@ -95,13 +95,14 @@
     `;
     
     // ===============================================================
-    // 3. BỘ CÀO PHIM (SCRAPER) TỐI ƯU CÚ CHỐT VƯỢT MỌI RÀO CẢN
+    // 3. BỘ CÀO PHIM SIÊU VIỆT (VƯỢT AJAX VÀ X-FRAME-OPTIONS)
     // ===============================================================
     
     const fetchHtml = (targetUrl) => {
         return new Promise((resolve, reject) => {
             context.GM_xmlhttpRequest({
                 method: "GET", url: targetUrl,
+                headers: { "User-Agent": navigator.userAgent, "Referer": "https://hoathinh3d.ee/" },
                 onload: (res) => { if(res.status === 200) resolve(res.responseText); else reject(new Error("Lỗi HTTP")); },
                 onerror: () => reject(new Error("Mất mạng!"))
             });
@@ -137,7 +138,7 @@
 
     const formatUrl = (src, baseUrl) => {
         if (!src) return null;
-        src = src.replace(/\\/g, ''); // Xóa dấu gạch chéo ngược (escape) trong JSON
+        src = src.replace(/\\/g, ''); 
         if (src.startsWith('//')) return 'https:' + src;
         if (src.startsWith('/')) return baseUrl + src;
         if (!src.startsWith('http')) return baseUrl + '/' + src;
@@ -147,78 +148,89 @@
     const isValidLink = (url) => {
         if (!url || url.length < 5 || url === '/' || url === '#') return false;
         if (url.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/i)) return false;
+        // QUAN TRỌNG: Chặn lấy nhầm iframe ẩn của trang chủ gây lỗi X-Frame-Options
+        let cleanUrl = url.replace(/\/$/, '');
+        if (cleanUrl === 'https://hoathinh3d.ee' || cleanUrl === 'http://hoathinh3d.ee') return false;
         return true;
-    };
-
-    const extractVideoLinkFromText = (text) => {
-        let resultSrc = null;
-
-        // ƯU TIÊN 1: Tìm trực tiếp file luồng M3U8 hoặc MP4 ẩn trong trang
-        const mediaRegex = /(https?:\/\\?\/[^\s"'<>]+\.(?:m3u8|mp4)[^\s"'<>]*)/i;
-        let mediaMatch = text.match(mediaRegex);
-        if (mediaMatch && mediaMatch[1]) {
-            let cleanLink = mediaMatch[1].replace(/\\/g, '');
-            if (!cleanLink.includes('thumb') && !cleanLink.includes('poster')) return cleanLink; 
-        }
-        
-        // ƯU TIÊN 2: Bóc tách nếu cấu trúc là JSON
-        try { const json = JSON.parse(text); if (json.link) return json.link; if (json.url) return json.url; if (json.iframe) return json.iframe; } catch(e) {}
-
-        // ƯU TIÊN 3: Quét thẻ Iframe trực tiếp
-        const iframeRegex = /<iframe[^>]+src=["']([^"']+)["']/gi;
-        let match;
-        while ((match = iframeRegex.exec(text)) !== null) {
-            let src = match[1];
-            if (isValidLink(src) && !src.includes('facebook') && !src.includes('youtube')) { resultSrc = src; break; }
-        }
-
-        // ƯU TIÊN 4: Tìm trong data-src
-        if (!resultSrc) {
-            const parser = new DOMParser(); const doc = parser.parseFromString(text, 'text/html');
-            const els = doc.querySelectorAll('[data-src], [data-iframe],[data-video], #box-player, .player-video');
-            for (let el of els) {
-                let src = el.getAttribute('data-src') || el.getAttribute('data-iframe') || el.getAttribute('data-video');
-                if (isValidLink(src)) {
-                    if (!src.includes('http') && !src.startsWith('/')) { try { src = atob(src); } catch(e) {} }
-                    if (src.includes('iframe')) { let m = src.match(/src=["']([^"']+)["']/); if (m) src = m[1]; }
-                    if (src.includes('http') || src.startsWith('//') || src.includes('player') || src.includes('ajax')) { resultSrc = src; break; }
-                }
-            }
-        }
-
-        // ƯU TIÊN 5: Tìm biến javascript
-        if (!resultSrc) {
-            const scriptPatterns =[/"(?:link|url|iframe)"\s*:\s*["']([^"']+)["']/i, /(?:link_play|url_play|iframe_url|file|src)\s*[:=]\s*["']([^"']+)["']/i];
-            for (let pattern of scriptPatterns) {
-                const m = text.match(pattern);
-                if (m && m[1] && isValidLink(m[1])) {
-                    let tempSrc = m[1].replace(/\\/g, '');
-                    if (tempSrc.includes('http') || tempSrc.startsWith('//') || tempSrc.includes('player')) { resultSrc = tempSrc; break; }
-                }
-            }
-        }
-        return resultSrc;
     };
 
     const getVideoSrc = async (epUrl) => {
         try {
             const baseUrl = 'https://hoathinh3d.ee';
             let htmlText = await fetchHtml(epUrl);
-            let extractedLink = extractVideoLinkFromText(htmlText);
-            let finalUrl = formatUrl(extractedLink, baseUrl);
             
-            // Xuyên giáp X-Frame-Options (bóc lớp bọc 2)
-            let maxDepth = 2, depth = 0;
-            while (finalUrl && finalUrl.includes(baseUrl) && depth < maxDepth) {
-                try {
-                    let innerHtml = await fetchHtml(finalUrl);
-                    let innerLink = extractVideoLinkFromText(innerHtml);
-                    if (innerLink && innerLink !== extractedLink) {
-                        extractedLink = innerLink; finalUrl = formatUrl(extractedLink, baseUrl); depth++;
-                    } else break; 
-                } catch (err) { break; }
+            // 1. DÒ TÌM m3u8 TRỰC TIẾP
+            let m3u8Match = htmlText.match(/(https?:\/\/[^\s"'<>]+\.(?:m3u8|mp4)[^\s"'<>]*)/i);
+            if (m3u8Match) return m3u8Match[1].replace(/\\/g, '');
+
+            // 2. DÒ TÌM GỌI API AJAX (chuẩn Halim theme - Web VN hay dùng cái này)
+            let ajaxUrlMatch = htmlText.match(/["']?ajax_url["']?\s*:\s*["']([^"']+)["']/i);
+            let postIdMatch = htmlText.match(/["']?post_id["']?\s*:\s*["']?(\d+)["']?/i) || htmlText.match(/data-post_id=["'](\d+)["']/i) || htmlText.match(/data-id=["'](\d+)["']/i);
+            
+            if (ajaxUrlMatch && postIdMatch) {
+                let ajaxUrl = ajaxUrlMatch[1].replace(/\\/g, '');
+                if (!ajaxUrl.startsWith('http')) ajaxUrl = baseUrl + (ajaxUrl.startsWith('/') ? '' : '/') + ajaxUrl;
+                
+                let postData = `action=halim_ajax_player&episode=&server=&post_id=${postIdMatch[1]}`;
+                let ajaxRes = await new Promise((resolve) => {
+                    context.GM_xmlhttpRequest({
+                        method: "POST", url: ajaxUrl, data: postData,
+                        headers: { "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest", "Referer": epUrl },
+                        onload: (r) => resolve(r.responseText), onerror: () => resolve("")
+                    });
+                });
+                
+                if (ajaxRes) {
+                    let ajaxM3u8 = ajaxRes.match(/(https?:\/\/[^\s"'<>]+\.(?:m3u8|mp4)[^\s"'<>]*)/i);
+                    if (ajaxM3u8) return ajaxM3u8[1].replace(/\\/g, '');
+                    let ajaxIframe = ajaxRes.match(/<iframe[^>]+src=\\?["']([^"'\\]+)\\?["']/i);
+                    if (ajaxIframe) return formatUrl(ajaxIframe[1], baseUrl);
+                }
             }
-            return finalUrl;
+
+            // 3. DÒ TÌM IFRAME TRONG MÃ HTML GỐC
+            let iframeRegex = /<iframe[^>]+src=["']([^"']+)["']/gi;
+            let match; let extractedLink = null;
+            while ((match = iframeRegex.exec(htmlText)) !== null) {
+                let src = match[1];
+                if (isValidLink(src) && !src.includes('facebook') && !src.includes('youtube') && !src.includes('google')) { 
+                    extractedLink = src; break; 
+                }
+            }
+            
+            // 4. DÒ TÌM TRONG data-src CỦA HTML (Trường hợp web giấu link)
+            if (!extractedLink) {
+                const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+                const els = doc.querySelectorAll('[data-src], [data-iframe],[data-video], #box-player, .player-video');
+                for (let el of els) {
+                    let src = el.getAttribute('data-src') || el.getAttribute('data-iframe') || el.getAttribute('data-video');
+                    if (isValidLink(src)) {
+                        if (!src.includes('http') && !src.startsWith('/')) { try { src = atob(src); } catch(e) {} }
+                        if (src.includes('iframe')) { let m = src.match(/src=["']([^"']+)["']/); if (m) src = m[1]; }
+                        if (isValidLink(src)) { extractedLink = src; break; }
+                    }
+                }
+            }
+            
+            // 5. Nếu có extractedLink nội bộ, ta đào sâu thêm 1 lớp
+            if (extractedLink) {
+                let finalUrl = formatUrl(extractedLink, baseUrl);
+                if (finalUrl.includes(baseUrl)) {
+                    try {
+                        let innerHtml = await fetchHtml(finalUrl);
+                        let innerM3u8 = innerHtml.match(/(https?:\/\/[^\s"'<>]+\.(?:m3u8|mp4)[^\s"'<>]*)/i);
+                        if (innerM3u8) return innerM3u8[1].replace(/\\/g, '');
+                        
+                        let innerIframe = innerHtml.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+                        if (innerIframe && isValidLink(innerIframe[1]) && !innerIframe[1].includes(baseUrl)) {
+                            return formatUrl(innerIframe[1], baseUrl);
+                        }
+                    } catch (err) {}
+                }
+                return finalUrl; // Nếu không đào được nữa thì trả về chính nó
+            }
+            
+            return null;
         } catch(e) { console.error("Lỗi cào link video:", e); return null; }
     };
     
@@ -459,7 +471,7 @@
             }
         };
 
-        // PHÁT VIDEO CỦA MỘT TẬP CỤ THỂ
+       // PHÁT VIDEO CỦA MỘT TẬP CỤ THỂ
         const playEpisode = async (epNum, epUrl) => {
             $('mv-read-ep').innerText = `Tập ${epNum} / ${currentMovie.total}`;
             
@@ -473,8 +485,8 @@
             try {
                 const iframeSrc = await getVideoSrc(epUrl);
                 if(iframeSrc) {
-                    // NẾU LÀ ĐUÔI .M3U8 HOẶC .MP4: CHÚNG TA TỰ DỰNG RẠP BẰNG THƯ VIỆN HLS.JS (KHÔNG BỊ X-FRAME-OPTIONS)
                     if (iframeSrc.includes('.m3u8') || iframeSrc.includes('.mp4')) {
+                        // Tự dựng rạp chiếu m3u8 cực xịn ngay tại trình duyệt
                         let playerHtml = `
                         <!DOCTYPE html>
                         <html>
@@ -493,34 +505,67 @@
                                     var hls = new Hls();
                                     hls.loadSource(src);
                                     hls.attachMedia(video);
-                                    hls.on(Hls.Events.MANIFEST_PARSED, function() { video.play().catch(e=>console.log("Browser chặn autoplay")); });
+                                    hls.on(Hls.Events.MANIFEST_PARSED, function() { video.play().catch(e=>console.log("Auto-play blocked")); });
                                 } else {
-                                    // Fallback cho mp4 hoặc safari
                                     video.src = src;
-                                    video.play().catch(e=>console.log("Browser chặn autoplay"));
+                                    video.play().catch(e=>console.log("Auto-play blocked"));
                                 }
                             </script>
                         </body>
                         </html>`;
                         
-                        // Mã hóa HTML để truyền vào srcdoc
-                        let encodedHtml = playerHtml.replace(/"/g, '&quot;');
-                        $('mv-video-container').innerHTML = `<iframe class="mv-video-iframe" srcdoc="${encodedHtml}" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" frameborder="0"></iframe>`;
+                        let iframe = document.createElement('iframe');
+                        iframe.className = 'mv-video-iframe';
+                        iframe.allowFullscreen = true;
+                        iframe.srcdoc = playerHtml;
+                        $('mv-video-container').innerHTML = '';
+                        $('mv-video-container').appendChild(iframe);
+
+                    } else if (iframeSrc.includes('hoathinh3d.ee')) {
+                        // NẾU TRƯỜNG HỢP CỰC ĐOAN: VẪN BỊ TRẢ VỀ LINK NỘI BỘ HOATHINH3D (gây lỗi sameorigin)
+                        // GIẢI PHÁP TỐI THƯỢNG: Hack nạp thẳng mã HTML của họ vào bộ nhớ (srcdoc bypass)
+                        try {
+                            let playerPageHtml = await new Promise((resolve, reject) => {
+                                context.GM_xmlhttpRequest({
+                                    method: "GET", url: iframeSrc,
+                                    headers: { "Referer": epUrl },
+                                    onload: (res) => { if(res.status === 200) resolve(res.responseText); else reject(); },
+                                    onerror: reject
+                                });
+                            });
+                            
+                            // Bơm thẻ base để các file css/js chạy bình thường như ở trang chủ
+                            if (playerPageHtml.includes('<head>')) {
+                                playerPageHtml = playerPageHtml.replace('<head>', '<head><base href="https://hoathinh3d.ee/">');
+                            } else {
+                                playerPageHtml = '<head><base href="https://hoathinh3d.ee/"></head>' + playerPageHtml;
+                            }
+                            
+                            let iframe = document.createElement('iframe');
+                            iframe.className = 'mv-video-iframe';
+                            iframe.allowFullscreen = true;
+                            iframe.srcdoc = playerPageHtml;
+                            $('mv-video-container').innerHTML = '';
+                            $('mv-video-container').appendChild(iframe);
+                            
+                        } catch(err) {
+                            $('mv-video-container').innerHTML = `<div style="color:red; text-align:center; padding: 50px;">❌ Không thể lách qua lớp bảo vệ!</div>`;
+                        }
+
                     } else {
-                        // NẾU LÀ LINK NHÚNG TIÊU CHUẨN CỦA TRANG KHÁC (Hydrax, Ophim, Youtube...)
+                        // Link bên thứ 3 (Hydrax, Ophim...) nhúng hoàn toàn bình thường
                         $('mv-video-container').innerHTML = `<iframe class="mv-video-iframe" src="${iframeSrc}" referrerpolicy="no-referrer" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" frameborder="0"></iframe>`;
                     }
                 } else {
-                    $('mv-video-container').innerHTML = `<div style="color:#d63031; text-align:center; padding: 50px; font-weight:bold;">❌ Cấu trúc mã hóa của tập này đã bị thay đổi!</div>`;
+                    $('mv-video-container').innerHTML = `<div style="color:#d63031; text-align:center; padding: 50px; font-weight:bold;">❌ Web nguồn thay đổi cấu trúc, không bắt được link!</div>`;
                 }
                 
-                // Lưu lịch sử xem phim
                 localProgressData[currentMovie.link] = { epNum: epNum, time: Date.now() };
                 setLocalVal(getProgressKey(), localProgressData);
                 if(Math.random() > 0.5) saveCloudHistory(); 
                 
             } catch(e) {
-                $('mv-video-container').innerHTML = `<div style="color:red; text-align:center; padding: 50px;">❌ Lỗi máy chủ hoặc mất kết nối!</div>`;
+                $('mv-video-container').innerHTML = `<div style="color:red; text-align:center; padding: 50px;">❌ Mất kết nối tới máy chủ chiếu phim!</div>`;
             }
         };
     
