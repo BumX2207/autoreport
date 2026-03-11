@@ -158,16 +158,6 @@
         episodeList.sort((a,b) => a.num - b.num);
         return episodeList;
     };
-
-    // Hàm chuẩn hóa link URL (Sửa lỗi escape string \/)
-    const formatUrl = (src) => {
-        if (!src) return null;
-        src = src.replace(/\\\//g, '/'); // Xóa dấu escape \/ nếu có trong cấu trúc JSON
-        if (src.startsWith('//')) return 'https:' + src;
-        if (src.startsWith('/')) return 'https://hoathinh3d.ee' + src;
-        return src;
-    };
-
     // Hàm kiểm tra link hợp lệ (Lọc nhiễu ảnh, link rác)
     const isValidLink = (url) => {
         if (!url || url.length < 5 || url === '/' || url === '#') return false;
