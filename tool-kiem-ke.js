@@ -305,7 +305,6 @@
                 return;
             }
 
-            params.shopId = STORE.currentShopId;
             params.sheet_stock = SHEET_CONFIG.STOCK;
             params.sheet_count = SHEET_CONFIG.COUNT;
 
@@ -331,14 +330,14 @@
         getStock: (cb) => { 
             if(!API_URL) return;
             if(!STORE.customSheetId) return;
-            let url = `${API_URL}?action=get_stock&shopId=${encodeURIComponent(STORE.currentShopId)}&sheet_stock=${encodeURIComponent(SHEET_CONFIG.STOCK)}&t=${Date.now()}&custom_spreadsheet_id=${encodeURIComponent(STORE.customSheetId)}`;
+            let url = `${API_URL}?action=get_stock&sheet_stock=${encodeURIComponent(SHEET_CONFIG.STOCK)}&t=${Date.now()}&custom_spreadsheet_id=${encodeURIComponent(STORE.customSheetId)}`;
             GM_xmlhttpRequest({ method: "GET", url: url, onload: (res) => { if(res.status===200) try{ cb(JSON.parse(res.responseText)); } catch(e){} } });
         }, 
         saveStock: (data, cb) => { if(!STORE.customSheetId) return; API.call({action: 'save_stock', data: data, loadingMsg: "☁️ Đang lưu Tồn kho..."}, cb); },
         
         getCount: (cb) => { 
             if(!API_URL || !STORE.customSheetId) return;
-            let url = `${API_URL}?action=get_count&shopId=${encodeURIComponent(STORE.currentShopId)}&sheet_count=${encodeURIComponent(SHEET_CONFIG.COUNT)}&t=${Date.now()}&custom_spreadsheet_id=${encodeURIComponent(STORE.customSheetId)}`;
+            let url = `${API_URL}?action=get_count&sheet_count=${encodeURIComponent(SHEET_CONFIG.COUNT)}&t=${Date.now()}&custom_spreadsheet_id=${encodeURIComponent(STORE.customSheetId)}`;
             GM_xmlhttpRequest({ method: "GET", url: url, onload: (res) => { if(res.status===200) try{ cb(JSON.parse(res.responseText)); } catch(e){} } });
         },
         saveCount: (data, cb) => { 
@@ -1043,7 +1042,7 @@
 
             if (typeof XLSX === 'undefined') { UI.showToast("❌ Lỗi thư viện Excel!"); return; }
             const wb = XLSX.utils.book_new(); const ws = XLSX.utils.json_to_sheet(dataToExport); XLSX.utils.book_append_sheet(wb, ws, "TongHop");
-            XLSX.writeFile(wb, `KiemKe_TongHop_${STORE.currentShopId}.xlsx`); UI.showToast("✅ Đã xuất file Excel!");
+            XLSX.writeFile(wb, `KiemKe_TongHop_Ma_${STORE.sessionCode || 'Guest'}.xlsx`); UI.showToast("✅ Đã xuất file Excel!");
         }
 
         function normalizeStatus(raw) { if (!raw) return ""; const cleanRaw = String(raw).trim(); if (STATUS_MAP[cleanRaw]) return STATUS_MAP[cleanRaw]; for (let key in STATUS_MAP) { if (cleanRaw.includes(key) || key.includes(cleanRaw)) return STATUS_MAP[key]; } return cleanRaw; }
