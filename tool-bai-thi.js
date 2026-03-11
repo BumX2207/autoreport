@@ -334,7 +334,7 @@
             app.id = 'qz-app-wrapper';
             app.innerHTML = `
                 <div class="qz-top-header">
-                    <div class="qz-logo">✍️ HỌC TẬP & THI CỬ</div>
+                    <div class="qz-logo">✍️ BÀI TEST</div>
                     <div class="qz-header-right">
                         <div id="qz-user-display" class="qz-user-badge">---</div>
                         <button class="qz-btn-close-app" id="btn-qz-close" title="Đóng">✕</button>
@@ -366,10 +366,10 @@
                 <!-- SCREEN 3: HOME (QUIZ LIST) -->
                 <div class="qz-screen" id="sc-home">
                     <div class="qz-page-title">
-                        <span>📚 DANH SÁCH BÀI THI</span>
+                        <span>📚 DANH SÁCH</span>
                         <button class="qz-btn-history" id="btn-qz-history">📜 Lịch sử thi</button>
                     </div>
-                    <div id="qz-loading-text" style="text-align:center; color:#94a3b8; padding:30px;">⏳ Đang tải dữ liệu từ Google Sheet...</div>
+                    <div id="qz-loading-text" style="text-align:center; color:#94a3b8; padding:30px;">⏳ Đang tải bộ câu hỏi...</div>
                     <div class="qz-grid" id="qz-quiz-grid"></div>
                 </div>
 
