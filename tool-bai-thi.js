@@ -542,7 +542,7 @@
                 }
 
                 $('qz-loading-text').style.display = 'none';
-                if(QUIZ_LIST.length === 0) { $('qz-quiz-grid').innerHTML = '<div style="color:#ef4444;">Không có bài thi nào! Vui lòng kiểm tra lại Google Sheet.</div>'; return; }
+                if(QUIZ_LIST.length === 0) { $('qz-quiz-grid').innerHTML = '<div style="color:#ef4444;">Không có bài thi nào! Vui lòng liên hệ Admin 42060.</div>'; return; }
 
                 QUIZ_LIST.forEach((quiz, idx) => {
                     $('qz-quiz-grid').innerHTML += `
