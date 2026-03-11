@@ -24,9 +24,11 @@
     // ===============================================================
     // 1. CẤU HÌNH & BIẾN STATE
     // ===============================================================
-    let API_URL = "https://script.google.com/macros/s/AKfycbyilVgP9qgHd66IsNVJahl19G35BVTCCxGnGVYL4NeHoYUV7u2FzYL1VGfM9lCbdo1xZQ/exec";
+    let API_URL = "https://script.google.com/macros/s/AKfycbxDRSg1JDNTyuYf2TSQovNIWhFk3ls9hPXxtRSMu6xI0oNjql53nJo0G1H5k1b2iq_3/exec";
+    
     let USER_NAME = "---";
     let IS_LOGGED_IN = false;
+    let IS_MWG_USER = false; // Phân biệt nội bộ hay khách
     
     let QUIZ_LIST =[]; 
     let CURRENT_QUIZ = null; 
@@ -142,24 +144,23 @@
 
         @keyframes fadeIn { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }
 
-        /* --- BẢN CẬP NHẬT CỐ ĐỊNH MÀN HÌNH REVIEW --- */
         #sc-review {
             display: none; 
             flex-direction: column;
-            height: calc(100vh - 80px); /* Cố định chiều cao bằng màn hình trừ đi thanh Top Header */
-            padding-bottom: 10px; /* Cách mép dưới đúng 10px */
-            overflow: hidden; /* Cấm cuộn toàn trang ở màn hình này */
+            height: calc(100vh - 80px);
+            padding-bottom: 10px;
+            overflow: hidden;
         }
         #sc-review.active {
-            display: flex; /* Khi active thì bật Flexbox */
+            display: flex;
         }
         #sc-review .qz-page-title {
-            flex-shrink: 0; /* Đóng băng tiêu đề, không cho bị bóp nhỏ */
+            flex-shrink: 0;
         }
         #qz-review-content {
-            flex-grow: 1; /* Chiếm toàn bộ không gian còn lại */
-            overflow-y: auto; /* Chỉ cuộn nội dung bên trong box này */
-            background: rgba(30, 41, 59, 0.8); /* Màu nền kính Dark Mode */
+            flex-grow: 1;
+            overflow-y: auto;
+            background: rgba(30, 41, 59, 0.8);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 16px; 
             padding: 20px; 
@@ -167,7 +168,6 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.4);
             backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
         }
-        /* Làm đẹp thanh cuộn bên trong khung Review */
         #qz-review-content::-webkit-scrollbar { width: 6px; }
         #qz-review-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
     `;
@@ -186,7 +186,7 @@
             });
             
             const json = JSON.parse(resText);
-            if (json.status !== 'success' || !json.data) return [];
+            if (json.status !== 'success' || !json.data) return[];
 
             const rows = json.data; // Đây là mảng 2 chiều [[], [], ...]
             const quizzes =[];
@@ -345,7 +345,7 @@
                 <div class="qz-screen active" id="sc-login">
                     <div class="qz-auth-box">
                         <h2 style="color:#FFD700; margin-bottom:20px;">ĐĂNG NHẬP</h2>
-                        <input type="text" id="inp-qz-user" class="qz-input" placeholder="Tên tài khoản (Ví dụ: 42060)">
+                        <input type="text" id="inp-qz-user" class="qz-input" placeholder="Tên tài khoản (Ví dụ: user123)">
                         <input type="password" id="inp-qz-pass" class="qz-input" placeholder="Mật khẩu">
                         <button id="btn-qz-login" class="qz-btn qz-btn-primary">VÀO HỆ THỐNG</button>
                         <div id="btn-qz-goto-reg" class="qz-link">Chưa có tài khoản? Đăng ký ngay</div>
@@ -427,7 +427,6 @@
                         <span>🔍 CHI TIẾT ĐÁP ÁN</span>
                         <button class="qz-btn-history" id="btn-qz-rev-home">⬅ Đóng</button>
                     </div>
-                    <!-- Đã bỏ style cứng, chuyển sang dùng CSS Flexbox để cuộn mượt mà -->
                     <div id="qz-review-content"></div>
                 </div>
 
@@ -444,23 +443,49 @@
             const switchScreen = (id) => { document.querySelectorAll('.qz-screen').forEach(s => s.classList.remove('active')); $(id).classList.add('active'); };
 
             // ==========================================
-            // LOGIC AUTH SỬ DỤNG UNIVERSAL FETCH MỚI
+            // LOGIC AUTH THÔNG MINH (CHẠY ĐƯỢC 2 LUỒNG)
             // ==========================================
             const checkAuth = () => {
+                // 1. Kiểm tra luồng MWG (Chạy qua Tampermonkey, context đã có sẵn AUTH_STATE)
+                if (context.AUTH_STATE && context.AUTH_STATE.isAuthorized && context.AUTH_STATE.userName && context.AUTH_STATE.userName !== "---") {
+                    USER_NAME = context.AUTH_STATE.userName;
+                    IS_LOGGED_IN = true;
+                    IS_MWG_USER = true; // Cờ đánh dấu là user nội bộ
+                    $('qz-user-display').innerHTML = `🏢 ${USER_NAME} (Nội bộ)`;
+                    
+                    // User MWG thì nhảy thẳng vào trang chủ bài thi
+                    switchScreen('sc-home');
+                    loadHomeData();
+                    return;
+                }
+
+                // 2. Kiểm tra luồng Guest (Chạy qua Netlify, không có context AUTH_STATE)
+                IS_MWG_USER = false;
                 let saved = localStorage.getItem('tgdd_guest_account');
+                
                 if (saved) {
-                    let acc = JSON.parse(saved); USER_NAME = acc.user; IS_LOGGED_IN = true;
+                    let acc = JSON.parse(saved); 
+                    USER_NAME = acc.user; 
+                    IS_LOGGED_IN = true;
+                    
                     $('qz-user-display').innerHTML = `👤 ${USER_NAME} <span style="font-size:10px; cursor:pointer; color:#ef4444; margin-left:10px;" id="btn-qz-logout">(Đăng xuất)</span>`;
-                    $('btn-qz-logout').onclick = () => { localStorage.removeItem('tgdd_guest_account'); IS_LOGGED_IN = false; checkAuth(); };
+                    $('btn-qz-logout').onclick = () => { 
+                        localStorage.removeItem('tgdd_guest_account'); 
+                        IS_LOGGED_IN = false; 
+                        checkAuth(); 
+                    };
+                    
                     switchScreen('sc-home');
                     loadHomeData();
                 } else {
-                    USER_NAME = "---"; IS_LOGGED_IN = false;
+                    USER_NAME = "---"; 
+                    IS_LOGGED_IN = false;
                     $('qz-user-display').innerText = "Chưa đăng nhập";
-                    switchScreen('sc-login');
+                    switchScreen('sc-login'); // Văng ra màn hình đăng nhập
                 }
             };
 
+            // Hàm gọi API Đăng ký / Đăng nhập
             const handleAuthCall = async (action, u, p, btnId) => {
                 if(!u || !p) { alert("Vui lòng nhập đủ thông tin!"); return; }
                 const btn = $(btnId); const oldText = btn.innerText; btn.innerText = "⏳ Đang xử lý..."; btn.disabled = true;
@@ -477,12 +502,17 @@
                     const json = JSON.parse(resText);
                     
                     if(json.status === 'success') {
-                        if(action === 'login_guest') { localStorage.setItem('tgdd_guest_account', JSON.stringify({user: u, pass: p})); checkAuth(); }
-                        else { alert("Đăng ký thành công! Hãy đăng nhập."); switchScreen('sc-login'); }
+                        if(action === 'login_guest') { 
+                            localStorage.setItem('tgdd_guest_account', JSON.stringify({user: u, pass: p})); 
+                            checkAuth(); 
+                        } else { 
+                            alert("Đăng ký thành công! Hãy tiến hành đăng nhập."); 
+                            switchScreen('sc-login'); 
+                        }
                     } else alert("❌ Lỗi: " + json.message); 
                     
                 } catch (e) {
-                    alert("❌ Lỗi kết nối mạng hoặc API chưa cấu hình CORS!"); 
+                    alert("❌ Lỗi kết nối mạng. Vui lòng kiểm tra lại!"); 
                     btn.innerText = oldText; btn.disabled = false;
                 }
             };
