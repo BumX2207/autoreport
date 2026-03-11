@@ -1,54 +1,30 @@
 ((context) => {
-    // Trích xuất an toàn từ context (Netlify có thể không truyền vào GM_xmlhttpRequest)
     const { UI, UTILS, CONSTANTS } = context;
     const GM_xmlhttpRequest = typeof context.GM_xmlhttpRequest !== 'undefined' ? context.GM_xmlhttpRequest : window.GM_xmlhttpRequest;
 
     // ===============================================================
-    // 0. HÀM GIAO TIẾP MẠNG ĐA NỀN TẢNG (TAMPERMONKEY & NETLIFY)
+    // 0. UNIVERSAL FETCH (HỖ TRỢ CẢ TAMPERMONKEY VÀ NETLIFY)
     // ===============================================================
     const universalFetch = async (options) => {
         return new Promise((resolve, reject) => {
-            // 1. Chạy trên Tampermonkey
             if (typeof GM_xmlhttpRequest !== 'undefined') {
                 GM_xmlhttpRequest({
-                    method: options.method || "GET",
-                    url: options.url,
-                    data: options.data,
-                    headers: options.headers,
-                    onload: (res) => {
-                        if (res.status >= 200 && res.status < 300) resolve(res.responseText);
-                        else reject(new Error(`HTTP Error: ${res.status}`));
-                    },
+                    method: options.method || "GET", url: options.url, data: options.data, headers: options.headers,
+                    onload: (res) => { if (res.status >= 200 && res.status < 300) resolve(res.responseText); else reject(new Error(`HTTP Error: ${res.status}`)); },
                     onerror: (err) => reject(err)
                 });
-            } 
-            // 2. Chạy trên Netlify / Web tiêu chuẩn
-            else {
-                const fetchOptions = {
-                    method: options.method || "GET",
-                    headers: options.headers || {}
-                };
-                if (options.data) fetchOptions.body = options.data;
-
-                fetch(options.url, fetchOptions)
-                    .then(response => {
-                        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-                        return response.text();
-                    })
-                    .then(text => resolve(text))
-                    .catch(err => reject(err));
+            } else {
+                const fetchOpts = { method: options.method || "GET", headers: options.headers || {} };
+                if (options.data) fetchOpts.body = options.data;
+                fetch(options.url, fetchOpts).then(r => { if (!r.ok) throw new Error(`HTTP Error`); return r.text(); }).then(resolve).catch(reject);
             }
         });
     };
 
     // ===============================================================
-    // 1. CẤU HÌNH DATA SHEET & API
+    // 1. CẤU HÌNH & BIẾN STATE
     // ===============================================================
-    const SHEET_ID = '1PegpCNhjqXrZCGle3iKpY5lvsE6XQC5WnBQRr2BoyOY';
-    const SHEET_GID = '0'; 
-    const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SHEET_GID}`;
     let API_URL = CONSTANTS?.GSHEET?.CONFIG_API || "";
-
     let USER_NAME = "---";
     let IS_LOGGED_IN = false;
     
@@ -61,7 +37,7 @@
     let TIME_LEFT = 0;
 
     // ===============================================================
-    // 2. CSS GIAO DIỆN
+    // 2. CSS GIAO DIỆN (DARK MODE CHUẨN + HIỆU ỨNG VẼ BÚT)
     // ===============================================================
     const MY_CSS = `
         #qz-app-wrapper { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.9); backdrop-filter:blur(15px); -webkit-backdrop-filter:blur(15px); z-index:2147483647; font-family: 'Segoe UI', sans-serif; overflow-y:auto; overflow-x:hidden; box-sizing:border-box; color: #fff; }
@@ -98,52 +74,62 @@
         .qz-card-title { font-size:16px; font-weight:bold; color:#FFD700; margin-bottom:5px; line-height:1.4; }
         .qz-card-desc { font-size:12px; color:#aaa; }
 
-        .qz-play-header { display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:10px 20px; border-radius:12px; margin-bottom:20px; font-weight:bold; }
+        /* PLAY SCREEN & DARK THEME QUESTION BOX */
+        .qz-play-header { display:flex; justify-content:space-between; align-items: center; background:rgba(0,0,0,0.3); padding:10px 20px; border-radius:12px; margin-bottom:20px; font-weight:bold; }
         .qz-timer { color:#ff5252; font-size:18px; font-family:monospace; }
-        .qz-question-container { background:rgba(255,255,255,0.95); color:#333; border-radius:16px; padding:25px; box-shadow:0 10px 30px rgba(0,0,0,0.2); min-height:300px; }
-        .qz-q-text { font-size:18px; font-weight:700; margin-bottom:20px; line-height:1.5; color:#1e293b; }
+        
+        .qz-question-container { background:rgba(30, 41, 59, 0.8); border: 1px solid rgba(255,255,255,0.1); color:#f8fafc; border-radius:16px; padding:25px; box-shadow:0 10px 30px rgba(0,0,0,0.4); min-height:300px; backdrop-filter: blur(10px); }
+        .qz-q-text { font-size:18px; font-weight:700; margin-bottom:20px; line-height:1.5; color:#FFD700; }
         .qz-img { max-width:100%; max-height:250px; border-radius:8px; display:block; margin:0 auto 15px; }
-        .qz-play-footer { display:flex; justify-content:space-between; margin-top:20px; padding-top:20px; border-top:1px solid #ddd; }
+        
+        .qz-play-footer { display:flex; justify-content:space-between; margin-top:20px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.1); }
         .qz-btn-nav { padding:10px 25px; border-radius:8px; border:none; font-weight:bold; cursor:pointer; color:#fff; transition:0.2s; }
-        .qz-btn-prev { background:#64748b; } .qz-btn-prev:disabled { opacity:0.5; cursor:not-allowed; }
-        .qz-btn-next { background:#3b82f6; } .qz-btn-next.disabled { background:#94a3b8; pointer-events:none; }
+        .qz-btn-prev { background:#64748b; } 
+        .qz-btn-prev:disabled { opacity:0.3; cursor:not-allowed; }
+        .qz-btn-next { background:linear-gradient(135deg, #0277bd, #01579b); } 
+        .qz-btn-next:disabled { background:#475569; opacity:0.5; cursor:not-allowed; }
+        
+        .qz-btn-quit { background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 5px 15px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; transition: 0.2s;}
+        .qz-btn-quit:hover { background: #ef4444; color: white;}
 
-        /* QUIZ TYPES */
+        /* QUIZ TYPES - DARK UI */
         .qz-opts { display:flex; gap:15px; flex-wrap:wrap; }
-        .qz-opt-label { border:2px solid #e2e8f0; border-radius:10px; padding:15px; cursor:pointer; display:flex; align-items:center; width:calc(50% - 8px); transition:0.2s; color:#333; font-weight:600;}
-        .qz-opt-label:hover { background:#f8fafc; border-color:#cbd5e1; }
-        .qz-opt-label.selected { border-color:#3b82f6; background:#eff6ff; }
+        .qz-opt-label { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); border-radius:10px; padding:15px; cursor:pointer; display:flex; align-items:center; width:calc(50% - 8px); transition:0.2s; color:#fff; font-weight:600;}
+        .qz-opt-label:hover { background:rgba(255,255,255,0.1); border-color:#FFD700; }
+        .qz-opt-label.selected { border-color:#FFD700; background:rgba(255,215,0,0.15); color: #FFD700; }
         .qz-opt-label input { margin-right:15px; transform:scale(1.3); }
         @media(max-width:600px){ .qz-opt-label { width:100%; } }
 
-        .qz-inline-input { border:none; border-bottom:2px solid #3b82f6; background:#eff6ff; padding:5px 10px; font-weight:bold; color:#1e293b; width:120px; text-align:center; outline:none; font-size:16px;}
+        .qz-inline-input { border:none; border-bottom:2px solid #FFD700; background:rgba(0,0,0,0.3); padding:5px 10px; font-weight:bold; color:#FFD700; width:120px; text-align:center; outline:none; font-size:16px;}
         
         .qz-match-container { display:flex; justify-content:space-between; gap:20px; margin-top:20px; position:relative; }
         .qz-match-col { width:45%; display:flex; flex-direction:column; gap:15px; z-index:2; }
-        .qz-match-item { padding:15px; background:#fff; border:2px solid #e2e8f0; border-radius:8px; cursor:pointer; text-align:center; font-weight:600; min-height:50px; display:flex; align-items:center; justify-content:center; }
-        .qz-match-item.active { border-color:#3b82f6; background:#eff6ff; box-shadow:0 0 0 2px rgba(59,130,246,0.2); }
-        .qz-match-item.matched { border-color:#10b981; background:#ecfdf5; color:#047857; }
+        .qz-match-item { padding:15px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); border-radius:8px; cursor:pointer; text-align:center; font-weight:600; min-height:50px; display:flex; align-items:center; justify-content:center; color: #fff;}
+        .qz-match-item.active { border-color:#FFD700; background:rgba(255,215,0,0.15); color:#FFD700; box-shadow:0 0 0 2px rgba(255,215,0,0.3); }
+        .qz-match-item.matched { border-color:#10b981; background:rgba(16,185,129,0.2); color:#10b981; }
         .match-svg { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1; }
-        .match-line { stroke:#3b82f6; stroke-width:3px; stroke-linecap:round; }
+        .match-line { stroke:#FFD700; stroke-width:3px; stroke-linecap:round; }
 
+        /* VẼ VÒNG TRÒN (HAND-DRAWN EFFECT) */
         .qz-circle-container { display:flex; flex-direction:column; gap:15px; }
         .qz-circle-item { display:flex; align-items:center; gap:15px; cursor:pointer; padding:10px 15px; border-radius:12px; transition:0.2s; border:1px solid transparent; }
-        .qz-circle-item:hover { background:#f8fafc; border-color:#e2e8f0; }
-        .qz-circle-mark { position:relative; width:45px; height:45px; display:flex; justify-content:center; align-items:center; font-size:20px; font-weight:bold; color:#64748b; flex-shrink:0; }
-        .qz-circle-item.selected .qz-circle-mark { color:#1e3a8a; }
+        .qz-circle-item:hover { background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.2); }
+        .qz-circle-mark { position:relative; width:45px; height:45px; display:flex; justify-content:center; align-items:center; font-size:20px; font-weight:bold; color:#94a3b8; flex-shrink:0; }
+        .qz-circle-item.selected .qz-circle-mark { color:#FFD700; }
         .qz-circle-svg { position:absolute; top:-5px; left:-5px; width:55px; height:55px; pointer-events:none; z-index:1; overflow:visible; }
-        .qz-circle-path { fill:none; stroke:#3b82f6; stroke-width:3; stroke-linecap:round; stroke-dasharray:200; stroke-dashoffset:200; transition:stroke-dashoffset 0.4s ease-out; opacity:0; }
+        .qz-circle-path { fill:none; stroke:#FFD700; stroke-width:3; stroke-linecap:round; stroke-dasharray:200; stroke-dashoffset:200; transition:stroke-dashoffset 0.5s ease-out; opacity:0; }
         .qz-circle-item.selected .qz-circle-path { stroke-dashoffset:0; opacity:1; }
-        .qz-circle-text { font-size:16px; font-weight:600; color:#333; }
+        .qz-circle-text { font-size:16px; font-weight:600; color:#fff; }
 
-        .qz-underline-box { line-height:2.2; font-size:18px; color:#333; padding:15px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0; font-weight:500;}
+        .qz-underline-box { line-height:2.2; font-size:18px; color:#fff; padding:15px; background:rgba(255,255,255,0.05); border-radius:8px; border:1px solid rgba(255,255,255,0.2); font-weight:500;}
         .qz-word { display:inline-block; cursor:pointer; padding:0 4px; margin:0 2px; border-bottom:3px solid transparent; transition:0.2s; border-radius:4px; }
-        .qz-word:hover { background:#e2e8f0; }
-        .qz-word.selected { border-bottom-color:#3b82f6; color:#1d4ed8; background:rgba(59,130,246,0.1); font-weight:bold; }
-        .qz-word.r-correct { border-bottom-color:#10b981; color:#047857; background:#ecfdf5; position:relative; }
-        .qz-word.r-wrong { border-bottom-color:#ef4444; color:#b91c1c; background:#fef2f2; text-decoration:line-through; }
-        .qz-word.r-missed { border-bottom:2px dashed #10b981; color:#64748b; }
+        .qz-word:hover { background:rgba(255,255,255,0.1); }
+        .qz-word.selected { border-bottom-color:#FFD700; color:#FFD700; background:rgba(255,215,0,0.2); font-weight:bold; }
+        .qz-word.r-correct { border-bottom-color:#10b981; color:#10b981; background:rgba(16,185,129,0.2); position:relative; }
+        .qz-word.r-wrong { border-bottom-color:#ef4444; color:#ef4444; background:rgba(239,68,68,0.2); text-decoration:line-through; }
+        .qz-word.r-missed { border-bottom:2px dashed #10b981; color:#94a3b8; }
 
+        /* RESULT & HISTORY */
         .qz-score-box { width:120px; height:120px; background:#FFD700; color:#1e293b; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:36px; font-weight:900; margin:0 auto 20px; box-shadow:0 0 20px rgba(255,215,0,0.5); }
         .qz-history-table { width:100%; border-collapse:collapse; margin-top:20px; background:rgba(255,255,255,0.05); border-radius:12px; overflow:hidden; }
         .qz-history-table th { background:rgba(0,0,0,0.5); padding:12px; text-align:left; color:#FFD700; }
@@ -158,45 +144,48 @@
     `;
 
     // ===============================================================
-    // 3. PARSE CSV 
+    // 3. PARSE API DATA (GỌI GAS MỚI)
     // ===============================================================
-    const parseCSV = (text) => {
-        const rows = []; let row =[], curr = '', inQuotes = false;
-        for (let i = 0; i < text.length; i++) {
-            let char = text[i];
-            if (inQuotes) {
-                if (char === '"') { if (text[i + 1] === '"') { curr += '"'; i++; } else { inQuotes = false; } } 
-                else { curr += char; }
-            } else {
-                if (char === '"') { inQuotes = true; } 
-                else if (char === ',') { row.push(curr); curr = ''; } 
-                else if (char === '\n' || char === '\r') {
-                    if (char === '\r' && text[i + 1] === '\n') i++;
-                    row.push(curr); rows.push(row); row =[]; curr = '';
-                } else { curr += char; }
-            }
-        }
-        if (curr !== '' || row.length > 0) { row.push(curr); rows.push(row); }
-        return rows;
-    };
-
     const fetchAndParseQuizzes = async () => {
         try {
-            // SỬ DỤNG HÀM MỚI ĐỂ VƯỢT LỖI CORS TRÊN NETLIFY VÀ TAMPERMONKEY
-            const text = await universalFetch({ method: "GET", url: CSV_URL });
-            const rows = parseCSV(text);
-            const quizzes =[];
+            if(!API_URL) { console.error("Chưa cấu hình API_URL"); return[]; }
+
+            // Gọi API Google Apps Script để lấy dữ liệu thô (Mảng 2D)
+            const resText = await universalFetch({ 
+                method: "GET", 
+                url: `${API_URL}?action=get_quizzes` 
+            });
             
-            if(rows.length < 2) return quizzes;
+            const json = JSON.parse(resText);
+            if (json.status !== 'success' || !json.data) return [];
+
+            const rows = json.data; // Đây là mảng 2 chiều [[], [], ...]
+            const quizzes =[];
+            if(rows.length < 3) return quizzes; // Tối thiểu phải có Name(1) và Config(2)
+
             const numCols = rows[0].length;
-            const cl = (s) => { if(!s) return ""; let t = s.trim(); if(t.startsWith('"') && t.endsWith('"')) t = t.slice(1,-1).replace(/""/g,'"'); return t; };
+            const cl = (s) => s ? String(s).trim() : "";
 
             for (let c = 0; c < numCols; c++) {
                 let quizName = cl(rows[0][c]);
                 if (!quizName) continue; 
 
+                // XỬ LÝ DÒNG 2: Cấu hình "Số_Câu,Thời_Gian"
+                let configStr = cl(rows[1][c]);
+                let maxQ = 999;
+                let timeLimit = 15; // Default 15 mins
+
+                if (configStr && configStr.includes(',')) {
+                    let parts = configStr.split(',');
+                    let pQ = parseInt(parts[0]);
+                    let pT = parseInt(parts[1]);
+                    if (!isNaN(pQ) && pQ > 0) maxQ = pQ;
+                    if (!isNaN(pT) && pT > 0) timeLimit = pT;
+                }
+
                 let questions =[];
-                for (let r = 1; r < rows.length; r += 9) {
+                // Bắt đầu quét câu hỏi từ dòng số 3 (index r = 2)
+                for (let r = 2; r < rows.length; r += 9) {
                     let type = cl(rows[r]?.[c]); 
                     if (!type) break; 
 
@@ -221,17 +210,30 @@
                         questions.push({ type: type, question: qT, image: img, options: op, correct: cr, explain: explainTxt });
                     }
                 }
-                if(questions.length > 0) quizzes.push({ name: quizName, questions: questions });
+
+                // RAMDOM & CẮT CÂU HỎI THEO CẤU HÌNH DÒNG 2
+                if(questions.length > 0) {
+                    // Tráo đổi ngẫu nhiên
+                    questions.sort(() => 0.5 - Math.random());
+                    // Cắt lấy đúng số lượng khai báo
+                    questions = questions.slice(0, maxQ);
+                    
+                    quizzes.push({ 
+                        name: quizName, 
+                        timeLimit: timeLimit,
+                        questions: questions 
+                    });
+                }
             }
             return quizzes;
         } catch (e) {
-            console.error("Lỗi tải đề thi:", e);
+            console.error("Lỗi parse dữ liệu đề thi:", e);
             return[];
         }
     };
 
     // ===============================================================
-    // 4. MODULE LOGIC CÂU HỎI (Giữ nguyên)
+    // 4. MODULE LOGIC CÂU HỎI (QUIZ TYPES)
     // ===============================================================
     const QZ_TYPES = {
         'text': {
@@ -255,7 +257,16 @@
             hasAnswer: (ans, q) => ans && Object.keys(ans).length === q.matchPairs.length
         },
         'circle': {
-            render: (q, ans, idx) => { let html = `<div class="qz-circle-container">`; q.options.forEach((opt, i) => { let clean = opt.replace(/^[A-D][\.\)]\s*/, ''), lbl = String.fromCharCode(65 + i), isSel = (ans === i); let path = "M 35.8 8.6 c -6.8 -5.6 -22.4 -2 -28.2 8.4 c -4.4 7.9 -1.6 20.4 5.2 26.2 c 8.4 7.1 22.8 5.7 30.6 -2.6 c 6.5 -7 6.1 -19.9 -1.2 -26.6"; html += `<div class="qz-circle-item ${isSel?'selected':''}" onclick="window.QZ_FN.clickOpt(this, 'circle')"><div class="qz-circle-mark">${lbl}<svg class="qz-circle-svg" viewBox="0 0 50 50"><path d="${path}" class="qz-circle-path"/></svg></div><div class="qz-circle-text">${clean}</div><input type="radio" name="opt-${idx}" value="${i}" ${isSel?'checked':''} style="display:none" onchange="window.QZ_FN.saveAns(${idx}, ${i}, 'radio')"/></div>`; }); return html + `</div>`; },
+            render: (q, ans, idx) => { 
+                let html = `<div class="qz-circle-container">`; 
+                q.options.forEach((opt, i) => { 
+                    let clean = opt.replace(/^[A-D][\.\)]\s*/, ''), lbl = String.fromCharCode(65 + i), isSel = (ans === i); 
+                    // Nét bút vẽ tay không liền mạch nhìn cực ngầu
+                    let path = "M 28 8 C 12 10 6 22 10 38 C 14 54 32 58 46 48 C 58 38 56 16 42 8 C 34 4 28 6 24 10"; 
+                    html += `<div class="qz-circle-item ${isSel?'selected':''}" onclick="window.QZ_FN.clickOpt(this, 'circle')"><div class="qz-circle-mark">${lbl}<svg class="qz-circle-svg" viewBox="0 0 60 60"><path d="${path}" class="qz-circle-path"/></svg></div><div class="qz-circle-text">${clean}</div><input type="radio" name="opt-${idx}" value="${i}" ${isSel?'checked':''} style="display:none" onchange="window.QZ_FN.saveAns(${idx}, ${i}, 'radio')"/></div>`; 
+                }); 
+                return html + `</div>`; 
+            },
             check: (q, ans) => ans !== null && ans !== undefined && ans === q.correct[0] - 1,
             hasAnswer: (ans) => ans !== null && ans !== undefined
         },
@@ -270,7 +281,12 @@
         saveAns: (qIdx, val, type, extra) => { if(type==='radio') USER_ANSWERS[qIdx] = parseInt(val); else if(type==='checkbox') { if(!USER_ANSWERS[qIdx]) USER_ANSWERS[qIdx]=[]; let arr=[]; document.getElementsByName('opt-'+qIdx).forEach(i=>{if(i.checked) arr.push(parseInt(i.value))}); USER_ANSWERS[qIdx]=arr; } else if(type==='text') { if(!USER_ANSWERS[qIdx]) USER_ANSWERS[qIdx]=[]; USER_ANSWERS[qIdx][val] = extra.trim(); } window.QZ_FN.checkNextBtn(qIdx); },
         clickOpt: (el, type) => { if(type==='radio') { el.parentElement.querySelectorAll('.qz-opt-label').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); } else if(type==='checkbox') { setTimeout(() => { let inp=el.querySelector('input'); el.classList.toggle('selected', inp.checked); }, 50); } else if(type==='circle') { el.parentElement.querySelectorAll('.qz-circle-item').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); let inp=el.querySelector('input'); if(inp){inp.checked=true;inp.onchange();} } },
         underlineClick: (el, idx, txt, wIdx) => { el.classList.toggle('selected'); let val = txt + '_' + wIdx; if(!USER_ANSWERS[idx]) USER_ANSWERS[idx] =[]; if(el.classList.contains('selected')) USER_ANSWERS[idx].push(val); else USER_ANSWERS[idx]=USER_ANSWERS[idx].filter(x=>x!==val); window.QZ_FN.checkNextBtn(idx); },
-        checkNextBtn: (idx) => { let h = QZ_TYPES[CURRENT_QUIZ.questions[idx].type]; let ok = h ? h.hasAnswer(USER_ANSWERS[idx], CURRENT_QUIZ.questions[idx]) : false; let b = document.getElementById('qz-btn-next'); if(b) { if(ok) b.classList.remove('disabled'); else b.classList.add('disabled'); } },
+        checkNextBtn: (idx) => { 
+            let h = QZ_TYPES[CURRENT_QUIZ.questions[idx].type]; 
+            let ok = h ? h.hasAnswer(USER_ANSWERS[idx], CURRENT_QUIZ.questions[idx]) : false; 
+            let b = document.getElementById('qz-btn-next'); 
+            if(b) { b.disabled = !ok; } // Sử dụng thuộc tính disabled chuẩn của Button thay vì class
+        },
         matchState: {left:null, right:null},
         renderMatchGame: (idx, q, saved) => { saved = saved || {}; const lC = document.getElementById('match-col-left'), rC = document.getElementById('match-col-right'); if(!lC) return; lC.innerHTML = q.matchPairs.map((p,i) => `<div class="qz-match-item ${saved.hasOwnProperty(i)?'matched':''}" onclick="window.QZ_FN.matchClick('left',${i},${idx})" id="m-left-${i}">${p.left}</div>`).join(''); rC.innerHTML = q.matchRightOrder.map(o => `<div class="qz-match-item ${Object.values(saved).includes(o)?'matched':''}" onclick="window.QZ_FN.matchClick('right',${o},${idx})" id="m-right-${o}">${q.matchPairs[o].right}</div>`).join(''); const con = document.querySelector('.qz-match-container'); if(con && !con.querySelector('.match-svg')) { let s=document.createElementNS('http://www.w3.org/2000/svg','svg'); s.setAttribute('class','match-svg'); con.appendChild(s); } window.QZ_FN.matchState = {left:null, right:null}; },
         matchClick: (side, id, idx) => { if(!USER_ANSWERS[idx]) USER_ANSWERS[idx] = {}; let state = window.QZ_FN.matchState; if(side==='left' && USER_ANSWERS[idx].hasOwnProperty(id)) { delete USER_ANSWERS[idx][id]; window.QZ_FN.updateMatchUI(idx); return; } if(side==='right') { let f=Object.keys(USER_ANSWERS[idx]).find(k=>USER_ANSWERS[idx][k]===id); if(f){ delete USER_ANSWERS[idx][f]; window.QZ_FN.updateMatchUI(idx); return; } } let col = side==='left'?'match-col-left':'match-col-right'; document.getElementById(col).querySelectorAll('.qz-match-item').forEach(e=>{ if(!e.classList.contains('matched')) e.classList.remove('active'); }); document.getElementById((side==='left'?'m-left-':'m-right-')+id).classList.add('active'); state[side] = id; if(state.left!==null && state.right!==null) { USER_ANSWERS[idx][state.left]=state.right; window.QZ_FN.updateMatchUI(idx); } },
@@ -331,13 +347,16 @@
                 <!-- SCREEN 4: PLAYING -->
                 <div class="qz-screen" id="sc-play">
                     <div class="qz-play-header">
-                        <span id="qz-progress-text" style="color:#4fc3f7;">Câu 1/10</span>
+                        <div>
+                            <button id="qz-btn-quit" class="qz-btn-quit">❌ Thoát</button>
+                            <span id="qz-progress-text" style="color:#4fc3f7; margin-left: 15px;">Câu 1/10</span>
+                        </div>
                         <span class="qz-timer" id="qz-timer-display">15:00</span>
                     </div>
                     <div class="qz-question-container" id="qz-question-render"></div>
                     <div class="qz-play-footer">
                         <button class="qz-btn-nav qz-btn-prev" id="qz-btn-prev">⬅ Quay lại</button>
-                        <button class="qz-btn-nav qz-btn-next disabled" id="qz-btn-next">Tiếp theo ➡</button>
+                        <button class="qz-btn-nav qz-btn-next" id="qz-btn-next" disabled>Tiếp theo ➡</button>
                     </div>
                 </div>
 
@@ -470,7 +489,7 @@
                         <div class="qz-card" data-idx="${idx}">
                             <div class="qz-card-icon">📝</div>
                             <div class="qz-card-title">${quiz.name}</div>
-                            <div class="qz-card-desc">${quiz.questions.length} câu hỏi • 15 phút</div>
+                            <div class="qz-card-desc">${quiz.questions.length} câu hỏi • ${quiz.timeLimit} phút</div>
                         </div>
                     `;
                 });
@@ -481,13 +500,20 @@
             };
 
             // ==========================================
-            // LOGIC PLAY QUIZ
+            // LOGIC PLAY QUIZ (THÊM THOÁT BÀI & FIX NEXT/PREV)
             // ==========================================
+            $('qz-btn-quit').onclick = () => {
+                if(confirm("Bạn có chắc chắn muốn thoát? Kết quả bài thi sẽ không được lưu!")) {
+                    clearInterval(TIMER_INTERVAL);
+                    switchScreen('sc-home');
+                }
+            }
+
             const startQuiz = (idx) => {
                 CURRENT_QUIZ = QUIZ_LIST[idx];
                 USER_ANSWERS = new Array(CURRENT_QUIZ.questions.length).fill(null);
                 CURRENT_Q_IDX = 0;
-                TIME_LEFT = 15 * 60; 
+                TIME_LEFT = CURRENT_QUIZ.timeLimit * 60; 
                 
                 switchScreen('sc-play');
                 renderQuestion(0);
@@ -537,7 +563,10 @@
                 });
 
                 $('qz-final-score').innerText = `${score}/${CURRENT_QUIZ.questions.length}`;
-                $('qz-final-time').innerText = `${15 - Math.floor(TIME_LEFT/60)} phút ${60 - (TIME_LEFT%60)} giây`;
+                
+                let timeSpent = (CURRENT_QUIZ.timeLimit * 60) - TIME_LEFT;
+                $('qz-final-time').innerText = `${Math.floor(timeSpent/60)} phút ${timeSpent%60} giây`;
+                
                 $('qz-result-user').innerText = USER_NAME;
                 switchScreen('sc-result');
 
