@@ -27,8 +27,6 @@
     let API_URL = "https://script.google.com/macros/s/AKfycbxDRSg1JDNTyuYf2TSQovNIWhFk3ls9hPXxtRSMu6xI0oNjql53nJo0G1H5k1b2iq_3/exec";
     
     let USER_NAME = "---";
-    let IS_LOGGED_IN = false;
-    let IS_MWG_USER = false; // Phân biệt nội bộ hay khách
     
     let QUIZ_LIST =[]; 
     let CURRENT_QUIZ = null; 
@@ -50,7 +48,7 @@
         .qz-top-header { display:flex; justify-content:space-between; align-items:center; padding:15px 25px; background:rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.1); position:sticky; top:0; z-index:100; }
         .qz-logo { font-size:18px; font-weight:900; color:#FFD700; text-transform:uppercase; letter-spacing:1px; }
         .qz-header-right { display:flex; align-items:center; gap:15px; }
-        .qz-user-badge { background:rgba(255,255,255,0.1); padding:5px 12px; border-radius:20px; font-size:13px; font-weight:bold; color:#4fc3f7; }
+        .qz-user-badge { background:rgba(255,255,255,0.1); padding:8px 16px; border-radius:20px; font-size:14px; font-weight:bold; color:#fff; border: 1px solid rgba(255,255,255,0.2); }
         .qz-btn-close-app { width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.1); color:#fff; border:none; cursor:pointer; font-weight:bold; transition:0.2s; display:flex; justify-content:center; align-items:center; font-size: 16px;}
         .qz-btn-close-app:hover { background:#ef4444; }
 
@@ -58,13 +56,8 @@
         .qz-screen.active { display:block; }
 
         .qz-auth-box { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:30px; max-width:350px; margin:50px auto; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5); }
-        .qz-input { width:100%; padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.3); color:#fff; margin-bottom:15px; font-size:14px; outline:none; }
-        .qz-input:focus { border-color:#FFD700; }
         .qz-btn { width:100%; padding:12px; border-radius:8px; border:none; font-weight:bold; cursor:pointer; transition:0.2s; font-size:14px; color:#fff; }
         .qz-btn-primary { background:linear-gradient(135deg, #0277bd, #01579b); }
-        .qz-btn-success { background:linear-gradient(135deg, #2e7d32, #1b5e20); }
-        .qz-link { font-size:12px; color:#4fc3f7; cursor:pointer; margin-top:10px; display:inline-block; }
-        .qz-link:hover { text-decoration:underline; }
 
         .qz-page-title { font-size:24px; font-weight:900; margin-bottom:20px; color:#fff; display:flex; justify-content:space-between; align-items:center; }
         .qz-btn-history { background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:8px 15px; border-radius:20px; font-size:13px; cursor:pointer; transition:0.2s; }
@@ -177,9 +170,8 @@
     // ===============================================================
     const fetchAndParseQuizzes = async () => {
         try {
-            if(!API_URL) { console.error("Chưa cấu hình API_URL"); return[]; }
+            if(!API_URL) return[];
 
-            // Gọi API Google Apps Script để lấy dữ liệu thô (Mảng 2D)
             const resText = await universalFetch({ 
                 method: "GET", 
                 url: `${API_URL}?action=get_quizzes` 
@@ -188,9 +180,9 @@
             const json = JSON.parse(resText);
             if (json.status !== 'success' || !json.data) return[];
 
-            const rows = json.data; // Đây là mảng 2 chiều [[], [], ...]
+            const rows = json.data;
             const quizzes =[];
-            if(rows.length < 3) return quizzes; // Tối thiểu phải có Name(1) và Config(2)
+            if(rows.length < 3) return quizzes;
 
             const numCols = rows[0].length;
             const cl = (s) => s ? String(s).trim() : "";
@@ -199,10 +191,9 @@
                 let quizName = cl(rows[0][c]);
                 if (!quizName) continue; 
 
-                // XỬ LÝ DÒNG 2: Cấu hình "Số_Câu,Thời_Gian"
                 let configStr = cl(rows[1][c]);
                 let maxQ = 999;
-                let timeLimit = 15; // Default 15 mins
+                let timeLimit = 15;
 
                 if (configStr && configStr.includes(',')) {
                     let parts = configStr.split(',');
@@ -213,7 +204,6 @@
                 }
 
                 let questions =[];
-                // Bắt đầu quét câu hỏi từ dòng số 3 (index r = 2)
                 for (let r = 2; r < rows.length; r += 9) {
                     let type = cl(rows[r]?.[c]); 
                     if (!type) break; 
@@ -223,7 +213,7 @@
                     let img = (qI && qI.includes('drive.google')) ? qI.replace(/\/file\/d\/(.+?)\/view.*/, '/uc?export=view&id=$1') : qI;
 
                     if(type === 'match') {
-                        let ps = []; 
+                        let ps =[]; 
                         [cl(rows[r+3]?.[c]), cl(rows[r+4]?.[c]), cl(rows[r+5]?.[c]), cl(rows[r+6]?.[c])].forEach(x => { 
                             if(x && x.includes('|')) { 
                                 let p = x.split('|'); 
@@ -240,18 +230,10 @@
                     }
                 }
 
-                // RAMDOM & CẮT CÂU HỎI THEO CẤU HÌNH DÒNG 2
                 if(questions.length > 0) {
-                    // Tráo đổi ngẫu nhiên
                     questions.sort(() => 0.5 - Math.random());
-                    // Cắt lấy đúng số lượng khai báo
                     questions = questions.slice(0, maxQ);
-                    
-                    quizzes.push({ 
-                        name: quizName, 
-                        timeLimit: timeLimit,
-                        questions: questions 
-                    });
+                    quizzes.push({ name: quizName, timeLimit: timeLimit, questions: questions });
                 }
             }
             return quizzes;
@@ -290,7 +272,6 @@
                 let html = `<div class="qz-circle-container">`; 
                 q.options.forEach((opt, i) => { 
                     let clean = opt.replace(/^[A-D][\.\)]\s*/, ''), lbl = String.fromCharCode(65 + i), isSel = (ans === i); 
-                    // Nét bút vẽ tay không liền mạch nhìn cực ngầu
                     let path = "M 28 8 C 12 10 6 22 10 38 C 14 54 32 58 46 48 C 58 38 56 16 42 8 C 34 4 28 6 24 10"; 
                     html += `<div class="qz-circle-item ${isSel?'selected':''}" onclick="window.QZ_FN.clickOpt(this, 'circle')"><div class="qz-circle-mark">${lbl}<svg class="qz-circle-svg" viewBox="0 0 60 60"><path d="${path}" class="qz-circle-path"/></svg></div><div class="qz-circle-text">${clean}</div><input type="radio" name="opt-${idx}" value="${i}" ${isSel?'checked':''} style="display:none" onchange="window.QZ_FN.saveAns(${idx}, ${i}, 'radio')"/></div>`; 
                 }); 
@@ -314,7 +295,7 @@
             let h = QZ_TYPES[CURRENT_QUIZ.questions[idx].type]; 
             let ok = h ? h.hasAnswer(USER_ANSWERS[idx], CURRENT_QUIZ.questions[idx]) : false; 
             let b = document.getElementById('qz-btn-next'); 
-            if(b) { b.disabled = !ok; } // Sử dụng thuộc tính disabled chuẩn của Button thay vì class
+            if(b) { b.disabled = !ok; } 
         },
         matchState: {left:null, right:null},
         renderMatchGame: (idx, q, saved) => { saved = saved || {}; const lC = document.getElementById('match-col-left'), rC = document.getElementById('match-col-right'); if(!lC) return; lC.innerHTML = q.matchPairs.map((p,i) => `<div class="qz-match-item ${saved.hasOwnProperty(i)?'matched':''}" onclick="window.QZ_FN.matchClick('left',${i},${idx})" id="m-left-${i}">${p.left}</div>`).join(''); rC.innerHTML = q.matchRightOrder.map(o => `<div class="qz-match-item ${Object.values(saved).includes(o)?'matched':''}" onclick="window.QZ_FN.matchClick('right',${o},${idx})" id="m-right-${o}">${q.matchPairs[o].right}</div>`).join(''); const con = document.querySelector('.qz-match-container'); if(con && !con.querySelector('.match-svg')) { let s=document.createElementNS('http://www.w3.org/2000/svg','svg'); s.setAttribute('class','match-svg'); con.appendChild(s); } window.QZ_FN.matchState = {left:null, right:null}; },
@@ -327,8 +308,138 @@
     // 5. MAIN LOGIC FLOW
     // ===============================================================
     const runTool = () => {
+        // KIỂM TRA ĐĂNG NHẬP NGAY TỪ CỬA
+        if (!context.AUTH_STATE || !context.AUTH_STATE.isAuthorized || context.AUTH_STATE.userName === "---") {
+            if (context.UI && context.UI.showToast) {
+                context.UI.showToast("Vui lòng đăng nhập để sử dụng tiện ích!");
+            }
+            if (window.GLOBAL_AUTH) {
+                window.GLOBAL_AUTH.openModal();
+            } else {
+                alert("Vui lòng đăng nhập ở màn hình chính trước khi sử dụng!");
+            }
+            return; // Dừng luôn, không vẽ giao diện Tool bài thi
+        }
+
         let app = document.getElementById('qz-app-wrapper');
         
+        // CÁC HÀM XỬ LÝ
+        const $ = (id) => document.getElementById(id);
+        const switchScreen = (id) => { document.querySelectorAll('.qz-screen').forEach(s => s.classList.remove('active')); $(id).classList.add('active'); };
+
+        const loadHomeData = async () => {
+            $('qz-loading-text').style.display = 'block'; $('qz-quiz-grid').innerHTML = '';
+            
+            QUIZ_LIST = await fetchAndParseQuizzes();
+            
+            if(API_URL) {
+                try {
+                    const resText = await universalFetch({ method: "GET", url: `${API_URL}?action=get_config&type=quiz_history&user=${USER_NAME}` });
+                    let json = JSON.parse(resText);
+                    if (json.data) QUIZ_HISTORY = typeof json.data === 'string' ? JSON.parse(json.data) : json.data;
+                } catch(e) { console.log("Không tải được lịch sử", e); }
+            }
+
+            $('qz-loading-text').style.display = 'none';
+            if(QUIZ_LIST.length === 0) { $('qz-quiz-grid').innerHTML = '<div style="color:#ef4444;">Không có bài thi nào! Vui lòng liên hệ Admin 42060.</div>'; return; }
+
+            QUIZ_LIST.forEach((quiz, idx) => {
+                $('qz-quiz-grid').innerHTML += `
+                    <div class="qz-card" data-idx="${idx}">
+                        <div class="qz-card-icon">📝</div>
+                        <div class="qz-card-title">${quiz.name}</div>
+                        <div class="qz-card-desc">${quiz.questions.length} câu hỏi • ${quiz.timeLimit} phút</div>
+                    </div>
+                `;
+            });
+
+            document.querySelectorAll('.qz-card').forEach(card => {
+                card.onclick = () => startQuiz(parseInt(card.getAttribute('data-idx')));
+            });
+        };
+
+        const startQuiz = (idx) => {
+            CURRENT_QUIZ = QUIZ_LIST[idx];
+            USER_ANSWERS = new Array(CURRENT_QUIZ.questions.length).fill(null);
+            CURRENT_Q_IDX = 0;
+            TIME_LEFT = CURRENT_QUIZ.timeLimit * 60; 
+            
+            switchScreen('sc-play');
+            renderQuestion(0);
+            
+            if(TIMER_INTERVAL) clearInterval(TIMER_INTERVAL);
+            TIMER_INTERVAL = setInterval(() => {
+                TIME_LEFT--;
+                if(TIME_LEFT <= 0) { clearInterval(TIMER_INTERVAL); submitQuiz(); }
+                let m = Math.floor(TIME_LEFT/60); let s = TIME_LEFT%60;
+                $('qz-timer-display').innerText = `${m<10?'0'+m:m}:${s<10?'0'+s:s}`;
+            }, 1000);
+        };
+
+        const renderQuestion = (idx) => {
+            const q = CURRENT_QUIZ.questions[idx];
+            $('qz-progress-text').innerText = `Câu ${idx+1} / ${CURRENT_QUIZ.questions.length}`;
+            
+            let imgHtml = q.image ? `<img src="${q.image}" class="qz-img">` : '';
+            let content = "";
+            let handler = QZ_TYPES[q.type];
+            if (handler) {
+                content = (q.type === 'text') ? handler.render(q, USER_ANSWERS[idx], idx) : `<div class="qz-q-text">Câu ${idx+1}: ${q.question}</div>` + handler.render(q, USER_ANSWERS[idx], idx);
+            }
+            
+            $('qz-question-render').innerHTML = imgHtml + content;
+            
+            $('qz-btn-prev').disabled = (idx === 0);
+            $('qz-btn-next').innerText = (idx === CURRENT_QUIZ.questions.length - 1) ? "Nộp Bài" : "Tiếp theo ➡";
+            window.QZ_FN.checkNextBtn(idx);
+        };
+
+        const submitQuiz = async () => {
+            clearInterval(TIMER_INTERVAL);
+            let score = 0;
+            CURRENT_QUIZ.questions.forEach((q, i) => {
+                let h = QZ_TYPES[q.type];
+                if (h && h.check(q, USER_ANSWERS[i])) score++;
+            });
+
+            $('qz-final-score').innerText = `${score}/${CURRENT_QUIZ.questions.length}`;
+            
+            let timeSpent = (CURRENT_QUIZ.timeLimit * 60) - TIME_LEFT;
+            $('qz-final-time').innerText = `${Math.floor(timeSpent/60)} phút ${timeSpent%60} giây`;
+            
+            $('qz-result-user').innerText = USER_NAME;
+            switchScreen('sc-result');
+
+            let hisRecord = {
+                time: new Date().getTime(),
+                quizName: CURRENT_QUIZ.name,
+                score: `${score}/${CURRENT_QUIZ.questions.length}`
+            };
+            QUIZ_HISTORY.unshift(hisRecord);
+            
+            if (API_URL) {
+                $('qz-sync-status').innerText = "⏳ Đang lưu kết quả...";
+                $('qz-sync-status').style.color = "#FFD700";
+                
+                try {
+                    await universalFetch({
+                        method: "POST", 
+                        url: API_URL, 
+                        data: JSON.stringify({ action: 'save_config', type: 'quiz_history', user: USER_NAME, config: QUIZ_HISTORY.slice(0, 20) }),
+                        headers: { "Content-Type": "application/x-www-form-urlencoded" }
+                    });
+                    $('qz-sync-status').innerText = "✅ Đã lưu kết quả thành công!"; 
+                    $('qz-sync-status').style.color = "#00e676";
+                } catch (e) {
+                    $('qz-sync-status').innerText = "⚠️ Lưu lịch sử thất bại do lỗi mạng.";
+                    $('qz-sync-status').style.color = "#ef4444";
+                }
+            } else {
+                $('qz-sync-status').innerText = "⚠️ Không lưu được lịch sử (Chưa có API).";
+            }
+        };
+
+        // KHỞI TẠO DOM NẾU CHƯA CÓ
         if (!app) {
             app = document.createElement('div');
             app.id = 'qz-app-wrapper';
@@ -341,29 +452,7 @@
                     </div>
                 </div>
 
-                <!-- SCREEN 1: LOGIN -->
-                <div class="qz-screen active" id="sc-login">
-                    <div class="qz-auth-box">
-                        <h2 style="color:#FFD700; margin-bottom:20px;">ĐĂNG NHẬP</h2>
-                        <input type="text" id="inp-qz-user" class="qz-input" placeholder="Tên tài khoản (Ví dụ: user123)">
-                        <input type="password" id="inp-qz-pass" class="qz-input" placeholder="Mật khẩu">
-                        <button id="btn-qz-login" class="qz-btn qz-btn-primary">VÀO HỆ THỐNG</button>
-                        <div id="btn-qz-goto-reg" class="qz-link">Chưa có tài khoản? Đăng ký ngay</div>
-                    </div>
-                </div>
-
-                <!-- SCREEN 2: REGISTER -->
-                <div class="qz-screen" id="sc-reg">
-                    <div class="qz-auth-box">
-                        <h2 style="color:#00e676; margin-bottom:20px;">ĐĂNG KÝ</h2>
-                        <input type="text" id="inp-qz-reg-user" class="qz-input" placeholder="Tên tài khoản">
-                        <input type="password" id="inp-qz-reg-pass" class="qz-input" placeholder="Mật khẩu">
-                        <button id="btn-qz-reg" class="qz-btn qz-btn-success">ĐĂNG KÝ</button>
-                        <div id="btn-qz-goto-login" class="qz-link" style="color:#aaa;">Quay lại đăng nhập</div>
-                    </div>
-                </div>
-
-                <!-- SCREEN 3: HOME (QUIZ LIST) -->
+                <!-- SCREEN 1: HOME (QUIZ LIST) -->
                 <div class="qz-screen" id="sc-home">
                     <div class="qz-page-title">
                         <span>📚 DANH SÁCH</span>
@@ -373,7 +462,7 @@
                     <div class="qz-grid" id="qz-quiz-grid"></div>
                 </div>
 
-                <!-- SCREEN 4: PLAYING -->
+                <!-- SCREEN 2: PLAYING -->
                 <div class="qz-screen" id="sc-play">
                     <div class="qz-play-header">
                         <div>
@@ -389,7 +478,7 @@
                     </div>
                 </div>
 
-                <!-- SCREEN 5: RESULT -->
+                <!-- SCREEN 3: RESULT -->
                 <div class="qz-screen" id="sc-result">
                     <div class="qz-auth-box" style="max-width:500px; margin: 20px auto;">
                         <h2 style="color:#FFD700; margin-bottom:20px;">KẾT QUẢ BÀI THI</h2>
@@ -405,7 +494,7 @@
                     </div>
                 </div>
 
-                <!-- SCREEN 6: HISTORY -->
+                <!-- SCREEN 4: HISTORY -->
                 <div class="qz-screen" id="sc-history">
                     <div class="qz-page-title">
                         <span>📜 LỊCH SỬ</span>
@@ -421,7 +510,7 @@
                     </div>
                 </div>
 
-                <!-- SCREEN 7: REVIEW -->
+                <!-- SCREEN 5: REVIEW -->
                 <div class="qz-screen" id="sc-review">
                     <div class="qz-page-title">
                         <span>🔍 CHI TIẾT ĐÁP ÁN</span>
@@ -429,7 +518,6 @@
                     </div>
                     <div id="qz-review-content"></div>
                 </div>
-
             `;
             document.body.appendChild(app);
             
@@ -439,226 +527,19 @@
                 document.head.appendChild(fa);
             }
 
-            const $ = (id) => document.getElementById(id);
-            const switchScreen = (id) => { document.querySelectorAll('.qz-screen').forEach(s => s.classList.remove('active')); $(id).classList.add('active'); };
-
-            // ==========================================
-            // LOGIC AUTH THÔNG MINH (CHẠY ĐƯỢC 2 LUỒNG)
-            // ==========================================
-            const checkAuth = () => {
-                // 1. Kiểm tra luồng MWG (Chạy qua Tampermonkey, context đã có sẵn AUTH_STATE)
-                if (context.AUTH_STATE && context.AUTH_STATE.isAuthorized && context.AUTH_STATE.userName && context.AUTH_STATE.userName !== "---") {
-                    USER_NAME = context.AUTH_STATE.userName;
-                    IS_LOGGED_IN = true;
-                    IS_MWG_USER = true; // Cờ đánh dấu là user nội bộ
-                    $('qz-user-display').innerHTML = `🏢 ${USER_NAME} (Nội bộ)`;
-                    
-                    // User MWG thì nhảy thẳng vào trang chủ bài thi
-                    switchScreen('sc-home');
-                    loadHomeData();
-                    return;
-                }
-
-                // 2. Kiểm tra luồng Guest (Chạy qua Netlify, không có context AUTH_STATE)
-                IS_MWG_USER = false;
-                let saved = localStorage.getItem('tgdd_guest_account');
-                
-                if (saved) {
-                    let acc = JSON.parse(saved); 
-                    USER_NAME = acc.user; 
-                    IS_LOGGED_IN = true;
-                    
-                    $('qz-user-display').innerHTML = `👤 ${USER_NAME} <span style="font-size:10px; cursor:pointer; color:#ef4444; margin-left:10px;" id="btn-qz-logout">(Đăng xuất)</span>`;
-                    $('btn-qz-logout').onclick = () => { 
-                        localStorage.removeItem('tgdd_guest_account'); 
-                        IS_LOGGED_IN = false; 
-                        checkAuth(); 
-                    };
-                    
-                    switchScreen('sc-home');
-                    loadHomeData();
-                } else {
-                    USER_NAME = "---"; 
-                    IS_LOGGED_IN = false;
-                    $('qz-user-display').innerText = "Chưa đăng nhập";
-                    switchScreen('sc-login'); // Văng ra màn hình đăng nhập
-                }
-            };
-
-            // Hàm gọi API Đăng ký / Đăng nhập
-            const handleAuthCall = async (action, u, p, btnId) => {
-                if(!u || !p) { alert("Vui lòng nhập đủ thông tin!"); return; }
-                const btn = $(btnId); const oldText = btn.innerText; btn.innerText = "⏳ Đang xử lý..."; btn.disabled = true;
-                
-                try {
-                    const resText = await universalFetch({
-                        method: "POST", 
-                        url: API_URL, 
-                        data: JSON.stringify({ action: action, user: u, password: p }),
-                        headers: { "Content-Type": "application/x-www-form-urlencoded" }
-                    });
-                    
-                    btn.innerText = oldText; btn.disabled = false;
-                    const json = JSON.parse(resText);
-                    
-                    if(json.status === 'success') {
-                        if(action === 'login_guest') { 
-                            localStorage.setItem('tgdd_guest_account', JSON.stringify({user: u, pass: p})); 
-                            checkAuth(); 
-                        } else { 
-                            alert("Đăng ký thành công! Hãy tiến hành đăng nhập."); 
-                            switchScreen('sc-login'); 
-                        }
-                    } else alert("❌ Lỗi: " + json.message); 
-                    
-                } catch (e) {
-                    alert("❌ Lỗi kết nối mạng. Vui lòng kiểm tra lại!"); 
-                    btn.innerText = oldText; btn.disabled = false;
-                }
-            };
-
-            $('btn-qz-login').onclick = () => handleAuthCall('login_guest', $('inp-qz-user').value.trim(), $('inp-qz-pass').value.trim(), 'btn-qz-login');
-            $('btn-qz-reg').onclick = () => handleAuthCall('register_guest', $('inp-qz-reg-user').value.trim(), $('inp-qz-reg-pass').value.trim(), 'btn-qz-reg');
-            $('btn-qz-goto-reg').onclick = () => switchScreen('sc-reg');
-            $('btn-qz-goto-login').onclick = () => switchScreen('sc-login');
+            // GÁN SỰ KIỆN CLICK CHO CÁC NÚT
             $('btn-qz-close').onclick = () => { app.style.display = 'none'; };
-
-            // ==========================================
-            // LOGIC LOAD DATA & HOME
-            // ==========================================
-            const loadHomeData = async () => {
-                $('qz-loading-text').style.display = 'block'; $('qz-quiz-grid').innerHTML = '';
-                
-                // Tải danh sách bài thi (Đã fix gọi qua hàm universalFetch bên trên)
-                QUIZ_LIST = await fetchAndParseQuizzes();
-                
-                // Đồng bộ lịch sử (Gọi qua Universal Fetch)
-                if(API_URL) {
-                    try {
-                        const resText = await universalFetch({ method: "GET", url: `${API_URL}?action=get_config&type=quiz_history&user=${USER_NAME}` });
-                        let json = JSON.parse(resText);
-                        if (json.data) QUIZ_HISTORY = typeof json.data === 'string' ? JSON.parse(json.data) : json.data;
-                    } catch(e) { console.log("Không tải được lịch sử", e); }
-                }
-
-                $('qz-loading-text').style.display = 'none';
-                if(QUIZ_LIST.length === 0) { $('qz-quiz-grid').innerHTML = '<div style="color:#ef4444;">Không có bài thi nào! Vui lòng liên hệ Admin 42060.</div>'; return; }
-
-                QUIZ_LIST.forEach((quiz, idx) => {
-                    $('qz-quiz-grid').innerHTML += `
-                        <div class="qz-card" data-idx="${idx}">
-                            <div class="qz-card-icon">📝</div>
-                            <div class="qz-card-title">${quiz.name}</div>
-                            <div class="qz-card-desc">${quiz.questions.length} câu hỏi • ${quiz.timeLimit} phút</div>
-                        </div>
-                    `;
-                });
-
-                document.querySelectorAll('.qz-card').forEach(card => {
-                    card.onclick = () => startQuiz(parseInt(card.getAttribute('data-idx')));
-                });
-            };
-
-            // ==========================================
-            // LOGIC PLAY QUIZ (THÊM THOÁT BÀI & FIX NEXT/PREV)
-            // ==========================================
             $('qz-btn-quit').onclick = () => {
                 if(confirm("Bạn có chắc chắn muốn thoát? Kết quả bài thi sẽ không được lưu!")) {
                     clearInterval(TIMER_INTERVAL);
                     switchScreen('sc-home');
                 }
-            }
-
-            const startQuiz = (idx) => {
-                CURRENT_QUIZ = QUIZ_LIST[idx];
-                USER_ANSWERS = new Array(CURRENT_QUIZ.questions.length).fill(null);
-                CURRENT_Q_IDX = 0;
-                TIME_LEFT = CURRENT_QUIZ.timeLimit * 60; 
-                
-                switchScreen('sc-play');
-                renderQuestion(0);
-                
-                if(TIMER_INTERVAL) clearInterval(TIMER_INTERVAL);
-                TIMER_INTERVAL = setInterval(() => {
-                    TIME_LEFT--;
-                    if(TIME_LEFT <= 0) { clearInterval(TIMER_INTERVAL); submitQuiz(); }
-                    let m = Math.floor(TIME_LEFT/60); let s = TIME_LEFT%60;
-                    $('qz-timer-display').innerText = `${m<10?'0'+m:m}:${s<10?'0'+s:s}`;
-                }, 1000);
             };
-
-            const renderQuestion = (idx) => {
-                const q = CURRENT_QUIZ.questions[idx];
-                $('qz-progress-text').innerText = `Câu ${idx+1} / ${CURRENT_QUIZ.questions.length}`;
-                
-                let imgHtml = q.image ? `<img src="${q.image}" class="qz-img">` : '';
-                let content = "";
-                let handler = QZ_TYPES[q.type];
-                if (handler) {
-                    content = (q.type === 'text') ? handler.render(q, USER_ANSWERS[idx], idx) : `<div class="qz-q-text">Câu ${idx+1}: ${q.question}</div>` + handler.render(q, USER_ANSWERS[idx], idx);
-                }
-                
-                $('qz-question-render').innerHTML = imgHtml + content;
-                
-                $('qz-btn-prev').disabled = (idx === 0);
-                $('qz-btn-next').innerText = (idx === CURRENT_QUIZ.questions.length - 1) ? "Nộp Bài" : "Tiếp theo ➡";
-                window.QZ_FN.checkNextBtn(idx);
-            };
-
             $('qz-btn-prev').onclick = () => { if(CURRENT_Q_IDX > 0) renderQuestion(--CURRENT_Q_IDX); };
             $('qz-btn-next').onclick = () => { 
                 if(CURRENT_Q_IDX < CURRENT_QUIZ.questions.length - 1) renderQuestion(++CURRENT_Q_IDX); 
                 else submitQuiz(); 
             };
-
-            // ==========================================
-            // LOGIC SUBMIT & HISTORY
-            // ==========================================
-            const submitQuiz = async () => {
-                clearInterval(TIMER_INTERVAL);
-                let score = 0;
-                CURRENT_QUIZ.questions.forEach((q, i) => {
-                    let h = QZ_TYPES[q.type];
-                    if (h && h.check(q, USER_ANSWERS[i])) score++;
-                });
-
-                $('qz-final-score').innerText = `${score}/${CURRENT_QUIZ.questions.length}`;
-                
-                let timeSpent = (CURRENT_QUIZ.timeLimit * 60) - TIME_LEFT;
-                $('qz-final-time').innerText = `${Math.floor(timeSpent/60)} phút ${timeSpent%60} giây`;
-                
-                $('qz-result-user').innerText = USER_NAME;
-                switchScreen('sc-result');
-
-                let hisRecord = {
-                    time: new Date().getTime(),
-                    quizName: CURRENT_QUIZ.name,
-                    score: `${score}/${CURRENT_QUIZ.questions.length}`
-                };
-                QUIZ_HISTORY.unshift(hisRecord);
-                
-                if (API_URL) {
-                    $('qz-sync-status').innerText = "⏳ Đang lưu kết quả...";
-                    $('qz-sync-status').style.color = "#FFD700";
-                    
-                    try {
-                        await universalFetch({
-                            method: "POST", 
-                            url: API_URL, 
-                            data: JSON.stringify({ action: 'save_config', type: 'quiz_history', user: USER_NAME, config: QUIZ_HISTORY.slice(0, 20) }),
-                            headers: { "Content-Type": "application/x-www-form-urlencoded" }
-                        });
-                        $('qz-sync-status').innerText = "✅ Đã lưu kết quả thành công!"; 
-                        $('qz-sync-status').style.color = "#00e676";
-                    } catch (e) {
-                        $('qz-sync-status').innerText = "⚠️ Lưu lịch sử thất bại do lỗi mạng.";
-                        $('qz-sync-status').style.color = "#ef4444";
-                    }
-                } else {
-                    $('qz-sync-status').innerText = "⚠️ Không lưu được lịch sử (Chưa có API).";
-                }
-            };
-
             $('btn-qz-gohome').onclick = () => switchScreen('sc-home');
             $('btn-qz-his-home').onclick = () => switchScreen('sc-home');
             $('btn-qz-rev-home').onclick = () => switchScreen('sc-result');
@@ -729,11 +610,19 @@
                 $('qz-review-content').innerHTML = html;
                 switchScreen('sc-review');
             };
-
-            // Khởi động
-            checkAuth();
+            
+            // Lần khởi tạo đầu tiên, gán username và load data
+            USER_NAME = context.AUTH_STATE.userName;
+            $('qz-user-display').innerHTML = `👤 ${USER_NAME}`;
+            switchScreen('sc-home');
+            loadHomeData();
+        } else {
+            // Nếu App đã được tạo trước đó (tắt đi bật lại) thì chỉ cần update lại User Name
+            USER_NAME = context.AUTH_STATE.userName;
+            document.getElementById('qz-user-display').innerHTML = `👤 ${USER_NAME}`;
         }
         
+        // Hiện UI tool lên
         app.style.display = 'block';
     };
 
