@@ -79,7 +79,7 @@
         #bc-app-wrapper * { box-sizing:border-box; }
         
         /* Cấu trúc Khung App (Fix cứng chiều cao) */
-        .bc-screen { display:none; margin-top: -60px; flex-direction:column; width:95%; max-width:800px; height:85vh; max-height:85vh; background:rgba(30, 41, 59, 0.7); border-radius:12px; border:1px solid rgba(255,255,255,0.1); overflow:hidden; animation: fadeIn 0.3s ease-out; box-shadow:0 15px 40px rgba(0,0,0,0.5);}
+        .bc-screen { display:none; margin-top: -60px; flex-direction:column; width:95%; max-width:800px; height:85vh; max-height:750px; background:rgba(30, 41, 59, 0.7); border-radius:12px; border:1px solid rgba(255,255,255,0.1); overflow:hidden; animation: fadeIn 0.3s ease-out; box-shadow:0 15px 40px rgba(0,0,0,0.5);}
         .bc-screen.active { display:flex; }
         
         /* Header & Footer cứng */
