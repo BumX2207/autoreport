@@ -7,29 +7,22 @@
     const SHEET_ID = '1iuApMwdKYx9ofo0oJR84AlzXka0PmTQPudXzx0Uub0o';
     const SHEET_GID = '984479015';
     const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SHEET_GID}`;
-    
-    const getProgressKey = () => 'tgdd_truyen_progress_' + USER_NAME;
-    
-    if (context.AUTH_STATE && context.AUTH_STATE.isAuthorized) {
-        USER_NAME = context.AUTH_STATE.userName;
-        IS_LOGGED_IN = true;
-    } else {
-        let savedGuestInfo = localStorage.getItem('tgdd_guest_account');
-        if (savedGuestInfo) {
-            let acc = JSON.parse(savedGuestInfo);
-            USER_NAME = acc.user;
+    const API_URL = context.CONSTANTS ? context.CONSTANTS.GSHEET.CONFIG_API : null;
+
+    // Hàm kiểm tra trạng thái lấy từ trang chủ (Global Auth)
+    const checkAuthState = () => {
+        if (context.AUTH_STATE && context.AUTH_STATE.isAuthorized && context.AUTH_STATE.userName !== "---") {
+            USER_NAME = context.AUTH_STATE.userName;
             IS_LOGGED_IN = true;
         } else {
-            let guestId = localStorage.getItem('tgdd_guest_id');
-            if (!guestId) {
-                guestId = 'Guest-' + Math.floor(Math.random() * 100000);
-                localStorage.setItem('tgdd_guest_id', guestId);
-            }
-            USER_NAME = guestId;
+            USER_NAME = 'Khách';
             IS_LOGGED_IN = false;
         }
-    }
-    const API_URL = context.CONSTANTS ? context.CONSTANTS.GSHEET.CONFIG_API : null;
+    };
+    checkAuthState();
+    
+    // Lưu lịch sử local dựa trên USER_NAME để tránh lẫn lộn giữa Khách và User thực
+    const getProgressKey = () => 'tgdd_truyen_progress_' + USER_NAME;
     
     // ===============================================================
     // 2. CSS GIAO DIỆN
@@ -50,6 +43,8 @@
         
         .tr-user-bar { background:#2d3436; color:#dfe6e9; padding:5px 20px; font-size:12px; display:flex; justify-content:space-between; align-items:center; font-weight:bold; flex-shrink:0;}
         .tr-user-name { color: #00cec9; }
+        .tr-login-prompt { font-size:11px; color:#ff9ff3; font-style:italic; margin-right: 5px; animation: pulse-text 2s infinite; }
+        @keyframes pulse-text { 0%, 100% {opacity: 0.7;} 50% {opacity: 1;} }
 
         .tr-toolbar { background:#fff; padding:10px 20px; border-bottom:1px solid #eee; display:flex; gap:10px; z-index:15; flex-wrap:nowrap; align-items:center; flex-shrink:0;}
         .tr-search-box { flex:1; display:flex; min-width: 0; }
@@ -167,10 +162,9 @@
             .tr-nav-btn { padding: 6px 10px; font-size: 12px; }
             .tr-filter { width: 130px; font-size: 12px; }
             .tr-section-title { font-size: 16px; }
-            
-            /* Tinh chỉnh riêng nút cho màn nhỏ để chữ không bị khuất */
             .tr-btn-tool { font-size: 12px; gap: 4px; padding: 10px 2px; }
             .tr-btn-tool svg { width: 16px; height: 16px; flex-shrink: 0; }
+            .tr-login-prompt { display:none !important; }
         }
 
         /* =========================================================
@@ -264,9 +258,7 @@
         }
         body.glass-ui-mode .tr-nav-select { background: #f8f9fa !important; border: 1px solid #eee !important; border-radius: 8px !important; }
         
-        body.glass-ui-mode #tr-btn-login { background: linear-gradient(135deg, #74b9ff, #0984e3) !important; box-shadow: 0 2px 8px rgba(9, 132, 227, 0.3) !important; border-radius: 8px !important;}
-        body.glass-ui-mode #tr-btn-register { background: linear-gradient(135deg, #00b894, #00cec9) !important; box-shadow: 0 2px 8px rgba(0, 184, 148, 0.3) !important; border-radius: 8px !important;}
-        body.glass-ui-mode #tr-btn-logout { background: linear-gradient(135deg, #ff7675, #d63031) !important; box-shadow: 0 2px 8px rgba(214, 48, 49, 0.3) !important; border-radius: 8px !important;}
+        body.glass-ui-mode #tr-btn-global-login { background: linear-gradient(135deg, #74b9ff, #0984e3) !important; box-shadow: 0 2px 8px rgba(9, 132, 227, 0.3) !important; border-radius: 8px !important;}
 
         body.glass-ui-mode ::-webkit-scrollbar { width: 6px; }
         body.glass-ui-mode ::-webkit-scrollbar-track { background: transparent; }
@@ -320,6 +312,8 @@
     // 4. LOGIC CHÍNH
     // ===============================================================
     const runTool = async () => {
+        checkAuthState(); // Cập nhật trạng thái người dùng khi mở Tool
+        
         const bottomNav = document.getElementById('tgdd-bottom-nav');
         if(bottomNav) bottomNav.style.display = 'none';
     
@@ -396,7 +390,31 @@
             if (bar) bar.style.width = percent + '%';
         };
 
-        // TẠO DOM APP
+        // Hàm Cập nhật UI đăng nhập tích hợp Global Auth
+        const updateAuthUI = () => {
+            const nameEl = $('tr-user-name-display'); 
+            const btnContainer = $('tr-auth-btns');
+            const promptEl = $('tr-login-prompt');
+            if (!nameEl || !btnContainer) return;
+            
+            nameEl.innerText = USER_NAME;
+            if (!IS_LOGGED_IN) {
+                if (promptEl) promptEl.style.display = 'inline';
+                btnContainer.innerHTML = `<button id="tr-btn-global-login" style="background:#0984e3; color:#fff; border:none; padding:4px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">Đăng nhập</button>`;
+                $('tr-btn-global-login').onclick = () => {
+                    if (window.GLOBAL_AUTH) {
+                        window.GLOBAL_AUTH.openModal();
+                    } else {
+                        alert("Hệ thống Đăng nhập toàn cục chưa sẵn sàng. Vui lòng quay lại màn hình chính.");
+                    }
+                };
+            } else {
+                if (promptEl) promptEl.style.display = 'none';
+                btnContainer.innerHTML = '';
+            }
+        };
+
+        // TẠO DOM APP NẾU CHƯA CÓ
         let app = $('truyen-app');
         if (!app) {
             app = document.createElement('div');
@@ -415,6 +433,7 @@
                 <div class="tr-user-bar">
                     <span>Xin chào, <span class="tr-user-name" id="tr-user-name-display">${USER_NAME}</span></span>
                     <div style="display:flex; gap:10px; align-items:center;">
+                        <span id="tr-login-prompt" class="tr-login-prompt">Đăng nhập để lưu lịch sử</span>
                         <span id="tr-status-text">Sẵn sàng</span>
                         <div id="tr-auth-btns" style="display:flex; gap:10px;"></div>
                     </div>
@@ -447,14 +466,10 @@
                         </div>
                     </div>
 
-                    <!-- Thanh Tiến Độ -->
                     <div class="tr-progress-container" id="tr-progress-container">
-                        <div class="tr-progress-bar" id="tr-progress-bar">
-                            <div class="tr-progress-thumb"></div>
-                        </div>
+                        <div class="tr-progress-bar" id="tr-progress-bar"><div class="tr-progress-thumb"></div></div>
                     </div>
                     
-                    <!-- Toolbar 80px Cố Định Đáy -->
                     <div class="tr-reader-tools">
                         <button class="tr-btn-tool tr-btn-play" id="btn-read-toggle">
                             <svg id="icon-play" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
@@ -478,7 +493,6 @@
                         </button>
                     </div>
 
-                    <!-- Bảng Cài đặt popup lên từ dưới -->
                     <div class="tr-settings-panel" id="tr-settings-panel">
                         <div class="tr-setting-row">
                             <span class="tr-setting-label">Giọng đọc</span>
@@ -517,11 +531,7 @@
             
             document.addEventListener('visibilitychange', () => {
                 if (document.hidden && isReading) {
-                    isReading = false; 
-                    synth.cancel(); 
-                    saveCloudHistory(); 
-                    updatePlayPauseUI(false);
-                    releaseWakeLock(); 
+                    isReading = false; synth.cancel(); saveCloudHistory(); updatePlayPauseUI(false); releaseWakeLock(); 
                     $('tr-interruption-overlay').style.display = 'flex'; 
                 }
             });
@@ -529,20 +539,15 @@
             $('btn-resume-giant').onclick = () => {
                 $('tr-interruption-overlay').style.display = 'none';
                 if (!isReading) {
-                    isReading = true; synth.getVoices();
-                    updatePlayPauseUI(true);
-                    requestWakeLock(); 
-                    speakNextSentence(); 
+                    isReading = true; synth.getVoices(); updatePlayPauseUI(true); requestWakeLock(); speakNextSentence(); 
                 }
             };
-
             $('btn-close-overlay').onclick = () => { $('tr-interruption-overlay').style.display = 'none'; };
 
             const contentWrap = document.getElementById('tr-content-wrap');
             if (contentWrap) {
                 const handleUserScroll = () => {
-                    isUserScrolling = true;
-                    updateProgressBar(); 
+                    isUserScrolling = true; updateProgressBar(); 
                     if(scrollResumeTimer) clearTimeout(scrollResumeTimer);
                     scrollResumeTimer = setTimeout(() => { isUserScrolling = false; }, 4000); 
                 };
@@ -552,11 +557,10 @@
                 contentWrap.addEventListener('scroll', updateProgressBar, {passive: true});
             }
 
-            // FIX: Nới lỏng thời gian Double Click và gọi JumpToSentence
             let lastClickTime = 0;
             $('tr-read-text').addEventListener('click', (e) => {
                 const now = new Date().getTime();
-                if (now - lastClickTime < 400) { // 400ms dễ bấm trên đt
+                if (now - lastClickTime < 400) { 
                     let target = e.target.closest('.tr-sent');
                     if (target) {
                         e.preventDefault();
@@ -567,73 +571,6 @@
                 lastClickTime = now;
             });
 
-            $('tr-btn-close').onclick = () => { app.style.display = 'none'; if(bottomNav) bottomNav.style.display = 'flex'; stopTTS(); releaseWakeLock(); saveCloudHistory(); currentCategoryView = null; };
-
-            const updateAuthUI = () => {
-                const nameEl = $('tr-user-name-display'); const btnContainer = $('tr-auth-btns');
-                if (!nameEl || !btnContainer) return;
-                nameEl.innerText = USER_NAME;
-                if (!IS_LOGGED_IN) {
-                    btnContainer.innerHTML = `<button id="tr-btn-login" style="background:#0984e3; color:#fff; border:none; padding:3px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold;">Đăng nhập</button><button id="tr-btn-register" style="background:#00b894; color:#fff; border:none; padding:3px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold;">Đăng ký</button>`;
-                    $('tr-btn-login').onclick = () => showAuthModal('login'); $('tr-btn-register').onclick = () => showAuthModal('register');
-                } else {
-                    let isMwUser = context.AUTH_STATE && context.AUTH_STATE.isAuthorized;
-                    if (!isMwUser) {
-                        btnContainer.innerHTML = `<button id="tr-btn-logout" style="background:#d63031; color:#fff; border:none; padding:3px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold;">Đăng xuất</button>`;
-                        $('tr-btn-logout').onclick = () => {
-                            if(confirm("Bạn có chắc chắn muốn đăng xuất?")) {
-                                localStorage.removeItem('tgdd_guest_account');
-                                let guestId = 'Guest-' + Math.floor(Math.random() * 100000);
-                                localStorage.setItem('tgdd_guest_id', guestId);
-                                USER_NAME = guestId; IS_LOGGED_IN = false; activeSession = {link:null, chap:1, sentence:0}; localProgressData = {};
-                                currentCategoryView = null;
-                                updateAuthUI(); renderHome();
-                            }
-                        };
-                    } else { btnContainer.innerHTML = ''; }
-                }
-            };
-
-            const showAuthModal = (mode) => {
-                const isLogin = mode === 'login'; const title = isLogin ? '🔐 ĐĂNG NHẬP KHÁCH' : '📝 TẠO TÀI KHOẢN';
-                const htmlContent = `<div style="text-align:left; font-size:13px; margin-bottom:10px;"><div style="margin-bottom:8px;"><label style="font-weight:bold; color:#555;">Tài khoản đăng nhập:</label><input type="text" id="tr-auth-user" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; margin-top:4px;" placeholder="Tên đăng nhập (không dấu)..."></div><div style="margin-bottom:20px;"><label style="font-weight:bold; color:#555;">Mật khẩu:</label><input type="password" id="tr-auth-pass" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; margin-top:4px;" placeholder="Nhập mật khẩu..."></div><button id="tr-auth-submit" class="tgdd-msg-btn" style="width:100%; background: ${isLogin ? '#0984e3' : '#00b894'}; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">${isLogin ? 'Đăng Nhập Ngay' : 'Đăng Ký Tài Khoản'}</button></div>`;
-                context.UI.showMsg(title, htmlContent, 'info');
-
-                setTimeout(() => {
-                    const modal = document.getElementById('tgdd-msg-modal');
-                    if (modal) { modal.style.zIndex = '2147483999'; let parent = modal.parentElement; while(parent && parent.tagName !== 'BODY') { if(window.getComputedStyle(parent).position === 'fixed' || window.getComputedStyle(parent).position === 'absolute') { parent.style.zIndex = '2147483998'; } parent = parent.parentElement; } }
-                    const btnSubmit = document.getElementById('tr-auth-submit');
-                    if(btnSubmit) {
-                        btnSubmit.onclick = () => {
-                            const u = document.getElementById('tr-auth-user').value.trim(); const p = document.getElementById('tr-auth-pass').value.trim();
-                            if(!u || !p) { alert("⚠️ Vui lòng nhập đầy đủ tài khoản và mật khẩu!"); return; }
-                            btnSubmit.innerText = "⏳ Đang xử lý..."; btnSubmit.disabled = true;
-
-                            context.GM_xmlhttpRequest({
-                                method: "POST", url: API_URL, data: JSON.stringify({ action: isLogin ? 'login_guest' : 'register_guest', user: u, password: p }),
-                                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                                onload: async (res) => { 
-                                    try {
-                                        const json = JSON.parse(res.responseText);
-                                        if(json.status === 'success') {
-                                            if (modal) modal.style.display = 'none'; document.body.classList.remove('tgdd-body-lock');
-                                            localStorage.setItem('tgdd_guest_account', JSON.stringify({user: u, pass: p}));
-                                            USER_NAME = u; IS_LOGGED_IN = true;
-                                            currentCategoryView = null;
-                                            updateAuthUI();
-                                            $('tr-status-text').innerText = "Đang tải lịch sử...";
-                                            await syncCloudHistory(); renderHome();
-                                        } else { alert("❌ Lỗi: " + json.message); btnSubmit.innerText = isLogin ? 'Đăng Nhập Ngay' : 'Đăng Ký Tài Khoản'; btnSubmit.disabled = false; }
-                                    } catch(e) { console.error(e); alert("❌ Lỗi phản hồi từ máy chủ!"); btnSubmit.disabled = false; }
-                                }, onerror: () => { alert("❌ Mất kết nối mạng!"); btnSubmit.disabled = false; }
-                            });
-                        };
-                    }
-                }, 100);
-            };
-
-            updateAuthUI();
-            
             $('tr-btn-home').onclick = () => { 
                 stopTTS(); releaseWakeLock(); saveCloudHistory(); 
                 $('tr-view-reader').style.display = 'none'; $('tr-view-home').style.display = 'flex'; 
@@ -647,8 +584,7 @@
             // LOGIC HẸN GIỜ
             const updateSleepTimerUI = () => {
                 if (sleepTimerSeconds > 0) {
-                    let m = Math.floor(sleepTimerSeconds / 60);
-                    let s = sleepTimerSeconds % 60;
+                    let m = Math.floor(sleepTimerSeconds / 60); let s = sleepTimerSeconds % 60;
                     $('text-sleep-timer').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
                 } else {
                     $('text-sleep-timer').innerText = "Hẹn giờ";
@@ -658,56 +594,37 @@
             $('btn-sleep-timer').onclick = () => {
                 if (sleepTimerInterval) {
                     if (confirm("Bạn có muốn hủy bỏ hẹn giờ tắt truyện không?")) {
-                        clearInterval(sleepTimerInterval);
-                        sleepTimerInterval = null;
-                        sleepTimerSeconds = 0;
-                        updateSleepTimerUI();
+                        clearInterval(sleepTimerInterval); sleepTimerInterval = null; sleepTimerSeconds = 0; updateSleepTimerUI();
                     }
                     return;
                 }
-
                 let mins = prompt("Nhập số phút bạn muốn hẹn giờ trước khi tự động tắt đọc truyện:", "15");
                 if (mins !== null) {
                     mins = parseInt(mins.trim());
                     if (!isNaN(mins) && mins > 0) {
-                        sleepTimerSeconds = mins * 60;
-                        updateSleepTimerUI();
-                        
+                        sleepTimerSeconds = mins * 60; updateSleepTimerUI();
                         sleepTimerInterval = setInterval(() => {
-                            sleepTimerSeconds--;
-                            updateSleepTimerUI();
-                            
+                            sleepTimerSeconds--; updateSleepTimerUI();
                             if (sleepTimerSeconds <= 0) {
-                                clearInterval(sleepTimerInterval);
-                                sleepTimerInterval = null;
-                                if (isReading) {
-                                    stopTTS();
-                                    saveCloudHistory();
-                                }
+                                clearInterval(sleepTimerInterval); sleepTimerInterval = null;
+                                if (isReading) { stopTTS(); saveCloudHistory(); }
                             }
                         }, 1000);
-                    } else {
-                        alert("Vui lòng nhập một số phút hợp lệ lớn hơn 0!");
-                    }
+                    } else { alert("Vui lòng nhập một số phút hợp lệ lớn hơn 0!"); }
                 }
             };
 
-            // LOGIC TREO MÁY
             const enterSleepMode = async () => {
                 if (!isReading) { alert("Vui lòng bấm AI Đọc trước khi treo máy!"); return; }
                 $('tr-sleep-story-name').innerText = currentStory ? currentStory.name : "Truyện";
                 $('tr-fake-lock-screen').style.display = 'flex';
             };
-
             $('btn-sleep-mode').onclick = enterSleepMode;
 
             let lastTap = 0;
             $('tr-fake-lock-screen').onclick = (e) => {
                 const cur = new Date().getTime(); const diff = cur - lastTap;
-                if (diff < 500 && diff > 0) { 
-                    $('tr-fake-lock-screen').style.display = 'none'; 
-                    e.preventDefault(); 
-                }
+                if (diff < 500 && diff > 0) { $('tr-fake-lock-screen').style.display = 'none'; e.preventDefault(); }
                 lastTap = cur;
             };
 
@@ -721,8 +638,43 @@
                 availableVoices.forEach((v, i) => { sel.innerHTML += `<option value="${i}">${v.name}</option>`; });
             };
             synth.onvoiceschanged = loadVoices; setTimeout(loadVoices, 500);
+
+            loadDataFromSheet();
+        } else {
+            // NẾU APP ĐÃ KHỞI TẠO, CHỈ CẬP NHẬT LẠI GIAO DIỆN AUTH
+            updateAuthUI();
         }
+    
         app.style.display = 'flex';
+
+        // -----------------------------------------------------
+        // THIẾT LẬP WATCHER LẮNG NGHE SỰ KIỆN ĐĂNG NHẬP (Chạy ngầm)
+        // -----------------------------------------------------
+        if (window.trAuthWatcher) clearInterval(window.trAuthWatcher);
+        window.trAuthWatcher = setInterval(() => {
+            let wasLoggedIn = IS_LOGGED_IN;
+            checkAuthState(); // Đọc lại dữ liệu từ context
+            
+            // Nếu phát hiện có người dùng vừa mới đăng nhập thành công
+            if (wasLoggedIn !== IS_LOGGED_IN) {
+                updateAuthUI();
+                if (IS_LOGGED_IN) {
+                    window._hasSyncedTruyenCloud = false;
+                    $('tr-status-text').innerText = "Đang tải lịch sử...";
+                    syncCloudHistory().then(() => renderHome());
+                } else {
+                    localProgressData = getLocalVal(getProgressKey(), {});
+                    renderHome();
+                }
+            }
+        }, 1000);
+
+        $('tr-btn-close').onclick = () => { 
+            app.style.display = 'none'; 
+            if(bottomNav) bottomNav.style.display = 'flex'; 
+            stopTTS(); releaseWakeLock(); saveCloudHistory(); currentCategoryView = null; 
+            if (window.trAuthWatcher) clearInterval(window.trAuthWatcher);
+        };
     
         // -----------------------------------------------------
         // ĐỒNG BỘ CLOUD -> LOCAL
@@ -772,46 +724,30 @@
             });
         };
 
-        // NEW: Load dữ liệu siêu tốc bằng bộ đệm + fetch ngầm
         const loadDataFromSheet = async () => {
             const CACHE_KEY = 'tgdd_truyen_list_cache';
-
-            // 1. Lấy ngay lập tức danh sách truyện từ bộ đệm trình duyệt để hiển thị Tức Thì
             let cachedStories = getLocalVal(CACHE_KEY,[]);
             if (cachedStories && cachedStories.length > 0) {
-                stories = cachedStories;
-                genres.clear();
-                stories.forEach(s => { if (s.genre) genres.add(s.genre); });
-
+                stories = cachedStories; genres.clear(); stories.forEach(s => { if (s.genre) genres.add(s.genre); });
                 localProgressData = getLocalVal(getProgressKey(), {});
-                renderFilters();
-                renderHome(); // Vẽ liền lên giao diện
+                renderFilters(); renderHome(); 
             } else {
                 $('tr-home-content').innerHTML = `<div style="width:100%; text-align:center; padding:50px; color:#888;">⏳ Đang tải dữ liệu truyện lần đầu...</div>`;
             }
 
-            // Sync mây ngầm
             let syncPromise = null;
             if (IS_LOGGED_IN && !window._hasSyncedTruyenCloud) {
                 window._hasSyncedTruyenCloud = true;
                 syncPromise = syncCloudHistory().then(() => {
                     if ($('tr-view-home').style.display !== 'none') {
-                        const homeBody = $('tr-home-content');
-                        let currentScroll = homeBody.scrollTop;
-                        renderHome();
-                        homeBody.scrollTop = currentScroll;
+                        const homeBody = $('tr-home-content'); let currentScroll = homeBody.scrollTop; renderHome(); homeBody.scrollTop = currentScroll;
                     }
                 });
             }
 
-            // 2. Fetch ngầm dữ liệu danh sách truyện mới nhất từ Server
             try {
-                const res = await fetch(CSV_URL); 
-                const csvText = await res.text(); 
-                const rows = parseCSV(csvText);
-                
-                let freshStories =[]; 
-                let freshGenres = new Set();
+                const res = await fetch(CSV_URL); const csvText = await res.text(); const rows = parseCSV(csvText);
+                let freshStories =[]; let freshGenres = new Set();
                 
                 for(let i = 1; i < rows.length; i++) {
                     const r = rows[i];
@@ -821,28 +757,17 @@
                     }
                 }
 
-                stories = freshStories;
-                genres = freshGenres;
-                
-                // Cập nhật lại vào bộ nhớ trình duyệt cho lần sau
-                setLocalVal(CACHE_KEY, stories);
-                renderFilters(); 
-                localProgressData = getLocalVal(getProgressKey(), {}); 
+                stories = freshStories; genres = freshGenres;
+                setLocalVal(CACHE_KEY, stories); renderFilters(); localProgressData = getLocalVal(getProgressKey(), {}); 
                 
                 if (syncPromise) await syncPromise;
 
-                // CHỈ VẼ LẠI NẾU NGƯỜI DÙNG ĐANG Ở TRANG CHỦ, GIỮ NGUYÊN VỊ TRÍ CUỘN CHUỘT
                 if ($('tr-view-home').style.display !== 'none') {
-                    const homeBody = $('tr-home-content');
-                    let currentScroll = homeBody.scrollTop;
-                    renderHome(); 
-                    homeBody.scrollTop = currentScroll;
+                    const homeBody = $('tr-home-content'); let currentScroll = homeBody.scrollTop; renderHome(); homeBody.scrollTop = currentScroll;
                 }
             } catch (e) { 
                 console.error("Lỗi fetch danh sách: ", e); 
-                if (stories.length === 0) {
-                    $('tr-home-content').innerHTML = `<div style="color:red; width:100%; text-align:center;">Lỗi tải dữ liệu. Hãy kiểm tra kết nối mạng.</div>`; 
-                }
+                if (stories.length === 0) $('tr-home-content').innerHTML = `<div style="color:red; width:100%; text-align:center;">Lỗi tải dữ liệu. Hãy kiểm tra kết nối mạng.</div>`; 
             }
         };
 
@@ -868,8 +793,7 @@
                             delete localProgressData[story.link];
                             if(activeSession.link === story.link) activeSession = { link: null, chap: 1, sentence: 0 };
                             setLocalVal(getProgressKey(), localProgressData);
-                            saveCloudHistory(); 
-                            renderHome();
+                            saveCloudHistory(); renderHome();
                         }
                     };
                 }
@@ -887,59 +811,33 @@
             }
 
             const sec = document.createElement('div'); sec.className = 'tr-section';
-            sec.innerHTML = `
-                <div class="tr-section-header" style="justify-content: flex-start; gap: 15px;">
-                    <button class="tr-btn-view-all" id="btn-back-cat" style="padding: 4px 8px;">⬅ Quay lại</button>
-                    <div class="tr-section-title">${title}</div>
-                </div>
-                <div class="tr-grid-container" id="grid-detail"></div>
-            `;
+            sec.innerHTML = `<div class="tr-section-header" style="justify-content: flex-start; gap: 15px;"><button class="tr-btn-view-all" id="btn-back-cat" style="padding: 4px 8px;">⬅ Quay lại</button><div class="tr-section-title">${title}</div></div><div class="tr-grid-container" id="grid-detail"></div>`;
             container.appendChild(sec);
-
             sec.querySelector('#btn-back-cat').onclick = () => { currentCategoryView = null; renderHome(); };
 
             const grid = sec.querySelector('#grid-detail');
-            const displayList = list.slice(0, categoryItemsLimit);
-            renderStoryCards(displayList, grid);
+            renderStoryCards(list.slice(0, categoryItemsLimit), grid);
 
-            const wrapBtn = document.createElement('div');
-            wrapBtn.style = "width: 100%; text-align: center; margin-top: 20px;";
-            const btnMore = document.createElement('button');
-            btnMore.className = 'tr-btn-tool'; 
-            btnMore.style = "margin: 0 auto; background: #e17055; width: fit-content;";
+            const wrapBtn = document.createElement('div'); wrapBtn.style = "width: 100%; text-align: center; margin-top: 20px;";
+            const btnMore = document.createElement('button'); btnMore.className = 'tr-btn-tool'; btnMore.style = "margin: 0 auto; background: #e17055; width: fit-content;";
 
             if (categoryItemsLimit >= list.length) {
-                btnMore.innerText = "Đã tải hết danh sách truyện";
-                btnMore.style.background = "#b2bec3";
-                btnMore.style.cursor = "not-allowed";
-                btnMore.style.boxShadow = "none";
-                btnMore.disabled = true;
+                btnMore.innerText = "Đã tải hết danh sách truyện"; btnMore.style.background = "#b2bec3"; btnMore.style.cursor = "not-allowed"; btnMore.style.boxShadow = "none"; btnMore.disabled = true;
             } else {
-                btnMore.innerText = "Tải thêm 10 truyện ⬇";
-                btnMore.onclick = () => { categoryItemsLimit += 10; renderHome(); };
+                btnMore.innerText = "Tải thêm 10 truyện ⬇"; btnMore.onclick = () => { categoryItemsLimit += 10; renderHome(); };
             }
-            wrapBtn.appendChild(btnMore);
-            container.appendChild(wrapBtn);
+            wrapBtn.appendChild(btnMore); container.appendChild(wrapBtn);
         };
 
         const renderCategorySection = (container, title, catKey, list, limit) => {
             if (list.length === 0) return;
             const sec = document.createElement('div'); sec.className = 'tr-section';
             const safeId = "grid-" + catKey.replace(/\s+/g, "");
-            sec.innerHTML = `
-                <div class="tr-section-header">
-                    <div class="tr-section-title">${title}</div>
-                    ${list.length > limit ? `<button class="tr-btn-view-all" id="btn-view-all-${safeId}">Xem tất cả (${list.length})</button>` : ''}
-                </div>
-                <div class="tr-grid-container" id="${safeId}"></div>
-            `;
+            sec.innerHTML = `<div class="tr-section-header"><div class="tr-section-title">${title}</div>${list.length > limit ? `<button class="tr-btn-view-all" id="btn-view-all-${safeId}">Xem tất cả (${list.length})</button>` : ''}</div><div class="tr-grid-container" id="${safeId}"></div>`;
             container.appendChild(sec);
             renderStoryCards(list.slice(0, limit), sec.querySelector(`#${safeId}`));
-
             const btn = sec.querySelector(`#btn-view-all-${safeId}`);
-            if (btn) {
-                btn.onclick = () => { currentCategoryView = catKey; categoryItemsLimit = 10; $('tr-home-content').scrollTop = 0; renderHome(); };
-            }
+            if (btn) btn.onclick = () => { currentCategoryView = catKey; categoryItemsLimit = 10; $('tr-home-content').scrollTop = 0; renderHome(); };
         };
 
         const renderHome = () => {
@@ -954,10 +852,7 @@
                 renderStoryCards(filtered, grid); content.appendChild(grid); return;
             }
 
-            if (currentCategoryView !== null) {
-                renderCategoryDetail(content);
-                return;
-            }
+            if (currentCategoryView !== null) { renderCategoryDetail(content); return; }
 
             let historyList = stories.filter(s => localProgressData[s.link]).map(s => {
                 return { ...s, lastReadTime: localProgressData[s.link].time || 0 };
@@ -971,7 +866,7 @@
                 content.appendChild(sec);
                 renderStoryCards(displayList, sec.querySelector('#grid-history'), true); 
                 const toggleBtn = sec.querySelector('#btn-toggle-history');
-                if(toggleBtn) { toggleBtn.onclick = () => { showAllHistory = !showAllHistory; renderHome(); }; }
+                if(toggleBtn) toggleBtn.onclick = () => { showAllHistory = !showAllHistory; renderHome(); };
             }
 
             renderCategorySection(content, "📚 Tất cả truyện", "all", stories, 10);
@@ -1044,24 +939,14 @@
                 let data = null;
                 let savedData = localProgressData[currentStory.link];
 
-                if (preloadedData.chapNum === currentChapter && preloadedData.contentArr) { 
-                    data = { cleanArr: preloadedData.contentArr }; 
-                } 
-                else if (savedData && savedData.chap === currentChapter && savedData.cachedContent) {
-                    data = { cleanArr: savedData.cachedContent };
-                } 
-                else { 
-                    const targetUrl = getChapterUrl(currentStory.link, currentChapter); 
-                    const htmlText = await fetchWithFallbacks(targetUrl); 
-                    data = parseChapterHTML(htmlText); 
-                }
+                if (preloadedData.chapNum === currentChapter && preloadedData.contentArr) { data = { cleanArr: preloadedData.contentArr }; } 
+                else if (savedData && savedData.chap === currentChapter && savedData.cachedContent) { data = { cleanArr: savedData.cachedContent }; } 
+                else { const targetUrl = getChapterUrl(currentStory.link, currentChapter); const htmlText = await fetchWithFallbacks(targetUrl); data = parseChapterHTML(htmlText); }
                 
                 $('tr-read-title').innerText = currentStory.name; $('tr-read-chap').innerText = `Chương ${currentChapter} / ${currentStory.total}`;
                 updateNavUI(); 
                 
-                let builtHtml = '';
-                currentSentences =[];
-                let sIndex = 0;
+                let builtHtml = ''; currentSentences =[]; let sIndex = 0;
 
                 data.cleanArr.forEach(txt => {
                     let pText = txt.trim();
@@ -1077,14 +962,11 @@
                             sIndex++;
                         }
                     });
-                    pHtml += '</p>';
-                    builtHtml += pHtml;
+                    pHtml += '</p>'; builtHtml += pHtml;
                 });
 
                 $('tr-read-text').innerHTML = builtHtml;
-                
                 if (!isResuming) { currentSentenceIndex = 0; }
-                
                 updateLocalSessionKey(currentChapter, currentSentenceIndex, data.cleanArr);
 
                 $('tr-loading').style.display = 'none';
@@ -1096,16 +978,13 @@
                             targetSpan.classList.add('tr-reading-active'); 
                             if(!isUserScrolling) targetSpan.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
                         }
-                        isResuming = false;
-                        updateProgressBar(); 
+                        isResuming = false; updateProgressBar(); 
                     }, 500);
                 } else { 
-                    $('tr-content-wrap').scrollTop = 0; 
-                    setTimeout(updateProgressBar, 100); 
+                    $('tr-content-wrap').scrollTop = 0; setTimeout(updateProgressBar, 100); 
                 }
                 
                 if (triggerSaveCloud) saveCloudHistory();
-                
                 if (currentChapter < currentStory.total) { setTimeout(() => { preloadNextChapter(currentChapter + 1); }, 1500); }
             } catch (e) { $('tr-loading').style.display = 'none'; $('tr-read-text').innerHTML = `<p style="color:red;">Lỗi tải chương: ${e.message}</p>`; }
         };
@@ -1116,9 +995,7 @@
             
             let existing = localProgressData[currentStory.link] || {};
             localProgressData[currentStory.link] = { 
-                chap: chap, 
-                sentence: sentence, 
-                time: Date.now(),
+                chap: chap, sentence: sentence, time: Date.now(),
                 cachedContent: contentArr ? contentArr : existing.cachedContent
             };
 
@@ -1126,12 +1003,9 @@
             if (allKeys.length > 10) {
                 allKeys.sort((a, b) => (localProgressData[b].time || 0) - (localProgressData[a].time || 0));
                 for (let i = 10; i < allKeys.length; i++) {
-                    if (localProgressData[allKeys[i]].cachedContent) {
-                        delete localProgressData[allKeys[i]].cachedContent;
-                    }
+                    if (localProgressData[allKeys[i]].cachedContent) delete localProgressData[allKeys[i]].cachedContent;
                 }
             }
-
             setLocalVal(getProgressKey(), localProgressData);
         };
 
@@ -1141,12 +1015,7 @@
             let fullHistory = Object.keys(localProgressData).map(link => {
                 let s = stories.find(st => st.link === link); let p = localProgressData[link];
                 if (!s || !p) return null;
-                return {
-                    story: s.name, 
-                    chapter: p.chap, 
-                    sentence: p.sentence || 0,
-                    timestamp: p.time || Date.now()
-                };
+                return { story: s.name, chapter: p.chap, sentence: p.sentence || 0, timestamp: p.time || Date.now() };
             }).filter(item => item !== null).sort((a,b) => b.timestamp - a.timestamp).slice(0, 15);
 
             if (fullHistory.length === 0) return;
@@ -1164,9 +1033,6 @@
         $('btn-next-chap').onclick = () => { if(currentChapter < currentStory.total) { isResuming=false; shouldReadChapterTitle=true; loadAndDisplayChapter(currentChapter + 1, true); }};
         $('sel-chap').onchange = (e) => { isResuming=false; shouldReadChapterTitle=true; loadAndDisplayChapter(parseInt(e.target.value), true); };
     
-        // -----------------------------------------------------
-        // FIX: CHẶN LỖI TTS (ĐỌC TRUYỆN) OVERLAPPING TẠO TIẾNG VANG
-        // -----------------------------------------------------
         const getVoice = () => {
             if (ttsVoiceIndex >= 0 && availableVoices[ttsVoiceIndex]) return availableVoices[ttsVoiceIndex];
             let voices = synth.getVoices(); let viVoices = voices.filter(v => v.lang.toLowerCase().includes('vi'));
@@ -1184,11 +1050,8 @@
             let u = setupUtterance(text, true); u.onend = () => { if(callback) callback(); }; synth.speak(u);
         };
     
-        // FIX: Đảm bảo nhảy câu không bị chạy đè
         const jumpToSentence = (idx) => {
-            isJumping = true;
-            synth.cancel(); // Lệnh này có thể làm câu cũ bị kích hoạt sự kiện u.onend
-
+            isJumping = true; synth.cancel(); 
             currentSentenceIndex = idx;
             updateLocalSessionKey(currentChapter, currentSentenceIndex);
             
@@ -1200,16 +1063,8 @@
                 if(!isUserScrolling) targetSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
 
-            isReading = true;
-            updatePlayPauseUI(true);
-            requestWakeLock();
-            updateProgressBar(); 
-            
-            // Đợi 1 chút xíu để sự kiện cancel dọn dẹp xong hoàn toàn rồi mới đọc câu mới
-            setTimeout(() => { 
-                isJumping = false; 
-                speakNextSentence(); 
-            }, 250);
+            isReading = true; updatePlayPauseUI(true); requestWakeLock(); updateProgressBar(); 
+            setTimeout(() => { isJumping = false; speakNextSentence(); }, 250);
         };
 
         const speakNextSentence = () => {
@@ -1228,7 +1083,6 @@
 
             let u = setupUtterance(cleanText);
             u.onend = () => { 
-                // FIX: Chặn ngay nếu người dùng vừa mới bấm nhảy sang câu khác (isJumping)
                 if(!isReading || isJumping) return; 
                 currentSentenceIndex++; 
                 updateLocalSessionKey(currentChapter, currentSentenceIndex); 
@@ -1236,11 +1090,7 @@
             };
             u.onerror = (e) => { 
                 console.warn("TTS Error: ", e); 
-                if (!isJumping) {
-                    isReading = false; 
-                    updatePlayPauseUI(false);
-                    releaseWakeLock();
-                }
+                if (!isJumping) { isReading = false; updatePlayPauseUI(false); releaseWakeLock(); }
             };
             synth.speak(u);
 
@@ -1259,47 +1109,27 @@
             isReading = false; saveCloudHistory(); 
             if(currentChapter < currentStory.total) {
                 speakSystemMsg(`Đã đọc xong chương ${currentChapter}, chuyển sang chương mới.`, async () => {
-                    isResuming = false; 
-                    shouldReadChapterTitle = true; 
-                    
+                    isResuming = false; shouldReadChapterTitle = true; 
                     await loadAndDisplayChapter(currentChapter + 1, false); 
-                    
-                    isReading = true; 
-                    updatePlayPauseUI(true);
-                    requestWakeLock(); 
-                    speakNextSentence();
+                    isReading = true; updatePlayPauseUI(true); requestWakeLock(); speakNextSentence();
                 });
             } else { 
                 speakSystemMsg("Đã đọc xong bộ truyện. Cảm ơn bạn.", () => { alert("Bạn đã đọc hết truyện!"); }); 
-                updatePlayPauseUI(false);
-                releaseWakeLock();
+                updatePlayPauseUI(false); releaseWakeLock();
             }
         };
     
         const stopTTS = () => { 
-            isReading = false; 
-            synth.cancel(); 
-            updatePlayPauseUI(false);
-            releaseWakeLock();
+            isReading = false; synth.cancel(); updatePlayPauseUI(false); releaseWakeLock();
         };
     
         $('btn-read-toggle').onclick = () => { 
             if (!isReading) { 
-                isReading = true; 
-                synth.getVoices(); 
-                requestWakeLock();
-                speakNextSentence(); 
-                updatePlayPauseUI(true);
+                isReading = true; synth.getVoices(); requestWakeLock(); speakNextSentence(); updatePlayPauseUI(true);
             } else {
-                isReading = false; 
-                synth.cancel(); 
-                releaseWakeLock();
-                saveCloudHistory();
-                updatePlayPauseUI(false);
+                isReading = false; synth.cancel(); releaseWakeLock(); saveCloudHistory(); updatePlayPauseUI(false);
             }
         };
-    
-        loadDataFromSheet();
     };
     
     return {
