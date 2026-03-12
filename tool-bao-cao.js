@@ -2,10 +2,7 @@
     const { UI, UTILS, CONSTANTS } = context;
     const GM_xmlhttpRequest = typeof context.GM_xmlhttpRequest !== 'undefined' ? context.GM_xmlhttpRequest : window.GM_xmlhttpRequest;
 
-    // ===============================================================
-    // 0. UNIVERSAL FETCH
-    // ===============================================================
-    const universalFetch = async (options) => {
+    const universalFetch = async (options) => { /* Giữ nguyên hàm fetch mày đang dùng */ 
         return new Promise((resolve, reject) => {
             if (typeof GM_xmlhttpRequest !== 'undefined') {
                 GM_xmlhttpRequest({
@@ -21,268 +18,212 @@
         });
     };
 
-    // CẤU HÌNH API (THAY LINK WEB APP CỦA BẠN VÀO ĐÂY)
-    const API_URL = "YOUR_GOOGLE_SCRIPT_WEB_APP_URL"; 
+    // ==========================================
+    // CẤU HÌNH API
+    // ==========================================
+    const API_URL_MAIN = "https://script.google.com/macros/s/AKfycbxDRSg1JDNTyuYf2TSQovNIWhFk3ls9hPXxtRSMu6xI0oNjql53nJo0G1H5k1b2iq_3/exec"; // Xử lý đăng nhập, lấy lưu config cột J,K,L
+    const API_URL_REPORT = "https://script.google.com/macros/s/AKfycbz7Hv3FHg_XiA4g-ujO8bXkLSohxzB2HJvzsOuKZbkGdr-E33vwRJB4Etl-eCtKh5Xr/exec"; // Xử lý tạo folder, up ảnh (Code ở Bước 1)
+
+    // Trạng thái user
+    let IS_MWG_USER = context.AUTH_STATE && context.AUTH_STATE.isAuthorized && context.AUTH_STATE.userName !== "---";
+    let CURRENT_USER = IS_MWG_USER ? context.AUTH_STATE.userName : "";
     
-    let USER_NAME = context.AUTH_STATE?.userName && context.AUTH_STATE.userName !== "---" 
-                    ? context.AUTH_STATE.userName 
-                    : (JSON.parse(localStorage.getItem('tgdd_guest_account') || '{}').user || "Tester");
+    // Lưu trữ thông tin sau khi NV đăng nhập thành công
+    let SESSION_DATA = { user: "", folderId: "", sheetId: "" };
+    
+    // State của quản lý
+    let MANAGER_EMPLOYEES =[];
 
-    // ===============================================================
-    // 1. CSS GIAO DIỆN
-    // ===============================================================
+    // CSS gộp chung (Lược bỏ bớt để ngắn gọn, mày lấy CSS cũ ốp vào thêm nhé)
     const MY_CSS = `
-        #bc-app-wrapper { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.95); backdrop-filter:blur(10px); z-index:2147483647; font-family: 'Segoe UI', sans-serif; overflow-y:auto; color: #f8fafc; }
-        #bc-app-wrapper * { box-sizing:border-box; }
-        
-        .bc-container { max-width: 800px; margin: 40px auto; padding: 20px; animation: fadeIn 0.3s ease-out; }
-        .bc-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 20px; margin-bottom: 20px; }
-        .bc-title { font-size: 24px; font-weight: bold; color: #38bdf8; display:flex; align-items:center; gap:10px;}
-        .bc-close-btn { background: rgba(255,255,255,0.1); border: none; color: white; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; transition: 0.2s; font-size: 16px; }
-        .bc-close-btn:hover { background: #ef4444; }
-
-        .bc-section { background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-        .bc-sec-title { font-size: 18px; font-weight: 600; color: #FFD700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
-        
-        .bc-input-group { margin-bottom: 15px; }
-        .bc-label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 8px; font-weight: 600; }
-        .bc-input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: #fff; outline: none; transition: 0.2s; }
-        .bc-input:focus { border-color: #38bdf8; }
-
-        .bc-file-upload { position: relative; display: inline-block; width: 100%; }
-        .bc-file-input { display: none; }
-        .bc-file-label { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 15px; border: 2px dashed rgba(255,255,255,0.2); border-radius: 8px; cursor: pointer; color: #94a3b8; transition: 0.2s; background: rgba(255,255,255,0.02); }
-        .bc-file-label:hover { border-color: #38bdf8; color: #38bdf8; background: rgba(56, 189, 248, 0.05); }
-        
-        .bc-preview-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
-        .bc-preview-item { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(255,255,255,0.2); }
-        
-        .bc-submit-btn { width: 100%; padding: 15px; border-radius: 8px; border: none; background: linear-gradient(135deg, #0284c7, #0369a1); color: white; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 20px; }
-        .bc-submit-btn:hover { background: linear-gradient(135deg, #0369a1, #075985); box-shadow: 0 5px 15px rgba(2, 132, 199, 0.4); }
-        .bc-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-        #bc-loading { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center; flex-direction:column; color:#fff; }
-        .spinner { border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid #38bdf8; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
-        
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        #bc-app-wrapper { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.95); backdrop-filter:blur(10px); z-index:2147483647; font-family:'Segoe UI'; color:#fff; overflow-y:auto;}
+        .bc-screen { display:none; max-width: 800px; margin: 40px auto; padding: 20px; animation: fadeIn 0.3s ease-out; }
+        .bc-screen.active { display:block; }
+        .bc-card { background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 25px; margin-bottom: 20px; }
+        .bc-input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: #fff; margin-bottom:15px; outline:none;}
+        .bc-btn { width: 100%; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; border:none; color:#fff; transition:0.2s;}
+        .btn-primary { background: linear-gradient(135deg, #0284c7, #0369a1); }
+        .btn-success { background: linear-gradient(135deg, #10b981, #047857); }
+        .btn-danger { background: #ef4444; padding:5px 10px; border-radius:4px;}
+        .employee-row { display:flex; justify-content:space-between; background:rgba(255,255,255,0.05); padding:10px; margin-bottom:5px; border-radius:6px; align-items:center;}
+        .warning-text { color:#fbbf24; font-size:13px; margin-bottom:15px; background:rgba(251,191,36,0.1); padding:10px; border-radius:8px;}
+        @keyframes fadeIn { from {opacity:0} to {opacity:1} }
     `;
 
-    // ===============================================================
-    // 2. HÀM NÉN ẢNH VÀ CHUYỂN BASE64 (Rất quan trọng để tối ưu mạng)
-    // ===============================================================
-    const processImages = async (files) => {
-        const base64Array =[];
-        for (let i = 0; i < files.length; i++) {
-            let file = files[i];
-            let base64 = await new Promise((resolve) => {
-                let reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = (event) => {
-                    let img = new Image();
-                    img.src = event.target.result;
-                    img.onload = () => {
-                        let canvas = document.createElement("canvas");
-                        let max_size = 1000; // Resize ảnh tối đa 1000px
-                        let width = img.width, height = img.height;
-                        if (width > height) { if (width > max_size) { height *= max_size / width; width = max_size; } } 
-                        else { if (height > max_size) { width *= max_size / height; height = max_size; } }
-                        canvas.width = width; canvas.height = height;
-                        let ctx = canvas.getContext("2d");
-                        ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL("image/jpeg", 0.7)); // Nén JPEG quality 70%
-                    };
-                };
-            });
-            base64Array.push(base64);
-        }
-        return base64Array;
-    };
+    // Hàm nén ảnh (giữ nguyên của m)
+    const processImages = async (files) => { /* ... Giữ nguyên như tao đã viết lần trước ... */ return[]; };
 
-    // ===============================================================
-    // 3. MAIN LOGIC
-    // ===============================================================
     const runTool = () => {
-        if (document.getElementById('bc-app-wrapper')) {
-            document.getElementById('bc-app-wrapper').style.display = 'block';
-            return;
-        }
+        if (document.getElementById('bc-app-wrapper')) { document.getElementById('bc-app-wrapper').style.display = 'block'; return; }
 
-        const app = document.createElement('div');
-        app.id = 'bc-app-wrapper';
+        const app = document.createElement('div'); app.id = 'bc-app-wrapper';
         app.innerHTML = `
-            <div id="bc-loading">
-                <div class="spinner"></div>
-                <h3 id="bc-load-text">Đang tải dữ liệu lên hệ thống... Vui lòng không đóng cửa sổ.</h3>
+            <!-- SCREEN 1: QUẢN LÝ (Chỉ hiện khi IS_MWG_USER = true) -->
+            <div class="bc-screen" id="sc-manager">
+                <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                    <h2 style="color:#FFD700;">⚙️ QUẢN LÝ HỆ THỐNG BÁO CÁO</h2>
+                    <button class="bc-btn btn-danger" style="width:auto;" id="btn-close-mgr">Đóng</button>
+                </div>
+                
+                <div class="bc-card">
+                    <h3 style="margin-bottom:15px;">1. Cấu hình Lưu trữ</h3>
+                    <div class="warning-text">⚠️ <b>LƯU Ý QUAN TRỌNG:</b> Folder và Sheet bạn tạo ra PHẢI bật chia sẻ "Bất kỳ ai có liên kết đều có thể chỉnh sửa" thì hệ thống mới đẩy ảnh lên được.</div>
+                    <label>ID Thư mục Google Drive (Cột J):</label>
+                    <input type="text" id="inp-folder-id" class="bc-input" placeholder="VD: 1A2b3C4d5E...">
+                    
+                    <label>ID Google Sheet (Cột K):</label>
+                    <input type="text" id="inp-sheet-id" class="bc-input" placeholder="VD: 1xYz_789abc...">
+                </div>
+
+                <div class="bc-card">
+                    <h3 style="margin-bottom:15px;">2. Danh sách Nhân viên (Cột L)</h3>
+                    <div style="display:flex; gap:10px; margin-bottom:15px;">
+                        <input type="text" id="inp-nv-user" class="bc-input" style="margin:0;" placeholder="Tên User (VD: nv_01)">
+                        <input type="text" id="inp-nv-pass" class="bc-input" style="margin:0;" placeholder="Mật khẩu">
+                        <button class="bc-btn btn-success" id="btn-add-nv" style="width:120px;">+ Thêm</button>
+                    </div>
+                    <div id="nv-list-container"></div>
+                </div>
+
+                <button class="bc-btn btn-primary" id="btn-save-config">💾 LƯU CẤU HÌNH LÊN HỆ THỐNG</button>
             </div>
 
-            <div class="bc-container">
-                <div class="bc-header">
-                    <div class="bc-title">📊 BÁO CÁO TRUYỀN THÔNG</div>
-                    <div>
-                        <span style="color:#94a3b8; font-size:14px; margin-right:15px;">👤 ${USER_NAME}</span>
-                        <button class="bc-close-btn" id="bc-btn-close">✕</button>
+            <!-- SCREEN 2: ĐĂNG NHẬP NHÂN VIÊN (Khi IS_MWG_USER = false) -->
+            <div class="bc-screen" id="sc-login">
+                <div class="bc-card" style="max-width:400px; margin: 100px auto;">
+                    <div style="text-align:center; margin-bottom:20px;">
+                        <h2 style="color:#38bdf8;">ĐĂNG NHẬP BÁO CÁO</h2>
+                        <p style="color:#94a3b8; font-size:13px;">Dành cho nhân viên</p>
                     </div>
+                    <!-- Yêu cầu nhập mã Quản lý để code biết dòng nào ở Script gốc mà lấy Cột J,K,L -->
+                    <input type="text" id="inp-login-manager" class="bc-input" placeholder="User của Quản Lý (Người tạo tài khoản)">
+                    <input type="text" id="inp-login-user" class="bc-input" placeholder="Tên User của bạn">
+                    <input type="password" id="inp-login-pass" class="bc-input" placeholder="Mật khẩu">
+                    <button class="bc-btn btn-primary" id="btn-nv-login">ĐĂNG NHẬP</button>
+                    <button class="bc-btn btn-danger" style="margin-top:15px; background:transparent; border:1px solid #ef4444" id="btn-close-login">Hủy</button>
                 </div>
+            </div>
 
-                <!-- SECTION 1: PHÁT TỜ RƠI -->
-                <div class="bc-section">
-                    <div class="bc-sec-title">📄 1. Phát Tờ Rơi</div>
-                    <div class="bc-input-group">
-                        <label class="bc-label">Số lượng tờ rơi đã phát</label>
-                        <input type="number" id="inp-toroi-sl" class="bc-input" placeholder="Nhập số lượng..." min="0">
-                    </div>
-                    <div class="bc-file-upload">
-                        <label class="bc-label">Hình ảnh minh chứng</label>
-                        <label for="file-toroi" class="bc-file-label">
-                            <span>📸 Nhấn để chọn nhiều ảnh</span>
-                        </label>
-                        <input type="file" id="file-toroi" class="bc-file-input" multiple accept="image/*">
-                        <div class="bc-preview-grid" id="prev-toroi"></div>
-                    </div>
-                </div>
-
-                <!-- SECTION 2: ĐĂNG BÀI TRUYỀN THÔNG -->
-                <div class="bc-section">
-                    <div class="bc-sec-title">🌐 2. Đăng Bài Truyền Thông</div>
-                    <div class="bc-input-group">
-                        <label class="bc-label">Link bài đăng (Facebook, Zalo...)</label>
-                        <input type="text" id="inp-dangbai-link" class="bc-input" placeholder="Dán link bài đăng vào đây...">
-                    </div>
-                    <div class="bc-file-upload">
-                        <label class="bc-label">Hình ảnh chụp màn hình bài đăng</label>
-                        <label for="file-dangbai" class="bc-file-label">
-                            <span>📸 Nhấn để chọn nhiều ảnh</span>
-                        </label>
-                        <input type="file" id="file-dangbai" class="bc-file-input" multiple accept="image/*">
-                        <div class="bc-preview-grid" id="prev-dangbai"></div>
-                    </div>
-                </div>
-
-                <!-- SECTION 3: LIVESTREAM -->
-                <div class="bc-section">
-                    <div class="bc-sec-title">🎥 3. Livestream</div>
-                    <div class="bc-input-group">
-                        <label class="bc-label">Link Livestream</label>
-                        <input type="text" id="inp-live-link" class="bc-input" placeholder="Dán link livestream vào đây...">
-                    </div>
-                    <div class="bc-file-upload">
-                        <label class="bc-label">Hình ảnh chụp màn hình lúc Live</label>
-                        <label for="file-live" class="bc-file-label">
-                            <span>📸 Nhấn để chọn nhiều ảnh</span>
-                        </label>
-                        <input type="file" id="file-live" class="bc-file-input" multiple accept="image/*">
-                        <div class="bc-preview-grid" id="prev-live"></div>
-                    </div>
-                </div>
-
-                <button class="bc-submit-btn" id="bc-btn-submit">🚀 GỬI BÁO CÁO</button>
+            <!-- SCREEN 3: FORM BÁO CÁO (Giống bản trước tao viết cho m) -->
+            <div class="bc-screen" id="sc-report">
+                <!-- Nội dung Form HTML báo cáo: Phát tờ rơi, Link bài, Livestream (Bê code cũ vào đây) -->
+                <!-- Nhớ thêm id="btn-close-report" cho nút X -->
+                <h2>BÁO CÁO TRUYỀN THÔNG</h2>
+                <div class="bc-card">... (HTML Form báo cáo) ...</div>
+                <button class="bc-btn btn-primary" id="btn-submit-report">🚀 GỬI BÁO CÁO</button>
             </div>
         `;
         document.body.appendChild(app);
-
-        const style = document.createElement('style');
-        style.innerHTML = MY_CSS;
-        document.head.appendChild(style);
-
+        const style = document.createElement('style'); style.innerHTML = MY_CSS; document.head.appendChild(style);
         const $ = (id) => document.getElementById(id);
+        const switchSc = (id) => { document.querySelectorAll('.bc-screen').forEach(s => s.classList.remove('active')); $(id).classList.add('active'); };
 
-        // Nút đóng
-        $('bc-btn-close').onclick = () => app.style.display = 'none';
+        // Nút Đóng App
+        $('btn-close-mgr').onclick = () => app.style.display = 'none';
+        $('btn-close-login').onclick = () => app.style.display = 'none';
 
-        // Xử lý Preview ảnh khi người dùng chọn file
-        const handlePreview = (inputId, previewId) => {
-            $(inputId).addEventListener('change', (e) => {
-                const previewContainer = $(previewId);
-                previewContainer.innerHTML = ''; // Reset preview
-                const files = e.target.files;
-                if(files.length > 0) {
-                    Array.from(files).forEach(file => {
-                        const url = URL.createObjectURL(file);
-                        previewContainer.innerHTML += `<img src="${url}" class="bc-preview-item">`;
+        // ==========================================
+        // LOGIC DÀNH CHO QUẢN LÝ
+        // ==========================================
+        if (IS_MWG_USER) {
+            switchSc('sc-manager');
+            
+            // 1. Lấy dữ liệu cũ từ Script gốc
+            const loadConfig = async () => {
+                try {
+                    // Giả định API gốc của m nhận action get_config_manager
+                    let res = await universalFetch({ method:"POST", url: API_URL_MAIN, data: JSON.stringify({action:"get_config_manager", user: CURRENT_USER})});
+                    let data = JSON.parse(res);
+                    if(data.status === 'success') {
+                        $('inp-folder-id').value = data.folderId || "";
+                        $('inp-sheet-id').value = data.sheetId || "";
+                        MANAGER_EMPLOYEES = data.employees ? JSON.parse(data.employees) :[];
+                        renderNV();
+                    }
+                } catch(e) { console.log(e); }
+            };
+            loadConfig();
+
+            // 2. Render danh sách NV
+            const renderNV = () => {
+                $('nv-list-container').innerHTML = MANAGER_EMPLOYEES.map((nv, idx) => `
+                    <div class="employee-row">
+                        <span>👤 ${nv.u} (Pass: ${nv.p})</span>
+                        <button class="bc-btn btn-danger" onclick="document.getElementById('bc-app-wrapper').dispatchEvent(new CustomEvent('delNV', {detail:${idx}}))">Xóa</button>
+                    </div>
+                `).join('');
+            };
+
+            app.addEventListener('delNV', (e) => { MANAGER_EMPLOYEES.splice(e.detail, 1); renderNV(); });
+
+            $('btn-add-nv').onclick = () => {
+                let u = $('inp-nv-user').value.trim(), p = $('inp-nv-pass').value.trim();
+                if(!u || !p) return alert("Nhập đủ user và mật khẩu!");
+                if(MANAGER_EMPLOYEES.some(x => x.u === u)) return alert("User này đã tồn tại!");
+                MANAGER_EMPLOYEES.push({u, p}); renderNV();
+                $('inp-nv-user').value = ''; $('inp-nv-pass').value = '';
+            };
+
+            // 3. Lưu lên Script Gốc
+            $('btn-save-config').onclick = async () => {
+                let fId = $('inp-folder-id').value.trim(), sId = $('inp-sheet-id').value.trim();
+                if(!fId || !sId) return alert("Vui lòng nhập ID Folder và ID Sheet!");
+                $('btn-save-config').innerText = "⏳ Đang lưu...";
+                
+                try {
+                    await universalFetch({ 
+                        method:"POST", url: API_URL_MAIN, 
+                        // Payload gửi lên Script gốc để lưu vào J, K, L
+                        data: JSON.stringify({ action: "save_config_manager", user: CURRENT_USER, folderId: fId, sheetId: sId, employees: JSON.stringify(MANAGER_EMPLOYEES) })
                     });
-                }
-            });
-        };
+                    alert("✅ Đã lưu cấu hình thành công!");
+                } catch(e) { alert("❌ Lỗi mạng!"); }
+                $('btn-save-config').innerText = "💾 LƯU CẤU HÌNH LÊN HỆ THỐNG";
+            };
 
-        handlePreview('file-toroi', 'prev-toroi');
-        handlePreview('file-dangbai', 'prev-dangbai');
-        handlePreview('file-live', 'prev-live');
+        } else {
+        // ==========================================
+        // LOGIC DÀNH CHO NHÂN VIÊN
+        // ==========================================
+            switchSc('sc-login');
 
-        // Submit form
-        $('bc-btn-submit').onclick = async () => {
-            // Validate sơ bộ
-            if (API_URL === "YOUR_GOOGLE_SCRIPT_WEB_APP_URL") {
-                alert("❌ Bạn chưa cấu hình API_URL trong code!"); return;
-            }
+            $('btn-nv-login').onclick = async () => {
+                let mgr = $('inp-login-manager').value.trim(), u = $('inp-login-user').value.trim(), p = $('inp-login-pass').value.trim();
+                if(!mgr || !u || !p) return alert("Nhập đủ thông tin!");
+                $('btn-nv-login').innerText = "⏳ Đang kiểm tra...";
 
-            $('bc-loading').style.display = 'flex';
-            $('bc-btn-submit').disabled = true;
+                try {
+                    // Gọi sang Script gốc yêu cầu dò tìm
+                    let res = await universalFetch({
+                        method:"POST", url: API_URL_MAIN,
+                        data: JSON.stringify({ action: "login_employee", managerUser: mgr, empUser: u, empPass: p })
+                    });
+                    let data = JSON.parse(res);
 
-            try {
-                // 1. Nén ảnh và chuyển sang Base64 song song
-                $('bc-load-text').innerText = "Đang xử lý và nén hình ảnh (Vui lòng chờ)...";
-                const[imgToRoi, imgDangBai, imgLive] = await Promise.all([
-                    processImages($('file-toroi').files),
-                    processImages($('file-dangbai').files),
-                    processImages($('file-live').files)
-                ]);
+                    if(data.status === 'success') {
+                        SESSION_DATA = { user: u, folderId: data.folderId, sheetId: data.sheetId };
+                        alert(`✅ Đăng nhập thành công! Chào ${u}`);
+                        switchSc('sc-report'); // Mở form báo cáo
+                    } else {
+                        alert("❌ Sai tài khoản, mật khẩu hoặc Quản lý chưa cấp quyền!");
+                    }
+                } catch(e) { alert("Lỗi kết nối"); }
+                $('btn-nv-login').innerText = "ĐĂNG NHẬP";
+            };
 
-                // 2. Gom dữ liệu
-                $('bc-load-text').innerText = "Đang tải dữ liệu và tạo thư mục trên hệ thống...";
+            // Form Submit Báo cáo (Gửi qua API Báo Cáo, KÈM ID CỦA QUẢN LÝ)
+            // Lấy logic cũ nhét vào đây, lưu ý đoạn payload gửi đi:
+            /*
                 const payload = {
                     action: 'submit_report',
-                    user: USER_NAME,
-                    data: {
-                        phatToRoi: {
-                            quantity: $('inp-toroi-sl').value,
-                            images: imgToRoi
-                        },
-                        dangBai: {
-                            link: $('inp-dangbai-link').value,
-                            images: imgDangBai
-                        },
-                        livestream: {
-                            link: $('inp-live-link').value,
-                            images: imgLive
-                        }
-                    }
+                    user: SESSION_DATA.user,
+                    folderId: SESSION_DATA.folderId, // Bắn ID động của QL lên
+                    sheetId: SESSION_DATA.sheetId,   // Bắn ID động của QL lên
+                    data: { ... }
                 };
-
-                // 3. Gửi API
-                const response = await universalFetch({
-                    method: "POST",
-                    url: API_URL,
-                    data: JSON.stringify(payload),
-                    headers: { "Content-Type": "application/x-www-form-urlencoded" }
-                });
-
-                const resJson = JSON.parse(response);
-                if(resJson.status === 'success') {
-                    alert("✅ Báo cáo thành công! Dữ liệu đã được lưu trữ tự động.");
-                    app.style.display = 'none';
-                    // Clear form
-                    $('inp-toroi-sl').value = ''; $('inp-dangbai-link').value = ''; $('inp-live-link').value = '';
-                    $('prev-toroi').innerHTML = ''; $('prev-dangbai').innerHTML = ''; $('prev-live').innerHTML = '';
-                    $('file-toroi').value = ''; $('file-dangbai').value = ''; $('file-live').value = '';
-                } else {
-                    alert("❌ Lỗi từ server: " + resJson.message);
-                }
-
-            } catch (err) {
-                console.error(err);
-                alert("❌ Lỗi mạng hoặc lỗi hệ thống. Không thể gửi báo cáo!");
-            } finally {
-                $('bc-loading').style.display = 'none';
-                $('bc-btn-submit').disabled = false;
-            }
-        };
+            */
+        }
     };
 
-    return {
-        name: "Báo Cáo TT",
-        icon: `<svg viewBox="0 0 24 24"><path fill="white" d="M3 3v18h18V3H3zm16 16H5V5h14v14zM7 10h2v7H7v-7zm4-3h2v10h-2V7zm4 6h2v4h-2v-4z"/></svg>`,
-        bgColor: "#0284c7", 
-        action: runTool
-    };
+    return { name: "Báo Cáo TT", bgColor: "#0284c7", action: runTool };
 })
