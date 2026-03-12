@@ -106,11 +106,73 @@
 
             <!-- SCREEN 3: FORM BÁO CÁO (Giống bản trước tao viết cho m) -->
             <div class="bc-screen" id="sc-report">
-                <!-- Nội dung Form HTML báo cáo: Phát tờ rơi, Link bài, Livestream (Bê code cũ vào đây) -->
-                <!-- Nhớ thêm id="btn-close-report" cho nút X -->
-                <h2>BÁO CÁO TRUYỀN THÔNG</h2>
-                <div class="bc-card">... (HTML Form báo cáo) ...</div>
-                <button class="bc-btn btn-primary" id="btn-submit-report">🚀 GỬI BÁO CÁO</button>
+                <div id="bc-loading">
+                <div class="spinner"></div>
+                <h3 id="bc-load-text">Đang tải dữ liệu lên hệ thống... Vui lòng không đóng cửa sổ.</h3>
+            </div>
+
+            <div class="bc-container">
+                <div class="bc-header">
+                    <div class="bc-title">📊 BÁO CÁO TRUYỀN THÔNG</div>
+                    <div>
+                        <span style="color:#94a3b8; font-size:14px; margin-right:15px;">👤 ${USER_NAME}</span>
+                        <button class="bc-close-btn" id="bc-btn-close">✕</button>
+                    </div>
+                </div>
+
+                <!-- SECTION 1: PHÁT TỜ RƠI -->
+                <div class="bc-section">
+                    <div class="bc-sec-title">📄 1. Phát Tờ Rơi</div>
+                    <div class="bc-input-group">
+                        <label class="bc-label">Số lượng tờ rơi đã phát</label>
+                        <input type="number" id="inp-toroi-sl" class="bc-input" placeholder="Nhập số lượng..." min="0">
+                    </div>
+                    <div class="bc-file-upload">
+                        <label class="bc-label">Hình ảnh minh chứng</label>
+                        <label for="file-toroi" class="bc-file-label">
+                            <span>📸 Nhấn để chọn nhiều ảnh</span>
+                        </label>
+                        <input type="file" id="file-toroi" class="bc-file-input" multiple accept="image/*">
+                        <div class="bc-preview-grid" id="prev-toroi"></div>
+                    </div>
+                </div>
+
+                <!-- SECTION 2: ĐĂNG BÀI TRUYỀN THÔNG -->
+                <div class="bc-section">
+                    <div class="bc-sec-title">🌐 2. Đăng Bài Truyền Thông</div>
+                    <div class="bc-input-group">
+                        <label class="bc-label">Link bài đăng (Facebook, Zalo...)</label>
+                        <input type="text" id="inp-dangbai-link" class="bc-input" placeholder="Dán link bài đăng vào đây...">
+                    </div>
+                    <div class="bc-file-upload">
+                        <label class="bc-label">Hình ảnh chụp màn hình bài đăng</label>
+                        <label for="file-dangbai" class="bc-file-label">
+                            <span>📸 Nhấn để chọn nhiều ảnh</span>
+                        </label>
+                        <input type="file" id="file-dangbai" class="bc-file-input" multiple accept="image/*">
+                        <div class="bc-preview-grid" id="prev-dangbai"></div>
+                    </div>
+                </div>
+
+                <!-- SECTION 3: LIVESTREAM -->
+                <div class="bc-section">
+                    <div class="bc-sec-title">🎥 3. Livestream</div>
+                    <div class="bc-input-group">
+                        <label class="bc-label">Link Livestream</label>
+                        <input type="text" id="inp-live-link" class="bc-input" placeholder="Dán link livestream vào đây...">
+                    </div>
+                    <div class="bc-file-upload">
+                        <label class="bc-label">Hình ảnh chụp màn hình lúc Live</label>
+                        <label for="file-live" class="bc-file-label">
+                            <span>📸 Nhấn để chọn nhiều ảnh</span>
+                        </label>
+                        <input type="file" id="file-live" class="bc-file-input" multiple accept="image/*">
+                        <div class="bc-preview-grid" id="prev-live"></div>
+                    </div>
+                </div>
+
+                <button class="bc-submit-btn" id="bc-btn-submit">🚀 GỬI BÁO CÁO</button>
+            </div>
             </div>
         `;
         document.body.appendChild(app);
