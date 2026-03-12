@@ -40,16 +40,34 @@
     let MANAGER_EMPLOYEES =[];
     let MANAGER_SHEET_ID = ""; 
 
-    // Helper xử lý Date từ Sheet (Chuyển dạng 2026-03-12T... thành dd/MM/yyyy và HH:mm)
+    // Hàm bóc tách ngày tháng an toàn tuyệt đối (Xử lý mọi định dạng Google Sheet trả về)
     const parseDateFromSheet = (rawStr) => {
-        let d = new Date(rawStr);
-        if(isNaN(d.getTime())) return { date: "N/A", time: "N/A" };
-        let dd = String(d.getDate()).padStart(2, '0');
-        let mm = String(d.getMonth() + 1).padStart(2, '0');
-        let yyyy = d.getFullYear();
-        let hh = String(d.getHours()).padStart(2, '0');
-        let min = String(d.getMinutes()).padStart(2, '0');
-        return { date: `${dd}/${mm}/${yyyy}`, time: `${hh}:${min}` };
+        if (!rawStr) return { date: "N/A", time: "N/A" };
+        let str = String(rawStr).trim();
+        
+        // Trường hợp 1: Chuỗi có dạng dd/MM/yyyy HH:mm:ss
+        let match = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{1,2})/);
+        if (match) {
+            let dd = String(match[1]).padStart(2, '0');
+            let mm = String(match[2]).padStart(2, '0');
+            let yyyy = match[3];
+            let hh = String(match[4]).padStart(2, '0');
+            let min = String(match[5]).padStart(2, '0');
+            return { date: `${dd}/${mm}/${yyyy}`, time: `${hh}:${min}` };
+        }
+        
+        // Trường hợp 2: Định dạng ISO 2026-03-12T15:19:33.000Z
+        let d = new Date(str);
+        if (!isNaN(d.getTime())) {
+            let dd = String(d.getDate()).padStart(2, '0');
+            let mm = String(d.getMonth() + 1).padStart(2, '0');
+            let yyyy = d.getFullYear();
+            let hh = String(d.getHours()).padStart(2, '0');
+            let min = String(d.getMinutes()).padStart(2, '0');
+            return { date: `${dd}/${mm}/${yyyy}`, time: `${hh}:${min}` };
+        }
+        
+        return { date: "N/A", time: "N/A" };
     };
 
     // ===============================================================
@@ -110,10 +128,15 @@
         .stat-box { flex:1; padding:15px; border-radius:8px; text-align:center; border: 1px solid transparent;}
         .sb-blue { background:rgba(56, 189, 248, 0.1); border-color:#38bdf8; }
         .sb-red { background:rgba(239, 68, 68, 0.1); border-color:#ef4444; }
-        .date-group-title { background: linear-gradient(90deg, rgba(56, 189, 248, 0.2), transparent); color: #38bdf8; padding: 8px 15px; border-left: 4px solid #38bdf8; border-radius: 4px; font-weight: bold; margin: 15px 0 10px; font-size: 14px;}
+        
+        /* Group khối ngày báo cáo */
+        .date-group-wrapper { background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; margin-bottom: 25px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .date-group-title { background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 12px 20px; font-weight: bold; font-size: 15px; border-bottom: 1px solid rgba(56, 189, 248, 0.2); display: flex; align-items: center; gap: 10px; }
+        .date-group-content { padding: 15px; }
 
         .rp-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; }
         .rp-card:hover { border-color: #38bdf8; background: rgba(56, 189, 248, 0.05); }
+        .rp-card:last-child { margin-bottom: 0; }
         .rp-header-row { display:flex; justify-content:space-between; align-items:center;}
         .rp-detail { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.2); font-size:13px; color:#cbd5e1;}
         .rp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 10px; margin-top: 10px; }
@@ -304,10 +327,13 @@
         document.querySelectorAll('.btn-close-app').forEach(btn => btn.onclick = () => app.style.display = 'none');
 
         // Hàm mở Lightbox toàn cục
-        window.openLightbox = (src) => { 
-            $('bc-lb-img').src = src; 
-            $('bc-lightbox').style.display = 'flex'; 
-        };
+        app.addEventListener('click', (e) => {
+            if(e.target.classList.contains('rp-img')) {
+                $('bc-lb-img').src = e.target.src;
+                $('bc-lightbox').style.display = 'flex';
+                e.stopPropagation();
+            }
+        });
         $('bc-lb-close').onclick = () => $('bc-lightbox').style.display = 'none';
 
         // Preview Ảnh Báo cáo
@@ -344,7 +370,7 @@
                         if(MANAGER_SHEET_ID) loadStatistics(); 
                         else $('stat-list-container').innerHTML = `<div style="text-align:center; color:#fbbf24; padding:20px;">Vui lòng cài đặt ID Sheet ở tab Cài Đặt trước!</div>`;
                     }
-                } catch(e) { console.log(e); }
+                } catch(e) { console.log(e); $('stat-list-container').innerHTML = `<div style="color:#ef4444; text-align:center;">Lỗi mạng! Không tải được cấu hình.</div>`; }
                 $('bc-loading').style.display = 'none';
             };
             loadConfig();
@@ -382,13 +408,12 @@
                 try {
                     let res = await universalFetch({ method:"POST", url: API_URL_MAIN, data: JSON.stringify({ action: "get_manager_reports", sheetId: MANAGER_SHEET_ID }) });
                     let json = JSON.parse(res);
-                    if(json.status === 'success' && json.data.length > 1) {
-                        // Xử lý lại Data, tách ngày và giờ
+                    if(json.status === 'success' && Array.isArray(json.data) && json.data.length > 1) {
                         STAT_DATA = json.data.slice(1).map(r => {
                             let parsed = parseDateFromSheet(r[0]);
-                            return { dateStr: parsed.date, timeStr: parsed.time, user: String(r[1]).trim(), slToRoi: r[2], linkDB: r[3], linkLive: r[4], imgToRoi: r[5], imgDB: r[6], imgLive: r[7], rootLink: r[8] };
+                            return { dateStr: parsed.date, timeStr: parsed.time, user: String(r[1] || "").trim(), slToRoi: r[2], linkDB: r[3], linkLive: r[4], imgToRoi: r[5], imgDB: r[6], imgLive: r[7], rootLink: r[8] };
                         });
-                        STAT_DATA.reverse(); // Mới nhất lên đầu
+                        STAT_DATA.reverse(); // Đẩy báo cáo mới nhất lên đầu
                         renderStatSummary();
                         renderStatFilter();
                         renderStatList("ALL");
@@ -396,7 +421,7 @@
                         renderStatSummary(true);
                         $('stat-list-container').innerHTML = `<div style="text-align:center; color:#94a3b8; padding:20px;">Chưa có báo cáo nào.</div>`;
                     }
-                } catch(e) { $('stat-list-container').innerHTML = `<div style="color:#ef4444; text-align:center;">Lỗi tải thống kê!</div>`; }
+                } catch(e) { $('stat-list-container').innerHTML = `<div style="color:#ef4444; text-align:center; padding:20px;">Lỗi tải thống kê! File Sheet cấu hình bị sai hoặc chưa được cấp quyền truy cập.</div>`; }
             };
 
             const renderStatSummary = (empty = false) => {
@@ -442,24 +467,26 @@
                 let filtered = dateFilter === "ALL" ? STAT_DATA : STAT_DATA.filter(r => r.dateStr === dateFilter);
                 if(filtered.length === 0) { $('stat-list-container').innerHTML = `<div style="text-align:center; padding:20px;">Không có dữ liệu.</div>`; return; }
                 
-                // Nhóm theo ngày
                 let grouped = {};
                 filtered.forEach(item => { if(!grouped[item.dateStr]) grouped[item.dateStr] =[]; grouped[item.dateStr].push(item); });
 
                 let html = '';
                 for(let date in grouped) {
-                    html += `<div class="date-group-title">📅 Ngày: ${date}</div>`;
+                    html += `
+                    <div class="date-group-wrapper">
+                        <div class="date-group-title">📅 Báo cáo ngày: ${date}</div>
+                        <div class="date-group-content">
+                    `;
                     grouped[date].forEach((row, idx) => {
                         let renderImgGrid = (str) => {
                             if(!str) return '';
-                            if(str.includes('ảnh') && !str.includes('http')) return `<span style="color:#fbbf24">${str} (Cũ)</span>`;
+                            if(str.includes('ảnh') && !str.includes('http')) return `<span style="color:#fbbf24; font-size:12px;">${str} (Cũ)</span>`;
                             let links = str.split('|||').filter(l => l.trim() !== '');
                             if(links.length === 0) return '';
                             return `<div class="rp-grid">` + links.map(l => {
                                 let match = l.match(/id=([a-zA-Z0-9_-]+)/);
                                 let imgUrl = match ? `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800` : l;
-                                // 💡 FIX LỖI: Gắn cứng sự kiện onclick vào hình ảnh và chặn không cho click văng ra ngoài 
-                                return `<img src="${imgUrl}" class="rp-img" onclick="window.openLightbox('${imgUrl}'); event.stopPropagation();">`; 
+                                return `<img src="${imgUrl}" class="rp-img">`; 
                             }).join('') + `</div>`;
                         };
 
@@ -485,6 +512,7 @@
                             </div>
                         `;
                     });
+                    html += `</div></div>`; // Đóng date-group-content và date-group-wrapper
                 }
                 $('stat-list-container').innerHTML = html;
             };
@@ -535,8 +563,11 @@
                     if(JSON.parse(response).status === 'success') {
                         alert("✅ Gửi báo cáo thành công!"); 
                         
-                        // 💡 FIX LỖI 2: RESET TRẮNG FORM SAU KHI GỬI THÀNH CÔNG['inp-toroi-sl', 'inp-dangbai-link', 'inp-live-link', 'file-toroi', 'file-dangbai', 'file-live'].forEach(id => $(id).value = '');
-                        ['prev-toroi', 'prev-dangbai', 'prev-live'].forEach(id => $(id).innerHTML = '');
+                        // FIX LỖI: Reset sạch form an toàn
+                        let textInputs =['inp-toroi-sl', 'inp-dangbai-link', 'inp-live-link', 'file-toroi', 'file-dangbai', 'file-live'];
+                        textInputs.forEach(id => { if($(id)) $(id).value = ''; });
+                        let prevBoxes =['prev-toroi', 'prev-dangbai', 'prev-live'];
+                        prevBoxes.forEach(id => { if($(id)) $(id).innerHTML = ''; });
 
                         app.style.display = 'none';
                     } else alert("❌ Lỗi Server!");
