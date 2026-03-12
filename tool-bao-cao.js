@@ -38,7 +38,7 @@
     
     let EMP_SESSION = JSON.parse(localStorage.getItem('bc_emp_session') || "null");
     let MANAGER_EMPLOYEES =[];
-    let MANAGER_SHEET_ID = ""; // Lưu tạm để gọi hàm thống kê
+    let MANAGER_SHEET_ID = ""; 
 
     // ===============================================================
     // 2. CSS GIAO DIỆN
@@ -47,11 +47,13 @@
         #bc-app-wrapper { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.95); backdrop-filter:blur(10px); z-index:2147483647; font-family: 'Segoe UI', sans-serif; overflow-y:auto; color: #f8fafc; }
         #bc-app-wrapper * { box-sizing:border-box; }
         
-        .bc-screen { display:none; max-width: 800px; margin: 40px auto; padding: 20px; animation: fadeIn 0.3s ease-out; background:rgba(30, 41, 59, 0.5); border-radius:12px; border:1px solid rgba(255,255,255,0.1); position:relative; overflow:hidden;}
+        /* Đã fix lại padding để sticky header hoạt động */
+        .bc-screen { display:none; max-width: 800px; margin: 40px auto; animation: fadeIn 0.3s ease-out; background:rgba(30, 41, 59, 0.5); border-radius:12px; border:1px solid rgba(255,255,255,0.1); position:relative;}
         .bc-screen.active { display:block; }
+        .bc-screen-body { padding: 20px; } /* Khu vực cuộn chứa nội dung */
 
-        /* Sticky Header Fix */
-        .bc-header { display: flex; justify-content: space-between; align-items: center; position: sticky; top: -20px; padding: 20px; margin: -20px -20px 20px -20px; background: rgba(15,23,42,0.98); border-bottom: 1px solid rgba(255,255,255,0.1); z-index: 100; box-shadow: 0 4px 20px rgba(0,0,0,0.5);}
+        /* Header Cố Định (Sticky) */
+        .bc-header { display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; padding: 20px; background: rgba(15, 23, 42, 0.98); border-bottom: 1px solid rgba(255,255,255,0.1); z-index: 100; border-radius: 12px 12px 0 0; backdrop-filter: blur(15px);}
         .bc-title { font-size: 20px; font-weight: bold; color: #38bdf8; display:flex; align-items:center; gap:8px;}
         
         .bc-header-right { display:flex; align-items:center; gap:15px; margin-left:auto; }
@@ -86,12 +88,17 @@
         .bc-tab-content.active { display: block; }
 
         /* UI THỐNG KÊ */
+        .stat-dash { display:flex; gap:10px; margin-bottom:15px; }
+        .stat-box { flex:1; padding:15px; border-radius:8px; text-align:center; border: 1px solid transparent;}
+        .sb-blue { background:rgba(56, 189, 248, 0.1); border-color:#38bdf8; }
+        .sb-red { background:rgba(239, 68, 68, 0.1); border-color:#ef4444; }
+
         .rp-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; }
         .rp-card:hover { border-color: #38bdf8; background: rgba(56, 189, 248, 0.05); }
         .rp-header-row { display:flex; justify-content:space-between; align-items:center;}
         .rp-detail { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.2); font-size:14px; color:#cbd5e1;}
-        .rp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 10px; margin-top: 10px; }
-        .rp-img { width: 100%; height: 70px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: 0.2s; }
+        .rp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; margin-top: 10px; }
+        .rp-img { width: 100%; height: 80px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: 0.2s; }
         .rp-img:hover { transform: scale(1.05); border-color:#FFD700; z-index:2;}
         .rp-link { color:#38bdf8; text-decoration:none; word-break: break-all;}
         .rp-link:hover { text-decoration:underline;}
@@ -158,45 +165,48 @@
                     </div>
                 </div>
 
-                <div class="bc-tabs">
-                    <button class="bc-tab-btn active" id="tab-btn-stat">📈 Thống Kê</button>
-                    <button class="bc-tab-btn" id="tab-btn-config">⚙️ Cài Đặt</button>
-                </div>
-
-                <!-- TAB THỐNG KÊ -->
-                <div class="bc-tab-content active" id="tab-stat">
-                    <div class="bc-card" style="padding:15px;">
-                        <label class="bc-label">Lọc theo ngày:</label>
-                        <select id="stat-date-filter" class="bc-input" style="margin-bottom:0; cursor:pointer;">
-                            <option value="ALL">Tất cả các ngày</option>
-                        </select>
-                    </div>
-                    <div id="stat-list-container">
-                        <div style="text-align:center; color:#94a3b8; padding:20px;">Đang tải dữ liệu...</div>
-                    </div>
-                </div>
-                
-                <!-- TAB CÀI ĐẶT -->
-                <div class="bc-tab-content" id="tab-config">
-                    <div class="bc-card">
-                        <h3 class="bc-sec-title">1. Cấu hình Lưu trữ</h3>
-                        <label class="bc-label">ID Thư mục Google Drive:</label>
-                        <input type="text" id="inp-folder-id" class="bc-input" placeholder="VD: 1A2b3C4d5E...">
-                        <label class="bc-label">ID Google Sheet:</label>
-                        <input type="text" id="inp-sheet-id" class="bc-input" placeholder="VD: 1xYz_789abc...">
+                <div class="bc-screen-body">
+                    <div class="bc-tabs">
+                        <button class="bc-tab-btn active" id="tab-btn-stat">📈 Thống Kê</button>
+                        <button class="bc-tab-btn" id="tab-btn-config">⚙️ Cài Đặt</button>
                     </div>
 
-                    <div class="bc-card">
-                        <h3 class="bc-sec-title">2. Danh sách Nhân viên</h3>
-                        <div style="display:flex; gap:10px; margin-bottom:15px;">
-                            <input type="text" id="inp-nv-user" class="bc-input" style="margin:0;" placeholder="Tên User">
-                            <input type="text" id="inp-nv-pass" class="bc-input" style="margin:0;" placeholder="Mật khẩu">
-                            <button class="bc-btn btn-success" id="btn-add-nv" style="width:65px; flex-shrink:0;">+ Thêm</button>
+                    <!-- TAB THỐNG KÊ -->
+                    <div class="bc-tab-content active" id="tab-stat">
+                        <div id="stat-summary-container"></div>
+                        <div class="bc-card" style="padding:15px; margin-bottom:10px;">
+                            <label class="bc-label">Lọc theo ngày:</label>
+                            <select id="stat-date-filter" class="bc-input" style="margin-bottom:0; cursor:pointer;">
+                                <option value="ALL">Tất cả các ngày</option>
+                            </select>
                         </div>
-                        <div id="nv-list-container"></div>
+                        <div id="stat-list-container">
+                            <div style="text-align:center; color:#94a3b8; padding:20px;">Đang tải dữ liệu...</div>
+                        </div>
                     </div>
+                    
+                    <!-- TAB CÀI ĐẶT -->
+                    <div class="bc-tab-content" id="tab-config">
+                        <div class="bc-card">
+                            <h3 class="bc-sec-title">1. Cấu hình Lưu trữ</h3>
+                            <label class="bc-label">ID Thư mục Google Drive:</label>
+                            <input type="text" id="inp-folder-id" class="bc-input" placeholder="VD: 1A2b3C4d5E...">
+                            <label class="bc-label">ID Google Sheet:</label>
+                            <input type="text" id="inp-sheet-id" class="bc-input" placeholder="VD: 1xYz_789abc...">
+                        </div>
 
-                    <button class="bc-btn btn-primary" id="btn-save-config">💾 LƯU CẤU HÌNH</button>
+                        <div class="bc-card">
+                            <h3 class="bc-sec-title">2. Danh sách Nhân viên</h3>
+                            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                                <input type="text" id="inp-nv-user" class="bc-input" style="margin:0;" placeholder="Tên User">
+                                <input type="text" id="inp-nv-pass" class="bc-input" style="margin:0;" placeholder="Mật khẩu">
+                                <button class="bc-btn btn-success" id="btn-add-nv" style="width:65px; flex-shrink:0;">+ Thêm</button>
+                            </div>
+                            <div id="nv-list-container"></div>
+                        </div>
+
+                        <button class="bc-btn btn-primary" id="btn-save-config">💾 LƯU CẤU HÌNH</button>
+                    </div>
                 </div>
             </div>
 
@@ -225,40 +235,42 @@
                     </div>
                 </div>
 
-                <div class="bc-card">
-                    <div class="bc-sec-title">📄 1. Phát Tờ Rơi</div>
-                    <label class="bc-label">Số lượng tờ rơi đã phát</label>
-                    <input type="number" id="inp-toroi-sl" class="bc-input" placeholder="Nhập số lượng..." min="0">
-                    <div class="bc-file-upload">
-                        <label for="file-toroi" class="bc-file-label">📸 Nhấn để chọn ảnh minh chứng</label>
-                        <input type="file" id="file-toroi" class="bc-file-input" multiple accept="image/*">
-                        <div class="bc-preview-grid" id="prev-toroi"></div>
+                <div class="bc-screen-body">
+                    <div class="bc-card">
+                        <div class="bc-sec-title">📄 1. Phát Tờ Rơi</div>
+                        <label class="bc-label">Số lượng tờ rơi đã phát</label>
+                        <input type="number" id="inp-toroi-sl" class="bc-input" placeholder="Nhập số lượng..." min="0">
+                        <div class="bc-file-upload">
+                            <label for="file-toroi" class="bc-file-label">📸 Nhấn để chọn ảnh minh chứng</label>
+                            <input type="file" id="file-toroi" class="bc-file-input" multiple accept="image/*">
+                            <div class="bc-preview-grid" id="prev-toroi"></div>
+                        </div>
                     </div>
-                </div>
 
-                <div class="bc-card">
-                    <div class="bc-sec-title">🌐 2. Đăng Bài Truyền Thông</div>
-                    <label class="bc-label">Link bài đăng</label>
-                    <input type="text" id="inp-dangbai-link" class="bc-input" placeholder="Dán link bài đăng vào đây...">
-                    <div class="bc-file-upload">
-                        <label for="file-dangbai" class="bc-file-label">📸 Nhấn để chọn ảnh bài đăng</label>
-                        <input type="file" id="file-dangbai" class="bc-file-input" multiple accept="image/*">
-                        <div class="bc-preview-grid" id="prev-dangbai"></div>
+                    <div class="bc-card">
+                        <div class="bc-sec-title">🌐 2. Đăng Bài Truyền Thông</div>
+                        <label class="bc-label">Link bài đăng</label>
+                        <input type="text" id="inp-dangbai-link" class="bc-input" placeholder="Dán link bài đăng vào đây...">
+                        <div class="bc-file-upload">
+                            <label for="file-dangbai" class="bc-file-label">📸 Nhấn để chọn ảnh bài đăng</label>
+                            <input type="file" id="file-dangbai" class="bc-file-input" multiple accept="image/*">
+                            <div class="bc-preview-grid" id="prev-dangbai"></div>
+                        </div>
                     </div>
-                </div>
 
-                <div class="bc-card">
-                    <div class="bc-sec-title">🎥 3. Livestream</div>
-                    <label class="bc-label">Link Livestream</label>
-                    <input type="text" id="inp-live-link" class="bc-input" placeholder="Dán link livestream vào đây...">
-                    <div class="bc-file-upload">
-                        <label for="file-live" class="bc-file-label">📸 Nhấn để chọn ảnh Livestream</label>
-                        <input type="file" id="file-live" class="bc-file-input" multiple accept="image/*">
-                        <div class="bc-preview-grid" id="prev-live"></div>
+                    <div class="bc-card">
+                        <div class="bc-sec-title">🎥 3. Livestream</div>
+                        <label class="bc-label">Link Livestream</label>
+                        <input type="text" id="inp-live-link" class="bc-input" placeholder="Dán link livestream vào đây...">
+                        <div class="bc-file-upload">
+                            <label for="file-live" class="bc-file-label">📸 Nhấn để chọn ảnh Livestream</label>
+                            <input type="file" id="file-live" class="bc-file-input" multiple accept="image/*">
+                            <div class="bc-preview-grid" id="prev-live"></div>
+                        </div>
                     </div>
-                </div>
 
-                <button class="bc-btn btn-primary" id="btn-submit-report" style="padding:15px; font-size:16px;">🚀 GỬI BÁO CÁO</button>
+                    <button class="bc-btn btn-primary" id="btn-submit-report" style="padding:15px; font-size:16px;">🚀 GỬI BÁO CÁO</button>
+                </div>
             </div>
         `;
         document.body.appendChild(app);
@@ -305,7 +317,7 @@
                         $('inp-sheet-id').value = MANAGER_SHEET_ID;
                         MANAGER_EMPLOYEES = data.employees && data.employees !== "[]" ? JSON.parse(data.employees) :[];
                         renderNV();
-                        if(MANAGER_SHEET_ID) loadStatistics(); // Tải luôn thống kê nếu có Sheet ID
+                        if(MANAGER_SHEET_ID) loadStatistics(); 
                         else $('stat-list-container').innerHTML = `<div style="text-align:center; color:#fbbf24; padding:20px;">Vui lòng cài đặt ID Sheet ở tab Cài Đặt trước!</div>`;
                     }
                 } catch(e) { console.log(e); }
@@ -351,16 +363,51 @@
                     if(json.status === 'success' && json.data.length > 1) {
                         STAT_DATA = json.data.slice(1); // Bỏ dòng Header
                         STAT_DATA.reverse(); // Mới nhất lên đầu
+                        renderStatSummary();
                         renderStatFilter();
                         renderStatList("ALL");
                     } else {
+                        renderStatSummary(true);
                         $('stat-list-container').innerHTML = `<div style="text-align:center; color:#94a3b8; padding:20px;">Chưa có báo cáo nào.</div>`;
                     }
                 } catch(e) { $('stat-list-container').innerHTML = `<div style="color:#ef4444; text-align:center;">Lỗi tải thống kê!</div>`; }
             };
 
+            // TÍNH TOÁN VÀ RENDER TÓM TẮT HÔM NAY
+            const renderStatSummary = (empty = false) => {
+                let d = new Date();
+                let todayStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth()+1).padStart(2, '0')}/${d.getFullYear()}`;
+                
+                let reportedUsers =[];
+                if(!empty) {
+                    let todayReports = STAT_DATA.filter(r => r[0].startsWith(todayStr));
+                    reportedUsers = [...new Set(todayReports.map(r => String(r[1]).trim()))]; 
+                }
+                
+                let notReportedUsers = MANAGER_EMPLOYEES.filter(emp => !reportedUsers.includes(String(emp.u).trim())).map(e => e.u);
+                let totalEmps = MANAGER_EMPLOYEES.length;
+                let reportedCount = reportedUsers.length;
+                let notReportedCount = notReportedUsers.length;
+
+                $('stat-summary-container').innerHTML = `
+                    <div class="stat-dash">
+                        <div class="stat-box sb-blue">
+                            <div style="font-size:26px; font-weight:bold; color:#38bdf8;">${reportedCount}</div>
+                            <div style="font-size:12px; color:#94a3b8;">Đã báo cáo (Hôm nay)</div>
+                        </div>
+                        <div class="stat-box sb-red">
+                            <div style="font-size:26px; font-weight:bold; color:#ef4444;">${notReportedCount}</div>
+                            <div style="font-size:12px; color:#94a3b8;">Chưa báo cáo</div>
+                        </div>
+                    </div>
+                    ${notReportedCount > 0 
+                        ? `<div style="font-size:12px; color:#ef4444; margin-bottom:20px; padding:10px; background:rgba(239, 68, 68, 0.1); border-radius:6px;"><b>⏳ Chưa báo cáo:</b> ${notReportedUsers.join(', ')}</div>` 
+                        : (totalEmps > 0 ? `<div style="font-size:12px; color:#10b981; margin-bottom:20px; padding:10px; background:rgba(16, 185, 129, 0.1); border-radius:6px;">✅ Tất cả nhân viên đã nộp báo cáo hôm nay!</div>` : '')}
+                `;
+            };
+
             const renderStatFilter = () => {
-                let dates = [...new Set(STAT_DATA.map(r => r[0].split(' ')[0]))]; // Lấy phần ngày dd/MM/yyyy
+                let dates =[...new Set(STAT_DATA.map(r => r[0].split(' ')[0]))]; // Lấy phần ngày dd/MM/yyyy
                 let opts = `<option value="ALL">Tất cả các ngày</option>`;
                 dates.forEach(d => opts += `<option value="${d}">${d}</option>`);
                 $('stat-date-filter').innerHTML = opts;
@@ -377,20 +424,24 @@
                     let time = row[0], user = row[1], slToRoi = row[2], linkDB = row[3], linkLive = row[4];
                     let imgToRoi = row[5], imgDB = row[6], imgLive = row[7], rootLink = row[8];
                     
-                    // Hàm render khung ảnh
+                    // FIX LỖI ẢNH: Sử dụng Regex bóc tách ID Drive và chuyển thành Thumbnail API cực nét
                     let renderImgGrid = (str) => {
                         if(!str) return '';
-                        if(str.includes('ảnh') && !str.includes('http')) return `<span style="color:#fbbf24">${str} (Phiên bản cũ không hỗ trợ xem trực tiếp)</span>`;
+                        if(str.includes('ảnh') && !str.includes('http')) return `<span style="color:#fbbf24">${str} (Phiên bản cũ không xem trực tiếp được)</span>`;
                         let links = str.split('|||').filter(l => l.trim() !== '');
                         if(links.length === 0) return '';
-                        return `<div class="rp-grid">` + links.map(l => `<img src="${l}" class="rp-img" onclick="window.openLightbox('${l}'); event.stopPropagation();">`).join('') + `</div>`;
+                        return `<div class="rp-grid">` + links.map(l => {
+                            let match = l.match(/id=([a-zA-Z0-9_-]+)/);
+                            let imgUrl = match ? `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800` : l;
+                            return `<img src="${imgUrl}" class="rp-img" onclick="window.openLightbox('${imgUrl}'); event.stopPropagation();">`;
+                        }).join('') + `</div>`;
                     };
 
                     html += `
                         <div class="rp-card" onclick="document.getElementById('rp-det-${idx}').style.display = document.getElementById('rp-det-${idx}').style.display === 'block' ? 'none' : 'block'">
                             <div class="rp-header-row">
                                 <div><b style="color:#38bdf8;">👤 ${user}</b> <span style="font-size:12px; color:#64748b; margin-left:10px;">${time}</span></div>
-                                <span style="font-size:12px; color:#FFD700;">▼ Xem chi tiết</span>
+                                <span style="font-size:12px; color:#FFD700;">▼ Chi tiết</span>
                             </div>
                             <div class="rp-detail" id="rp-det-${idx}" onclick="event.stopPropagation();">
                                 <div style="margin-bottom:10px;"><b>📄 Phát Tờ Rơi:</b> ${slToRoi} tờ</div>
@@ -402,7 +453,7 @@
                                 <div style="margin:15px 0 10px;"><b>🎥 Livestream:</b> ${linkLive ? `<a href="${linkLive}" target="_blank" class="rp-link">${linkLive}</a>` : 'Không có link'}</div>
                                 ${renderImgGrid(imgLive)}
                                 
-                                <div style="margin-top:15px; text-align:right;"><a href="${rootLink}" target="_blank" style="color:#10b981; font-size:12px; text-decoration:none;">📁 Mở Thư mục Gốc Google Drive ➡</a></div>
+                                <div style="margin-top:15px; text-align:right;"><a href="${rootLink}" target="_blank" style="color:#10b981; font-size:12px; text-decoration:none;">📁 Mở Thư mục Google Drive ➡</a></div>
                             </div>
                         </div>
                     `;
