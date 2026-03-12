@@ -181,7 +181,7 @@
                     <h2 style="color:#38bdf8; margin-bottom:5px;">ĐĂNG NHẬP BÁO CÁO</h2>
                     <p style="color:#94a3b8; font-size:13px; margin-bottom:20px;">Dành cho nhân viên</p>
                     
-                    <input type="text" id="inp-login-manager" class="bc-input" placeholder="User của Quản Lý (Người cấp tk)">
+                    <!-- Đã bỏ ô inp-login-manager -->
                     <input type="text" id="inp-login-user" class="bc-input" placeholder="Tên User của bạn">
                     <input type="password" id="inp-login-pass" class="bc-input" placeholder="Mật khẩu">
                     
@@ -340,19 +340,20 @@
 
             // Xử lý Đăng nhập NV
             $('btn-nv-login').onclick = async () => {
-                let mgr = $('inp-login-manager').value.trim(), u = $('inp-login-user').value.trim(), p = $('inp-login-pass').value.trim();
-                if(!mgr || !u || !p) return alert("Vui lòng nhập đủ thông tin!");
+                let u = $('inp-login-user').value.trim(), p = $('inp-login-pass').value.trim();
+                if(!u || !p) return alert("Vui lòng nhập đủ thông tin!");
                 
                 $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang kiểm tra tài khoản...";
                 try {
                     let res = await universalFetch({
                         method:"POST", url: API_URL_MAIN,
-                        data: JSON.stringify({ action: "login_employee", managerUser: mgr, empUser: u, empPass: p })
+                        // Chỉ gửi lên empUser và empPass
+                        data: JSON.stringify({ action: "login_employee", empUser: u, empPass: p })
                     });
                     let data = JSON.parse(res);
 
                     if(data.status === 'success') {
-                        EMP_SESSION = { user: u, manager: mgr, folderId: data.folderId, sheetId: data.sheetId };
+                        EMP_SESSION = { user: u, folderId: data.folderId, sheetId: data.sheetId };
                         localStorage.setItem('bc_emp_session', JSON.stringify(EMP_SESSION)); // Lưu phiên
                         $('lbl-emp-name').innerText = `👤 ${u}`;
                         switchSc('sc-report');
