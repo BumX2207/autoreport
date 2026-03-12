@@ -191,7 +191,7 @@
                         <div style="display:flex; gap:10px; margin-bottom:15px;">
                             <input type="text" id="inp-nv-user" class="bc-input" style="margin:0;" placeholder="Tên User">
                             <input type="text" id="inp-nv-pass" class="bc-input" style="margin:0;" placeholder="Mật khẩu">
-                            <button class="bc-btn btn-success" id="btn-add-nv" style="width:140px; flex-shrink:0;">+ Thêm</button>
+                            <button class="bc-btn btn-success" id="btn-add-nv" style="width:65px; flex-shrink:0;">+ Thêm</button>
                         </div>
                         <div id="nv-list-container"></div>
                     </div>
