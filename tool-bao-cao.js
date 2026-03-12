@@ -79,7 +79,7 @@
         #bc-app-wrapper * { box-sizing:border-box; }
         
         /* Cấu trúc Khung App (Fix cứng chiều cao) */
-        .bc-screen { display:none; flex-direction:column; width:95%; max-width:800px; height:90vh; max-height:850px; background:rgba(30, 41, 59, 0.7); border-radius:12px; border:1px solid rgba(255,255,255,0.1); overflow:hidden; animation: fadeIn 0.3s ease-out; box-shadow:0 15px 40px rgba(0,0,0,0.5);}
+        .bc-screen { display:none; flex-direction:column; width:95%; max-width:800px; height:85vh; max-height:85vh; background:rgba(30, 41, 59, 0.7); border-radius:12px; border:1px solid rgba(255,255,255,0.1); overflow:hidden; animation: fadeIn 0.3s ease-out; box-shadow:0 15px 40px rgba(0,0,0,0.5);}
         .bc-screen.active { display:flex; }
         
         /* Header & Footer cứng */
@@ -199,7 +199,7 @@
             <!-- SCREEN 1: QUẢN LÝ -->
             <div class="bc-screen" id="sc-manager">
                 <div class="bc-header">
-                    <div class="bc-title">⚙️ CẤU HÌNH</div>
+                    <div class="bc-title">⚙️ QUẢN LÝ</div>
                     <div class="bc-header-right">
                         <span style="color:#94a3b8; font-size:14px; font-weight:600;">👤 ${CURRENT_USER}</span>
                         <button class="bc-close-btn btn-close-app">✕</button>
@@ -241,7 +241,7 @@
                             <div style="display:flex; gap:10px; margin-bottom:15px;">
                                 <input type="text" id="inp-nv-user" class="bc-input" style="margin:0;" placeholder="Tên User">
                                 <input type="text" id="inp-nv-pass" class="bc-input" style="margin:0;" placeholder="Mật khẩu">
-                                <button class="bc-btn btn-success" id="btn-add-nv" style="width:65px; flex-shrink:0;">+ Thêm</button>
+                                <button class="bc-btn btn-success" id="btn-add-nv" style="width:75px; flex-shrink:0;">+ Thêm</button>
                             </div>
                             <div id="nv-list-container"></div>
                         </div>
@@ -283,7 +283,7 @@
                         <label class="bc-label">Số lượng tờ rơi đã phát</label>
                         <input type="number" id="inp-toroi-sl" class="bc-input" placeholder="Nhập số lượng..." min="0">
                         <div class="bc-file-upload">
-                            <label for="file-toroi" class="bc-file-label">📸 Nhấn để chọn ảnh minh chứng</label>
+                            <label for="file-toroi" class="bc-file-label">📸 Nhấn để chọn ảnh</label>
                             <input type="file" id="file-toroi" class="bc-file-input" multiple accept="image/*">
                             <div class="bc-preview-grid" id="prev-toroi"></div>
                         </div>
@@ -441,11 +441,11 @@
                     <div class="stat-dash">
                         <div class="stat-box sb-blue">
                             <div style="font-size:26px; font-weight:bold; color:#38bdf8;">${reportedUsers.length}</div>
-                            <div style="font-size:12px; color:#94a3b8;">Đã nộp (Hôm nay)</div>
+                            <div style="font-size:12px; color:#94a3b8;">Đã báo cáo (Hôm nay)</div>
                         </div>
                         <div class="stat-box sb-red">
                             <div style="font-size:26px; font-weight:bold; color:#ef4444;">${notReportedUsers.length}</div>
-                            <div style="font-size:12px; color:#94a3b8;">Chưa nộp</div>
+                            <div style="font-size:12px; color:#94a3b8;">Chưa báo cáo</div>
                         </div>
                     </div>
                     ${notReportedUsers.length > 0 
