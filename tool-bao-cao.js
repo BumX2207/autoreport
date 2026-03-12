@@ -218,7 +218,7 @@
                             <div style="display:flex; gap:10px; margin-bottom:15px;">
                                 <input type="text" id="inp-nv-user" class="bc-input" style="margin:0;" placeholder="Tên User">
                                 <input type="text" id="inp-nv-pass" class="bc-input" style="margin:0;" placeholder="Mật khẩu">
-                                <button class="bc-btn btn-success" id="btn-add-nv" style="width:140px; flex-shrink:0;">+ Thêm</button>
+                                <button class="bc-btn btn-success" id="btn-add-nv" style="width:65px; flex-shrink:0;">+ Thêm</button>
                             </div>
                             <div id="nv-list-container"></div>
                         </div>
@@ -303,14 +303,11 @@
         // Nút Đóng App
         document.querySelectorAll('.btn-close-app').forEach(btn => btn.onclick = () => app.style.display = 'none');
 
-        // Sự kiện Click Ảnh -> Phóng to (Áp dụng Event Delegation)
-        app.addEventListener('click', (e) => {
-            if(e.target.classList.contains('rp-img')) {
-                $('bc-lb-img').src = e.target.src;
-                $('bc-lightbox').style.display = 'flex';
-                e.stopPropagation();
-            }
-        });
+        // Hàm mở Lightbox toàn cục
+        window.openLightbox = (src) => { 
+            $('bc-lb-img').src = src; 
+            $('bc-lightbox').style.display = 'flex'; 
+        };
         $('bc-lb-close').onclick = () => $('bc-lightbox').style.display = 'none';
 
         // Preview Ảnh Báo cáo
@@ -379,7 +376,7 @@
                 $('bc-loading').style.display = 'none';
             };
 
-            // ---- LOGIC TAB THỐNG KÊ MỚI ----
+            // ---- LOGIC TAB THỐNG KÊ ----
             let STAT_DATA =[];
             const loadStatistics = async () => {
                 try {
@@ -409,7 +406,7 @@
                 let reportedUsers =[];
                 if(!empty) {
                     let todayReports = STAT_DATA.filter(r => r.dateStr === todayStr);
-                    reportedUsers = [...new Set(todayReports.map(r => r.user))]; 
+                    reportedUsers =[...new Set(todayReports.map(r => r.user))]; 
                 }
                 
                 let notReportedUsers = MANAGER_EMPLOYEES.filter(emp => !reportedUsers.includes(String(emp.u).trim())).map(e => e.u);
@@ -461,7 +458,8 @@
                             return `<div class="rp-grid">` + links.map(l => {
                                 let match = l.match(/id=([a-zA-Z0-9_-]+)/);
                                 let imgUrl = match ? `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800` : l;
-                                return `<img src="${imgUrl}" class="rp-img">`; // Class rp-img sẽ đc App bắt sự kiện
+                                // 💡 FIX LỖI: Gắn cứng sự kiện onclick vào hình ảnh và chặn không cho click văng ra ngoài 
+                                return `<img src="${imgUrl}" class="rp-img" onclick="window.openLightbox('${imgUrl}'); event.stopPropagation();">`; 
                             }).join('') + `</div>`;
                         };
 
@@ -533,8 +531,14 @@
                         }
                     };
                     const response = await universalFetch({ method: "POST", url: API_URL_REPORT, data: JSON.stringify(payload), headers: { "Content-Type": "application/x-www-form-urlencoded" }});
+                    
                     if(JSON.parse(response).status === 'success') {
-                        alert("✅ Gửi báo cáo thành công!"); app.style.display = 'none';
+                        alert("✅ Gửi báo cáo thành công!"); 
+                        
+                        // 💡 FIX LỖI 2: RESET TRẮNG FORM SAU KHI GỬI THÀNH CÔNG['inp-toroi-sl', 'inp-dangbai-link', 'inp-live-link', 'file-toroi', 'file-dangbai', 'file-live'].forEach(id => $(id).value = '');
+                        ['prev-toroi', 'prev-dangbai', 'prev-live'].forEach(id => $(id).innerHTML = '');
+
+                        app.style.display = 'none';
                     } else alert("❌ Lỗi Server!");
                 } catch (err) { alert("❌ Lỗi mạng. Không thể gửi lúc này!"); } 
                 finally { $('bc-loading').style.display = 'none'; }
