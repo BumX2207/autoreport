@@ -2,9 +2,6 @@
     const { UI, UTILS, CONSTANTS } = context;
     const GM_xmlhttpRequest = typeof context.GM_xmlhttpRequest !== 'undefined' ? context.GM_xmlhttpRequest : window.GM_xmlhttpRequest;
 
-    // ===============================================================
-    // 0. HÀM FETCH CHUNG (HỖ TRỢ TAMPERMONKEY VÀ NETLIFY)
-    // ===============================================================
     const universalFetch = async (options) => {
         return new Promise((resolve, reject) => {
             if (typeof GM_xmlhttpRequest !== 'undefined') {
@@ -22,21 +19,32 @@
     };
 
     // ===============================================================
-    // 1. CẤU HÌNH LINK API & BIẾN STATE
+    // 1. CẤU HÌNH LINK API & BIẾN STATE (FIX NHẬN DIỆN QUẢN LÝ)
     // ===============================================================
-    // ⚠️ QUAN TRỌNG: THAY 2 LINK CỦA MÀY VÀO ĐÂY
-    const API_URL_MAIN = "https://script.google.com/macros/s/AKfycbxDRSg1JDNTyuYf2TSQovNIWhFk3ls9hPXxtRSMu6xI0oNjql53nJo0G1H5k1b2iq_3/exec";   // Link Script Gốc (Lưu cột J, K, L & Đăng nhập)
-    const API_URL_REPORT = "https://script.google.com/macros/s/AKfycbz7Hv3FHg_XiA4g-ujO8bXkLSohxzB2HJvzsOuKZbkGdr-E33vwRJB4Etl-eCtKh5Xr/exec"; // Link Script Chuyên xử lý tạo Thư mục & Up ảnh
+    const API_URL_MAIN = "LINK_WEB_APP_GOC_CUA_MAY";   
+    const API_URL_REPORT = "LINK_WEB_APP_UPLOAD_ANH"; 
 
-    // Phân biệt Quản lý (MWG) và Nhân viên (Khách)
-    let IS_MWG_USER = (context.AUTH_STATE && context.AUTH_STATE.isAuthorized && context.AUTH_STATE.userName && context.AUTH_STATE.userName !== "---");
-    let CURRENT_USER = IS_MWG_USER ? context.AUTH_STATE.userName : "";
+    // Lấy User đang đăng nhập ở Hệ thống (Bất kể từ hệ thống ERP nội bộ hay web ngoài)
+    let SYSTEM_USER = "---";
+    if (context.AUTH_STATE && context.AUTH_STATE.isAuthorized && context.AUTH_STATE.userName && context.AUTH_STATE.userName !== "---") {
+        SYSTEM_USER = context.AUTH_STATE.userName; // User Nội bộ
+    } else {
+        let savedGuest = localStorage.getItem('tgdd_guest_account');
+        if (savedGuest) {
+            SYSTEM_USER = JSON.parse(savedGuest).user || "---"; // User Tự đăng ký
+        }
+    }
+
+    // 💡 SỬ DỤNG REGEX ĐỂ PHÂN BIỆT QUẢN LÝ DỰA VÀO CÚ PHÁP: "Số - Tên"
+    const managerRegex = /^\d+\s*-\s*.+$/;
+    let IS_MANAGER = managerRegex.test(SYSTEM_USER);
+    let CURRENT_USER = IS_MANAGER ? SYSTEM_USER : "";
     
-    // Phiên đăng nhập của Nhân viên (Lưu cục bộ để khỏi đăng nhập lại nhiều lần)
+    // Phiên đăng nhập riêng của Nhân viên Báo Cáo
     let EMP_SESSION = JSON.parse(localStorage.getItem('bc_emp_session') || "null");
-    
-    let MANAGER_EMPLOYEES =[]; // Danh sách NV (dành cho màn hình QL)
+    let MANAGER_EMPLOYEES =[];
 
+    // ... (Phần 2 và Phần 3 mày giữ nguyên) ...
     // ===============================================================
     // 2. CSS GIAO DIỆN CHUNG
     // ===============================================================
@@ -263,8 +271,7 @@
         // ==========================================
         // ĐIỀU HƯỚNG MÀN HÌNH CHÍNH
         // ==========================================
-        if (IS_MWG_USER) {
-            // ---> LUỒNG QUẢN LÝ (NỘI BỘ MWG)
+        if (IS_MANAGER) {
             switchSc('sc-manager');
             
             // Tải cấu hình từ Script Gốc
