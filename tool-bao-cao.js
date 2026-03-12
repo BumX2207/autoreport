@@ -21,8 +21,8 @@
     // ===============================================================
     // 1. CẤU HÌNH LINK API & BIẾN STATE (FIX NHẬN DIỆN QUẢN LÝ)
     // ===============================================================
-    const API_URL_MAIN = "LINK_WEB_APP_GOC_CUA_MAY";   
-    const API_URL_REPORT = "LINK_WEB_APP_UPLOAD_ANH"; 
+    const API_URL_MAIN = "https://script.google.com/macros/s/AKfycbxDRSg1JDNTyuYf2TSQovNIWhFk3ls9hPXxtRSMu6xI0oNjql53nJo0G1H5k1b2iq_3/exec";   
+    const API_URL_REPORT = "https://script.google.com/macros/s/AKfycbz7Hv3FHg_XiA4g-ujO8bXkLSohxzB2HJvzsOuKZbkGdr-E33vwRJB4Etl-eCtKh5Xr/exec"; 
 
     // Lấy User đang đăng nhập ở Hệ thống (Bất kể từ hệ thống ERP nội bộ hay web ngoài)
     let SYSTEM_USER = "---";
