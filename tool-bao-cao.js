@@ -226,8 +226,9 @@
                         <div class="bc-card">
                             <h3 class="bc-sec-title">2. Danh sách Nhân viên</h3>
                             <div style="display:flex; gap:10px; margin-bottom:15px;">
-                                <input type="text" id="inp-nv-user" class="bc-input" style="margin:0;" placeholder="Tên User">
-                                <input type="text" id="inp-nv-pass" class="bc-input" style="margin:0;" placeholder="Mật khẩu">
+                                <input type="text" id="inp-nv-shop" class="bc-input" style="margin:0; flex:1;" placeholder="Mã Shop">
+                                <input type="text" id="inp-nv-user" class="bc-input" style="margin:0; flex:1;" placeholder="Tên User">
+                                <input type="text" id="inp-nv-pass" class="bc-input" style="margin:0; flex:1;" placeholder="Mật khẩu">
                                 <button class="bc-btn btn-success" id="btn-add-nv" style="width:75px; flex-shrink:0;">+ Thêm</button>
                             </div>
                             <div id="nv-list-container"></div>
@@ -247,6 +248,7 @@
                 <div style="padding: 0 30px 40px; text-align:center;">
                     <h2 style="color:#38bdf8; margin-bottom:5px;">ĐĂNG NHẬP</h2>
                     <p style="color:#94a3b8; font-size:13px; margin-bottom:25px;">Hệ thống Báo cáo Truyền thông</p>
+                    <input type="text" id="inp-login-shop" class="bc-input" placeholder="Mã Shop của bạn">
                     <input type="text" id="inp-login-user" class="bc-input" placeholder="Tên User của bạn">
                     <input type="password" id="inp-login-pass" class="bc-input" placeholder="Mật khẩu">
                     <button class="bc-btn btn-primary" id="btn-nv-login">VÀO BÁO CÁO</button>
@@ -313,9 +315,7 @@
         // Nút Đóng App
         document.querySelectorAll('.btn-close-app').forEach(btn => btn.onclick = () => app.style.display = 'none');
 
-        // ==========================================
-        // XỬ LÝ LIGHTBOX BẰNG EVENT DELEGATION (Fix lỗi click không phản hồi do chặn tập lệnh)
-        // ==========================================
+        // Xử lý Phóng to ảnh (Lightbox)
         app.addEventListener('click', (e) => {
             if (e.target && e.target.classList.contains('rp-img')) {
                 e.stopPropagation();
@@ -365,17 +365,19 @@
             const renderNV = () => {
                 $('nv-list-container').innerHTML = MANAGER_EMPLOYEES.map((nv, idx) => `
                     <div class="employee-row">
-                        <span>👤 ${nv.u} <span style="color:#94a3b8; font-size:12px;">(Pass: ${nv.p})</span></span>
+                        <span>🏬 ${nv.s || 'N/A'} - 👤 ${nv.u} <span style="color:#94a3b8; font-size:12px;">(Pass: ${nv.p})</span></span>
                         <button class="bc-btn btn-danger" style="width:auto; padding:5px 10px;" onclick="document.getElementById('bc-app-wrapper').dispatchEvent(new CustomEvent('delNV', {detail:${idx}}))">Xóa</button>
                     </div>
                 `).join('');
             };
             app.addEventListener('delNV', (e) => { MANAGER_EMPLOYEES.splice(e.detail, 1); renderNV(); });
+            
             $('btn-add-nv').onclick = () => {
-                let u = $('inp-nv-user').value.trim(), p = $('inp-nv-pass').value.trim();
-                if(!u || !p) return alert("Nhập đủ User và Mật khẩu!");
-                if(MANAGER_EMPLOYEES.some(x => x.u === u)) return alert("User này đã tồn tại!");
-                MANAGER_EMPLOYEES.push({u, p}); renderNV(); $('inp-nv-user').value = ''; $('inp-nv-pass').value = '';
+                let s = $('inp-nv-shop').value.trim(), u = $('inp-nv-user').value.trim(), p = $('inp-nv-pass').value.trim();
+                if(!s || !u || !p) return alert("Nhập đủ Mã Shop, User và Mật khẩu!");
+                if(MANAGER_EMPLOYEES.some(x => x.s === s && x.u === u)) return alert("User này đã tồn tại trong Shop!");
+                MANAGER_EMPLOYEES.push({s, u, p}); renderNV(); 
+                $('inp-nv-shop').value = ''; $('inp-nv-user').value = ''; $('inp-nv-pass').value = '';
             };
 
             $('btn-save-config').onclick = async () => {
@@ -427,11 +429,11 @@
                     <div class="stat-dash">
                         <div class="stat-box sb-blue">
                             <div style="font-size:26px; font-weight:bold; color:#38bdf8;">${reportedUsers.length}</div>
-                            <div style="font-size:12px; color:#94a3b8;">Đã báo cáo (Hôm nay)</div>
+                            <div style="font-size:12px; color:#94a3b8;">Đã nộp (Hôm nay)</div>
                         </div>
                         <div class="stat-box sb-red">
                             <div style="font-size:26px; font-weight:bold; color:#ef4444;">${notReportedUsers.length}</div>
-                            <div style="font-size:12px; color:#94a3b8;">Chưa báo cáo</div>
+                            <div style="font-size:12px; color:#94a3b8;">Chưa nộp</div>
                         </div>
                     </div>
                     ${notReportedUsers.length > 0 
@@ -441,7 +443,7 @@
             };
 
             const renderStatFilter = () => {
-                let dates = [...new Set(STAT_DATA.map(r => r.dateStr))]; 
+                let dates =[...new Set(STAT_DATA.map(r => r.dateStr))]; 
                 let opts = `<option value="ALL">Tất cả các ngày</option>`;
                 dates.forEach(d => opts += `<option value="${d}">${d}</option>`);
                 $('stat-date-filter').innerHTML = opts;
@@ -511,14 +513,14 @@
             else { switchSc('sc-login'); }
 
             $('btn-nv-login').onclick = async () => {
-                let u = $('inp-login-user').value.trim(), p = $('inp-login-pass').value.trim();
-                if(!u || !p) return alert("Nhập đủ thông tin!");
+                let s = $('inp-login-shop').value.trim(), u = $('inp-login-user').value.trim(), p = $('inp-login-pass').value.trim();
+                if(!s || !u || !p) return alert("Nhập đủ thông tin!");
                 $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang kiểm tra tài khoản...";
                 try {
-                    let res = await universalFetch({ method:"POST", url: API_URL_MAIN, data: JSON.stringify({ action: "login_employee", empUser: u, empPass: p }) });
+                    let res = await universalFetch({ method:"POST", url: API_URL_MAIN, data: JSON.stringify({ action: "login_employee", empShop: s, empUser: u, empPass: p }) });
                     let data = JSON.parse(res);
                     if(data.status === 'success') {
-                        EMP_SESSION = { user: u, folderId: data.folderId, sheetId: data.sheetId };
+                        EMP_SESSION = { user: u, shop: s, folderId: data.folderId, sheetId: data.sheetId };
                         localStorage.setItem('bc_emp_session', JSON.stringify(EMP_SESSION));
                         $('lbl-emp-name').innerText = `👤 ${u}`; switchSc('sc-report');
                     } else alert("❌ Lỗi: " + data.message);
@@ -533,7 +535,7 @@
                 $('bc-loading').style.display = 'flex';
                 try {
                     $('bc-load-text').innerText = "Đang nén hình ảnh...";
-                    const [imgToRoi, imgDangBai, imgLive] = await Promise.all([ processImages($('file-toroi').files), processImages($('file-dangbai').files), processImages($('file-live').files) ]);
+                    const[imgToRoi, imgDangBai, imgLive] = await Promise.all([ processImages($('file-toroi').files), processImages($('file-dangbai').files), processImages($('file-live').files) ]);
                     
                     $('bc-load-text').innerText = "Đang đẩy dữ liệu lên hệ thống...";
                     const payload = {
