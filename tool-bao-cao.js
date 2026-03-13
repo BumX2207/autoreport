@@ -40,12 +40,10 @@
     let MANAGER_EMPLOYEES =[];
     let MANAGER_SHEET_ID = ""; 
 
-    // Hàm bóc tách ngày tháng an toàn tuyệt đối (Xử lý mọi định dạng Google Sheet trả về)
     const parseDateFromSheet = (rawStr) => {
         if (!rawStr) return { date: "N/A", time: "N/A" };
         let str = String(rawStr).trim();
         
-        // Trường hợp 1: Chuỗi có dạng dd/MM/yyyy HH:mm:ss
         let match = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{1,2})/);
         if (match) {
             let dd = String(match[1]).padStart(2, '0');
@@ -56,7 +54,6 @@
             return { date: `${dd}/${mm}/${yyyy}`, time: `${hh}:${min}` };
         }
         
-        // Trường hợp 2: Định dạng ISO 2026-03-12T15:19:33.000Z
         let d = new Date(str);
         if (!isNaN(d.getTime())) {
             let dd = String(d.getDate()).padStart(2, '0');
@@ -71,22 +68,18 @@
     };
 
     // ===============================================================
-    // 2. CSS GIAO DIỆN CHUẨN APP (CỐ ĐỊNH HEADER/FOOTER)
+    // 2. CSS GIAO DIỆN
     // ===============================================================
     const MY_CSS = `
-        /* Lớp phủ màn hình & Căn giữa App */
         #bc-app-wrapper { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.95); backdrop-filter:blur(10px); z-index:2147483647; font-family: 'Segoe UI', sans-serif; color: #f8fafc; display:flex; justify-content:center; align-items:center; }
         #bc-app-wrapper * { box-sizing:border-box; }
         
-        /* Cấu trúc Khung App (Fix cứng chiều cao) */
-        .bc-screen { display:none; margin-top: -60px; flex-direction:column; width:95%; max-width:800px; height:80vh; max-height:80vh; background:rgba(30, 41, 59, 0.7); border-radius:12px; border:1px solid rgba(255,255,255,0.1); overflow:hidden; animation: fadeIn 0.3s ease-out; box-shadow:0 15px 40px rgba(0,0,0,0.5);}
+        .bc-screen { display:none; flex-direction:column; width:95%; max-width:800px; height:90vh; max-height:850px; background:rgba(30, 41, 59, 0.7); border-radius:12px; border:1px solid rgba(255,255,255,0.1); overflow:hidden; animation: fadeIn 0.3s ease-out; box-shadow:0 15px 40px rgba(0,0,0,0.5);}
         .bc-screen.active { display:flex; }
         
-        /* Header & Footer cứng */
         .bc-header { flex-shrink:0; display:flex; justify-content:space-between; align-items:center; padding:15px 20px; background:rgba(15, 23, 42, 0.8); border-bottom:1px solid rgba(255,255,255,0.1); }
         .bc-footer { flex-shrink:0; padding:15px 20px; background:rgba(15, 23, 42, 0.8); border-top:1px solid rgba(255,255,255,0.1); }
         
-        /* Body Cuộn */
         .bc-screen-body { flex:1; overflow-y:auto; padding:20px; }
         .bc-screen-body::-webkit-scrollbar { width: 6px; }
         .bc-screen-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
@@ -116,20 +109,16 @@
         .bc-preview-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
         .bc-preview-item { width: 60px; height: 60px; border-radius: 6px; object-fit: cover; border: 1px solid rgba(255,255,255,0.2); }
 
-        /* TABS CHO QUẢN LÝ */
         .bc-tabs { display: flex; gap: 10px; padding:10px 20px; background: rgba(15, 23, 42, 0.5); flex-shrink:0; border-bottom:1px solid rgba(255,255,255,0.05);}
         .bc-tab-btn { flex: 1; padding: 10px; border-radius: 6px; border: none; background: rgba(0,0,0,0.2); color: #94a3b8; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .bc-tab-btn.active { background: #38bdf8; color: #0f172a; }
         .bc-tab-content { display: none; flex-direction:column; flex:1; overflow:hidden;}
         .bc-tab-content.active { display: flex; animation: fadeIn 0.3s; }
 
-        /* UI THỐNG KÊ */
         .stat-dash { display:flex; gap:10px; margin-bottom:15px; }
         .stat-box { flex:1; padding:15px; border-radius:8px; text-align:center; border: 1px solid transparent;}
         .sb-blue { background:rgba(56, 189, 248, 0.1); border-color:#38bdf8; }
         .sb-red { background:rgba(239, 68, 68, 0.1); border-color:#ef4444; }
-        
-        /* Group khối ngày báo cáo */
         .date-group-wrapper { background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; margin-bottom: 25px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .date-group-title { background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 12px 20px; font-weight: bold; font-size: 15px; border-bottom: 1px solid rgba(56, 189, 248, 0.2); display: flex; align-items: center; gap: 10px; }
         .date-group-content { padding: 15px; }
@@ -140,12 +129,13 @@
         .rp-header-row { display:flex; justify-content:space-between; align-items:center;}
         .rp-detail { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.2); font-size:13px; color:#cbd5e1;}
         .rp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 10px; margin-top: 10px; }
-        .rp-img { width: 100%; height: 70px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: 0.2s; }
+        
+        /* Chỉnh lại cursor để dễ nhận biết */
+        .rp-img { width: 100%; height: 70px; object-fit: cover; border-radius: 6px; cursor: zoom-in; border: 1px solid rgba(255,255,255,0.2); transition: 0.2s; }
         .rp-img:hover { transform: scale(1.05); border-color:#FFD700; z-index:2;}
         .rp-link { color:#38bdf8; text-decoration:none; word-break: break-all;}
         .rp-link:hover { text-decoration:underline;}
 
-        /* LIGHTBOX XEM ẢNH */
         #bc-lightbox { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 2147483648; justify-content: center; align-items: center; flex-direction: column; }
         #bc-lb-img { max-width: 95vw; max-height: 85vh; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); object-fit:contain;}
         #bc-lb-close { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); border: none; color: white; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 20px; transition:0.2s;}
@@ -211,22 +201,20 @@
                     <button class="bc-tab-btn" id="tab-btn-config">⚙️ Cài Đặt</button>
                 </div>
 
-                <!-- TAB THỐNG KÊ (Body cuộn) -->
+                <!-- TAB THỐNG KÊ -->
                 <div class="bc-tab-content active" id="tab-stat">
-                    <!-- Khu vực Filter cố định -->
                     <div style="flex-shrink:0; padding:15px 20px 0;">
                         <div id="stat-summary-container"></div>
                         <div class="bc-card" style="margin-bottom:0; padding:10px 15px;">
                             <select id="stat-date-filter" class="bc-input" style="margin:0; cursor:pointer;"></select>
                         </div>
                     </div>
-                    <!-- Khu vực List cuộn -->
                     <div class="bc-screen-body" id="stat-list-container">
                         <div style="text-align:center; color:#94a3b8; padding:20px;">Đang tải dữ liệu...</div>
                     </div>
                 </div>
                 
-                <!-- TAB CÀI ĐẶT (Body cuộn + Footer fixed) -->
+                <!-- TAB CÀI ĐẶT -->
                 <div class="bc-tab-content" id="tab-config">
                     <div class="bc-screen-body">
                         <div class="bc-card">
@@ -266,7 +254,7 @@
                 </div>
             </div>
 
-            <!-- SCREEN 3: FORM BÁO CÁO (Body cuộn + Footer fixed) -->
+            <!-- SCREEN 3: FORM BÁO CÁO -->
             <div class="bc-screen" id="sc-report">
                 <div class="bc-header">
                     <div class="bc-title">📊 BÁO CÁO</div>
@@ -283,7 +271,7 @@
                         <label class="bc-label">Số lượng tờ rơi đã phát</label>
                         <input type="number" id="inp-toroi-sl" class="bc-input" placeholder="Nhập số lượng..." min="0">
                         <div class="bc-file-upload">
-                            <label for="file-toroi" class="bc-file-label">📸 Nhấn để chọn ảnh</label>
+                            <label for="file-toroi" class="bc-file-label">📸 Nhấn để chọn ảnh phát tờ rơi</label>
                             <input type="file" id="file-toroi" class="bc-file-input" multiple accept="image/*">
                             <div class="bc-preview-grid" id="prev-toroi"></div>
                         </div>
@@ -326,14 +314,13 @@
         // Nút Đóng App
         document.querySelectorAll('.btn-close-app').forEach(btn => btn.onclick = () => app.style.display = 'none');
 
-        // Hàm mở Lightbox toàn cục
-        app.addEventListener('click', (e) => {
-            if(e.target.classList.contains('rp-img')) {
-                $('bc-lb-img').src = e.target.src;
-                $('bc-lightbox').style.display = 'flex';
-                e.stopPropagation();
-            }
-        });
+        // ==========================================
+        // SỬA LỖI LIGHTBOX (Gắn thẳng lên thẻ img thông qua window object)
+        // ==========================================
+        window.openBcLightbox = (src) => { 
+            $('bc-lb-img').src = src; 
+            $('bc-lightbox').style.display = 'flex'; 
+        };
         $('bc-lb-close').onclick = () => $('bc-lightbox').style.display = 'none';
 
         // Preview Ảnh Báo cáo
@@ -351,11 +338,9 @@
         if (IS_MANAGER) {
             switchSc('sc-manager');
             
-            // Logic Tabs
             $('tab-btn-stat').onclick = () => { $('tab-btn-stat').classList.add('active'); $('tab-btn-config').classList.remove('active'); $('tab-stat').classList.add('active'); $('tab-config').classList.remove('active'); };
             $('tab-btn-config').onclick = () => { $('tab-btn-config').classList.add('active'); $('tab-btn-stat').classList.remove('active'); $('tab-config').classList.add('active'); $('tab-stat').classList.remove('active'); };
 
-            // Tải cấu hình
             const loadConfig = async () => {
                 $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang tải dữ liệu...";
                 try {
@@ -402,7 +387,6 @@
                 $('bc-loading').style.display = 'none';
             };
 
-            // ---- LOGIC TAB THỐNG KÊ ----
             let STAT_DATA =[];
             const loadStatistics = async () => {
                 try {
@@ -413,7 +397,7 @@
                             let parsed = parseDateFromSheet(r[0]);
                             return { dateStr: parsed.date, timeStr: parsed.time, user: String(r[1] || "").trim(), slToRoi: r[2], linkDB: r[3], linkLive: r[4], imgToRoi: r[5], imgDB: r[6], imgLive: r[7], rootLink: r[8] };
                         });
-                        STAT_DATA.reverse(); // Đẩy báo cáo mới nhất lên đầu
+                        STAT_DATA.reverse(); 
                         renderStatSummary();
                         renderStatFilter();
                         renderStatList("ALL");
@@ -441,11 +425,11 @@
                     <div class="stat-dash">
                         <div class="stat-box sb-blue">
                             <div style="font-size:26px; font-weight:bold; color:#38bdf8;">${reportedUsers.length}</div>
-                            <div style="font-size:12px; color:#94a3b8;">Đã báo cáo (Hôm nay)</div>
+                            <div style="font-size:12px; color:#94a3b8;">Đã nộp (Hôm nay)</div>
                         </div>
                         <div class="stat-box sb-red">
                             <div style="font-size:26px; font-weight:bold; color:#ef4444;">${notReportedUsers.length}</div>
-                            <div style="font-size:12px; color:#94a3b8;">Chưa báo cáo</div>
+                            <div style="font-size:12px; color:#94a3b8;">Chưa nộp</div>
                         </div>
                     </div>
                     ${notReportedUsers.length > 0 
@@ -486,7 +470,8 @@
                             return `<div class="rp-grid">` + links.map(l => {
                                 let match = l.match(/id=([a-zA-Z0-9_-]+)/);
                                 let imgUrl = match ? `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800` : l;
-                                return `<img src="${imgUrl}" class="rp-img">`; 
+                                // 💡 FIX LỖI: Gọi trực tiếp hàm window.openBcLightbox và stopPropagation ngay tại thẻ img
+                                return `<img src="${imgUrl}" class="rp-img" onclick="window.openBcLightbox('${imgUrl}'); event.stopPropagation();">`; 
                             }).join('') + `</div>`;
                         };
 
@@ -512,7 +497,7 @@
                             </div>
                         `;
                     });
-                    html += `</div></div>`; // Đóng date-group-content và date-group-wrapper
+                    html += `</div></div>`; 
                 }
                 $('stat-list-container').innerHTML = html;
             };
@@ -563,7 +548,6 @@
                     if(JSON.parse(response).status === 'success') {
                         alert("✅ Gửi báo cáo thành công!"); 
                         
-                        // FIX LỖI: Reset sạch form an toàn
                         let textInputs =['inp-toroi-sl', 'inp-dangbai-link', 'inp-live-link', 'file-toroi', 'file-dangbai', 'file-live'];
                         textInputs.forEach(id => { if($(id)) $(id).value = ''; });
                         let prevBoxes =['prev-toroi', 'prev-dangbai', 'prev-live'];
@@ -577,5 +561,5 @@
         }
     };
 
-    return { name: "Báo Cáo", icon: `<svg viewBox="0 0 24 24"><path fill="white" d="M3 3v18h18V3H3zm16 16H5V5h14v14zM7 10h2v7H7v-7zm4-3h2v10h-2V7zm4 6h2v4h-2v-4z"/></svg>`, bgColor: "#0284c7", action: runTool };
+    return { name: "Báo Cáo TT", icon: `<svg viewBox="0 0 24 24"><path fill="white" d="M3 3v18h18V3H3zm16 16H5V5h14v14zM7 10h2v7H7v-7zm4-3h2v10h-2V7zm4 6h2v4h-2v-4z"/></svg>`, bgColor: "#0284c7", action: runTool };
 })
