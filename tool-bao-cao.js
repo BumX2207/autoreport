@@ -207,9 +207,8 @@
                         <div class="bc-card" style="margin-bottom:15px; padding:10px 15px;">
                             <select id="stat-date-filter" class="bc-input" style="margin:0; cursor:pointer;"></select>
                         </div>
-                        <div id="stat-list-container">
-                            <div style="text-align:center; color:#94a3b8; padding:20px;">Đang tải dữ liệu...</div>
-                        </div>
+                        <!-- Bỏ chữ "Đang tải dữ liệu..." ở nền để gọn gàng -->
+                        <div id="stat-list-container"></div>
                     </div>
                 </div>
                 
@@ -354,10 +353,18 @@
                         $('inp-sheet-id').value = MANAGER_SHEET_ID;
                         MANAGER_EMPLOYEES = data.employees && data.employees !== "[]" ? JSON.parse(data.employees) :[];
                         renderNV();
-                        if(MANAGER_SHEET_ID) loadStatistics(); 
-                        else $('stat-list-container').innerHTML = `<div style="text-align:center; color:#fbbf24; padding:20px;">Vui lòng cài đặt ID Sheet ở tab Cài Đặt trước!</div>`;
+                        if(MANAGER_SHEET_ID) {
+                            // Chờ tải số liệu thống kê xong hoàn toàn
+                            await loadStatistics(); 
+                        } else {
+                            $('stat-list-container').innerHTML = `<div style="text-align:center; color:#fbbf24; padding:20px;">Vui lòng cài đặt ID Sheet ở tab Cài Đặt trước!</div>`;
+                        }
                     }
-                } catch(e) { console.log(e); $('stat-list-container').innerHTML = `<div style="color:#ef4444; text-align:center;">Lỗi mạng! Không tải được cấu hình.</div>`; }
+                } catch(e) { 
+                    console.log(e); 
+                    $('stat-list-container').innerHTML = `<div style="color:#ef4444; text-align:center;">Lỗi mạng! Không tải được cấu hình.</div>`; 
+                }
+                // CHỈ ẨN OVERLAY KHI MỌI THỨ ĐÃ TẢI XONG
                 $('bc-loading').style.display = 'none';
             };
             loadConfig();
@@ -386,7 +393,7 @@
                 $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang lưu cấu hình...";
                 try {
                     let res = await universalFetch({ method:"POST", url: API_URL_MAIN, data: JSON.stringify({ action: "save_config_manager", user: CURRENT_USER, folderId: fId, sheetId: sId, employees: JSON.stringify(MANAGER_EMPLOYEES) }) });
-                    if(JSON.parse(res).status === 'success') { alert("✅ Đã lưu cấu hình!"); MANAGER_SHEET_ID = sId; loadStatistics(); }
+                    if(JSON.parse(res).status === 'success') { alert("✅ Đã lưu cấu hình!"); MANAGER_SHEET_ID = sId; await loadStatistics(); }
                 } catch(e) { alert("❌ Lỗi mạng!"); }
                 $('bc-loading').style.display = 'none';
             };
@@ -419,7 +426,7 @@
                 let reportedUsers =[];
                 if(!empty) {
                     let todayReports = STAT_DATA.filter(r => r.dateStr === todayStr);
-                    reportedUsers = [...new Set(todayReports.map(r => r.user))]; 
+                    reportedUsers =[...new Set(todayReports.map(r => r.user))]; 
                 }
                 
                 let notReportedUsers = MANAGER_EMPLOYEES.filter(emp => !reportedUsers.includes(String(emp.u).trim())).map(e => e.u);
@@ -429,11 +436,11 @@
                     <div class="stat-dash">
                         <div class="stat-box sb-blue">
                             <div style="font-size:26px; font-weight:bold; color:#38bdf8;">${reportedUsers.length}</div>
-                            <div style="font-size:12px; color:#94a3b8;">Đã báo cáo (Hôm nay)</div>
+                            <div style="font-size:12px; color:#94a3b8;">Đã nộp (Hôm nay)</div>
                         </div>
                         <div class="stat-box sb-red">
                             <div style="font-size:26px; font-weight:bold; color:#ef4444;">${notReportedUsers.length}</div>
-                            <div style="font-size:12px; color:#94a3b8;">Chưa báo cáo</div>
+                            <div style="font-size:12px; color:#94a3b8;">Chưa nộp</div>
                         </div>
                     </div>
                     ${notReportedUsers.length > 0 
@@ -481,7 +488,7 @@
                     let allLinksLive =[];
                     let allImgToRoi = [];
                     let allImgDB =[];
-                    let allImgLive = [];
+                    let allImgLive =[];
                     
                     grouped[date].forEach(row => {
                         totalToRoi += parseInt(row.slToRoi) || 0;
