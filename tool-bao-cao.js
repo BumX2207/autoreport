@@ -41,7 +41,7 @@
     let MANAGER_SHEET_ID = ""; 
 
     const parseDateFromSheet = (rawStr) => {
-        if (!rawStr) return { date: "N/A", time: "N/A" };
+        if (!rawStr) return { date: "N/A", time: "N/A", month: "N/A" };
         let str = String(rawStr).trim();
         
         let match = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{1,2})/);
@@ -51,7 +51,7 @@
             let yyyy = match[3];
             let hh = String(match[4]).padStart(2, '0');
             let min = String(match[5]).padStart(2, '0');
-            return { date: `${dd}/${mm}/${yyyy}`, time: `${hh}:${min}` };
+            return { date: `${dd}/${mm}/${yyyy}`, month: `${mm}/${yyyy}`, time: `${hh}:${min}` };
         }
         
         let d = new Date(str);
@@ -61,14 +61,14 @@
             let yyyy = d.getFullYear();
             let hh = String(d.getHours()).padStart(2, '0');
             let min = String(d.getMinutes()).padStart(2, '0');
-            return { date: `${dd}/${mm}/${yyyy}`, time: `${hh}:${min}` };
+            return { date: `${dd}/${mm}/${yyyy}`, month: `${mm}/${yyyy}`, time: `${hh}:${min}` };
         }
         
-        return { date: "N/A", time: "N/A" };
+        return { date: "N/A", time: "N/A", month: "N/A" };
     };
 
     // ===============================================================
-    // 2. CSS GIAO DIỆN
+    // 2. CSS GIAO DIỆN NÂNG CẤP
     // ===============================================================
     const MY_CSS = `
         #bc-app-wrapper { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.95); backdrop-filter:blur(10px); z-index:2147483647; font-family: 'Segoe UI', sans-serif; color: #f8fafc; display:flex; justify-content:center; align-items:flex-start; padding-top:20px; }
@@ -119,6 +119,7 @@
         .stat-box { flex:1; padding:15px; border-radius:8px; text-align:center; border: 1px solid transparent;}
         .sb-blue { background:rgba(56, 189, 248, 0.1); border-color:#38bdf8; }
         .sb-red { background:rgba(239, 68, 68, 0.1); border-color:#ef4444; }
+        
         .date-group-wrapper { background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; margin-bottom: 25px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .date-group-title { background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 12px 20px; font-weight: bold; font-size: 15px; border-bottom: 1px solid rgba(56, 189, 248, 0.2); display: flex; align-items: center; gap: 10px; }
         .date-group-content { padding: 15px; }
@@ -128,12 +129,28 @@
         .rp-card:last-child { margin-bottom: 0; }
         .rp-header-row { display:flex; justify-content:space-between; align-items:center; cursor: pointer; }
         .rp-detail { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.2); font-size:13px; color:#cbd5e1;}
+        
+        /* Cải tiến hiển thị hình ảnh - Cuộn ngang cho Summary */
         .rp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 10px; margin-top: 10px; }
+        .rp-grid.scroll-x { display: flex; overflow-x: auto; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: #38bdf8 rgba(255,255,255,0.1); }
+        .rp-grid.scroll-x::-webkit-scrollbar { height: 6px; }
+        .rp-grid.scroll-x::-webkit-scrollbar-thumb { background: #38bdf8; border-radius: 10px; }
         
         .rp-img { width: 100%; height: 70px; object-fit: cover; border-radius: 6px; cursor: zoom-in; border: 1px solid rgba(255,255,255,0.2); transition: 0.2s; }
+        .rp-grid.scroll-x .rp-img { width: 80px; flex-shrink:0; height: 80px; }
         .rp-img:hover { transform: scale(1.05); border-color:#FFD700; z-index:2;}
+        
         .rp-link { color:#38bdf8; text-decoration:none; word-break: break-all;}
         .rp-link:hover { text-decoration:underline;}
+        .link-list { margin-top:5px; margin-left: 15px; font-size:12px; }
+        .link-list li { margin-bottom: 5px; }
+
+        /* Bảng vàng thành tích */
+        .leaderboard { display: flex; gap: 10px; margin-bottom: 25px; }
+        .lb-card { flex: 1; background: linear-gradient(180deg, rgba(255,215,0,0.15) 0%, rgba(0,0,0,0.2) 100%); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 15px; text-align: center; }
+        .lb-title { font-size: 11px; text-transform: uppercase; color: #FFD700; font-weight: bold; margin-bottom: 5px; }
+        .lb-name { font-size: 15px; font-weight: bold; color: #fff; margin-bottom: 5px; }
+        .lb-score { font-size: 13px; color: #38bdf8; font-weight: bold; }
 
         #bc-lightbox { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 2147483648; justify-content: center; align-items: center; flex-direction: column; }
         #bc-lb-img { max-width: 95vw; max-height: 85vh; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); object-fit:contain;}
@@ -146,6 +163,13 @@
         
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Khung filter 3 lựa chọn */
+        .filter-row { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+        .filter-row select { flex: 1; min-width: 100px; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; color: #fff; cursor: pointer; outline: none; }
+        .filter-row select:focus { border-color: #38bdf8; }
+        .filter-row button { flex-shrink: 0; padding: 10px 15px; border-radius: 8px; background: #0284c7; border: none; color: white; font-size: 16px; cursor: pointer; }
+        .filter-row button:hover { background: #0369a1; }
     `;
 
     const processImages = async (files) => {
@@ -179,7 +203,6 @@
         app.innerHTML = `
             <div id="bc-loading"><div class="spinner"></div><h3 id="bc-load-text">Đang tải dữ liệu...</h3></div>
             
-            <!-- LIGHTBOX -->
             <div id="bc-lightbox">
                 <button id="bc-lb-close">✕</button>
                 <img id="bc-lb-img" src="">
@@ -188,7 +211,7 @@
             <!-- SCREEN 1: QUẢN LÝ -->
             <div class="bc-screen" id="sc-manager">
                 <div class="bc-header">
-                    <div class="bc-title">⚙️ QUẢN LÝ</div>
+                    <div class="bc-title">⚙️ QUẢN LÝ DASHBOARD</div>
                     <div class="bc-header-right">
                         <span style="color:#94a3b8; font-size:14px; font-weight:600;">👤 ${CURRENT_USER}</span>
                         <button class="bc-close-btn btn-close-app">✕</button>
@@ -202,14 +225,20 @@
 
                 <!-- TAB THỐNG KÊ -->
                 <div class="bc-tab-content active" id="tab-stat">
-                    <div class="bc-screen-body">
+                    <div class="bc-screen-body" style="padding-top: 10px;">
+                        
+                        <!-- CHỈ BÁO TRẠNG THÁI HÔM NAY (Mặc định luôn hiện) -->
                         <div id="stat-summary-container"></div>
                         
-                        <div class="bc-card" style="margin-bottom:15px; padding:10px 15px; display:flex; gap:10px; align-items:center;">
-                            <select id="stat-date-filter" class="bc-input" style="margin:0; cursor:pointer; flex:1;"></select>
-                            <button id="btn-refresh-stat" class="bc-btn btn-primary" style="margin:0; width:auto; padding:10px 15px; display:flex; align-items:center; justify-content:center; font-size:16px;" title="Làm mới dữ liệu">🔄</button>
+                        <!-- BỘ LỌC 3 TIÊU CHÍ -->
+                        <div class="filter-row">
+                            <select id="stat-month-filter" title="Chọn Tháng"></select>
+                            <select id="stat-date-filter" title="Chọn Ngày"></select>
+                            <select id="stat-emp-filter" title="Chọn Nhân viên"></select>
+                            <button id="btn-refresh-stat" title="Làm mới dữ liệu">🔄</button>
                         </div>
 
+                        <!-- VÙNG HIỂN THỊ DỮ LIỆU ĐỘNG -->
                         <div id="stat-list-container"></div>
                     </div>
                 </div>
@@ -272,7 +301,6 @@
                     <button class="bc-tab-btn" id="tab-btn-emp-history">🕒 Lịch Sử Hôm Nay</button>
                 </div>
 
-                <!-- TAB NHẬP BÁO CÁO -->
                 <div class="bc-tab-content active" id="tab-emp-form">
                     <div class="bc-screen-body">
                         <div class="bc-card">
@@ -313,7 +341,6 @@
                     </div>
                 </div>
 
-                <!-- TAB LỊCH SỬ BÁO CÁO CỦA NHÂN VIÊN -->
                 <div class="bc-tab-content" id="tab-emp-history">
                     <div class="bc-screen-body">
                         <div style="text-align:right; margin-bottom: 15px;">
@@ -330,10 +357,8 @@
         const $ = (id) => document.getElementById(id);
         const switchSc = (id) => { document.querySelectorAll('.bc-screen').forEach(s => s.classList.remove('active')); $(id).classList.add('active'); };
 
-        // Nút Đóng App
         document.querySelectorAll('.btn-close-app').forEach(btn => btn.onclick = () => app.style.display = 'none');
 
-        // Xử lý Phóng to ảnh (Lightbox)
         app.addEventListener('click', (e) => {
             if (e.target && e.target.classList.contains('rp-img')) {
                 e.stopPropagation();
@@ -343,7 +368,6 @@
         });
         $('bc-lb-close').onclick = () => $('bc-lightbox').style.display = 'none';
 
-        // Preview Ảnh Báo cáo
         const handlePreview = (inputId, previewId) => {
             $(inputId).addEventListener('change', (e) => {
                 const con = $(previewId); con.innerHTML = '';
@@ -378,18 +402,14 @@
                             $('stat-list-container').innerHTML = `<div style="text-align:center; color:#fbbf24; padding:20px;">Vui lòng cài đặt ID Sheet ở tab Cài Đặt trước!</div>`;
                         }
                     }
-                } catch(e) { 
-                    $('stat-list-container').innerHTML = `<div style="color:#ef4444; text-align:center;">Lỗi mạng! Không tải được cấu hình.</div>`; 
-                }
+                } catch(e) { $('stat-list-container').innerHTML = `<div style="color:#ef4444; text-align:center;">Lỗi mạng! Không tải được cấu hình.</div>`; }
                 $('bc-loading').style.display = 'none';
             };
             loadConfig();
 
-            // SỰ KIỆN NÚT LÀM MỚI (REFRESH) QUẢN LÝ
             $('btn-refresh-stat').onclick = async () => {
                 if(!MANAGER_SHEET_ID) return alert("Vui lòng cài đặt ID Sheet trước!");
-                $('bc-loading').style.display = 'flex'; 
-                $('bc-load-text').innerText = "Đang làm mới dữ liệu...";
+                $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang làm mới dữ liệu...";
                 await loadStatistics();
                 $('bc-loading').style.display = 'none';
             };
@@ -431,22 +451,26 @@
                     if(json.status === 'success' && Array.isArray(json.data) && json.data.length > 1) {
                         STAT_DATA = json.data.slice(1).map(r => {
                             let parsed = parseDateFromSheet(r[0]);
-                            return { dateStr: parsed.date, timeStr: parsed.time, user: String(r[1] || "").trim(), slToRoi: r[2], linkDB: r[3], linkLive: r[4], imgToRoi: r[5], imgDB: r[6], imgLive: r[7], rootLink: r[8] };
+                            return { dateStr: parsed.date, monthStr: parsed.month, timeStr: parsed.time, user: String(r[1] || "").trim(), slToRoi: r[2], linkDB: r[3], linkLive: r[4], imgToRoi: r[5], imgDB: r[6], imgLive: r[7], rootLink: r[8] };
                         });
                         STAT_DATA.reverse(); 
-                        renderStatSummary();
-                        renderStatFilter();
                         
-                        let currentFilter = $('stat-date-filter').value || "ALL";
-                        renderStatList(currentFilter);
+                        // Luôn render Tình hình Hôm nay ở trên cùng
+                        renderTodaySummary();
+                        
+                        // Cập nhật bộ lọc 3 lớp
+                        updateFilters();
+                        
+                        // Render data theo bộ lọc hiện tại
+                        triggerRender();
                     } else {
-                        renderStatSummary(true);
+                        renderTodaySummary(true);
                         $('stat-list-container').innerHTML = `<div style="text-align:center; color:#94a3b8; padding:20px;">Chưa có báo cáo nào.</div>`;
                     }
                 } catch(e) { $('stat-list-container').innerHTML = `<div style="color:#ef4444; text-align:center; padding:20px;">Lỗi tải thống kê! File Sheet cấu hình bị sai hoặc chưa được cấp quyền truy cập.</div>`; }
             };
 
-            const renderStatSummary = (empty = false) => {
+            const renderTodaySummary = (empty = false) => {
                 let d = new Date();
                 let todayStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth()+1).padStart(2, '0')}/${d.getFullYear()}`;
                 
@@ -457,8 +481,7 @@
                 }
                 
                 let notReportedUsers = MANAGER_EMPLOYEES.filter(emp => !reportedUsers.includes(String(emp.u).trim())).map(e => e.u);
-                let totalEmps = MANAGER_EMPLOYEES.length;
-
+                
                 $('stat-summary-container').innerHTML = `
                     <div class="stat-dash">
                         <div class="stat-box sb-blue">
@@ -470,101 +493,203 @@
                             <div style="font-size:12px; color:#94a3b8;">Chưa nộp</div>
                         </div>
                     </div>
-                    ${notReportedUsers.length > 0 
-                        ? `<div style="font-size:12px; color:#ef4444; margin-bottom:15px; padding:10px; background:rgba(239, 68, 68, 0.1); border-radius:6px;"><b>⏳ Chưa báo cáo:</b> ${notReportedUsers.join(', ')}</div>` 
-                        : (totalEmps > 0 ? `<div style="font-size:12px; color:#10b981; margin-bottom:15px; padding:10px; background:rgba(16, 185, 129, 0.1); border-radius:6px;">✅ Tất cả nhân viên đã nộp báo cáo hôm nay!</div>` : '')}
                 `;
             };
 
-            const renderStatFilter = () => {
-                let dates =[...new Set(STAT_DATA.map(r => r.dateStr))]; 
-                let currentVal = $('stat-date-filter').value;
+            const updateFilters = () => {
+                let months =[...new Set(STAT_DATA.map(r => r.monthStr))];
+                let emps = MANAGER_EMPLOYEES.map(e => e.u);
                 
-                let opts = `<option value="ALL">Tất cả các ngày</option>`;
-                dates.forEach(d => opts += `<option value="${d}">${d}</option>`);
-                $('stat-date-filter').innerHTML = opts;
+                let curMonth = $('stat-month-filter').value;
+                let curDate = $('stat-date-filter').value;
+                let curEmp = $('stat-emp-filter').value;
+
+                // Render Month Filter
+                let htmlMonth = `<option value="ALL">Tất cả Tháng</option>`;
+                months.forEach(m => htmlMonth += `<option value="${m}">${m}</option>`);
+                $('stat-month-filter').innerHTML = htmlMonth;
+                if(curMonth && months.includes(curMonth)) $('stat-month-filter').value = curMonth;
+
+                // Render Emp Filter
+                let htmlEmp = `<option value="ALL">Tất cả Nhân Viên</option>`;
+                emps.forEach(e => htmlEmp += `<option value="${e}">${e}</option>`);
+                $('stat-emp-filter').innerHTML = htmlEmp;
+                if(curEmp && emps.includes(curEmp)) $('stat-emp-filter').value = curEmp;
                 
-                if(currentVal && dates.includes(currentVal)) $('stat-date-filter').value = currentVal;
+                updateDateDropdown(); // Cập nhật Date theo Month
+                if(curDate) $('stat-date-filter').value = curDate;
             };
 
-            $('stat-date-filter').onchange = (e) => renderStatList(e.target.value);
+            const updateDateDropdown = () => {
+                let selectedMonth = $('stat-month-filter').value;
+                let dates =[];
+                if(selectedMonth === "ALL") {
+                    dates =[...new Set(STAT_DATA.map(r => r.dateStr))];
+                } else {
+                    dates =[...new Set(STAT_DATA.filter(r => r.monthStr === selectedMonth).map(r => r.dateStr))];
+                }
+                let htmlDate = `<option value="ALL">Tất cả Ngày</option>`;
+                dates.forEach(d => htmlDate += `<option value="${d}">${d}</option>`);
+                $('stat-date-filter').innerHTML = htmlDate;
+            };
 
-            const renderStatList = (dateFilter) => {
-                let filtered = dateFilter === "ALL" ? STAT_DATA : STAT_DATA.filter(r => r.dateStr === dateFilter);
-                if(filtered.length === 0) { $('stat-list-container').innerHTML = `<div style="text-align:center; padding:20px;">Không có dữ liệu.</div>`; return; }
+            // Gắn sự kiện thay đổi
+            $('stat-month-filter').onchange = () => { updateDateDropdown(); triggerRender(); };
+            $('stat-date-filter').onchange = () => triggerRender();
+            $('stat-emp-filter').onchange = () => triggerRender();
+
+            const triggerRender = () => {
+                let m = $('stat-month-filter').value;
+                let d = $('stat-date-filter').value;
+                let e = $('stat-emp-filter').value;
                 
-                let grouped = {};
-                filtered.forEach(item => { if(!grouped[item.dateStr]) grouped[item.dateStr] = []; grouped[item.dateStr].push(item); });
+                let filtered = STAT_DATA;
+                if(m !== "ALL") filtered = filtered.filter(x => x.monthStr === m);
+                if(d !== "ALL") filtered = filtered.filter(x => x.dateStr === d);
+                if(e !== "ALL") filtered = filtered.filter(x => x.user === e);
 
-                let html = '';
-                
-                const renderImgGrid = (str) => {
-                    if(!str) return '';
-                    if(str.includes('ảnh') && !str.includes('http')) return `<span style="color:#fbbf24; font-size:12px;">${str} (Cũ)</span>`;
-                    let links = str.split('|||').filter(l => l.trim() !== '');
-                    if(links.length === 0) return '';
-                    return `<div class="rp-grid">` + links.map(l => {
-                        let match = l.match(/id=([a-zA-Z0-9_-]+)/);
-                        let imgUrl = match ? `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800` : l;
-                        return `<img src="${imgUrl}" class="rp-img">`; 
-                    }).join('') + `</div>`;
-                };
+                renderStatList(filtered, e, m, d);
+            };
 
-                for(let date in grouped) {
-                    let totalToRoi = 0;
-                    let allLinksDB = [];
-                    let allLinksLive =[];
-                    let allImgToRoi =[];
-                    let allImgDB =[];
-                    let allImgLive =[];
+            // Hàm render Grid hình ảnh (Có hỗ trợ cuộn ngang nếu true)
+            const renderImgGrid = (str, horizontal = false) => {
+                if(!str) return '';
+                if(str.includes('ảnh') && !str.includes('http')) return `<span style="color:#fbbf24; font-size:12px;">${str} (Cũ)</span>`;
+                let links = str.split('|||').filter(l => l.trim() !== '');
+                if(links.length === 0) return '';
+                let className = horizontal ? "rp-grid scroll-x" : "rp-grid";
+                return `<div class="${className}">` + links.map(l => {
+                    let match = l.match(/id=([a-zA-Z0-9_-]+)/);
+                    let imgUrl = match ? `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800` : l;
+                    return `<img src="${imgUrl}" class="rp-img">`; 
+                }).join('') + `</div>`;
+            };
+
+            const renderStatList = (filteredData, selectedEmp, selectedMonth, selectedDate) => {
+                if(filteredData.length === 0) { 
+                    $('stat-list-container').innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">Không có dữ liệu phù hợp với bộ lọc.</div>`; 
+                    return; 
+                }
+
+                let finalHtml = '';
+
+                // ====================================================
+                // PHẦN 1: BÁO CÁO TỔNG QUAN (LEADERBOARD / CÁ NHÂN)
+                // ====================================================
+                if (selectedEmp === "ALL") {
+                    // TÍNH BẢNG VÀNG THÀNH TÍCH (Cho tất cả NV trong thời gian đã lọc)
+                    let userStats = {};
+                    filteredData.forEach(r => {
+                        if(!userStats[r.user]) userStats[r.user] = { flyers: 0, posts: 0, lives: 0 };
+                        userStats[r.user].flyers += parseInt(r.slToRoi) || 0;
+                        if(r.linkDB || r.imgDB) userStats[r.user].posts += 1;
+                        if(r.linkLive || r.imgLive) userStats[r.user].lives += 1;
+                    });
                     
-                    grouped[date].forEach(row => {
-                        totalToRoi += parseInt(row.slToRoi) || 0;
-                        if(row.linkDB) allLinksDB.push(`<a href="${row.linkDB}" target="_blank" class="rp-link">${row.linkDB}</a>`);
-                        if(row.linkLive) allLinksLive.push(`<a href="${row.linkLive}" target="_blank" class="rp-link">${row.linkLive}</a>`);
-                        
-                        if(row.imgToRoi) allImgToRoi.push(row.imgToRoi);
-                        if(row.imgDB) allImgDB.push(row.imgDB);
-                        if(row.imgLive) allImgLive.push(row.imgLive);
+                    let topFlyer = Object.keys(userStats).sort((a,b) => userStats[b].flyers - userStats[a].flyers)[0];
+                    let topPost = Object.keys(userStats).sort((a,b) => userStats[b].posts - userStats[a].posts)[0];
+                    let topLive = Object.keys(userStats).sort((a,b) => userStats[b].lives - userStats[a].lives)[0];
+
+                    if(Object.keys(userStats).length > 0) {
+                        finalHtml += `
+                            <div class="bc-sec-title">🏆 BẢNG VÀNG THÀNH TÍCH</div>
+                            <div class="leaderboard">
+                                <div class="lb-card">
+                                    <div class="lb-title">📄 Vua Tờ Rơi</div>
+                                    <div class="lb-name">${topFlyer || '---'}</div>
+                                    <div class="lb-score">${userStats[topFlyer]?.flyers || 0} tờ</div>
+                                </div>
+                                <div class="lb-card" style="border-color: #38bdf8; background: linear-gradient(180deg, rgba(56,189,248,0.15) 0%, rgba(0,0,0,0.2) 100%);">
+                                    <div class="lb-title" style="color:#38bdf8;">🌐 Top Đăng Bài</div>
+                                    <div class="lb-name">${topPost || '---'}</div>
+                                    <div class="lb-score" style="color:#FFD700;">${userStats[topPost]?.posts || 0} bài</div>
+                                </div>
+                                <div class="lb-card" style="border-color: #ef4444; background: linear-gradient(180deg, rgba(239,68,68,0.15) 0%, rgba(0,0,0,0.2) 100%);">
+                                    <div class="lb-title" style="color:#ef4444;">🎥 Top Livestream</div>
+                                    <div class="lb-name">${topLive || '---'}</div>
+                                    <div class="lb-score" style="color:#FFD700;">${userStats[topLive]?.lives || 0} lần</div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                } 
+                else {
+                    // TỔNG QUAN CHI TIẾT CỦA 1 NHÂN VIÊN
+                    let totalFlyers = 0, postCount = 0, liveCount = 0;
+                    let activeDays = new Set();
+                    let allFlyerImgs = [], allPostImgs =[], allLiveImgs = [];
+                    let allPostLinks = [], allLiveLinks =[];
+
+                    filteredData.forEach(r => {
+                        activeDays.add(r.dateStr);
+                        totalFlyers += parseInt(r.slToRoi) || 0;
+                        if (r.linkDB) { postCount++; allPostLinks.push(`<li><a href="${r.linkDB}" target="_blank" class="rp-link">${r.linkDB}</a></li>`); } 
+                        else if (r.imgDB) { postCount++; } // Chỉ có ảnh không có link
+
+                        if (r.linkLive) { liveCount++; allLiveLinks.push(`<li><a href="${r.linkLive}" target="_blank" class="rp-link">${r.linkLive}</a></li>`); }
+                        else if (r.imgLive) { liveCount++; }
+
+                        if (r.imgToRoi) allFlyerImgs.push(r.imgToRoi);
+                        if (r.imgDB) allPostImgs.push(r.imgDB);
+                        if (r.imgLive) allLiveImgs.push(r.imgLive);
                     });
 
-                    let combinedImgToRoi = allImgToRoi.filter(s => s).join('|||');
-                    let combinedImgDB = allImgDB.filter(s => s).join('|||');
-                    let combinedImgLive = allImgLive.filter(s => s).join('|||');
-
-                    html += `
-                    <div class="date-group-wrapper">
-                        <div class="date-group-title">📅 Báo cáo ngày: ${date}</div>
-                        <div class="date-group-content">
-                    `;
+                    let timeLabel = selectedDate !== "ALL" ? `Ngày ${selectedDate}` : (selectedMonth !== "ALL" ? `Tháng ${selectedMonth}` : `Tất cả thời gian`);
+                    let uId = "emp-portfolio-1";
                     
-                    let uniqueIdSum = `rp-det-${date.replace(/\//g,'-')}-SUM`;
-                    html += `
-                        <div class="rp-card" style="border-color: #FFD700; background: rgba(255, 215, 0, 0.05); margin-bottom: 20px;">
-                            <div class="rp-header-row" onclick="document.getElementById('${uniqueIdSum}').style.display = document.getElementById('${uniqueIdSum}').style.display === 'block' ? 'none' : 'block'">
-                                <div><b style="color:#FFD700; font-size:15px;">🌟 TẤT CẢ</b></div>
-                                <span style="font-size:12px; color:#FFD700;">▼ Xem chi tiết</span>
+                    finalHtml += `
+                        <div class="bc-sec-title">📋 TỔNG QUAN CÁ NHÂN - ${selectedEmp}</div>
+                        <div class="rp-card" style="border-color: #38bdf8; background: rgba(56, 189, 248, 0.05); margin-bottom: 25px;">
+                            <div class="rp-header-row" onclick="document.getElementById('${uId}').style.display = document.getElementById('${uId}').style.display === 'block' ? 'none' : 'block'">
+                                <div>
+                                    <b style="color:#38bdf8; font-size:15px;">📊 Số liệu: ${timeLabel}</b>
+                                    <div style="font-size:12px; color:#cbd5e1; margin-top:5px;">Chuyên cần: ${activeDays.size} ngày có báo cáo</div>
+                                </div>
+                                <span style="font-size:12px; color:#38bdf8;">▼ Chi tiết ảnh & link</span>
                             </div>
-                            <div class="rp-detail" id="${uniqueIdSum}" style="border-top-color:rgba(255,215,0,0.3);">
-                                <div style="margin-bottom:10px;"><b>📄 Tổng Phát Tờ Rơi:</b> ${totalToRoi} tờ</div>
-                                ${renderImgGrid(combinedImgToRoi)}
+                            <div class="rp-detail" id="${uId}" style="border-top-color:rgba(56,189,248,0.3); display:block;">
                                 
-                                <div style="margin:15px 0 10px;"><b>🌐 Tổng Link Đăng Bài:</b> <div style="margin-top:5px; font-size:12px;">${allLinksDB.length > 0 ? allLinksDB.join('<br>') : 'Không có link'}</div></div>
-                                ${renderImgGrid(combinedImgDB)}
+                                <div style="margin-bottom:15px;">
+                                    <b style="color:#fff;">📄 Tổng Tờ Rơi Đã Phát: <span style="color:#FFD700; font-size:16px;">${totalFlyers}</span> tờ</b>
+                                    ${renderImgGrid(allFlyerImgs.filter(s=>s).join('|||'), true)}
+                                </div>
                                 
-                                <div style="margin:15px 0 10px;"><b>🎥 Tổng Link Livestream:</b> <div style="margin-top:5px; font-size:12px;">${allLinksLive.length > 0 ? allLinksLive.join('<br>') : 'Không có link'}</div></div>
-                                ${renderImgGrid(combinedImgLive)}
+                                <div style="margin-bottom:15px;">
+                                    <b style="color:#fff;">🌐 Tổng Lượt Đăng Bài: <span style="color:#FFD700; font-size:16px;">${postCount}</span> lần</b>
+                                    <ul class="link-list">${allPostLinks.join('')}</ul>
+                                    ${renderImgGrid(allPostImgs.filter(s=>s).join('|||'), true)}
+                                </div>
+                                
+                                <div style="margin-bottom:5px;">
+                                    <b style="color:#fff;">🎥 Tổng Lượt Livestream: <span style="color:#FFD700; font-size:16px;">${liveCount}</span> lần</b>
+                                    <ul class="link-list">${allLiveLinks.join('')}</ul>
+                                    ${renderImgGrid(allLiveImgs.filter(s=>s).join('|||'), true)}
+                                </div>
                             </div>
                         </div>
                     `;
+                }
 
+                // ====================================================
+                // PHẦN 2: CHI TIẾT TỪNG NGÀY BÁO CÁO (Dạng Group)
+                // ====================================================
+                let grouped = {};
+                filteredData.forEach(item => { if(!grouped[item.dateStr]) grouped[item.dateStr] = []; grouped[item.dateStr].push(item); });
+
+                for(let date in grouped) {
+                    finalHtml += `
+                    <div class="date-group-wrapper">
+                        <div class="date-group-title">📅 Nhật ký báo cáo ngày: ${date}</div>
+                        <div class="date-group-content">
+                    `;
+                    
                     grouped[date].forEach((row, idx) => {
                         let uniqueId = `rp-det-${date.replace(/\//g,'-')}-${idx}`;
-                        html += `
+                        finalHtml += `
                             <div class="rp-card">
                                 <div class="rp-header-row" onclick="document.getElementById('${uniqueId}').style.display = document.getElementById('${uniqueId}').style.display === 'block' ? 'none' : 'block'">
                                     <div><b style="color:#38bdf8;">👤 ${row.user}</b> <span style="font-size:12px; color:#64748b; margin-left:10px;">🕒 ${row.timeStr}</span></div>
-                                    <span style="font-size:12px; color:#FFD700;">▼ Chi tiết</span>
+                                    <span style="font-size:12px; color:#FFD700;">▼ Lần nộp này</span>
                                 </div>
                                 <div class="rp-detail" id="${uniqueId}">
                                     <div style="margin-bottom:10px;"><b>📄 Phát Tờ Rơi:</b> ${row.slToRoi} tờ</div>
@@ -581,19 +706,19 @@
                             </div>
                         `;
                     });
-                    html += `</div></div>`; 
+                    finalHtml += `</div></div>`; 
                 }
-                $('stat-list-container').innerHTML = html;
+                
+                $('stat-list-container').innerHTML = finalHtml;
             };
 
         } else {
             // ==========================================
-            // LUỒNG NHÂN VIÊN
+            // LUỒNG NHÂN VIÊN (GIỮ NGUYÊN)
             // ==========================================
             if (EMP_SESSION && EMP_SESSION.user) { switchSc('sc-report'); $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.user}`; } 
             else { switchSc('sc-login'); }
 
-            // XỬ LÝ CHUYỂN TAB CỦA NHÂN VIÊN
             $('tab-btn-emp-form').onclick = () => { 
                 $('tab-btn-emp-form').classList.add('active'); 
                 $('tab-btn-emp-history').classList.remove('active'); 
@@ -609,7 +734,6 @@
                 loadEmployeeHistory();
             };
 
-            // HÀM TẢI LỊCH SỬ NHÂN VIÊN
             const loadEmployeeHistory = async () => {
                 if(!EMP_SESSION || !EMP_SESSION.sheetId) return;
                 $('bc-loading').style.display = 'flex';
@@ -690,7 +814,6 @@
                         localStorage.setItem('bc_emp_session', JSON.stringify(EMP_SESSION));
                         $('lbl-emp-name').innerText = `👤 ${u}`; 
                         switchSc('sc-report');
-                        // Tự động nhảy qua tab điền form khi đăng nhập
                         $('tab-btn-emp-form').click();
                     } else alert("❌ Lỗi: " + data.message);
                 } catch(e) { alert("❌ Lỗi máy chủ!"); }
@@ -725,7 +848,6 @@
                         let prevBoxes =['prev-toroi', 'prev-dangbai', 'prev-live'];
                         prevBoxes.forEach(id => { if($(id)) $(id).innerHTML = ''; });
 
-                        // KHÔNG ĐÓNG APP NỮA -> MÀ CHUYỂN NGAY SANG TAB LỊCH SỬ ĐỂ HỌ XEM LẠI
                         $('tab-btn-emp-history').click();
 
                     } else alert("❌ Lỗi Server!");
