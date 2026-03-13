@@ -115,10 +115,17 @@
         .bc-tab-content { display: none; flex-direction:column; flex:1; overflow:hidden;}
         .bc-tab-content.active { display: flex; animation: fadeIn 0.3s; }
 
-        .stat-dash { display:flex; gap:10px; margin-bottom:15px; }
+        .stat-dash { display:flex; gap:10px; margin-bottom:10px; transition:0.2s; }
+        .stat-dash:hover { transform: translateY(-2px); }
         .stat-box { flex:1; padding:15px; border-radius:8px; text-align:center; border: 1px solid transparent;}
         .sb-blue { background:rgba(56, 189, 248, 0.1); border-color:#38bdf8; }
         .sb-red { background:rgba(239, 68, 68, 0.1); border-color:#ef4444; }
+        
+        /* Hiệu ứng danh sách nhân viên trạng thái */
+        .emp-status-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 10px; border-bottom: 1px dashed rgba(255,255,255,0.05); }
+        .emp-status-row:last-child { border-bottom: none; }
+        .emp-name.reported { font-weight: bold; background: linear-gradient(45deg, #38bdf8, #10b981); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .emp-name.pending { font-weight: bold; color: #ef4444; opacity: 0.9; }
         
         .date-group-wrapper { background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; margin-bottom: 25px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .date-group-title { background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 12px 20px; font-weight: bold; font-size: 15px; border-bottom: 1px solid rgba(56, 189, 248, 0.2); display: flex; align-items: center; gap: 10px; }
@@ -161,15 +168,12 @@
         .spinner { border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid #38bdf8; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
         .employee-row { display:flex; justify-content:space-between; background:rgba(255,255,255,0.05); padding:10px; margin-bottom:5px; border-radius:6px; align-items:center; }
         
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
         /* Khung filter 3 lựa chọn */
         .filter-row { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
         .filter-row select { flex: 1; min-width: 100px; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; color: #fff; cursor: pointer; outline: none; }
         .filter-row select:focus { border-color: #38bdf8; }
-        .filter-row button { flex-shrink: 0; padding: 10px 15px; border-radius: 8px; background: #0284c7; border: none; color: white; font-size: 16px; cursor: pointer; }
-        .filter-row button:hover { background: #0369a1; }
+        .filter-row button { flex-shrink: 0; padding: 10px 15px; border-radius: 8px; background: #0284c7; border: none; color: white; font-size: 16px; cursor: pointer; transition: 0.2s; }
+        .filter-row button:hover { background: #0369a1; transform: scale(1.05); }
     `;
 
     const processImages = async (files) => {
@@ -211,7 +215,7 @@
             <!-- SCREEN 1: QUẢN LÝ -->
             <div class="bc-screen" id="sc-manager">
                 <div class="bc-header">
-                    <div class="bc-title">⚙️ QUẢN LÝ DASHBOARD</div>
+                    <div class="bc-title">⚙️ QUẢN LÝ</div>
                     <div class="bc-header-right">
                         <span style="color:#94a3b8; font-size:14px; font-weight:600;">👤 ${CURRENT_USER}</span>
                         <button class="bc-close-btn btn-close-app">✕</button>
@@ -227,7 +231,7 @@
                 <div class="bc-tab-content active" id="tab-stat">
                     <div class="bc-screen-body" style="padding-top: 10px;">
                         
-                        <!-- CHỈ BÁO TRẠNG THÁI HÔM NAY (Mặc định luôn hiện) -->
+                        <!-- CHỈ BÁO TRẠNG THÁI HÔM NAY -->
                         <div id="stat-summary-container"></div>
                         
                         <!-- BỘ LỌC 3 TIÊU CHÍ -->
@@ -455,13 +459,8 @@
                         });
                         STAT_DATA.reverse(); 
                         
-                        // Luôn render Tình hình Hôm nay ở trên cùng
                         renderTodaySummary();
-                        
-                        // Cập nhật bộ lọc 3 lớp
                         updateFilters();
-                        
-                        // Render data theo bộ lọc hiện tại
                         triggerRender();
                     } else {
                         renderTodaySummary(true);
@@ -480,10 +479,36 @@
                     reportedUsers =[...new Set(todayReports.map(r => r.user))]; 
                 }
                 
-                let notReportedUsers = MANAGER_EMPLOYEES.filter(emp => !reportedUsers.includes(String(emp.u).trim())).map(e => e.u);
+                let allEmps = MANAGER_EMPLOYEES.map(e => String(e.u).trim());
+                let notReportedUsers = allEmps.filter(u => !reportedUsers.includes(u));
+
+                // Dựng giao diện Danh sách những ai nộp / chưa nộp
+                let listHtml = `<div id="today-emp-list" style="display:none; margin-bottom: 25px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 15px 10px; max-height: 250px; overflow-y: auto;">
+                                    <div style="font-size: 11px; color: #94a3b8; margin-bottom: 10px; text-align: center; font-weight: bold; text-transform: uppercase;">Chi tiết trạng thái báo cáo hôm nay</div>`;
                 
+                reportedUsers.forEach(u => {
+                    listHtml += `<div class="emp-status-row">
+                        <span class="emp-name reported">${u}</span>
+                        <span style="color:#10b981;">✅</span>
+                    </div>`;
+                });
+
+                notReportedUsers.forEach(u => {
+                    listHtml += `<div class="emp-status-row">
+                        <span class="emp-name pending">${u}</span>
+                        <span style="color:#ef4444;">⏳</span>
+                    </div>`;
+                });
+
+                if(allEmps.length === 0) {
+                    listHtml += `<div style="text-align:center; padding: 10px; color:#94a3b8; font-size:13px;">Chưa có nhân viên nào trong danh sách.</div>`;
+                }
+
+                listHtml += `</div>`;
+
+                // Render UI tổng
                 $('stat-summary-container').innerHTML = `
-                    <div class="stat-dash">
+                    <div class="stat-dash" style="cursor: pointer;" onclick="document.getElementById('today-emp-list').style.display = document.getElementById('today-emp-list').style.display === 'none' ? 'block' : 'none'" title="Bấm để xem danh sách chi tiết">
                         <div class="stat-box sb-blue">
                             <div style="font-size:26px; font-weight:bold; color:#38bdf8;">${reportedUsers.length}</div>
                             <div style="font-size:12px; color:#94a3b8;">Đã nộp (Hôm nay)</div>
@@ -493,6 +518,7 @@
                             <div style="font-size:12px; color:#94a3b8;">Chưa nộp</div>
                         </div>
                     </div>
+                    ${listHtml}
                 `;
             };
 
@@ -504,19 +530,17 @@
                 let curDate = $('stat-date-filter').value;
                 let curEmp = $('stat-emp-filter').value;
 
-                // Render Month Filter
                 let htmlMonth = `<option value="ALL">Tất cả Tháng</option>`;
                 months.forEach(m => htmlMonth += `<option value="${m}">${m}</option>`);
                 $('stat-month-filter').innerHTML = htmlMonth;
                 if(curMonth && months.includes(curMonth)) $('stat-month-filter').value = curMonth;
 
-                // Render Emp Filter
                 let htmlEmp = `<option value="ALL">Tất cả Nhân Viên</option>`;
                 emps.forEach(e => htmlEmp += `<option value="${e}">${e}</option>`);
                 $('stat-emp-filter').innerHTML = htmlEmp;
                 if(curEmp && emps.includes(curEmp)) $('stat-emp-filter').value = curEmp;
                 
-                updateDateDropdown(); // Cập nhật Date theo Month
+                updateDateDropdown(); 
                 if(curDate) $('stat-date-filter').value = curDate;
             };
 
@@ -533,7 +557,6 @@
                 $('stat-date-filter').innerHTML = htmlDate;
             };
 
-            // Gắn sự kiện thay đổi
             $('stat-month-filter').onchange = () => { updateDateDropdown(); triggerRender(); };
             $('stat-date-filter').onchange = () => triggerRender();
             $('stat-emp-filter').onchange = () => triggerRender();
@@ -551,7 +574,6 @@
                 renderStatList(filtered, e, m, d);
             };
 
-            // Hàm render Grid hình ảnh (Có hỗ trợ cuộn ngang nếu true)
             const renderImgGrid = (str, horizontal = false) => {
                 if(!str) return '';
                 if(str.includes('ảnh') && !str.includes('http')) return `<span style="color:#fbbf24; font-size:12px;">${str} (Cũ)</span>`;
@@ -573,11 +595,7 @@
 
                 let finalHtml = '';
 
-                // ====================================================
-                // PHẦN 1: BÁO CÁO TỔNG QUAN (LEADERBOARD / CÁ NHÂN)
-                // ====================================================
                 if (selectedEmp === "ALL") {
-                    // TÍNH BẢNG VÀNG THÀNH TÍCH (Cho tất cả NV trong thời gian đã lọc)
                     let userStats = {};
                     filteredData.forEach(r => {
                         if(!userStats[r.user]) userStats[r.user] = { flyers: 0, posts: 0, lives: 0 };
@@ -614,7 +632,6 @@
                     }
                 } 
                 else {
-                    // TỔNG QUAN CHI TIẾT CỦA 1 NHÂN VIÊN
                     let totalFlyers = 0, postCount = 0, liveCount = 0;
                     let activeDays = new Set();
                     let allFlyerImgs = [], allPostImgs =[], allLiveImgs = [];
@@ -624,7 +641,7 @@
                         activeDays.add(r.dateStr);
                         totalFlyers += parseInt(r.slToRoi) || 0;
                         if (r.linkDB) { postCount++; allPostLinks.push(`<li><a href="${r.linkDB}" target="_blank" class="rp-link">${r.linkDB}</a></li>`); } 
-                        else if (r.imgDB) { postCount++; } // Chỉ có ảnh không có link
+                        else if (r.imgDB) { postCount++; } 
 
                         if (r.linkLive) { liveCount++; allLiveLinks.push(`<li><a href="${r.linkLive}" target="_blank" class="rp-link">${r.linkLive}</a></li>`); }
                         else if (r.imgLive) { liveCount++; }
@@ -670,9 +687,6 @@
                     `;
                 }
 
-                // ====================================================
-                // PHẦN 2: CHI TIẾT TỪNG NGÀY BÁO CÁO (Dạng Group)
-                // ====================================================
                 let grouped = {};
                 filteredData.forEach(item => { if(!grouped[item.dateStr]) grouped[item.dateStr] = []; grouped[item.dateStr].push(item); });
 
@@ -714,7 +728,7 @@
 
         } else {
             // ==========================================
-            // LUỒNG NHÂN VIÊN (GIỮ NGUYÊN)
+            // LUỒNG NHÂN VIÊN
             // ==========================================
             if (EMP_SESSION && EMP_SESSION.user) { switchSc('sc-report'); $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.user}`; } 
             else { switchSc('sc-login'); }
