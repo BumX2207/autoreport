@@ -204,9 +204,13 @@
                 <div class="bc-tab-content active" id="tab-stat">
                     <div class="bc-screen-body">
                         <div id="stat-summary-container"></div>
-                        <div class="bc-card" style="margin-bottom:15px; padding:10px 15px;">
-                            <select id="stat-date-filter" class="bc-input" style="margin:0; cursor:pointer;"></select>
+                        
+                        <!-- Khu vực Bộ lọc và Nút Làm mới -->
+                        <div class="bc-card" style="margin-bottom:15px; padding:10px 15px; display:flex; gap:10px; align-items:center;">
+                            <select id="stat-date-filter" class="bc-input" style="margin:0; cursor:pointer; flex:1;"></select>
+                            <button id="btn-refresh-stat" class="bc-btn btn-primary" style="margin:0; width:auto; padding:10px 15px; display:flex; align-items:center; justify-content:center; font-size:16px;" title="Làm mới dữ liệu">🔄</button>
                         </div>
+
                         <!-- Bỏ chữ "Đang tải dữ liệu..." ở nền để gọn gàng -->
                         <div id="stat-list-container"></div>
                     </div>
@@ -369,6 +373,15 @@
             };
             loadConfig();
 
+            // SỰ KIỆN NÚT LÀM MỚI (REFRESH)
+            $('btn-refresh-stat').onclick = async () => {
+                if(!MANAGER_SHEET_ID) return alert("Vui lòng cài đặt ID Sheet trước!");
+                $('bc-loading').style.display = 'flex'; 
+                $('bc-load-text').innerText = "Đang làm mới dữ liệu...";
+                await loadStatistics();
+                $('bc-loading').style.display = 'none';
+            };
+
             const renderNV = () => {
                 $('nv-list-container').innerHTML = MANAGER_EMPLOYEES.map((nv, idx) => `
                     <div class="employee-row">
@@ -411,7 +424,10 @@
                         STAT_DATA.reverse(); 
                         renderStatSummary();
                         renderStatFilter();
-                        renderStatList("ALL");
+                        
+                        // Khi làm mới xong, tự động hiển thị ngày đang được chọn trên bộ lọc (hoặc ALL)
+                        let currentFilter = $('stat-date-filter').value || "ALL";
+                        renderStatList(currentFilter);
                     } else {
                         renderStatSummary(true);
                         $('stat-list-container').innerHTML = `<div style="text-align:center; color:#94a3b8; padding:20px;">Chưa có báo cáo nào.</div>`;
@@ -450,10 +466,18 @@
             };
 
             const renderStatFilter = () => {
+                // Chỉ render lại bộ lọc nếu nó chưa có item nào, để tránh bị reset mất giá trị người dùng đang chọn khi bấm refresh
                 let dates =[...new Set(STAT_DATA.map(r => r.dateStr))]; 
+                let currentVal = $('stat-date-filter').value; // Lưu lại giá trị đang chọn
+                
                 let opts = `<option value="ALL">Tất cả các ngày</option>`;
                 dates.forEach(d => opts += `<option value="${d}">${d}</option>`);
                 $('stat-date-filter').innerHTML = opts;
+                
+                // Khôi phục lại ngày đang xem nếu ngày đó vẫn còn trong danh sách
+                if(currentVal && dates.includes(currentVal)) {
+                    $('stat-date-filter').value = currentVal;
+                }
             };
 
             $('stat-date-filter').onchange = (e) => renderStatList(e.target.value);
