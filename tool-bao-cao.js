@@ -703,7 +703,7 @@
                             <div class="rp-card">
                                 <div class="rp-header-row" onclick="document.getElementById('${uniqueId}').style.display = document.getElementById('${uniqueId}').style.display === 'block' ? 'none' : 'block'">
                                     <div><b style="color:#38bdf8;">👤 ${row.user}</b> <span style="font-size:12px; color:#64748b; margin-left:10px;">🕒 ${row.timeStr}</span></div>
-                                    <span style="font-size:12px; color:#FFD700;">▼ Lần nộp này</span>
+                                    <span style="font-size:12px; color:#FFD700;">▼ Xem chi tiết</span>
                                 </div>
                                 <div class="rp-detail" id="${uniqueId}">
                                     <div style="margin-bottom:10px;"><b>📄 Phát Tờ Rơi:</b> ${row.slToRoi} tờ</div>
