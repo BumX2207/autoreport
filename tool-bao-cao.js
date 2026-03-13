@@ -508,8 +508,8 @@
                     html += `
                         <div class="rp-card" style="border-color: #FFD700; background: rgba(255, 215, 0, 0.05); margin-bottom: 20px;">
                             <div class="rp-header-row" onclick="document.getElementById('${uniqueIdSum}').style.display = document.getElementById('${uniqueIdSum}').style.display === 'block' ? 'none' : 'block'">
-                                <div><b style="color:#FFD700; font-size:15px;">🌟 TỔNG CỘNG TRONG NGÀY</b></div>
-                                <span style="font-size:12px; color:#FFD700;">▼ Xem tổng hợp</span>
+                                <div><b style="color:#FFD700; font-size:15px;">🌟 TẤT CẢ</b></div>
+                                <span style="font-size:12px; color:#FFD700;">▼ Xem chi tiết</span>
                             </div>
                             <div class="rp-detail" id="${uniqueIdSum}" style="border-top-color:rgba(255,215,0,0.3);">
                                 <div style="margin-bottom:10px;"><b>📄 Tổng Phát Tờ Rơi:</b> ${totalToRoi} tờ</div>
