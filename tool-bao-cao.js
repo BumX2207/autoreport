@@ -239,7 +239,7 @@
                             <select id="stat-month-filter" title="Chọn Tháng"></select>
                             <select id="stat-date-filter" title="Chọn Ngày"></select>
                             <select id="stat-emp-filter" title="Chọn Nhân viên"></select>
-                            <button id="btn-refresh-stat" title="Làm mới dữ liệu">🔄</button>
+                            <button id="btn-refresh-stat" title="Load lại dữ liệu">🔄</button>
                         </div>
 
                         <!-- VÙNG HIỂN THỊ DỮ LIỆU ĐỘNG -->
@@ -348,7 +348,7 @@
                 <div class="bc-tab-content" id="tab-emp-history">
                     <div class="bc-screen-body">
                         <div style="text-align:right; margin-bottom: 15px;">
-                            <button id="btn-refresh-emp-history" class="bc-btn btn-primary" style="width:auto; padding:8px 15px; font-size:13px;">🔄 Làm mới lịch sử</button>
+                            <button id="btn-refresh-emp-history" class="bc-btn btn-primary" style="width:auto; padding:8px 15px; font-size:13px;">🔄 Load lại lịch sử</button>
                         </div>
                         <div id="emp-history-container"></div>
                     </div>
@@ -484,7 +484,7 @@
 
                 // Dựng giao diện Danh sách những ai nộp / chưa nộp
                 let listHtml = `<div id="today-emp-list" style="display:none; margin-bottom: 25px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 15px 10px; max-height: 250px; overflow-y: auto;">
-                                    <div style="font-size: 11px; color: #94a3b8; margin-bottom: 10px; text-align: center; font-weight: bold; text-transform: uppercase;">Chi tiết trạng thái báo cáo hôm nay</div>`;
+                                    <div style="font-size: 11px; color: #94a3b8; margin-bottom: 10px; text-align: center; font-weight: bold; text-transform: uppercase;">Danh sách NV đã/chưa báo cáo hôm nay</div>`;
                 
                 reportedUsers.forEach(u => {
                     listHtml += `<div class="emp-status-row">
@@ -610,15 +610,15 @@
 
                     if(Object.keys(userStats).length > 0) {
                         finalHtml += `
-                            <div class="bc-sec-title">🏆 BẢNG VÀNG THÀNH TÍCH</div>
+                            <div class="bc-sec-title">🏆 TOP TRUYỀN THÔNG</div>
                             <div class="leaderboard">
                                 <div class="lb-card">
-                                    <div class="lb-title">📄 Vua Tờ Rơi</div>
+                                    <div class="lb-title">📄 Top Tờ Rơi</div>
                                     <div class="lb-name">${topFlyer || '---'}</div>
                                     <div class="lb-score">${userStats[topFlyer]?.flyers || 0} tờ</div>
                                 </div>
                                 <div class="lb-card" style="border-color: #38bdf8; background: linear-gradient(180deg, rgba(56,189,248,0.15) 0%, rgba(0,0,0,0.2) 100%);">
-                                    <div class="lb-title" style="color:#38bdf8;">🌐 Top Đăng Bài</div>
+                                    <div class="lb-title" style="color:#38bdf8;">🌐 Top Đăng/Share bài</div>
                                     <div class="lb-name">${topPost || '---'}</div>
                                     <div class="lb-score" style="color:#FFD700;">${userStats[topPost]?.posts || 0} bài</div>
                                 </div>
@@ -660,7 +660,7 @@
                             <div class="rp-header-row" onclick="document.getElementById('${uId}').style.display = document.getElementById('${uId}').style.display === 'block' ? 'none' : 'block'">
                                 <div>
                                     <b style="color:#38bdf8; font-size:15px;">📊 Số liệu: ${timeLabel}</b>
-                                    <div style="font-size:12px; color:#cbd5e1; margin-top:5px;">Chuyên cần: ${activeDays.size} ngày có báo cáo</div>
+                                    <div style="font-size:12px; color:#cbd5e1; margin-top:5px;">Số ngày báo cáo: ${activeDays.size}</div>
                                 </div>
                                 <span style="font-size:12px; color:#38bdf8;">▼ Chi tiết ảnh & link</span>
                             </div>
@@ -787,14 +787,14 @@
                                 html += `
                                     <div class="rp-card">
                                         <div class="rp-header-row" onclick="document.getElementById('${uniqueId}').style.display = document.getElementById('${uniqueId}').style.display === 'block' ? 'none' : 'block'">
-                                            <div><b style="color:#38bdf8;">🕒 Lần báo cáo lúc: ${row.timeStr}</b></div>
+                                            <div><b style="color:#38bdf8;">🕒 Báo cáo lúc: ${row.timeStr}</b></div>
                                             <span style="font-size:12px; color:#FFD700;">▼ Xem chi tiết</span>
                                         </div>
                                         <div class="rp-detail" id="${uniqueId}">
-                                            <div style="margin-bottom:10px;"><b>📄 Phát Tờ Rơi:</b> ${row.slToRoi} tờ</div>
+                                            <div style="margin-bottom:10px;"><b>📄 Lượt Phát Tờ Rơi:</b> ${row.slToRoi} tờ</div>
                                             ${renderImgGrid(row.imgToRoi)}
                                             
-                                            <div style="margin:15px 0 10px;"><b>🌐 Đăng Bài:</b> ${row.linkDB ? `<a href="${row.linkDB}" target="_blank" class="rp-link">${row.linkDB}</a>` : 'Không có link'}</div>
+                                            <div style="margin:15px 0 10px;"><b>🌐 Lượt Đăng/Share Bài:</b> ${row.linkDB ? `<a href="${row.linkDB}" target="_blank" class="rp-link">${row.linkDB}</a>` : 'Không có link'}</div>
                                             ${renderImgGrid(row.imgDB)}
                                             
                                             <div style="margin:15px 0 10px;"><b>🎥 Livestream:</b> ${row.linkLive ? `<a href="${row.linkLive}" target="_blank" class="rp-link">${row.linkLive}</a>` : 'Không có link'}</div>
