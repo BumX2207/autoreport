@@ -205,13 +205,11 @@
                     <div class="bc-screen-body">
                         <div id="stat-summary-container"></div>
                         
-                        <!-- Khu vực Bộ lọc và Nút Làm mới -->
                         <div class="bc-card" style="margin-bottom:15px; padding:10px 15px; display:flex; gap:10px; align-items:center;">
                             <select id="stat-date-filter" class="bc-input" style="margin:0; cursor:pointer; flex:1;"></select>
                             <button id="btn-refresh-stat" class="bc-btn btn-primary" style="margin:0; width:auto; padding:10px 15px; display:flex; align-items:center; justify-content:center; font-size:16px;" title="Làm mới dữ liệu">🔄</button>
                         </div>
 
-                        <!-- Bỏ chữ "Đang tải dữ liệu..." ở nền để gọn gàng -->
                         <div id="stat-list-container"></div>
                     </div>
                 </div>
@@ -258,7 +256,7 @@
                 </div>
             </div>
 
-            <!-- SCREEN 3: FORM BÁO CÁO -->
+            <!-- SCREEN 3: FORM BÁO CÁO NHÂN VIÊN -->
             <div class="bc-screen" id="sc-report">
                 <div class="bc-header">
                     <div class="bc-title">📊 BÁO CÁO</div>
@@ -269,43 +267,60 @@
                     </div>
                 </div>
 
-                <div class="bc-screen-body">
-                    <div class="bc-card">
-                        <div class="bc-sec-title">📄 1. Phát Tờ Rơi</div>
-                        <label class="bc-label">Số lượng tờ rơi đã phát</label>
-                        <input type="number" id="inp-toroi-sl" class="bc-input" placeholder="Nhập số lượng..." min="0">
-                        <div class="bc-file-upload">
-                            <label for="file-toroi" class="bc-file-label">📸 Nhấn để chọn ảnh phát tờ rơi</label>
-                            <input type="file" id="file-toroi" class="bc-file-input" multiple accept="image/*">
-                            <div class="bc-preview-grid" id="prev-toroi"></div>
+                <div class="bc-tabs">
+                    <button class="bc-tab-btn active" id="tab-btn-emp-form">📝 Gửi Báo Cáo</button>
+                    <button class="bc-tab-btn" id="tab-btn-emp-history">🕒 Lịch Sử Hôm Nay</button>
+                </div>
+
+                <!-- TAB NHẬP BÁO CÁO -->
+                <div class="bc-tab-content active" id="tab-emp-form">
+                    <div class="bc-screen-body">
+                        <div class="bc-card">
+                            <div class="bc-sec-title">📄 1. Phát Tờ Rơi</div>
+                            <label class="bc-label">Số lượng tờ rơi đã phát</label>
+                            <input type="number" id="inp-toroi-sl" class="bc-input" placeholder="Nhập số lượng..." min="0">
+                            <div class="bc-file-upload">
+                                <label for="file-toroi" class="bc-file-label">📸 Nhấn để chọn ảnh phát tờ rơi</label>
+                                <input type="file" id="file-toroi" class="bc-file-input" multiple accept="image/*">
+                                <div class="bc-preview-grid" id="prev-toroi"></div>
+                            </div>
+                        </div>
+
+                        <div class="bc-card">
+                            <div class="bc-sec-title">🌐 2. Đăng Bài Truyền Thông</div>
+                            <label class="bc-label">Link bài đăng</label>
+                            <input type="text" id="inp-dangbai-link" class="bc-input" placeholder="Dán link bài đăng vào đây...">
+                            <div class="bc-file-upload">
+                                <label for="file-dangbai" class="bc-file-label">📸 Nhấn để chọn ảnh bài đăng</label>
+                                <input type="file" id="file-dangbai" class="bc-file-input" multiple accept="image/*">
+                                <div class="bc-preview-grid" id="prev-dangbai"></div>
+                            </div>
+                        </div>
+
+                        <div class="bc-card">
+                            <div class="bc-sec-title">🎥 3. Livestream</div>
+                            <label class="bc-label">Link Livestream</label>
+                            <input type="text" id="inp-live-link" class="bc-input" placeholder="Dán link livestream vào đây...">
+                            <div class="bc-file-upload">
+                                <label for="file-live" class="bc-file-label">📸 Nhấn để chọn ảnh Livestream</label>
+                                <input type="file" id="file-live" class="bc-file-input" multiple accept="image/*">
+                                <div class="bc-preview-grid" id="prev-live"></div>
+                            </div>
                         </div>
                     </div>
-
-                    <div class="bc-card">
-                        <div class="bc-sec-title">🌐 2. Đăng Bài Truyền Thông</div>
-                        <label class="bc-label">Link bài đăng</label>
-                        <input type="text" id="inp-dangbai-link" class="bc-input" placeholder="Dán link bài đăng vào đây...">
-                        <div class="bc-file-upload">
-                            <label for="file-dangbai" class="bc-file-label">📸 Nhấn để chọn ảnh bài đăng</label>
-                            <input type="file" id="file-dangbai" class="bc-file-input" multiple accept="image/*">
-                            <div class="bc-preview-grid" id="prev-dangbai"></div>
-                        </div>
-                    </div>
-
-                    <div class="bc-card">
-                        <div class="bc-sec-title">🎥 3. Livestream</div>
-                        <label class="bc-label">Link Livestream</label>
-                        <input type="text" id="inp-live-link" class="bc-input" placeholder="Dán link livestream vào đây...">
-                        <div class="bc-file-upload">
-                            <label for="file-live" class="bc-file-label">📸 Nhấn để chọn ảnh Livestream</label>
-                            <input type="file" id="file-live" class="bc-file-input" multiple accept="image/*">
-                            <div class="bc-preview-grid" id="prev-live"></div>
-                        </div>
+                    <div class="bc-footer">
+                        <button class="bc-btn btn-primary" id="btn-submit-report" style="padding:15px; font-size:16px;">🚀 GỬI BÁO CÁO</button>
                     </div>
                 </div>
 
-                <div class="bc-footer">
-                    <button class="bc-btn btn-primary" id="btn-submit-report" style="padding:15px; font-size:16px;">🚀 GỬI BÁO CÁO</button>
+                <!-- TAB LỊCH SỬ BÁO CÁO CỦA NHÂN VIÊN -->
+                <div class="bc-tab-content" id="tab-emp-history">
+                    <div class="bc-screen-body">
+                        <div style="text-align:right; margin-bottom: 15px;">
+                            <button id="btn-refresh-emp-history" class="bc-btn btn-primary" style="width:auto; padding:8px 15px; font-size:13px;">🔄 Làm mới lịch sử</button>
+                        </div>
+                        <div id="emp-history-container"></div>
+                    </div>
                 </div>
             </div>
         `;
@@ -358,22 +373,19 @@
                         MANAGER_EMPLOYEES = data.employees && data.employees !== "[]" ? JSON.parse(data.employees) :[];
                         renderNV();
                         if(MANAGER_SHEET_ID) {
-                            // Chờ tải số liệu thống kê xong hoàn toàn
                             await loadStatistics(); 
                         } else {
                             $('stat-list-container').innerHTML = `<div style="text-align:center; color:#fbbf24; padding:20px;">Vui lòng cài đặt ID Sheet ở tab Cài Đặt trước!</div>`;
                         }
                     }
                 } catch(e) { 
-                    console.log(e); 
                     $('stat-list-container').innerHTML = `<div style="color:#ef4444; text-align:center;">Lỗi mạng! Không tải được cấu hình.</div>`; 
                 }
-                // CHỈ ẨN OVERLAY KHI MỌI THỨ ĐÃ TẢI XONG
                 $('bc-loading').style.display = 'none';
             };
             loadConfig();
 
-            // SỰ KIỆN NÚT LÀM MỚI (REFRESH)
+            // SỰ KIỆN NÚT LÀM MỚI (REFRESH) QUẢN LÝ
             $('btn-refresh-stat').onclick = async () => {
                 if(!MANAGER_SHEET_ID) return alert("Vui lòng cài đặt ID Sheet trước!");
                 $('bc-loading').style.display = 'flex'; 
@@ -425,7 +437,6 @@
                         renderStatSummary();
                         renderStatFilter();
                         
-                        // Khi làm mới xong, tự động hiển thị ngày đang được chọn trên bộ lọc (hoặc ALL)
                         let currentFilter = $('stat-date-filter').value || "ALL";
                         renderStatList(currentFilter);
                     } else {
@@ -452,11 +463,11 @@
                     <div class="stat-dash">
                         <div class="stat-box sb-blue">
                             <div style="font-size:26px; font-weight:bold; color:#38bdf8;">${reportedUsers.length}</div>
-                            <div style="font-size:12px; color:#94a3b8;">Đã báo cáo (Hôm nay)</div>
+                            <div style="font-size:12px; color:#94a3b8;">Đã nộp (Hôm nay)</div>
                         </div>
                         <div class="stat-box sb-red">
                             <div style="font-size:26px; font-weight:bold; color:#ef4444;">${notReportedUsers.length}</div>
-                            <div style="font-size:12px; color:#94a3b8;">Chưa báo cáo</div>
+                            <div style="font-size:12px; color:#94a3b8;">Chưa nộp</div>
                         </div>
                     </div>
                     ${notReportedUsers.length > 0 
@@ -466,18 +477,14 @@
             };
 
             const renderStatFilter = () => {
-                // Chỉ render lại bộ lọc nếu nó chưa có item nào, để tránh bị reset mất giá trị người dùng đang chọn khi bấm refresh
                 let dates =[...new Set(STAT_DATA.map(r => r.dateStr))]; 
-                let currentVal = $('stat-date-filter').value; // Lưu lại giá trị đang chọn
+                let currentVal = $('stat-date-filter').value;
                 
                 let opts = `<option value="ALL">Tất cả các ngày</option>`;
                 dates.forEach(d => opts += `<option value="${d}">${d}</option>`);
                 $('stat-date-filter').innerHTML = opts;
                 
-                // Khôi phục lại ngày đang xem nếu ngày đó vẫn còn trong danh sách
-                if(currentVal && dates.includes(currentVal)) {
-                    $('stat-date-filter').value = currentVal;
-                }
+                if(currentVal && dates.includes(currentVal)) $('stat-date-filter').value = currentVal;
             };
 
             $('stat-date-filter').onchange = (e) => renderStatList(e.target.value);
@@ -491,7 +498,6 @@
 
                 let html = '';
                 
-                // Hàm render Grid hình ảnh dùng chung
                 const renderImgGrid = (str) => {
                     if(!str) return '';
                     if(str.includes('ảnh') && !str.includes('http')) return `<span style="color:#fbbf24; font-size:12px;">${str} (Cũ)</span>`;
@@ -505,12 +511,10 @@
                 };
 
                 for(let date in grouped) {
-                    
-                    // --- TÍNH TỔNG SỐ LIỆU TRONG NGÀY ---
                     let totalToRoi = 0;
                     let allLinksDB = [];
                     let allLinksLive =[];
-                    let allImgToRoi = [];
+                    let allImgToRoi =[];
                     let allImgDB =[];
                     let allImgLive =[];
                     
@@ -534,7 +538,6 @@
                         <div class="date-group-content">
                     `;
                     
-                    // --- CARD TỔNG CỘNG ---
                     let uniqueIdSum = `rp-det-${date.replace(/\//g,'-')}-SUM`;
                     html += `
                         <div class="rp-card" style="border-color: #FFD700; background: rgba(255, 215, 0, 0.05); margin-bottom: 20px;">
@@ -555,7 +558,6 @@
                         </div>
                     `;
 
-                    // --- CÁC CARD CỦA NHÂN VIÊN ---
                     grouped[date].forEach((row, idx) => {
                         let uniqueId = `rp-det-${date.replace(/\//g,'-')}-${idx}`;
                         html += `
@@ -591,6 +593,91 @@
             if (EMP_SESSION && EMP_SESSION.user) { switchSc('sc-report'); $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.user}`; } 
             else { switchSc('sc-login'); }
 
+            // XỬ LÝ CHUYỂN TAB CỦA NHÂN VIÊN
+            $('tab-btn-emp-form').onclick = () => { 
+                $('tab-btn-emp-form').classList.add('active'); 
+                $('tab-btn-emp-history').classList.remove('active'); 
+                $('tab-emp-form').classList.add('active'); 
+                $('tab-emp-history').classList.remove('active'); 
+            };
+            
+            $('tab-btn-emp-history').onclick = () => { 
+                $('tab-btn-emp-history').classList.add('active'); 
+                $('tab-btn-emp-form').classList.remove('active'); 
+                $('tab-emp-history').classList.add('active'); 
+                $('tab-emp-form').classList.remove('active'); 
+                loadEmployeeHistory();
+            };
+
+            // HÀM TẢI LỊCH SỬ NHÂN VIÊN
+            const loadEmployeeHistory = async () => {
+                if(!EMP_SESSION || !EMP_SESSION.sheetId) return;
+                $('bc-loading').style.display = 'flex';
+                $('bc-load-text').innerText = "Đang tải lịch sử của bạn...";
+                try {
+                    let res = await universalFetch({ method:"POST", url: API_URL_MAIN, data: JSON.stringify({ action: "get_manager_reports", sheetId: EMP_SESSION.sheetId }) });
+                    let json = JSON.parse(res);
+                    if(json.status === 'success' && Array.isArray(json.data) && json.data.length > 1) {
+                        let d = new Date();
+                        let todayStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth()+1).padStart(2, '0')}/${d.getFullYear()}`;
+                        
+                        let myData = json.data.slice(1).map(r => {
+                            let parsed = parseDateFromSheet(r[0]);
+                            return { dateStr: parsed.date, timeStr: parsed.time, user: String(r[1] || "").trim(), slToRoi: r[2], linkDB: r[3], linkLive: r[4], imgToRoi: r[5], imgDB: r[6], imgLive: r[7] };
+                        }).filter(r => r.dateStr === todayStr && r.user === EMP_SESSION.user);
+                        
+                        myData.reverse(); 
+                        
+                        if(myData.length === 0) {
+                            $('emp-history-container').innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">Bạn chưa có báo cáo nào trong hôm nay.</div>`;
+                        } else {
+                            let html = '';
+                            const renderImgGrid = (str) => {
+                                if(!str) return '';
+                                if(str.includes('ảnh') && !str.includes('http')) return `<span style="color:#fbbf24; font-size:12px;">${str} (Cũ)</span>`;
+                                let links = str.split('|||').filter(l => l.trim() !== '');
+                                if(links.length === 0) return '';
+                                return `<div class="rp-grid">` + links.map(l => {
+                                    let match = l.match(/id=([a-zA-Z0-9_-]+)/);
+                                    let imgUrl = match ? `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800` : l;
+                                    return `<img src="${imgUrl}" class="rp-img">`; 
+                                }).join('') + `</div>`;
+                            };
+
+                            myData.forEach((row, idx) => {
+                                let uniqueId = `emp-rp-det-${idx}`;
+                                html += `
+                                    <div class="rp-card">
+                                        <div class="rp-header-row" onclick="document.getElementById('${uniqueId}').style.display = document.getElementById('${uniqueId}').style.display === 'block' ? 'none' : 'block'">
+                                            <div><b style="color:#38bdf8;">🕒 Lần báo cáo lúc: ${row.timeStr}</b></div>
+                                            <span style="font-size:12px; color:#FFD700;">▼ Xem chi tiết</span>
+                                        </div>
+                                        <div class="rp-detail" id="${uniqueId}">
+                                            <div style="margin-bottom:10px;"><b>📄 Phát Tờ Rơi:</b> ${row.slToRoi} tờ</div>
+                                            ${renderImgGrid(row.imgToRoi)}
+                                            
+                                            <div style="margin:15px 0 10px;"><b>🌐 Đăng Bài:</b> ${row.linkDB ? `<a href="${row.linkDB}" target="_blank" class="rp-link">${row.linkDB}</a>` : 'Không có link'}</div>
+                                            ${renderImgGrid(row.imgDB)}
+                                            
+                                            <div style="margin:15px 0 10px;"><b>🎥 Livestream:</b> ${row.linkLive ? `<a href="${row.linkLive}" target="_blank" class="rp-link">${row.linkLive}</a>` : 'Không có link'}</div>
+                                            ${renderImgGrid(row.imgLive)}
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                            $('emp-history-container').innerHTML = html;
+                        }
+                    } else {
+                        $('emp-history-container').innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">Bạn chưa có báo cáo nào trong hôm nay.</div>`;
+                    }
+                } catch(e) { 
+                    $('emp-history-container').innerHTML = `<div style="text-align:center; color:#ef4444; padding:20px;">Lỗi tải dữ liệu lịch sử!</div>`;
+                }
+                $('bc-loading').style.display = 'none';
+            };
+
+            $('btn-refresh-emp-history').onclick = loadEmployeeHistory;
+
             $('btn-nv-login').onclick = async () => {
                 let s = $('inp-login-shop').value.trim(), u = $('inp-login-user').value.trim(), p = $('inp-login-pass').value.trim();
                 if(!s || !u || !p) return alert("Nhập đủ thông tin!");
@@ -601,7 +688,10 @@
                     if(data.status === 'success') {
                         EMP_SESSION = { user: u, shop: s, folderId: data.folderId, sheetId: data.sheetId };
                         localStorage.setItem('bc_emp_session', JSON.stringify(EMP_SESSION));
-                        $('lbl-emp-name').innerText = `👤 ${u}`; switchSc('sc-report');
+                        $('lbl-emp-name').innerText = `👤 ${u}`; 
+                        switchSc('sc-report');
+                        // Tự động nhảy qua tab điền form khi đăng nhập
+                        $('tab-btn-emp-form').click();
                     } else alert("❌ Lỗi: " + data.message);
                 } catch(e) { alert("❌ Lỗi máy chủ!"); }
                 $('bc-loading').style.display = 'none';
@@ -635,7 +725,9 @@
                         let prevBoxes =['prev-toroi', 'prev-dangbai', 'prev-live'];
                         prevBoxes.forEach(id => { if($(id)) $(id).innerHTML = ''; });
 
-                        app.style.display = 'none';
+                        // KHÔNG ĐÓNG APP NỮA -> MÀ CHUYỂN NGAY SANG TAB LỊCH SỬ ĐỂ HỌ XEM LẠI
+                        $('tab-btn-emp-history').click();
+
                     } else alert("❌ Lỗi Server!");
                 } catch (err) { alert("❌ Lỗi mạng. Không thể gửi lúc này!"); } 
                 finally { $('bc-loading').style.display = 'none'; }
