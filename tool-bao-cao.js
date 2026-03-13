@@ -71,10 +71,10 @@
     // 2. CSS GIAO DIỆN
     // ===============================================================
     const MY_CSS = `
-        #bc-app-wrapper { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.95); backdrop-filter:blur(10px); z-index:2147483647; font-family: 'Segoe UI', sans-serif; color: #f8fafc; display:flex; justify-content:center; align-items:center; }
+        #bc-app-wrapper { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.95); backdrop-filter:blur(10px); z-index:2147483647; font-family: 'Segoe UI', sans-serif; color: #f8fafc; display:flex; justify-content:center; align-items:flex-start; padding-top:20px; }
         #bc-app-wrapper * { box-sizing:border-box; }
         
-        .bc-screen { display:none; flex-direction:column; width:95%; max-width:800px; height:80vh; max-height:750px; background:rgba(30, 41, 59, 0.7); border-radius:12px; border:1px solid rgba(255,255,255,0.1); overflow:hidden; animation: fadeIn 0.3s ease-out; box-shadow:0 15px 40px rgba(0,0,0,0.5);}
+        .bc-screen { display:none; flex-direction:column; width:95%; max-width:800px; height:80vh; max-height:80vh; background:rgba(30, 41, 59, 0.7); border-radius:12px; border:1px solid rgba(255,255,255,0.1); overflow:hidden; animation: fadeIn 0.3s ease-out; box-shadow:0 15px 40px rgba(0,0,0,0.5);}
         .bc-screen.active { display:flex; }
         
         .bc-header { flex-shrink:0; display:flex; justify-content:space-between; align-items:center; padding:15px 20px; background:rgba(15, 23, 42, 0.8); border-bottom:1px solid rgba(255,255,255,0.1); }
@@ -123,14 +123,13 @@
         .date-group-title { background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 12px 20px; font-weight: bold; font-size: 15px; border-bottom: 1px solid rgba(56, 189, 248, 0.2); display: flex; align-items: center; gap: 10px; }
         .date-group-content { padding: 15px; }
 
-        .rp-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; }
+        .rp-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 10px; transition: 0.2s; }
         .rp-card:hover { border-color: #38bdf8; background: rgba(56, 189, 248, 0.05); }
         .rp-card:last-child { margin-bottom: 0; }
-        .rp-header-row { display:flex; justify-content:space-between; align-items:center;}
+        .rp-header-row { display:flex; justify-content:space-between; align-items:center; cursor: pointer; }
         .rp-detail { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.2); font-size:13px; color:#cbd5e1;}
         .rp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 10px; margin-top: 10px; }
         
-        /* Chỉnh lại cursor để dễ nhận biết */
         .rp-img { width: 100%; height: 70px; object-fit: cover; border-radius: 6px; cursor: zoom-in; border: 1px solid rgba(255,255,255,0.2); transition: 0.2s; }
         .rp-img:hover { transform: scale(1.05); border-color:#FFD700; z-index:2;}
         .rp-link { color:#38bdf8; text-decoration:none; word-break: break-all;}
@@ -203,14 +202,14 @@
 
                 <!-- TAB THỐNG KÊ -->
                 <div class="bc-tab-content active" id="tab-stat">
-                    <div style="flex-shrink:0; padding:15px 20px 0;">
+                    <div class="bc-screen-body">
                         <div id="stat-summary-container"></div>
-                        <div class="bc-card" style="margin-bottom:0; padding:10px 15px;">
+                        <div class="bc-card" style="margin-bottom:15px; padding:10px 15px;">
                             <select id="stat-date-filter" class="bc-input" style="margin:0; cursor:pointer;"></select>
                         </div>
-                    </div>
-                    <div class="bc-screen-body" id="stat-list-container">
-                        <div style="text-align:center; color:#94a3b8; padding:20px;">Đang tải dữ liệu...</div>
+                        <div id="stat-list-container">
+                            <div style="text-align:center; color:#94a3b8; padding:20px;">Đang tải dữ liệu...</div>
+                        </div>
                     </div>
                 </div>
                 
@@ -315,12 +314,15 @@
         document.querySelectorAll('.btn-close-app').forEach(btn => btn.onclick = () => app.style.display = 'none');
 
         // ==========================================
-        // SỬA LỖI LIGHTBOX (Gắn thẳng lên thẻ img thông qua window object)
+        // XỬ LÝ LIGHTBOX BẰNG EVENT DELEGATION (Fix lỗi click không phản hồi do chặn tập lệnh)
         // ==========================================
-        window.openBcLightbox = (src) => { 
-            $('bc-lb-img').src = src; 
-            $('bc-lightbox').style.display = 'flex'; 
-        };
+        app.addEventListener('click', (e) => {
+            if (e.target && e.target.classList.contains('rp-img')) {
+                e.stopPropagation();
+                $('bc-lb-img').src = e.target.getAttribute('src');
+                $('bc-lightbox').style.display = 'flex';
+            }
+        });
         $('bc-lb-close').onclick = () => $('bc-lightbox').style.display = 'none';
 
         // Preview Ảnh Báo cáo
@@ -415,7 +417,7 @@
                 let reportedUsers =[];
                 if(!empty) {
                     let todayReports = STAT_DATA.filter(r => r.dateStr === todayStr);
-                    reportedUsers =[...new Set(todayReports.map(r => r.user))]; 
+                    reportedUsers = [...new Set(todayReports.map(r => r.user))]; 
                 }
                 
                 let notReportedUsers = MANAGER_EMPLOYEES.filter(emp => !reportedUsers.includes(String(emp.u).trim())).map(e => e.u);
@@ -439,7 +441,7 @@
             };
 
             const renderStatFilter = () => {
-                let dates =[...new Set(STAT_DATA.map(r => r.dateStr))]; 
+                let dates = [...new Set(STAT_DATA.map(r => r.dateStr))]; 
                 let opts = `<option value="ALL">Tất cả các ngày</option>`;
                 dates.forEach(d => opts += `<option value="${d}">${d}</option>`);
                 $('stat-date-filter').innerHTML = opts;
@@ -452,7 +454,7 @@
                 if(filtered.length === 0) { $('stat-list-container').innerHTML = `<div style="text-align:center; padding:20px;">Không có dữ liệu.</div>`; return; }
                 
                 let grouped = {};
-                filtered.forEach(item => { if(!grouped[item.dateStr]) grouped[item.dateStr] =[]; grouped[item.dateStr].push(item); });
+                filtered.forEach(item => { if(!grouped[item.dateStr]) grouped[item.dateStr] = []; grouped[item.dateStr].push(item); });
 
                 let html = '';
                 for(let date in grouped) {
@@ -470,19 +472,18 @@
                             return `<div class="rp-grid">` + links.map(l => {
                                 let match = l.match(/id=([a-zA-Z0-9_-]+)/);
                                 let imgUrl = match ? `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800` : l;
-                                // 💡 FIX LỖI: Gọi trực tiếp hàm window.openBcLightbox và stopPropagation ngay tại thẻ img
-                                return `<img src="${imgUrl}" class="rp-img" onclick="window.openBcLightbox('${imgUrl}'); event.stopPropagation();">`; 
+                                return `<img src="${imgUrl}" class="rp-img">`; 
                             }).join('') + `</div>`;
                         };
 
                         let uniqueId = `rp-det-${date.replace(/\//g,'-')}-${idx}`;
                         html += `
-                            <div class="rp-card" onclick="document.getElementById('${uniqueId}').style.display = document.getElementById('${uniqueId}').style.display === 'block' ? 'none' : 'block'">
-                                <div class="rp-header-row">
+                            <div class="rp-card">
+                                <div class="rp-header-row" onclick="document.getElementById('${uniqueId}').style.display = document.getElementById('${uniqueId}').style.display === 'block' ? 'none' : 'block'">
                                     <div><b style="color:#38bdf8;">👤 ${row.user}</b> <span style="font-size:12px; color:#64748b; margin-left:10px;">🕒 ${row.timeStr}</span></div>
                                     <span style="font-size:12px; color:#FFD700;">▼ Chi tiết</span>
                                 </div>
-                                <div class="rp-detail" id="${uniqueId}" onclick="event.stopPropagation();">
+                                <div class="rp-detail" id="${uniqueId}">
                                     <div style="margin-bottom:10px;"><b>📄 Phát Tờ Rơi:</b> ${row.slToRoi} tờ</div>
                                     ${renderImgGrid(row.imgToRoi)}
                                     
@@ -532,7 +533,7 @@
                 $('bc-loading').style.display = 'flex';
                 try {
                     $('bc-load-text').innerText = "Đang nén hình ảnh...";
-                    const[imgToRoi, imgDangBai, imgLive] = await Promise.all([ processImages($('file-toroi').files), processImages($('file-dangbai').files), processImages($('file-live').files) ]);
+                    const [imgToRoi, imgDangBai, imgLive] = await Promise.all([ processImages($('file-toroi').files), processImages($('file-dangbai').files), processImages($('file-live').files) ]);
                     
                     $('bc-load-text').innerText = "Đang đẩy dữ liệu lên hệ thống...";
                     const payload = {
