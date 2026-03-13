@@ -429,11 +429,11 @@
                     <div class="stat-dash">
                         <div class="stat-box sb-blue">
                             <div style="font-size:26px; font-weight:bold; color:#38bdf8;">${reportedUsers.length}</div>
-                            <div style="font-size:12px; color:#94a3b8;">Đã nộp (Hôm nay)</div>
+                            <div style="font-size:12px; color:#94a3b8;">Đã báo cáo (Hôm nay)</div>
                         </div>
                         <div class="stat-box sb-red">
                             <div style="font-size:26px; font-weight:bold; color:#ef4444;">${notReportedUsers.length}</div>
-                            <div style="font-size:12px; color:#94a3b8;">Chưa nộp</div>
+                            <div style="font-size:12px; color:#94a3b8;">Chưa báo cáo</div>
                         </div>
                     </div>
                     ${notReportedUsers.length > 0 
@@ -459,25 +459,73 @@
                 filtered.forEach(item => { if(!grouped[item.dateStr]) grouped[item.dateStr] = []; grouped[item.dateStr].push(item); });
 
                 let html = '';
+                
+                // Hàm render Grid hình ảnh dùng chung
+                const renderImgGrid = (str) => {
+                    if(!str) return '';
+                    if(str.includes('ảnh') && !str.includes('http')) return `<span style="color:#fbbf24; font-size:12px;">${str} (Cũ)</span>`;
+                    let links = str.split('|||').filter(l => l.trim() !== '');
+                    if(links.length === 0) return '';
+                    return `<div class="rp-grid">` + links.map(l => {
+                        let match = l.match(/id=([a-zA-Z0-9_-]+)/);
+                        let imgUrl = match ? `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800` : l;
+                        return `<img src="${imgUrl}" class="rp-img">`; 
+                    }).join('') + `</div>`;
+                };
+
                 for(let date in grouped) {
+                    
+                    // --- TÍNH TỔNG SỐ LIỆU TRONG NGÀY ---
+                    let totalToRoi = 0;
+                    let allLinksDB = [];
+                    let allLinksLive =[];
+                    let allImgToRoi = [];
+                    let allImgDB =[];
+                    let allImgLive = [];
+                    
+                    grouped[date].forEach(row => {
+                        totalToRoi += parseInt(row.slToRoi) || 0;
+                        if(row.linkDB) allLinksDB.push(`<a href="${row.linkDB}" target="_blank" class="rp-link">${row.linkDB}</a>`);
+                        if(row.linkLive) allLinksLive.push(`<a href="${row.linkLive}" target="_blank" class="rp-link">${row.linkLive}</a>`);
+                        
+                        if(row.imgToRoi) allImgToRoi.push(row.imgToRoi);
+                        if(row.imgDB) allImgDB.push(row.imgDB);
+                        if(row.imgLive) allImgLive.push(row.imgLive);
+                    });
+
+                    let combinedImgToRoi = allImgToRoi.filter(s => s).join('|||');
+                    let combinedImgDB = allImgDB.filter(s => s).join('|||');
+                    let combinedImgLive = allImgLive.filter(s => s).join('|||');
+
                     html += `
                     <div class="date-group-wrapper">
                         <div class="date-group-title">📅 Báo cáo ngày: ${date}</div>
                         <div class="date-group-content">
                     `;
-                    grouped[date].forEach((row, idx) => {
-                        let renderImgGrid = (str) => {
-                            if(!str) return '';
-                            if(str.includes('ảnh') && !str.includes('http')) return `<span style="color:#fbbf24; font-size:12px;">${str} (Cũ)</span>`;
-                            let links = str.split('|||').filter(l => l.trim() !== '');
-                            if(links.length === 0) return '';
-                            return `<div class="rp-grid">` + links.map(l => {
-                                let match = l.match(/id=([a-zA-Z0-9_-]+)/);
-                                let imgUrl = match ? `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800` : l;
-                                return `<img src="${imgUrl}" class="rp-img">`; 
-                            }).join('') + `</div>`;
-                        };
+                    
+                    // --- CARD TỔNG CỘNG ---
+                    let uniqueIdSum = `rp-det-${date.replace(/\//g,'-')}-SUM`;
+                    html += `
+                        <div class="rp-card" style="border-color: #FFD700; background: rgba(255, 215, 0, 0.05); margin-bottom: 20px;">
+                            <div class="rp-header-row" onclick="document.getElementById('${uniqueIdSum}').style.display = document.getElementById('${uniqueIdSum}').style.display === 'block' ? 'none' : 'block'">
+                                <div><b style="color:#FFD700; font-size:15px;">🌟 TỔNG CỘNG TRONG NGÀY</b></div>
+                                <span style="font-size:12px; color:#FFD700;">▼ Xem tổng hợp</span>
+                            </div>
+                            <div class="rp-detail" id="${uniqueIdSum}" style="border-top-color:rgba(255,215,0,0.3);">
+                                <div style="margin-bottom:10px;"><b>📄 Tổng Phát Tờ Rơi:</b> ${totalToRoi} tờ</div>
+                                ${renderImgGrid(combinedImgToRoi)}
+                                
+                                <div style="margin:15px 0 10px;"><b>🌐 Tổng Link Đăng Bài:</b> <div style="margin-top:5px; font-size:12px;">${allLinksDB.length > 0 ? allLinksDB.join('<br>') : 'Không có link'}</div></div>
+                                ${renderImgGrid(combinedImgDB)}
+                                
+                                <div style="margin:15px 0 10px;"><b>🎥 Tổng Link Livestream:</b> <div style="margin-top:5px; font-size:12px;">${allLinksLive.length > 0 ? allLinksLive.join('<br>') : 'Không có link'}</div></div>
+                                ${renderImgGrid(combinedImgLive)}
+                            </div>
+                        </div>
+                    `;
 
+                    // --- CÁC CARD CỦA NHÂN VIÊN ---
+                    grouped[date].forEach((row, idx) => {
                         let uniqueId = `rp-det-${date.replace(/\//g,'-')}-${idx}`;
                         html += `
                             <div class="rp-card">
