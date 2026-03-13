@@ -511,11 +511,11 @@
                     <div class="stat-dash" style="cursor: pointer;" onclick="document.getElementById('today-emp-list').style.display = document.getElementById('today-emp-list').style.display === 'none' ? 'block' : 'none'" title="Bấm để xem danh sách chi tiết">
                         <div class="stat-box sb-blue">
                             <div style="font-size:26px; font-weight:bold; color:#38bdf8;">${reportedUsers.length}</div>
-                            <div style="font-size:12px; color:#94a3b8;">Đã nộp (Hôm nay)</div>
+                            <div style="font-size:12px; color:#94a3b8;">Đã báo cáo (Hôm nay)</div>
                         </div>
                         <div class="stat-box sb-red">
                             <div style="font-size:26px; font-weight:bold; color:#ef4444;">${notReportedUsers.length}</div>
-                            <div style="font-size:12px; color:#94a3b8;">Chưa nộp</div>
+                            <div style="font-size:12px; color:#94a3b8;">Chưa báo cáo</div>
                         </div>
                     </div>
                     ${listHtml}
