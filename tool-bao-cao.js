@@ -427,11 +427,11 @@
                     <div class="stat-dash">
                         <div class="stat-box sb-blue">
                             <div style="font-size:26px; font-weight:bold; color:#38bdf8;">${reportedUsers.length}</div>
-                            <div style="font-size:12px; color:#94a3b8;">Đã nộp (Hôm nay)</div>
+                            <div style="font-size:12px; color:#94a3b8;">Đã báo cáo (Hôm nay)</div>
                         </div>
                         <div class="stat-box sb-red">
                             <div style="font-size:26px; font-weight:bold; color:#ef4444;">${notReportedUsers.length}</div>
-                            <div style="font-size:12px; color:#94a3b8;">Chưa nộp</div>
+                            <div style="font-size:12px; color:#94a3b8;">Chưa báo cáo</div>
                         </div>
                     </div>
                     ${notReportedUsers.length > 0 
