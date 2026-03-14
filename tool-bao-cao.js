@@ -370,65 +370,89 @@
         document.querySelectorAll('.btn-close-app').forEach(btn => btn.onclick = () => app.style.display = 'none');
 
         // ==========================================
-        // LOGIC XỬ LÝ HÌNH ẢNH (PHÓNG TO + TẢI XUỐNG)
+        // LOGIC XỬ LÝ HÌNH ẢNH & TẢI XUỐNG THÔNG MINH
         // ==========================================
+        const fallbackDownload = (url, filename) => {
+            fetch(url).then(r => r.blob()).then(blob => {
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = blobUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(blobUrl);
+            }).catch(e => {
+                console.log('Fetch blocked by CORS, opening in new tab...', e);
+                window.open(url, '_blank');
+            });
+        };
+
+        const executeDownload = (url, filename) => {
+            if (typeof GM_xmlhttpRequest !== 'undefined') {
+                GM_xmlhttpRequest({
+                    method: "GET", url: url, responseType: "blob",
+                    onload: (res) => {
+                        if(res.status >= 200 && res.status < 300) {
+                            const blob = res.response;
+                            const blobUrl = URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = blobUrl;
+                            a.download = filename;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(blobUrl);
+                        } else {
+                            fallbackDownload(url, filename);
+                        }
+                    },
+                    onerror: () => fallbackDownload(url, filename)
+                });
+            } else {
+                fallbackDownload(url, filename);
+            }
+        };
+
         app.addEventListener('click', (e) => {
+            // Xem ảnh phóng to
             if (e.target && e.target.classList.contains('rp-img')) {
                 e.stopPropagation();
                 $('bc-lb-img').src = e.target.getAttribute('src');
                 $('bc-lightbox').style.display = 'flex';
             }
-        });
-        $('bc-lb-close').onclick = () => $('bc-lightbox').style.display = 'none';
-
-        window.downloadImage = (url, filename) => {
-            if (typeof GM_xmlhttpRequest !== 'undefined') {
-                GM_xmlhttpRequest({
-                    method: "GET", url: url, responseType: "blob",
-                    onload: (res) => {
-                        const blob = res.response;
-                        const blobUrl = URL.createObjectURL(blob);
-                        const a = document.createElement("a");
-                        a.href = blobUrl;
-                        a.download = filename;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(blobUrl);
-                    }
-                });
-            } else {
-                fetch(url).then(r => r.blob()).then(blob => {
-                    const blobUrl = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = blobUrl;
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(blobUrl);
-                }).catch(e => console.log('Download Error:', e));
+            // Đóng lightbox
+            else if (e.target && e.target.id === 'bc-lb-close') {
+                $('bc-lightbox').style.display = 'none';
             }
-        };
-
-        window.downloadSingleImage = (e, url, filename) => {
-            e.stopPropagation();
-            window.downloadImage(url, filename);
-        };
-
-        window.downloadAllImages = (e, links, prefix) => {
-            e.stopPropagation();
-            if(!confirm(`Bắt đầu tải về ${links.length} ảnh?\n(Lưu ý: Nếu đây là lần đầu tiên, trình duyệt sẽ yêu cầu bạn cấp quyền "Tải xuống nhiều tệp" -> Hãy chọn Allow/Cho phép nhé!)`)) return;
-            
-            links.forEach((l, idx) => {
-                let match = l.match(/id=([a-zA-Z0-9_-]+)/);
-                let imgUrl = match ? `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800` : l;
-                // Thêm độ trễ để trình duyệt không bị treo và chặn download
-                setTimeout(() => {
-                    window.downloadImage(imgUrl, `${prefix}_${idx + 1}.jpg`);
-                }, idx * 400); 
-            });
-        };
+            // Bấm nút Tải 1 ảnh
+            else if (e.target && e.target.classList.contains('btn-dl-single')) {
+                e.stopPropagation();
+                let url = e.target.getAttribute('data-url');
+                let filename = e.target.getAttribute('data-filename');
+                executeDownload(url, filename);
+            }
+            // Bấm nút Tải tất cả
+            else if (e.target && e.target.classList.contains('btn-dl-all')) {
+                e.stopPropagation();
+                let linksStr = e.target.getAttribute('data-links');
+                let prefix = e.target.getAttribute('data-prefix');
+                let links =[];
+                try { links = JSON.parse(linksStr); } catch(err) { console.error("Lỗi parse JSON link", err); }
+                
+                if (links.length > 0) {
+                    if(!confirm(`Bắt đầu tải về ${links.length} ảnh?\n(Lưu ý: Trình duyệt có thể hỏi quyền, hãy chọn "Allow/Cho phép Tải xuống nhiều tệp" nhé!)`)) return;
+                    
+                    links.forEach((l, idx) => {
+                        let match = l.match(/id=([a-zA-Z0-9_-]+)/);
+                        let imgUrl = match ? `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800` : l;
+                        setTimeout(() => {
+                            executeDownload(imgUrl, `${prefix}_${idx + 1}.jpg`);
+                        }, idx * 400); 
+                    });
+                }
+            }
+        });
 
         const handlePreview = (inputId, previewId) => {
             $(inputId).addEventListener('change', (e) => {
@@ -637,10 +661,11 @@
                 if(links.length === 0) return '';
                 
                 let className = horizontal ? "rp-grid scroll-x" : "rp-grid";
-                let linksJson = JSON.stringify(links).replace(/"/g, '&quot;');
+                // Chuyển chuỗi JSON cho HTML an toàn
+                let linksJson = JSON.stringify(links).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
                 
                 let downloadAllBtn = `<div style="text-align: right; margin-bottom: 5px; margin-top: 5px;">
-                    <span style="font-size: 11px; color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="window.downloadAllImages(event, ${linksJson}, '${prefixName}')">📥 Tải tất cả ${links.length} ảnh</span>
+                    <span class="btn-dl-all" style="font-size: 11px; color: #38bdf8; cursor: pointer; text-decoration: underline;" data-links="${linksJson}" data-prefix="${prefixName}">📥 Tải tất cả ${links.length} ảnh</span>
                 </div>`;
 
                 let gridHtml = `<div class="${className}">` + links.map((l, idx) => {
@@ -649,7 +674,7 @@
                     return `
                         <div class="rp-img-wrap">
                             <img src="${imgUrl}" class="rp-img">
-                            <div class="rp-img-dl" onclick="window.downloadSingleImage(event, '${imgUrl}', '${prefixName}_${idx+1}.jpg')" title="Tải ảnh này">📥</div>
+                            <div class="rp-img-dl btn-dl-single" data-url="${imgUrl}" data-filename="${prefixName}_${idx+1}.jpg" title="Tải ảnh này">📥</div>
                         </div>`; 
                 }).join('') + `</div>`;
                 
@@ -774,7 +799,7 @@
                     let allLinksLive =[];
                     let allImgToRoi =[];
                     let allImgDB = [];
-                    let allImgLive =[];
+                    let allImgLive = [];
 
                     grouped[date].forEach(row => {
                         totalToRoi += parseInt(row.slToRoi) || 0;
@@ -893,10 +918,10 @@
                                 if(links.length === 0) return '';
                                 
                                 let className = horizontal ? "rp-grid scroll-x" : "rp-grid";
-                                let linksJson = JSON.stringify(links).replace(/"/g, '&quot;');
+                                let linksJson = JSON.stringify(links).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
                                 
                                 let downloadAllBtn = `<div style="text-align: right; margin-bottom: 5px; margin-top: 5px;">
-                                    <span style="font-size: 11px; color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="window.downloadAllImages(event, ${linksJson}, '${prefixName}')">📥 Tải tất cả ${links.length} ảnh</span>
+                                    <span class="btn-dl-all" style="font-size: 11px; color: #38bdf8; cursor: pointer; text-decoration: underline;" data-links="${linksJson}" data-prefix="${prefixName}">📥 Tải tất cả ${links.length} ảnh</span>
                                 </div>`;
 
                                 let gridHtml = `<div class="${className}">` + links.map((l, idx) => {
@@ -905,7 +930,7 @@
                                     return `
                                         <div class="rp-img-wrap">
                                             <img src="${imgUrl}" class="rp-img">
-                                            <div class="rp-img-dl" onclick="window.downloadSingleImage(event, '${imgUrl}', '${prefixName}_${idx+1}.jpg')" title="Tải ảnh này">📥</div>
+                                            <div class="rp-img-dl btn-dl-single" data-url="${imgUrl}" data-filename="${prefixName}_${idx+1}.jpg" title="Tải ảnh này">📥</div>
                                         </div>`; 
                                 }).join('') + `</div>`;
                                 
@@ -1001,5 +1026,5 @@
         }
     };
 
-    return { name: "Báo Cáo TT", icon: `<svg viewBox="0 0 24 24"><path fill="white" d="M3 3v18h18V3H3zm16 16H5V5h14v14zM7 10h2v7H7v-7zm4-3h2v10h-2V7zm4 6h2v4h-2v-4z"/></svg>`, bgColor: "#0284c7", action: runTool };
+    return { name: "Báo Cáo", icon: `<svg viewBox="0 0 24 24"><path fill="white" d="M3 3v18h18V3H3zm16 16H5V5h14v14zM7 10h2v7H7v-7zm4-3h2v10h-2V7zm4 6h2v4h-2v-4z"/></svg>`, bgColor: "#0284c7", action: runTool };
 })
