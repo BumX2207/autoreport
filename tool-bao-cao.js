@@ -215,7 +215,7 @@
             <!-- SCREEN 1: QUẢN LÝ -->
             <div class="bc-screen" id="sc-manager">
                 <div class="bc-header">
-                    <div class="bc-title">⚙️ QUẢN LÝ</div>
+                    <div class="bc-title">⚙️ QUẢN LÝ DASHBOARD</div>
                     <div class="bc-header-right">
                         <span style="color:#94a3b8; font-size:14px; font-weight:600;">👤 ${CURRENT_USER}</span>
                         <button class="bc-close-btn btn-close-app">✕</button>
@@ -634,7 +634,7 @@
                 else {
                     let totalFlyers = 0, postCount = 0, liveCount = 0;
                     let activeDays = new Set();
-                    let allFlyerImgs = [], allPostImgs =[], allLiveImgs = [];
+                    let allFlyerImgs = [], allPostImgs =[], allLiveImgs =[];
                     let allPostLinks = [], allLiveLinks =[];
 
                     filteredData.forEach(r => {
@@ -696,6 +696,52 @@
                         <div class="date-group-title">📅 Nhật ký báo cáo ngày: ${date}</div>
                         <div class="date-group-content">
                     `;
+
+                    // ==========================================
+                    // TỔNG CỘNG TRONG NGÀY
+                    // ==========================================
+                    let totalToRoi = 0;
+                    let allLinksDB = [];
+                    let allLinksLive = [];
+                    let allImgToRoi =[];
+                    let allImgDB = [];
+                    let allImgLive = [];
+
+                    grouped[date].forEach(row => {
+                        totalToRoi += parseInt(row.slToRoi) || 0;
+                        if (row.linkDB) allLinksDB.push(`<li><a href="${row.linkDB}" target="_blank" class="rp-link">${row.linkDB}</a></li>`);
+                        if (row.linkLive) allLinksLive.push(`<li><a href="${row.linkLive}" target="_blank" class="rp-link">${row.linkLive}</a></li>`);
+
+                        if (row.imgToRoi) allImgToRoi.push(row.imgToRoi);
+                        if (row.imgDB) allImgDB.push(row.imgDB);
+                        if (row.imgLive) allImgLive.push(row.imgLive);
+                    });
+
+                    let combinedImgToRoi = allImgToRoi.filter(s => s).join('|||');
+                    let combinedImgDB = allImgDB.filter(s => s).join('|||');
+                    let combinedImgLive = allImgLive.filter(s => s).join('|||');
+
+                    let uniqueIdSum = `rp-det-${date.replace(/\//g,'-')}-SUM`;
+                    
+                    finalHtml += `
+                        <div class="rp-card" style="border-color: #FFD700; background: rgba(255, 215, 0, 0.05); margin-bottom: 20px;">
+                            <div class="rp-header-row" onclick="document.getElementById('${uniqueIdSum}').style.display = document.getElementById('${uniqueIdSum}').style.display === 'block' ? 'none' : 'block'">
+                                <div><b style="color:#FFD700; font-size:15px;">🌟 TỔNG CỘNG TRONG NGÀY</b></div>
+                                <span style="font-size:12px; color:#FFD700;">▼ Xem tổng hợp</span>
+                            </div>
+                            <div class="rp-detail" id="${uniqueIdSum}" style="border-top-color:rgba(255,215,0,0.3);">
+                                <div style="margin-bottom:10px;"><b>📄 Tổng Phát Tờ Rơi:</b> <span style="color:#FFD700; font-size:14px; font-weight:bold;">${totalToRoi}</span> tờ</div>
+                                ${renderImgGrid(combinedImgToRoi, true)}
+                                
+                                <div style="margin:15px 0 10px;"><b>🌐 Tổng Link Đăng Bài:</b> <div style="margin-top:5px; font-size:12px;"><ul class="link-list">${allLinksDB.length > 0 ? allLinksDB.join('') : '<li>Không có link</li>'}</ul></div></div>
+                                ${renderImgGrid(combinedImgDB, true)}
+                                
+                                <div style="margin:15px 0 10px;"><b>🎥 Tổng Link Livestream:</b> <div style="margin-top:5px; font-size:12px;"><ul class="link-list">${allLinksLive.length > 0 ? allLinksLive.join('') : '<li>Không có link</li>'}</ul></div></div>
+                                ${renderImgGrid(combinedImgLive, true)}
+                            </div>
+                        </div>
+                    `;
+                    // ==========================================
                     
                     grouped[date].forEach((row, idx) => {
                         let uniqueId = `rp-det-${date.replace(/\//g,'-')}-${idx}`;
@@ -871,5 +917,5 @@
         }
     };
 
-    return { name: "Báo Cáo TT", icon: `<svg viewBox="0 0 24 24"><path fill="white" d="M3 3v18h18V3H3zm16 16H5V5h14v14zM7 10h2v7H7v-7zm4-3h2v10h-2V7zm4 6h2v4h-2v-4z"/></svg>`, bgColor: "#0284c7", action: runTool };
+    return { name: "Báo Cáo", icon: `<svg viewBox="0 0 24 24"><path fill="white" d="M3 3v18h18V3H3zm16 16H5V5h14v14zM7 10h2v7H7v-7zm4-3h2v10h-2V7zm4 6h2v4h-2v-4z"/></svg>`, bgColor: "#0284c7", action: runTool };
 })
