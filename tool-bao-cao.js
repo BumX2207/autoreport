@@ -137,15 +137,21 @@
         .rp-header-row { display:flex; justify-content:space-between; align-items:center; cursor: pointer; }
         .rp-detail { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.2); font-size:13px; color:#cbd5e1;}
         
-        /* Cải tiến hiển thị hình ảnh - Cuộn ngang cho Summary */
-        .rp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 10px; margin-top: 10px; }
+        /* Cải tiến hiển thị hình ảnh - Cuộn ngang cho Summary + Nút Tải Xuống */
+        .rp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 10px; margin-top: 5px; }
         .rp-grid.scroll-x { display: flex; overflow-x: auto; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: #38bdf8 rgba(255,255,255,0.1); }
         .rp-grid.scroll-x::-webkit-scrollbar { height: 6px; }
         .rp-grid.scroll-x::-webkit-scrollbar-thumb { background: #38bdf8; border-radius: 10px; }
         
-        .rp-img { width: 100%; height: 70px; object-fit: cover; border-radius: 6px; cursor: zoom-in; border: 1px solid rgba(255,255,255,0.2); transition: 0.2s; }
-        .rp-grid.scroll-x .rp-img { width: 80px; flex-shrink:0; height: 80px; }
-        .rp-img:hover { transform: scale(1.05); border-color:#FFD700; z-index:2;}
+        .rp-img-wrap { position:relative; width: 100%; height: 70px; transition: 0.2s; border-radius: 6px; flex-shrink: 0;}
+        .rp-grid.scroll-x .rp-img-wrap { width: 80px; height: 80px; }
+        .rp-img-wrap:hover { transform: scale(1.05); z-index:2;}
+        .rp-img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; cursor: zoom-in; border: 1px solid rgba(255,255,255,0.2); transition: 0.2s; display: block;}
+        .rp-img-wrap:hover .rp-img { border-color:#FFD700; }
+
+        .rp-img-dl { position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); border-radius: 4px; padding: 4px; font-size: 12px; line-height: 1; cursor: pointer; opacity: 0; transition: 0.2s; z-index: 3; }
+        .rp-img-wrap:hover .rp-img-dl { opacity: 1; }
+        .rp-img-dl:hover { background: #38bdf8; color: #fff; }
         
         .rp-link { color:#38bdf8; text-decoration:none; word-break: break-all;}
         .rp-link:hover { text-decoration:underline;}
@@ -363,6 +369,9 @@
 
         document.querySelectorAll('.btn-close-app').forEach(btn => btn.onclick = () => app.style.display = 'none');
 
+        // ==========================================
+        // LOGIC XỬ LÝ HÌNH ẢNH (PHÓNG TO + TẢI XUỐNG)
+        // ==========================================
         app.addEventListener('click', (e) => {
             if (e.target && e.target.classList.contains('rp-img')) {
                 e.stopPropagation();
@@ -371,6 +380,55 @@
             }
         });
         $('bc-lb-close').onclick = () => $('bc-lightbox').style.display = 'none';
+
+        window.downloadImage = (url, filename) => {
+            if (typeof GM_xmlhttpRequest !== 'undefined') {
+                GM_xmlhttpRequest({
+                    method: "GET", url: url, responseType: "blob",
+                    onload: (res) => {
+                        const blob = res.response;
+                        const blobUrl = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = blobUrl;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(blobUrl);
+                    }
+                });
+            } else {
+                fetch(url).then(r => r.blob()).then(blob => {
+                    const blobUrl = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = blobUrl;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(blobUrl);
+                }).catch(e => console.log('Download Error:', e));
+            }
+        };
+
+        window.downloadSingleImage = (e, url, filename) => {
+            e.stopPropagation();
+            window.downloadImage(url, filename);
+        };
+
+        window.downloadAllImages = (e, links, prefix) => {
+            e.stopPropagation();
+            if(!confirm(`Bắt đầu tải về ${links.length} ảnh?\n(Lưu ý: Nếu đây là lần đầu tiên, trình duyệt sẽ yêu cầu bạn cấp quyền "Tải xuống nhiều tệp" -> Hãy chọn Allow/Cho phép nhé!)`)) return;
+            
+            links.forEach((l, idx) => {
+                let match = l.match(/id=([a-zA-Z0-9_-]+)/);
+                let imgUrl = match ? `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800` : l;
+                // Thêm độ trễ để trình duyệt không bị treo và chặn download
+                setTimeout(() => {
+                    window.downloadImage(imgUrl, `${prefix}_${idx + 1}.jpg`);
+                }, idx * 400); 
+            });
+        };
 
         const handlePreview = (inputId, previewId) => {
             $(inputId).addEventListener('change', (e) => {
@@ -482,7 +540,6 @@
                 let allEmps = MANAGER_EMPLOYEES.map(e => String(e.u).trim());
                 let notReportedUsers = allEmps.filter(u => !reportedUsers.includes(u));
 
-                // Dựng giao diện Danh sách những ai nộp / chưa nộp
                 let listHtml = `<div id="today-emp-list" style="display:none; margin-bottom: 25px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 15px 10px; max-height: 250px; overflow-y: auto;">
                                     <div style="font-size: 11px; color: #94a3b8; margin-bottom: 10px; text-align: center; font-weight: bold; text-transform: uppercase;">Danh sách NV đã/chưa báo cáo hôm nay</div>`;
                 
@@ -506,7 +563,6 @@
 
                 listHtml += `</div>`;
 
-                // Render UI tổng
                 $('stat-summary-container').innerHTML = `
                     <div class="stat-dash" style="cursor: pointer;" onclick="document.getElementById('today-emp-list').style.display = document.getElementById('today-emp-list').style.display === 'none' ? 'block' : 'none'" title="Bấm để xem danh sách chi tiết">
                         <div class="stat-box sb-blue">
@@ -574,17 +630,30 @@
                 renderStatList(filtered, e, m, d);
             };
 
-            const renderImgGrid = (str, horizontal = false) => {
+            const renderImgGrid = (str, horizontal = false, prefixName = "Anh") => {
                 if(!str) return '';
                 if(str.includes('ảnh') && !str.includes('http')) return `<span style="color:#fbbf24; font-size:12px;">${str} (Cũ)</span>`;
                 let links = str.split('|||').filter(l => l.trim() !== '');
                 if(links.length === 0) return '';
+                
                 let className = horizontal ? "rp-grid scroll-x" : "rp-grid";
-                return `<div class="${className}">` + links.map(l => {
+                let linksJson = JSON.stringify(links).replace(/"/g, '&quot;');
+                
+                let downloadAllBtn = `<div style="text-align: right; margin-bottom: 5px; margin-top: 5px;">
+                    <span style="font-size: 11px; color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="window.downloadAllImages(event, ${linksJson}, '${prefixName}')">📥 Tải tất cả ${links.length} ảnh</span>
+                </div>`;
+
+                let gridHtml = `<div class="${className}">` + links.map((l, idx) => {
                     let match = l.match(/id=([a-zA-Z0-9_-]+)/);
                     let imgUrl = match ? `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800` : l;
-                    return `<img src="${imgUrl}" class="rp-img">`; 
+                    return `
+                        <div class="rp-img-wrap">
+                            <img src="${imgUrl}" class="rp-img">
+                            <div class="rp-img-dl" onclick="window.downloadSingleImage(event, '${imgUrl}', '${prefixName}_${idx+1}.jpg')" title="Tải ảnh này">📥</div>
+                        </div>`; 
                 }).join('') + `</div>`;
+                
+                return downloadAllBtn + gridHtml;
             };
 
             const renderStatList = (filteredData, selectedEmp, selectedMonth, selectedDate) => {
@@ -668,19 +737,19 @@
                                 
                                 <div style="margin-bottom:15px;">
                                     <b style="color:#fff;">📄 Tổng Tờ Rơi Đã Phát: <span style="color:#FFD700; font-size:16px;">${totalFlyers}</span> tờ</b>
-                                    ${renderImgGrid(allFlyerImgs.filter(s=>s).join('|||'), true)}
+                                    ${renderImgGrid(allFlyerImgs.filter(s=>s).join('|||'), true, `PhatToRoi_${selectedEmp}`)}
                                 </div>
                                 
                                 <div style="margin-bottom:15px;">
                                     <b style="color:#fff;">🌐 Tổng Lượt Đăng Bài: <span style="color:#FFD700; font-size:16px;">${postCount}</span> lần</b>
                                     <ul class="link-list">${allPostLinks.join('')}</ul>
-                                    ${renderImgGrid(allPostImgs.filter(s=>s).join('|||'), true)}
+                                    ${renderImgGrid(allPostImgs.filter(s=>s).join('|||'), true, `DangBai_${selectedEmp}`)}
                                 </div>
                                 
                                 <div style="margin-bottom:5px;">
                                     <b style="color:#fff;">🎥 Tổng Lượt Livestream: <span style="color:#FFD700; font-size:16px;">${liveCount}</span> lần</b>
                                     <ul class="link-list">${allLiveLinks.join('')}</ul>
-                                    ${renderImgGrid(allLiveImgs.filter(s=>s).join('|||'), true)}
+                                    ${renderImgGrid(allLiveImgs.filter(s=>s).join('|||'), true, `Livestream_${selectedEmp}`)}
                                 </div>
                             </div>
                         </div>
@@ -702,10 +771,10 @@
                     // ==========================================
                     let totalToRoi = 0;
                     let allLinksDB = [];
-                    let allLinksLive = [];
+                    let allLinksLive =[];
                     let allImgToRoi =[];
                     let allImgDB = [];
-                    let allImgLive = [];
+                    let allImgLive =[];
 
                     grouped[date].forEach(row => {
                         totalToRoi += parseInt(row.slToRoi) || 0;
@@ -722,6 +791,7 @@
                     let combinedImgLive = allImgLive.filter(s => s).join('|||');
 
                     let uniqueIdSum = `rp-det-${date.replace(/\//g,'-')}-SUM`;
+                    let safeDate = date.replace(/\//g,'-');
                     
                     finalHtml += `
                         <div class="rp-card" style="border-color: #FFD700; background: rgba(255, 215, 0, 0.05); margin-bottom: 20px;">
@@ -731,13 +801,13 @@
                             </div>
                             <div class="rp-detail" id="${uniqueIdSum}" style="border-top-color:rgba(255,215,0,0.3);">
                                 <div style="margin-bottom:10px;"><b>📄 Tổng Phát Tờ Rơi:</b> <span style="color:#FFD700; font-size:14px; font-weight:bold;">${totalToRoi}</span> tờ</div>
-                                ${renderImgGrid(combinedImgToRoi, true)}
+                                ${renderImgGrid(combinedImgToRoi, true, `Tong_ToRoi_${safeDate}`)}
                                 
                                 <div style="margin:15px 0 10px;"><b>🌐 Tổng Link Đăng Bài:</b> <div style="margin-top:5px; font-size:12px;"><ul class="link-list">${allLinksDB.length > 0 ? allLinksDB.join('') : '<li>Không có link</li>'}</ul></div></div>
-                                ${renderImgGrid(combinedImgDB, true)}
+                                ${renderImgGrid(combinedImgDB, true, `Tong_DangBai_${safeDate}`)}
                                 
                                 <div style="margin:15px 0 10px;"><b>🎥 Tổng Link Livestream:</b> <div style="margin-top:5px; font-size:12px;"><ul class="link-list">${allLinksLive.length > 0 ? allLinksLive.join('') : '<li>Không có link</li>'}</ul></div></div>
-                                ${renderImgGrid(combinedImgLive, true)}
+                                ${renderImgGrid(combinedImgLive, true, `Tong_Livestream_${safeDate}`)}
                             </div>
                         </div>
                     `;
@@ -753,13 +823,13 @@
                                 </div>
                                 <div class="rp-detail" id="${uniqueId}">
                                     <div style="margin-bottom:10px;"><b>📄 Phát Tờ Rơi:</b> ${row.slToRoi} tờ</div>
-                                    ${renderImgGrid(row.imgToRoi)}
+                                    ${renderImgGrid(row.imgToRoi, false, `ToRoi_${row.user}_${safeDate}`)}
                                     
                                     <div style="margin:15px 0 10px;"><b>🌐 Đăng Bài:</b> ${row.linkDB ? `<a href="${row.linkDB}" target="_blank" class="rp-link">${row.linkDB}</a>` : 'Không có link'}</div>
-                                    ${renderImgGrid(row.imgDB)}
+                                    ${renderImgGrid(row.imgDB, false, `DangBai_${row.user}_${safeDate}`)}
                                     
                                     <div style="margin:15px 0 10px;"><b>🎥 Livestream:</b> ${row.linkLive ? `<a href="${row.linkLive}" target="_blank" class="rp-link">${row.linkLive}</a>` : 'Không có link'}</div>
-                                    ${renderImgGrid(row.imgLive)}
+                                    ${renderImgGrid(row.imgLive, false, `Livestream_${row.user}_${safeDate}`)}
                                     
                                     <div style="margin-top:15px; text-align:right;"><a href="${row.rootLink}" target="_blank" style="color:#10b981; font-size:12px; text-decoration:none;">📁 Mở Thư mục Drive ➡</a></div>
                                 </div>
@@ -816,16 +886,30 @@
                             $('emp-history-container').innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">Bạn chưa có báo cáo nào trong hôm nay.</div>`;
                         } else {
                             let html = '';
-                            const renderImgGrid = (str) => {
+                            const renderImgGrid = (str, horizontal = false, prefixName = "Anh") => {
                                 if(!str) return '';
                                 if(str.includes('ảnh') && !str.includes('http')) return `<span style="color:#fbbf24; font-size:12px;">${str} (Cũ)</span>`;
                                 let links = str.split('|||').filter(l => l.trim() !== '');
                                 if(links.length === 0) return '';
-                                return `<div class="rp-grid">` + links.map(l => {
+                                
+                                let className = horizontal ? "rp-grid scroll-x" : "rp-grid";
+                                let linksJson = JSON.stringify(links).replace(/"/g, '&quot;');
+                                
+                                let downloadAllBtn = `<div style="text-align: right; margin-bottom: 5px; margin-top: 5px;">
+                                    <span style="font-size: 11px; color: #38bdf8; cursor: pointer; text-decoration: underline;" onclick="window.downloadAllImages(event, ${linksJson}, '${prefixName}')">📥 Tải tất cả ${links.length} ảnh</span>
+                                </div>`;
+
+                                let gridHtml = `<div class="${className}">` + links.map((l, idx) => {
                                     let match = l.match(/id=([a-zA-Z0-9_-]+)/);
                                     let imgUrl = match ? `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800` : l;
-                                    return `<img src="${imgUrl}" class="rp-img">`; 
+                                    return `
+                                        <div class="rp-img-wrap">
+                                            <img src="${imgUrl}" class="rp-img">
+                                            <div class="rp-img-dl" onclick="window.downloadSingleImage(event, '${imgUrl}', '${prefixName}_${idx+1}.jpg')" title="Tải ảnh này">📥</div>
+                                        </div>`; 
                                 }).join('') + `</div>`;
+                                
+                                return downloadAllBtn + gridHtml;
                             };
 
                             myData.forEach((row, idx) => {
@@ -838,13 +922,13 @@
                                         </div>
                                         <div class="rp-detail" id="${uniqueId}">
                                             <div style="margin-bottom:10px;"><b>📄 Lượt Phát Tờ Rơi:</b> ${row.slToRoi} tờ</div>
-                                            ${renderImgGrid(row.imgToRoi)}
+                                            ${renderImgGrid(row.imgToRoi, false, `ToRoi_ToiNay_${idx+1}`)}
                                             
                                             <div style="margin:15px 0 10px;"><b>🌐 Lượt Đăng/Share Bài:</b> ${row.linkDB ? `<a href="${row.linkDB}" target="_blank" class="rp-link">${row.linkDB}</a>` : 'Không có link'}</div>
-                                            ${renderImgGrid(row.imgDB)}
+                                            ${renderImgGrid(row.imgDB, false, `DangBai_ToiNay_${idx+1}`)}
                                             
                                             <div style="margin:15px 0 10px;"><b>🎥 Livestream:</b> ${row.linkLive ? `<a href="${row.linkLive}" target="_blank" class="rp-link">${row.linkLive}</a>` : 'Không có link'}</div>
-                                            ${renderImgGrid(row.imgLive)}
+                                            ${renderImgGrid(row.imgLive, false, `Livestream_ToiNay_${idx+1}`)}
                                         </div>
                                     </div>
                                 `;
@@ -917,5 +1001,5 @@
         }
     };
 
-    return { name: "Báo Cáo", icon: `<svg viewBox="0 0 24 24"><path fill="white" d="M3 3v18h18V3H3zm16 16H5V5h14v14zM7 10h2v7H7v-7zm4-3h2v10h-2V7zm4 6h2v4h-2v-4z"/></svg>`, bgColor: "#0284c7", action: runTool };
+    return { name: "Báo Cáo TT", icon: `<svg viewBox="0 0 24 24"><path fill="white" d="M3 3v18h18V3H3zm16 16H5V5h14v14zM7 10h2v7H7v-7zm4-3h2v10h-2V7zm4 6h2v4h-2v-4z"/></svg>`, bgColor: "#0284c7", action: runTool };
 })
