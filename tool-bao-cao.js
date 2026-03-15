@@ -286,11 +286,11 @@
                     <button class="bc-close-btn btn-close-app">✕</button>
                 </div>
                 <div style="padding: 0 30px 40px; text-align:center;">
-                    <h2 style="color:#38bdf8; margin-bottom:5px;">ĐĂNG NHẬP</h2>
+                    <h2 style="color:#38bdf8; margin-bottom:5px;">ĐĂNG NHẬP TÀI KHOẢN TRUYỀN THÔNG</h2>
                     <p style="color:#94a3b8; font-size:13px; margin-bottom:25px;">Hệ thống Báo cáo Truyền thông</p>
                     <input type="text" id="inp-login-shop" class="bc-input" placeholder="Mã Shop của bạn">
-                    <input type="text" id="inp-login-user" class="bc-input" placeholder="Tên User của bạn">
-                    <input type="password" id="inp-login-pass" class="bc-input" placeholder="Mật khẩu">
+                    <input type="text" id="inp-login-user" class="bc-input" placeholder="Username QL khai báo cho bạn">
+                    <input type="password" id="inp-login-pass" class="bc-input" placeholder="Mật khẩu QL khai báo cho bạn">
                     <button class="bc-btn btn-primary" id="btn-nv-login">VÀO BÁO CÁO</button>
                 </div>
             </div>
