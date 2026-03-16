@@ -1,7 +1,6 @@
 ((context) => {
-    const { UI, UTILS, CONSTANTS, DATA } = context;
+    const { UI, UTILS, CONSTANTS } = context;
     const GM_xmlhttpRequest = typeof context.GM_xmlhttpRequest !== 'undefined' ? context.GM_xmlhttpRequest : window.GM_xmlhttpRequest;
-    const GM_getValue = typeof context.GM_getValue !== 'undefined' ? context.GM_getValue : window.GM_getValue;
 
     const universalFetch = async (options) => {
         return new Promise((resolve, reject) => {
@@ -24,6 +23,7 @@
     // ===============================================================
     const API_URL_MAIN = "https://script.google.com/macros/s/AKfycbxDRSg1JDNTyuYf2TSQovNIWhFk3ls9hPXxtRSMu6xI0oNjql53nJo0G1H5k1b2iq_3/exec";   
     const API_URL_REPORT = "https://script.google.com/macros/s/AKfycbz7Hv3FHg_XiA4g-ujO8bXkLSohxzB2HJvzsOuKZbkGdr-E33vwRJB4Etl-eCtKh5Xr/exec";
+    const API_URL_HISTORY = "https://script.google.com/macros/s/AKfycbzL5rzzxfhSdX0WmFR3sB-BBimZgRsHT8v2RyzfZ_7RWG-bYuRTEwqmbwiImyZY5KgC/exec";
 
     let SYSTEM_USER = "---";
     if (context.AUTH_STATE && context.AUTH_STATE.isAuthorized && context.AUTH_STATE.userName && context.AUTH_STATE.userName !== "---") {
@@ -174,6 +174,28 @@
         .filter-row button { flex-shrink: 0; padding: 10px 15px; border-radius: 8px; background: #0284c7; border: none; color: white; font-size: 16px; cursor: pointer; transition: 0.2s; }
         .filter-row button:hover { background: #0369a1; transform: scale(1.05); }
 
+        /* CSS MỚI CHO BẢNG NĂNG LỰC NHÂN VIÊN VÀO TAB CÁ NHÂN */
+        .nlnv-container { width: 100%; max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; background: #fff; }
+        .nlnv-table { width: 100%; border-collapse: collapse; text-align: center; font-size: 13px; border: 2px solid #000; color: #000;}
+        .nlnv-table th, .nlnv-table td { border: 1px solid #000; padding: 6px 4px; vertical-align: middle; }
+        .nlnv-title-cell { background-color: #FFEB3B; font-weight: bold; font-size: 16px; color: #000; text-transform: uppercase; line-height: 1.4; }
+        .nlnv-staff-cell { padding: 0 !important; vertical-align: middle; background: #fff;}
+        .nlnv-staff-select { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; color: #0070C0; border: none; outline: none; background: transparent; text-align: center; width: 100%; height: 100%; min-height: 45px; display: block; cursor: pointer; appearance: none; -webkit-appearance: none; }
+        .nlnv-header-cyan { background-color: #00B0F0; color: #fff; font-weight: bold; }
+        .nlnv-label { color: #0070C0; font-weight: bold; }
+        .nlnv-val-red { color: #FF0000; font-weight: bold; }
+        .nlnv-val-green { color: #00B050; font-weight: bold; }
+        .nlnv-row-bg { background-color: #f9f9f9; }
+        .nlnv-item-name { color: #0070C0; font-weight: bold; text-align: left; padding-left: 8px !important; }
+        .nlnv-footer-blue { background-color: #00B0F0; color: white; font-weight: bold; font-size: 14px; }
+        .nlnv-footer-green { background-color: #00B050; color: white; font-weight: bold; font-size: 14px; }
+        .nlnv-footer-yellow { background-color: #FFEB3B; color: red; font-weight: bold; font-size: 14px; }
+
+        .nlnv-daily-wrapper { width: 100%; overflow-x: auto; background: #fff; }
+        .nlnv-daily-table { border-collapse: collapse; width: 100%; text-align: center; font-size: 13px; border: 1px solid #000; font-family: Arial, sans-serif; color: #000;}
+        .nlnv-daily-table th, .nlnv-daily-table td { border: 1px solid #000; padding: 6px 4px; white-space: nowrap; vertical-align: middle; }
+        .nlnv-daily-item { color: #008080; font-weight: bold; text-align: left; padding-left: 8px !important; }
+
         /* Khóa cứng Dropdown nhân viên trong bảng NLNV */
         #emp-nlnv-container * { color: #000; }
         #emp-nlnv-container .nlnv-staff-select, 
@@ -212,6 +234,248 @@
         }
         return base64Array;
     };
+
+    // ===============================================================
+    // LOCAL BI ENGINE (TỰ ĐỘNG VẼ BẢNG NLNV ĐỘC LẬP TỪ CLOUD)
+    // ===============================================================
+    const LOCAL_BI_ENGINE = {
+        formatNumber: (num) => new Intl.NumberFormat('en-US').format(Math.round(num || 0)),
+        unflattenObject: (flatObj) => {
+            const result = {};
+            for (let flatKey in flatObj) {
+                const keys = flatKey.split('|||');
+                let current = result;
+                for (let i = 0; i < keys.length; i++) {
+                    let key = keys[i];
+                    if (i === keys.length - 1) {
+                        current[key] = flatObj[flatKey];
+                    } else {
+                        if (!current[key]) current[key] = {};
+                        current = current[key];
+                    }
+                }
+            }
+            return result;
+        },
+        getNLNVReport: (dataCache, configList, userConfig, selectedStaffName, shopIdx, daysPassed, daysInMonth) => {
+            const staffList = userConfig.staffList ||[];
+            const shopKey = `shop${shopIdx}`;
+            
+            const scrapedStaffData = dataCache.link6 || {};
+            const crmData = dataCache.link8 || {};
+            const staffRealMap = dataCache.staffReal || {};
+            const currentShopStaffData = scrapedStaffData[shopKey] ? (scrapedStaffData[shopKey].competition || {}) : {};
+            const revData = scrapedStaffData[shopKey] ? (scrapedStaffData[shopKey].revenue || {}) : {};
+
+            const today = new Date();
+            const dateStr = `${today.getDate() < 10 ? '0'+today.getDate() : today.getDate()}/${(today.getMonth() + 1) < 10 ? '0'+(today.getMonth() + 1) : (today.getMonth() + 1)}/${today.getFullYear()}`;
+
+            let shopRevTarget = userConfig[`target${shopIdx}`] || 0;
+            let personalRevTarget = 0;
+            const shopStaffGroup = staffList.filter(s => s.shopIdx == shopIdx);
+            const staffWithRate = shopStaffGroup.filter(s => s.rate && parseFloat(s.rate) > 0);
+            const staffNoRate = shopStaffGroup.filter(s => !s.rate || parseFloat(s.rate) <= 0);
+
+            let usedTarget = 0;
+            staffWithRate.forEach(s => {
+                const t = Math.round(shopRevTarget * parseFloat(s.rate) / 100);
+                if(s.name === selectedStaffName) personalRevTarget = t;
+                usedTarget += t;
+            });
+            if (staffNoRate.length > 0) {
+                const remain = Math.max(0, shopRevTarget - usedTarget);
+                const perStaff = Math.round(remain / staffNoRate.length);
+                staffNoRate.forEach(s => { if(s.name === selectedStaffName) personalRevTarget = perStaff; });
+            }
+
+            const actualRev = revData[selectedStaffName] || 0;
+            const serviceInfo = crmData[selectedStaffName] || { score: '-' };
+
+            let html = `
+            <div class="nlnv-container">
+                <table class="nlnv-table">
+                    <tr>
+                        <td colspan="2" class="nlnv-title-cell">BẢNG NĂNG LỰC NHÂN VIÊN<br><span style="font-size:14px; color:#c00000;">Bản lưu Lịch sử mới nhất</span></td>
+                        <td colspan="3" class="nlnv-staff-cell"><select class="nlnv-staff-select" disabled><option>${selectedStaffName}</option></select></td>
+                    </tr>
+                    <tr>
+                        <td class="nlnv-label">Target Doanh thu</td><td class="nlnv-val-red">${LOCAL_BI_ENGINE.formatNumber(personalRevTarget)}</td>
+                        <td colspan="2" class="nlnv-label">Thực hiện</td><td class="nlnv-val-red">${LOCAL_BI_ENGINE.formatNumber(actualRev)}</td>
+                    </tr>
+                    <tr>
+                        <td class="nlnv-label" style="color:#008080;">Điểm Phục vụ</td><td class="nlnv-label" style="color:#008080;">Điểm doanh thu</td><td class="nlnv-label" style="color:#008080;">Điểm thi đua</td><td class="nlnv-label" style="color:#008080;">Rank phục vụ</td><td class="nlnv-label" style="color:#008080;">Rank thi đua</td>
+                    </tr>
+                    <tr>
+                        <td class="nlnv-val-red">${serviceInfo.score}</td><td class="nlnv-val-red"></td><td class="nlnv-val-red"></td><td class="nlnv-val-red"></td><td class="nlnv-val-red"></td>
+                    </tr>
+                    <tr class="nlnv-header-cyan"><td>Nhóm hàng</td><td>Target</td><td>Thực hiện</td><td>% Hoàn thành</td><td>Dự kiến</td></tr>
+            `;
+
+            let activeGroups = userConfig.compData ? userConfig.compData.map(c => c.group) :[];
+            let passCount = 0; let failCount = 0;
+
+            activeGroups.forEach((cat, idx) => {
+                const configItem = configList.find(c => c.short === cat) || { type: 'soluong' };
+                const isRevenue = configItem.type.toLowerCase().includes('doanhthu') || configItem.type.toLowerCase().includes('tiền');
+                const finalMult = isRevenue ? 1000 : 1;
+
+                let shopTargetRaw = 0;
+                if (dataCache.link4_smart && dataCache.link4_smart[cat] && dataCache.link4_smart[cat][shopKey]) {
+                    shopTargetRaw = dataCache.link4_smart[cat][shopKey].t || 0;
+                    if (isRevenue) shopTargetRaw = shopTargetRaw / 1000;
+                } else {
+                    const compRow = userConfig.compData.find(c => c.group === cat);
+                    if (compRow) shopTargetRaw = compRow[`t${shopIdx}`] || 0;
+                }
+
+                let personalTarget = 0; let targetUsedRaw = 0;
+                staffWithRate.forEach(s => {
+                    let rawShare = shopTargetRaw * parseFloat(s.rate) / 100;
+                    if (s.name === selectedStaffName) personalTarget = Math.round(rawShare) * finalMult;
+                    targetUsedRaw += rawShare;
+                });
+                if (staffNoRate.length > 0) {
+                    let remainingRaw = Math.max(0, shopTargetRaw - targetUsedRaw);
+                    let rawPerStaff = remainingRaw / staffNoRate.length;
+                    staffNoRate.forEach(s => { if(s.name === selectedStaffName) personalTarget = Math.round(rawPerStaff) * finalMult; });
+                }
+
+                let actual = 0;
+                if (currentShopStaffData[selectedStaffName] && currentShopStaffData[selectedStaffName][cat] !== undefined) { actual = currentShopStaffData[selectedStaffName][cat]; } 
+                else if (staffRealMap[selectedStaffName] && staffRealMap[selectedStaffName][cat] !== undefined) { actual = staffRealMap[selectedStaffName][cat]; }
+
+                let pctComplete = personalTarget > 0 ? (actual / personalTarget * 100) : (actual > 0 ? 100 : 0);
+                const forecastValue = (actual / daysPassed) * daysInMonth;
+                let forecastPct = personalTarget > 0 ? (forecastValue / personalTarget * 100) : (actual > 0 ? 100 : 0);
+
+                pctComplete = Math.round(pctComplete); forecastPct = Math.round(forecastPct);
+                if (forecastPct >= 100) passCount++; else failCount++;
+
+                const bgRow = idx % 2 !== 0 ? 'nlnv-row-bg' : '';
+                const fcClass = forecastPct >= 100 ? 'nlnv-val-green' : 'nlnv-val-red';
+                const fcBg = forecastPct >= 100 ? 'background-color:#d9ead3;' : 'background-color:#fce4d6;';
+                const fillPct = Math.min(pctComplete, 100);
+                const progressStyle = `background: linear-gradient(to right, #c6efce ${fillPct}%, transparent ${fillPct}%); font-weight:bold;`;
+
+                html += `<tr class="${bgRow}"><td class="nlnv-item-name">${cat}</td><td class="bold">${LOCAL_BI_ENGINE.formatNumber(personalTarget)}</td><td class="bold">${LOCAL_BI_ENGINE.formatNumber(actual)}</td><td style="${progressStyle}">${pctComplete}%</td><td class="${fcClass}" style="${fcBg}">${forecastPct}%</td></tr>`;
+            });
+
+            html += `<tr><td colspan="2" class="nlnv-footer-blue">Số lượng môn thi đua</td><td class="nlnv-footer-blue">${activeGroups.length}</td><td class="nlnv-footer-green">Đạt: ${passCount}</td><td class="nlnv-footer-yellow">Không đạt: ${failCount}</td></tr></table></div>`;
+            return html;
+        },
+
+        getNLNVDailyReport: (historyCache, configList, userConfig, selectedStaffName, shopIdx, daysPassed, daysInMonth) => {
+            const staffList = userConfig.staffList ||[];
+            const shopKey = `shop${shopIdx}`;
+            const today = new Date();
+            const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
+            const currentYear = String(today.getFullYear());
+
+            let validDates = Object.keys(historyCache).filter(d => {
+                const parts = d.split('/');
+                if (parts.length === 3) {
+                    const[dd, mm, yyyy] = parts;
+                    return mm === currentMonth && yyyy === currentYear && parseInt(dd) > 1;
+                }
+                return false;
+            }).sort((a, b) => parseInt(a.split('/')[0]) - parseInt(b.split('/')[0]));
+
+            let shopRevTarget = userConfig[`target${shopIdx}`] || 0;
+            let personalRevTarget = 0;
+            const shopStaffGroup = staffList.filter(s => s.shopIdx == shopIdx);
+            const staffWithRate = shopStaffGroup.filter(s => s.rate && parseFloat(s.rate) > 0);
+            const staffNoRate = shopStaffGroup.filter(s => !s.rate || parseFloat(s.rate) <= 0);
+
+            let usedRevTarget = 0;
+            staffWithRate.forEach(s => {
+                const t = Math.round(shopRevTarget * parseFloat(s.rate) / 100);
+                if(s.name === selectedStaffName) personalRevTarget = t;
+                usedRevTarget += t;
+            });
+            if (staffNoRate.length > 0) {
+                const remain = Math.max(0, shopRevTarget - usedRevTarget);
+                const perStaff = Math.round(remain / staffNoRate.length);
+                staffNoRate.forEach(s => { if(s.name === selectedStaffName) personalRevTarget = perStaff; });
+            }
+
+            let activeGroups = userConfig.compData ? userConfig.compData.map(c => c.group) : [];
+            const rowData =[];
+
+            rowData.push({ name: 'Doanh thu', flatKey: `link6|||${shopKey}|||revenue|||${selectedStaffName}`, target: personalRevTarget });
+
+            activeGroups.forEach(cat => {
+                const configItem = configList.find(c => c.short === cat) || { type: 'soluong' };
+                const isRevenue = configItem.type.toLowerCase().includes('doanhthu') || configItem.type.toLowerCase().includes('tiền');
+                const finalMult = isRevenue ? 1000 : 1;
+
+                let shopTargetRaw = 0;
+                if (validDates.length > 0) {
+                    const latestDate = validDates[validDates.length - 1];
+                    const historyKey = `link4_smart|||${cat}|||${shopKey}|||t`;
+                    if (historyCache[latestDate] && historyCache[latestDate][historyKey] !== undefined) {
+                        shopTargetRaw = parseFloat(historyCache[latestDate][historyKey]) || 0;
+                        if (isRevenue) shopTargetRaw = shopTargetRaw / 1000;
+                    } else {
+                        const compRow = userConfig.compData.find(c => c.group === cat);
+                        if (compRow) shopTargetRaw = compRow[`t${shopIdx}`] || 0;
+                    }
+                }
+
+                let personalTarget = 0; let targetUsedRaw = 0;
+                staffWithRate.forEach(s => {
+                    let rawShare = shopTargetRaw * parseFloat(s.rate) / 100;
+                    if (s.name === selectedStaffName) personalTarget = Math.round(rawShare) * finalMult;
+                    targetUsedRaw += rawShare;
+                });
+                if (staffNoRate.length > 0) {
+                    let remainingRaw = Math.max(0, shopTargetRaw - targetUsedRaw);
+                    let rawPerStaff = remainingRaw / staffNoRate.length;
+                    staffNoRate.forEach(s => { if(s.name === selectedStaffName) personalTarget = Math.round(rawPerStaff) * finalMult; });
+                }
+
+                rowData.push({ name: cat, flatKey: `link6|||${shopKey}|||competition|||${selectedStaffName}|||${cat}`, target: personalTarget });
+            });
+
+            let html = `<div class="nlnv-daily-wrapper"><table class="nlnv-daily-table"><thead><tr>`;
+            html += `<th style="background-color: #FFEB3B; padding: 0; min-width:180px;"><select class="nlnv-staff-select" disabled><option>${selectedStaffName}</option></select></th>`;
+            html += `<th style="background-color: #00B0F0; color: white; font-size: 14px;">Target</th><th style="background-color: #00B0F0; color: white; font-size: 14px;">Dự kiến</th><th style="background-color: #00B0F0; color: white; font-size: 14px; min-width: 100px;">Cảnh báo</th>`;
+            validDates.forEach(d => { html += `<th style="background-color: #00B0F0; color: white; font-size: 14px;">Ngày<br>${parseInt(d.split('/')[0]) - 1}</th>`; });
+            if (validDates.length === 0) html += `<th style="background-color: #00B0F0; color: white;">Chưa có dữ liệu</th>`;
+            html += `</tr></thead><tbody>`;
+
+            rowData.forEach((row, idx) => {
+                const bgClass = idx % 2 !== 0 ? 'background-color: #f9f9f9;' : '';
+                const targetDisplay = row.target === 0 ? '-' : LOCAL_BI_ENGINE.formatNumber(row.target);
+
+                let previousValue = 0; let dailyValues =[]; let cumulativeCurrent = 0;
+                if (validDates.length > 0) {
+                    validDates.forEach(d => {
+                        const dayObj = historyCache[d] || {};
+                        let currentValue = parseFloat(dayObj[row.flatKey]) || 0;
+                        let delta = currentValue - previousValue;
+                        if (delta < 0) delta = 0;
+                        dailyValues.push(delta); previousValue = currentValue; cumulativeCurrent = currentValue;
+                    });
+                }
+
+                let forecastPct = row.target > 0 ? ((cumulativeCurrent / daysPassed) * daysInMonth / row.target) * 100 : (cumulativeCurrent > 0 ? 100 : 0);
+                let forecastDisplay = validDates.length === 0 ? '-' : Math.round(forecastPct) + '%';
+                let forecastColor = forecastPct >= 100 ? '#00b050' : '#d63031';
+
+                let consecutiveZeroDays = 0;
+                for (let i = dailyValues.length - 1; i >= 0; i--) { if (dailyValues[i] === 0) consecutiveZeroDays++; else break; }
+                let warningText = (consecutiveZeroDays >= 2 && validDates.length >= 2) ? `Liên tiếp ${consecutiveZeroDays} ngày<br>chưa bán!` : '';
+
+                html += `<tr style="${bgClass}"><td class="nlnv-daily-item">${row.name}</td><td class="nlnv-daily-target" style="color:#007bff">${targetDisplay}</td><td style="color:${forecastColor}; font-weight:bold;">${forecastDisplay}</td><td style="color:#d63031; font-weight:bold; font-size:11px; line-height: 1.3;">${warningText}</td>`;
+                if (validDates.length === 0) html += `<td>-</td>`;
+                else { dailyValues.forEach(delta => { html += `<td class="nlnv-daily-val" style="${delta === 0 ? 'color: #999;' : 'color: #000000; font-weight:bold;'}">${delta === 0 ? '-' : LOCAL_BI_ENGINE.formatNumber(delta)}</td>`; }); }
+                html += `</tr>`;
+            });
+            html += `</tbody></table></div>`;
+            return html;
+        }
+    };
+
 
     const runTool = () => {
         if (document.getElementById('bc-app-wrapper')) { document.getElementById('bc-app-wrapper').style.display = 'flex'; return; }
@@ -460,7 +724,7 @@
                         let match = l.match(/id=([a-zA-Z0-9_-]+)/);
                         let imgUrl = match ? `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800` : l;
                         setTimeout(() => {
-                            executeDownload(imgUrl, `${prefix}_${idx + 1}.jpg`);
+                            executeDownload(imgUrl, `${prefix}_${idx+1}.jpg`);
                         }, idx * 400); 
                     });
                 }
@@ -526,7 +790,6 @@
             };
             app.addEventListener('delNV', (e) => { MANAGER_EMPLOYEES.splice(e.detail, 1); renderNV(); });
             
-            // XỬ LÝ NÚT THÊM NHÂN VIÊN VỚI 7 TRƯỜNG DỮ LIỆU
             $('btn-add-nv').onclick = () => {
                 let s = $('inp-nv-shop').value.trim();
                 let u = $('inp-nv-user').value.trim();
@@ -765,7 +1028,7 @@
                 else {
                     let totalFlyers = 0, postCount = 0, liveCount = 0;
                     let activeDays = new Set();
-                    let allFlyerImgs = [], allPostImgs =[], allLiveImgs =[];
+                    let allFlyerImgs =[], allPostImgs =[], allLiveImgs =[];
                     let allPostLinks = [], allLiveLinks =[];
 
                     filteredData.forEach(r => {
@@ -828,9 +1091,6 @@
                         <div class="date-group-content">
                     `;
 
-                    // ==========================================
-                    // TỔNG CỘNG TRONG NGÀY
-                    // ==========================================
                     let totalToRoi = 0;
                     let allLinksDB =[];
                     let allLinksLive =[];
@@ -905,7 +1165,7 @@
 
         } else {
             // ==========================================
-            // LUỒNG NHÂN VIÊN & RENDER BẢNG CÁ NHÂN
+            // LUỒNG NHÂN VIÊN
             // ==========================================
             const updateEmpTabs = () => {
                 if (EMP_SESSION && EMP_SESSION.role === 'NV') {
@@ -932,58 +1192,93 @@
                 loadEmployeeHistory();
             };
 
-            // TAB "CÁ NHÂN" CLICK
+            // TAB CÁ NHÂN CLICK
             $('tab-btn-emp-personal').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });
                 $('tab-btn-emp-personal').classList.add('active'); $('tab-emp-personal').classList.add('active'); 
-                renderNLNV('overview'); // Load bảng tổng quan đầu tiên
+                renderNLNV('overview'); 
             };
 
             $('emp-nlnv-view-select').onchange = (e) => {
                 renderNLNV(e.target.value);
             };
 
-            // HÀM RENDER BẢNG NĂNG LỰC NHÂN VIÊN VÀO TAB CÁ NHÂN
-            const renderNLNV = (mode) => {
+            const renderNLNV = async (mode) => {
                 const container = $('emp-nlnv-container');
-                container.innerHTML = `<div style="text-align:center; padding:20px; color:#000;"><div class="spinner" style="margin:0 auto; border-top-color:#0070C0;"></div><br>Đang tải dữ liệu BI...</div>`;
+                container.innerHTML = `<div style="text-align:center; padding:20px; color:#000;"><div class="spinner" style="margin:0 auto; border-top-color:#0070C0;"></div><br>Đang tải cấu hình & dữ liệu từ Cloud...</div>`;
                 
-                // Lấy Data từ hệ sinh thái BI 8.3
-                const userConfig = UTILS.getPersistentConfig();
-                const configList = GM_getValue(context.CONSTANTS.KEYS.CONFIG_LIST) ||[];
-                const dataCache = GM_getValue(context.CONSTANTS.KEYS.DATA_CACHE) || {};
-                const useBITarget = true; // Mặc định dùng Target BI
-                
-                // Tìm kiếm nhân viên tương ứng trên hệ thống BI
-                let staffNameInBI = EMP_SESSION.user; 
-                const staffListBI = userConfig.staffList ||[];
-                // Ưu tiên tìm theo Họ Tên, không thấy thì tìm theo User
-                const matchedStaff = staffListBI.find(s => (EMP_SESSION.fn && s.name.includes(EMP_SESSION.fn)) || s.name.includes(EMP_SESSION.user));
-                if (matchedStaff) staffNameInBI = matchedStaff.name;
-                
-                // Gán tên cho hàm của BI render
-                window.tgdd_nlnv_selected_staff = staffNameInBI;
+                if (!EMP_SESSION.mgrUser) {
+                    container.innerHTML = `<div style="color:red; text-align:center;">Lỗi: Không xác định được Quản lý của bạn. Vui lòng đăng nhập lại.</div>`;
+                    return;
+                }
 
-                // Vẽ Bảng Tổng Quan
-                if (mode === 'overview') {
-                    setTimeout(() => {
-                        let html = UI.HTML.getNLNVReport(dataCache, configList, userConfig, useBITarget);
-                        container.innerHTML = html;
-                    }, 200);
-                } 
-                // Vẽ Bảng Hàng Ngày (Cần fetch Lịch sử Cloud)
-                else if (mode === 'daily') {
-                    if (window.tgdd_history_cache) {
-                        let html = UI.HTML.getNLNVDailyReport(window.tgdd_history_cache, configList, userConfig, staffNameInBI, dataCache, useBITarget);
-                        container.innerHTML = html;
-                    } else {
-                        DATA.fetchHistoryFromSheet(userConfig, (history) => {
-                            window.tgdd_history_cache = history || {};
-                            let html = UI.HTML.getNLNVDailyReport(window.tgdd_history_cache, configList, userConfig, staffNameInBI, dataCache, useBITarget);
-                            container.innerHTML = html;
-                        });
+                try {
+                    // 1. Fetch Config Quản lý
+                    let configRes = await universalFetch({
+                        method: "GET",
+                        url: `${CONSTANTS.GSHEET.CONFIG_API}?user=${encodeURIComponent(EMP_SESSION.mgrUser)}`
+                    });
+                    let configJson = JSON.parse(configRes);
+                    if (configJson.status !== 'success' || !configJson.data) throw new Error("Không lấy được cấu hình Quản lý");
+                    let mgrConfig = JSON.parse(configJson.data);
+                    
+                    let historySheetId = mgrConfig.historySheetId;
+                    if (!historySheetId) throw new Error("Quản lý chưa cài đặt ID file Lịch sử.");
+
+                    // 2. Fetch Lịch sử
+                    let historyRes = await universalFetch({
+                        method: "GET",
+                        url: `${API_URL_HISTORY}?sheetId=${historySheetId}`
+                    });
+                    let historyJson = JSON.parse(historyRes);
+                    if (historyJson.status !== 'success' || !historyJson.data) throw new Error("Không lấy được dữ liệu Lịch sử.");
+                    let historyCache = historyJson.data;
+
+                    // 3. Khôi phục configList & dataCache
+                    let mockConfigList = (mgrConfig.compData ||[]).map(c => ({
+                        short: c.group,
+                        type: c.group.toLowerCase().includes('doanh thu') ? 'doanhthu' : 'soluong',
+                        channel: 'T'
+                    }));
+
+                    let parseDateStr = (dStr) => { let parts = dStr.split('/'); return new Date(parts[2], parts[1] - 1, parts[0]); };
+                    let validDates = Object.keys(historyCache);
+                    if (validDates.length === 0) throw new Error("Chưa có dữ liệu lịch sử nào.");
+                    validDates.sort((a, b) => parseDateStr(a) - parseDateStr(b));
+                    
+                    let latestDate = validDates[validDates.length - 1];
+                    let latestFlatData = historyCache[latestDate];
+                    let latestDataCache = LOCAL_BI_ENGINE.unflattenObject(latestFlatData);
+
+                    // 4. Tìm nhân viên và ShopIdx
+                    let staffNameInBI = EMP_SESSION.user; 
+                    const staffListBI = mgrConfig.staffList ||[];
+                    const matchedStaff = staffListBI.find(s => (EMP_SESSION.fn && s.name.includes(EMP_SESSION.fn)) || s.name.includes(EMP_SESSION.user));
+                    let shopIdx = 1;
+                    if (matchedStaff) {
+                        staffNameInBI = matchedStaff.name;
+                        shopIdx = matchedStaff.shopIdx;
                     }
+
+                    // 5. Xử lý thời gian (dp)
+                    const today = new Date();
+                    const currentDay = today.getDate();
+                    const customDP = parseInt(mgrConfig.dp);
+                    const daysPassed = (customDP >= 1 && customDP <= 31) ? customDP : (currentDay > 1 ? currentDay - 1 : 1);
+                    const customEOM = parseInt(mgrConfig.eom);
+                    const daysInMonth = (customEOM >= 1 && customEOM <= 31) ? customEOM : new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+
+                    if (mode === 'overview') {
+                        container.innerHTML = LOCAL_BI_ENGINE.getNLNVReport(latestDataCache, mockConfigList, mgrConfig, staffNameInBI, shopIdx, daysPassed, daysInMonth);
+                    } else if (mode === 'daily') {
+                        container.innerHTML = LOCAL_BI_ENGINE.getNLNVDailyReport(historyCache, mockConfigList, mgrConfig, staffNameInBI, shopIdx, daysPassed, daysInMonth);
+                    }
+
+                } catch (e) {
+                    console.error(e);
+                    container.innerHTML = `<div style="color:red; text-align:center; padding: 20px;">Lỗi: ${e.message}</div>`;
                 }
             };
+
 
             const loadEmployeeHistory = async () => {
                 if(!EMP_SESSION || !EMP_SESSION.sheetId) return;
@@ -1075,12 +1370,11 @@
                     let res = await universalFetch({ method:"POST", url: API_URL_MAIN, data: JSON.stringify({ action: "login_employee", empShop: s, empUser: u, empPass: p }) });
                     let data = JSON.parse(res);
                     if(data.status === 'success') {
-                        // LƯU THÊM fn (Họ Tên), dob, role, grp VÀO SESSION
-                        EMP_SESSION = { user: u, shop: s, folderId: data.folderId, sheetId: data.sheetId, fn: data.fn || "", dob: data.dob || "", role: data.role || "NV", grp: data.grp || "" };
+                        EMP_SESSION = { user: u, shop: s, folderId: data.folderId, sheetId: data.sheetId, mgrUser: data.mgrUser || "", fn: data.fn || "", dob: data.dob || "", role: data.role || "NV", grp: data.grp || "" };
                         localStorage.setItem('bc_emp_session', JSON.stringify(EMP_SESSION));
                         $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.fn ? EMP_SESSION.fn + ' - ' : ''}${u}`; 
                         
-                        updateEmpTabs(); // Kiểm tra NV để hiện nút Cá nhân
+                        updateEmpTabs(); 
                         switchSc('sc-report');
                         $('tab-btn-emp-form').click();
                     } else alert("❌ Lỗi: " + data.message);
