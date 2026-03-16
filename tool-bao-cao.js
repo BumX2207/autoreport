@@ -185,7 +185,7 @@
         .filter-row button:hover { background: #0369a1; transform: scale(1.05); }
 
         /* CSS BẢNG NĂNG LỰC NHÂN VIÊN TRONG TAB CÁ NHÂN */
-        #emp-nlnv-scroll-wrapper { width: 100%; overflow: hidden; background: #fff; border-radius: 8px; touch-action: none;}
+        #emp-nlnv-scroll-wrapper { width: 100%; overflow: auto; background: #fff; border-radius: 8px; }
         .nlnv-zoom-area { transform-origin: 0 0; width: max-content;}
         
         .nlnv-container { width: 100%; max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; background: #fff; }
