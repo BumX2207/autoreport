@@ -540,7 +540,7 @@
                 
                 if (!/^\d+$/.test(s)) return alert("Mã Shop chỉ được nhập số!");
                 
-                if (!/^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪỬỮỰỲỴÝỶỸỳỵỷỹ\s]+$/.test(fn)) {
+                if (!/^[\p{L}\s]+$/u.test(fn)) {
                     return alert("Họ và tên chỉ được chứa chữ cái và khoảng trắng!");
                 }
 
