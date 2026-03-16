@@ -1204,7 +1204,7 @@
 
             const renderNLNV = async (mode) => {
                 const container = $('emp-nlnv-container');
-                container.innerHTML = `<div style="text-align:center; padding:20px; color:#000;"><div class="spinner" style="margin:0 auto; border-top-color:#0070C0;"></div><br>Đang tải cấu hình & dữ liệu từ Cloud...</div>`;
+                container.innerHTML = `<div style="text-align:center; padding:20px; color:#000;"><div class="spinner" style="margin:0 auto; border-top-color:#0070C0;"></div><br>Đang tải dữ liệu...</div>`;
                 
                 if (!EMP_SESSION.mgrUser) {
                     container.innerHTML = `<div style="color:red; text-align:center;">Lỗi: Không xác định được Quản lý của bạn. Vui lòng đăng nhập lại.</div>`;
