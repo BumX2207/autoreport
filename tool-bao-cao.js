@@ -67,6 +67,12 @@
         return { date: "N/A", time: "N/A", month: "N/A" };
     };
 
+    // Helper quy đổi User -> "Họ và Tên - User" cho bảng Quản lý
+    const getEmpDisplayName = (u) => {
+        const emp = MANAGER_EMPLOYEES.find(x => x.u === u);
+        return (emp && emp.fn) ? `${emp.fn} - ${u}` : u;
+    };
+
     // ===============================================================
     // 2. CSS GIAO DIỆN NÂNG CẤP
     // ===============================================================
@@ -121,7 +127,6 @@
         .sb-blue { background:rgba(56, 189, 248, 0.1); border-color:#38bdf8; }
         .sb-red { background:rgba(239, 68, 68, 0.1); border-color:#ef4444; }
         
-        /* Hiệu ứng danh sách nhân viên trạng thái */
         .emp-status-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 10px; border-bottom: 1px dashed rgba(255,255,255,0.05); }
         .emp-status-row:last-child { border-bottom: none; }
         .emp-name.reported { font-weight: bold; background: linear-gradient(45deg, #38bdf8, #10b981); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
@@ -137,7 +142,6 @@
         .rp-header-row { display:flex; justify-content:space-between; align-items:center; cursor: pointer; }
         .rp-detail { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.2); font-size:13px; color:#cbd5e1;}
         
-        /* Cải tiến hiển thị hình ảnh - Cuộn ngang cho Summary + Nút Tải Xuống */
         .rp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 10px; margin-top: 5px; }
         .rp-grid.scroll-x { display: flex; overflow-x: auto; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: #38bdf8 rgba(255,255,255,0.1); }
         .rp-grid.scroll-x::-webkit-scrollbar { height: 6px; }
@@ -158,7 +162,6 @@
         .link-list { margin-top:5px; margin-left: 15px; font-size:12px; }
         .link-list li { margin-bottom: 5px; }
 
-        /* Bảng vàng thành tích */
         .leaderboard { display: flex; gap: 10px; margin-bottom: 25px; }
         .lb-card { flex: 1; background: linear-gradient(180deg, rgba(255,215,0,0.15) 0%, rgba(0,0,0,0.2) 100%); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 15px; text-align: center; }
         .lb-title { font-size: 11px; text-transform: uppercase; color: #FFD700; font-weight: bold; margin-bottom: 5px; }
@@ -172,14 +175,21 @@
 
         #bc-loading { display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:2147483649; justify-content:center; align-items:center; flex-direction:column; color:#fff; }
         .spinner { border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid #38bdf8; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
-        .employee-row { display:flex; justify-content:space-between; background:rgba(255,255,255,0.05); padding:10px; margin-bottom:5px; border-radius:6px; align-items:center; }
+        .employee-row { display:flex; justify-content:space-between; background:rgba(255,255,255,0.05); padding:10px; margin-bottom:5px; border-radius:6px; align-items:center; flex-wrap: wrap; gap: 10px;}
         
-        /* Khung filter 3 lựa chọn */
         .filter-row { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
         .filter-row select { flex: 1; min-width: 100px; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; color: #fff; cursor: pointer; outline: none; }
         .filter-row select:focus { border-color: #38bdf8; }
         .filter-row button { flex-shrink: 0; padding: 10px 15px; border-radius: 8px; background: #0284c7; border: none; color: white; font-size: 16px; cursor: pointer; transition: 0.2s; }
         .filter-row button:hover { background: #0369a1; transform: scale(1.05); }
+
+        /* RESPONSIVE CHO HEADER (YÊU CẦU 4) */
+        @media (max-width: 600px) {
+            #emp-header { flex-wrap: wrap; flex-direction: column; align-items: flex-start; gap: 10px; padding-bottom: 15px;}
+            #emp-header .bc-title { width: 100%; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 10px; }
+            #emp-header .bc-header-right { width: 100%; justify-content: flex-end; margin-left: 0; }
+            .emp-display-name { flex: 1; text-align: left; }
+        }
     `;
 
     const processImages = async (files) => {
@@ -236,19 +246,13 @@
                 <!-- TAB THỐNG KÊ -->
                 <div class="bc-tab-content active" id="tab-stat">
                     <div class="bc-screen-body" style="padding-top: 10px;">
-                        
-                        <!-- CHỈ BÁO TRẠNG THÁI HÔM NAY -->
                         <div id="stat-summary-container"></div>
-                        
-                        <!-- BỘ LỌC 3 TIÊU CHÍ -->
                         <div class="filter-row">
                             <select id="stat-month-filter" title="Chọn Tháng"></select>
                             <select id="stat-date-filter" title="Chọn Ngày"></select>
                             <select id="stat-emp-filter" title="Chọn Nhân viên"></select>
                             <button id="btn-refresh-stat" title="Load lại dữ liệu">🔄</button>
                         </div>
-
-                        <!-- VÙNG HIỂN THỊ DỮ LIỆU ĐỘNG -->
                         <div id="stat-list-container"></div>
                     </div>
                 </div>
@@ -264,11 +268,13 @@
                             <input type="text" id="inp-sheet-id" class="bc-input" placeholder="VD: 1xYz_789abc...">
                         </div>
                         <div class="bc-card">
-                            <h3 class="bc-sec-title">2. Danh sách Nhân viên</h3>
-                            <div style="display:flex; gap:10px; margin-bottom:15px;">
-                                <input type="text" id="inp-nv-shop" class="bc-input" style="margin:0; flex:1;" placeholder="Mã Shop">
-                                <input type="text" id="inp-nv-user" class="bc-input" style="margin:0; flex:1;" placeholder="Tên User">
-                                <input type="text" id="inp-nv-pass" class="bc-input" style="margin:0; flex:1;" placeholder="Mật khẩu">
+                            <h3 class="bc-sec-title">2. Khai báo Nhân viên</h3>
+                            <!-- LƯỚI KHAI BÁO 4 CỘT -->
+                            <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
+                                <input type="text" id="inp-nv-shop" class="bc-input" style="margin:0; flex: 1; min-width:80px;" placeholder="Mã Shop">
+                                <input type="text" id="inp-nv-user" class="bc-input" style="margin:0; flex: 1.5; min-width:100px;" placeholder="User">
+                                <input type="text" id="inp-nv-fn" class="bc-input" style="margin:0; flex: 2; min-width:140px;" placeholder="Họ và Tên">
+                                <input type="text" id="inp-nv-pass" class="bc-input" style="margin:0; flex: 1.5; min-width:100px;" placeholder="Mật khẩu">
                                 <button class="bc-btn btn-success" id="btn-add-nv" style="width:75px; flex-shrink:0;">+ Thêm</button>
                             </div>
                             <div id="nv-list-container"></div>
@@ -297,10 +303,10 @@
 
             <!-- SCREEN 3: FORM BÁO CÁO NHÂN VIÊN -->
             <div class="bc-screen" id="sc-report">
-                <div class="bc-header">
+                <div class="bc-header" id="emp-header">
                     <div class="bc-title">📊 BÁO CÁO</div>
                     <div class="bc-header-right">
-                        <span style="color:#94a3b8; font-size:14px; font-weight:600;" id="lbl-emp-name">👤 ---</span>
+                        <span class="emp-display-name" style="color:#94a3b8; font-size:14px; font-weight:600;" id="lbl-emp-name">👤 ---</span>
                         <button class="bc-btn btn-danger" id="btn-nv-logout" style="padding:5px 10px; width:auto; font-size:12px;">Thoát</button>
                         <button class="bc-close-btn btn-close-app">✕</button>
                     </div>
@@ -308,7 +314,7 @@
 
                 <div class="bc-tabs">
                     <button class="bc-tab-btn active" id="tab-btn-emp-form">📝 Gửi Báo Cáo</button>
-                    <button class="bc-tab-btn" id="tab-btn-emp-history">🕒 Lịch Sử Hôm Nay</button>
+                    <button class="bc-tab-btn" id="tab-btn-emp-history">🕒 Lịch Sử</button>
                 </div>
 
                 <div class="bc-tab-content active" id="tab-emp-form">
@@ -369,9 +375,6 @@
 
         document.querySelectorAll('.btn-close-app').forEach(btn => btn.onclick = () => app.style.display = 'none');
 
-        // ==========================================
-        // LOGIC XỬ LÝ HÌNH ẢNH & TẢI XUỐNG THÔNG MINH
-        // ==========================================
         const fallbackDownload = (url, filename) => {
             fetch(url).then(r => r.blob()).then(blob => {
                 const blobUrl = URL.createObjectURL(blob);
@@ -415,24 +418,20 @@
         };
 
         app.addEventListener('click', (e) => {
-            // Xem ảnh phóng to
             if (e.target && e.target.classList.contains('rp-img')) {
                 e.stopPropagation();
                 $('bc-lb-img').src = e.target.getAttribute('src');
                 $('bc-lightbox').style.display = 'flex';
             }
-            // Đóng lightbox
             else if (e.target && e.target.id === 'bc-lb-close') {
                 $('bc-lightbox').style.display = 'none';
             }
-            // Bấm nút Tải 1 ảnh
             else if (e.target && e.target.classList.contains('btn-dl-single')) {
                 e.stopPropagation();
                 let url = e.target.getAttribute('data-url');
                 let filename = e.target.getAttribute('data-filename');
                 executeDownload(url, filename);
             }
-            // Bấm nút Tải tất cả
             else if (e.target && e.target.classList.contains('btn-dl-all')) {
                 e.stopPropagation();
                 let linksStr = e.target.getAttribute('data-links');
@@ -503,19 +502,36 @@
             const renderNV = () => {
                 $('nv-list-container').innerHTML = MANAGER_EMPLOYEES.map((nv, idx) => `
                     <div class="employee-row">
-                        <span>🏬 ${nv.s || 'N/A'} - 👤 ${nv.u} <span style="color:#94a3b8; font-size:12px;">(Pass: ${nv.p})</span></span>
-                        <button class="bc-btn btn-danger" style="width:auto; padding:5px 10px;" onclick="document.getElementById('bc-app-wrapper').dispatchEvent(new CustomEvent('delNV', {detail:${idx}}))">Xóa</button>
+                        <span style="flex:1;">🏬 ${nv.s || 'N/A'} - 👤 ${nv.fn ? nv.fn + ' - ' : ''}${nv.u} <span style="color:#94a3b8; font-size:12px;">(Pass: ${nv.p})</span></span>
+                        <button class="bc-btn btn-danger" style="width:auto; padding:5px 10px; flex-shrink:0;" onclick="document.getElementById('bc-app-wrapper').dispatchEvent(new CustomEvent('delNV', {detail:${idx}}))">Xóa</button>
                     </div>
                 `).join('');
             };
             app.addEventListener('delNV', (e) => { MANAGER_EMPLOYEES.splice(e.detail, 1); renderNV(); });
             
+            // XỬ LÝ NÚT THÊM NHÂN VIÊN VỚI REGEX
             $('btn-add-nv').onclick = () => {
-                let s = $('inp-nv-shop').value.trim(), u = $('inp-nv-user').value.trim(), p = $('inp-nv-pass').value.trim();
-                if(!s || !u || !p) return alert("Nhập đủ Mã Shop, User và Mật khẩu!");
+                let s = $('inp-nv-shop').value.trim();
+                let u = $('inp-nv-user').value.trim();
+                let fn = $('inp-nv-fn').value.trim();
+                let p = $('inp-nv-pass').value.trim();
+
+                if(!s || !u || !fn || !p) return alert("Vui lòng nhập đủ Mã Shop, User, Họ Tên và Mật khẩu!");
+                
+                // Mã shop chỉ nhập số
+                if (!/^\d+$/.test(s)) return alert("Mã Shop chỉ được nhập số!");
+                
+                // Họ và tên chỉ nhập chữ và khoảng trắng (cho phép tiếng Việt có dấu)
+                if (!/^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪỬỮỰỲỴÝỶỸỳỵỷỹ\s]+$/.test(fn)) {
+                    return alert("Họ và tên chỉ được chứa chữ cái và khoảng trắng!");
+                }
+
                 if(MANAGER_EMPLOYEES.some(x => x.s === s && x.u === u)) return alert("User này đã tồn tại trong Shop!");
-                MANAGER_EMPLOYEES.push({s, u, p}); renderNV(); 
-                $('inp-nv-shop').value = ''; $('inp-nv-user').value = ''; $('inp-nv-pass').value = '';
+                
+                MANAGER_EMPLOYEES.push({s, u, fn, p}); 
+                renderNV(); 
+                
+                $('inp-nv-shop').value = ''; $('inp-nv-user').value = ''; $('inp-nv-fn').value = ''; $('inp-nv-pass').value = '';
             };
 
             $('btn-save-config').onclick = async () => {
@@ -569,14 +585,14 @@
                 
                 reportedUsers.forEach(u => {
                     listHtml += `<div class="emp-status-row">
-                        <span class="emp-name reported">${u}</span>
+                        <span class="emp-name reported">${getEmpDisplayName(u)}</span>
                         <span style="color:#10b981;">✅</span>
                     </div>`;
                 });
 
                 notReportedUsers.forEach(u => {
                     listHtml += `<div class="emp-status-row">
-                        <span class="emp-name pending">${u}</span>
+                        <span class="emp-name pending">${getEmpDisplayName(u)}</span>
                         <span style="color:#ef4444;">⏳</span>
                     </div>`;
                 });
@@ -616,7 +632,7 @@
                 if(curMonth && months.includes(curMonth)) $('stat-month-filter').value = curMonth;
 
                 let htmlEmp = `<option value="ALL">Tất cả Nhân Viên</option>`;
-                emps.forEach(e => htmlEmp += `<option value="${e}">${e}</option>`);
+                emps.forEach(e => htmlEmp += `<option value="${e}">${getEmpDisplayName(e)}</option>`);
                 $('stat-emp-filter').innerHTML = htmlEmp;
                 if(curEmp && emps.includes(curEmp)) $('stat-emp-filter').value = curEmp;
                 
@@ -661,7 +677,6 @@
                 if(links.length === 0) return '';
                 
                 let className = horizontal ? "rp-grid scroll-x" : "rp-grid";
-                // Chuyển chuỗi JSON cho HTML an toàn
                 let linksJson = JSON.stringify(links).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
                 
                 let downloadAllBtn = `<div style="text-align: right; margin-bottom: 5px; margin-top: 5px;">
@@ -708,17 +723,17 @@
                             <div class="leaderboard">
                                 <div class="lb-card">
                                     <div class="lb-title">📄 Top Tờ Rơi</div>
-                                    <div class="lb-name">${topFlyer || '---'}</div>
+                                    <div class="lb-name">${getEmpDisplayName(topFlyer) || '---'}</div>
                                     <div class="lb-score">${userStats[topFlyer]?.flyers || 0} tờ</div>
                                 </div>
                                 <div class="lb-card" style="border-color: #38bdf8; background: linear-gradient(180deg, rgba(56,189,248,0.15) 0%, rgba(0,0,0,0.2) 100%);">
                                     <div class="lb-title" style="color:#38bdf8;">🌐 Top Đăng/Share bài</div>
-                                    <div class="lb-name">${topPost || '---'}</div>
+                                    <div class="lb-name">${getEmpDisplayName(topPost) || '---'}</div>
                                     <div class="lb-score" style="color:#FFD700;">${userStats[topPost]?.posts || 0} bài</div>
                                 </div>
                                 <div class="lb-card" style="border-color: #ef4444; background: linear-gradient(180deg, rgba(239,68,68,0.15) 0%, rgba(0,0,0,0.2) 100%);">
                                     <div class="lb-title" style="color:#ef4444;">🎥 Top Livestream</div>
-                                    <div class="lb-name">${topLive || '---'}</div>
+                                    <div class="lb-name">${getEmpDisplayName(topLive) || '---'}</div>
                                     <div class="lb-score" style="color:#FFD700;">${userStats[topLive]?.lives || 0} lần</div>
                                 </div>
                             </div>
@@ -749,7 +764,7 @@
                     let uId = "emp-portfolio-1";
                     
                     finalHtml += `
-                        <div class="bc-sec-title">📋 TỔNG QUAN CÁ NHÂN - ${selectedEmp}</div>
+                        <div class="bc-sec-title">📋 TỔNG QUAN CÁ NHÂN - ${getEmpDisplayName(selectedEmp)}</div>
                         <div class="rp-card" style="border-color: #38bdf8; background: rgba(56, 189, 248, 0.05); margin-bottom: 25px;">
                             <div class="rp-header-row" onclick="document.getElementById('${uId}').style.display = document.getElementById('${uId}').style.display === 'block' ? 'none' : 'block'">
                                 <div>
@@ -843,7 +858,7 @@
                         finalHtml += `
                             <div class="rp-card">
                                 <div class="rp-header-row" onclick="document.getElementById('${uniqueId}').style.display = document.getElementById('${uniqueId}').style.display === 'block' ? 'none' : 'block'">
-                                    <div><b style="color:#38bdf8;">👤 ${row.user}</b> <span style="font-size:12px; color:#64748b; margin-left:10px;">🕒 ${row.timeStr}</span></div>
+                                    <div><b style="color:#38bdf8;">👤 ${getEmpDisplayName(row.user)}</b> <span style="font-size:12px; color:#64748b; margin-left:10px;">🕒 ${row.timeStr}</span></div>
                                     <span style="font-size:12px; color:#FFD700;">▼ Xem chi tiết</span>
                                 </div>
                                 <div class="rp-detail" id="${uniqueId}">
@@ -871,7 +886,11 @@
             // ==========================================
             // LUỒNG NHÂN VIÊN
             // ==========================================
-            if (EMP_SESSION && EMP_SESSION.user) { switchSc('sc-report'); $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.user}`; } 
+            if (EMP_SESSION && EMP_SESSION.user) { 
+                switchSc('sc-report'); 
+                // HIỂN THỊ HỌ TÊN - USER Ở ĐÂY
+                $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.fn ? EMP_SESSION.fn + ' - ' : ''}${EMP_SESSION.user}`; 
+            } 
             else { switchSc('sc-login'); }
 
             $('tab-btn-emp-form').onclick = () => { 
@@ -979,9 +998,10 @@
                     let res = await universalFetch({ method:"POST", url: API_URL_MAIN, data: JSON.stringify({ action: "login_employee", empShop: s, empUser: u, empPass: p }) });
                     let data = JSON.parse(res);
                     if(data.status === 'success') {
-                        EMP_SESSION = { user: u, shop: s, folderId: data.folderId, sheetId: data.sheetId };
+                        // LƯU THÊM fn (Họ Tên) VÀO SESSION
+                        EMP_SESSION = { user: u, shop: s, folderId: data.folderId, sheetId: data.sheetId, fn: data.fn || "" };
                         localStorage.setItem('bc_emp_session', JSON.stringify(EMP_SESSION));
-                        $('lbl-emp-name').innerText = `👤 ${u}`; 
+                        $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.fn ? EMP_SESSION.fn + ' - ' : ''}${u}`; 
                         switchSc('sc-report');
                         $('tab-btn-emp-form').click();
                     } else alert("❌ Lỗi: " + data.message);
