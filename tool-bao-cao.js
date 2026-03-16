@@ -535,7 +535,7 @@
                                 <input type="text" id="inp-nv-dob" class="bc-input" style="margin:0; flex:1.5; min-width:120px;" placeholder="Ngày sinh (dd/mm/yyyy)">
                                 <input type="text" id="inp-nv-pass" class="bc-input" style="margin:0; flex:1.5; min-width:100px;" placeholder="Mật khẩu">
                                 <select id="inp-nv-role" class="bc-input" style="margin:0; flex:0.8; min-width:70px; padding:12px;"><option value="NV">NV</option><option value="PG">PG</option></select>
-                                <input type="text" id="inp-nv-grp" class="bc-input" style="margin:0; flex:1.5; min-width:100px;" placeholder="Nhóm (Tự chọn)">
+                                <input type="text" id="inp-nv-grp" class="bc-input" style="margin:0; flex:0; min-width:60px;" placeholder="Nhóm (Tự chọn)">
                                 <button class="bc-btn btn-success" id="btn-add-nv" style="width:100%; flex-shrink:0; margin-top:5px;">+ Thêm Nhân Viên</button>
                             </div>
                             <div id="nv-list-container"></div>
