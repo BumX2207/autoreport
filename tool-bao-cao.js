@@ -359,7 +359,7 @@
                 <table class="nlnv-table">
                     <tr>
                         <td colspan="2" class="nlnv-title-cell">BẢNG NĂNG LỰC NHÂN VIÊN<br><span style="font-size:14px; color:#c00000;">Bản lưu Lịch sử mới nhất</span></td>
-                        <td colspan="3" class="nlnv-staff-cell"><select class="nlnv-staff-select" disabled><option>${selectedStaffName}</option></select></td>
+                        <td colspan="3" class="nlnv-staff-cell"><div class="nlnv-staff-select" style="display: flex; align-items: center; justify-content: center; padding: 5px; white-space: normal; word-break: break-word; min-height: 45px; line-height: 1.3;">${selectedStaffName}</div></td>
                     </tr>
                     <tr>
                         <td class="nlnv-label">Target Doanh thu</td><td class="nlnv-val-red">${LOCAL_BI_ENGINE.formatNumber(personalRevTarget)}</td>
@@ -500,7 +500,7 @@
             });
 
             let html = `<div class="nlnv-daily-wrapper"><table class="nlnv-daily-table"><thead><tr>`;
-            html += `<th style="background-color: #FFEB3B; padding: 0; min-width:180px;"><select class="nlnv-staff-select" disabled><option>${selectedStaffName}</option></select></th>`;
+            html += `<th style="background-color: #FFEB3B; padding: 0; min-width:180px;"><div class="nlnv-staff-select" style="display: flex; align-items: center; justify-content: center; padding: 5px; white-space: normal; word-break: break-word; min-height: 45px; line-height: 1.3;">${selectedStaffName}</div></th>`;
             html += `<th style="background-color: #00B0F0; color: white; font-size: 14px;">Target</th><th style="background-color: #00B0F0; color: white; font-size: 14px;">Dự kiến</th><th style="background-color: #00B0F0; color: white; font-size: 14px; min-width: 100px;">Cảnh báo</th>`;
             validDates.forEach(d => { html += `<th style="background-color: #00B0F0; color: white; font-size: 14px;">Ngày<br>${parseInt(d.split('/')[0]) - 1}</th>`; });
             if (validDates.length === 0) html += `<th style="background-color: #00B0F0; color: white;">Chưa có dữ liệu</th>`;
