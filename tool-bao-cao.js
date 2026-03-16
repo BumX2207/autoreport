@@ -1,6 +1,7 @@
 ((context) => {
-    const { UI, UTILS, CONSTANTS } = context;
+    const { UI, UTILS, CONSTANTS, DATA } = context;
     const GM_xmlhttpRequest = typeof context.GM_xmlhttpRequest !== 'undefined' ? context.GM_xmlhttpRequest : window.GM_xmlhttpRequest;
+    const GM_getValue = typeof context.GM_getValue !== 'undefined' ? context.GM_getValue : window.GM_getValue;
 
     const universalFetch = async (options) => {
         return new Promise((resolve, reject) => {
@@ -40,6 +41,7 @@
     let EMP_SESSION = JSON.parse(localStorage.getItem('bc_emp_session') || "null");
     let MANAGER_EMPLOYEES =[];
     let MANAGER_SHEET_ID = ""; 
+    let EDITING_EMP_INDEX = -1; // Cờ theo dõi trạng thái đang sửa nhân viên
 
     const parseDateFromSheet = (rawStr) => {
         if (!rawStr) return { date: "N/A", time: "N/A", month: "N/A" };
@@ -65,7 +67,7 @@
     };
 
     // ===============================================================
-    // 2. CSS GIAO DIỆN
+    // 2. CSS GIAO DIỆN TỔNG HỢP (Đã thêm CSS cho Lock Input và Zoom)
     // ===============================================================
     const MY_CSS = `
         #bc-app-wrapper { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.95); backdrop-filter:blur(10px); z-index:2147483647; font-family: 'Segoe UI', sans-serif; color: #f8fafc; display:flex; justify-content:center; align-items:flex-start; padding-top:20px; }
@@ -93,11 +95,19 @@
         .bc-input:focus { border-color: #38bdf8; }
         .bc-label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 8px; font-weight: 600; }
 
+        /* Khóa input mờ đi */
+        .bc-input.locked { opacity: 0.5; background: rgba(255,255,255,0.05); border-color: transparent; }
+        .btn-unlock { position: absolute; right: 10px; top: 10px; background: rgba(255,255,255,0.1); border: none; color: #38bdf8; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; transition: 0.2s; font-weight: bold; z-index: 2; }
+        .btn-unlock:hover { background: rgba(56,189,248,0.2); color: #fff; }
+        .input-wrapper { position: relative; margin-bottom: 15px; }
+        .input-wrapper .bc-input { margin-bottom: 0; padding-right: 60px; } /* chừa chỗ cho nút sửa */
+
         .bc-btn { width: 100%; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; border:none; color:#fff; transition:0.2s; }
         .btn-primary { background: linear-gradient(135deg, #0284c7, #0369a1); }
         .btn-primary:hover { background: linear-gradient(135deg, #0369a1, #075985); }
         .btn-success { background: linear-gradient(135deg, #10b981, #047857); }
         .btn-danger { background: #ef4444; }
+        .btn-warning { background: linear-gradient(135deg, #f59e0b, #d97706); } /* Thêm màu nút Sửa */
 
         .bc-file-upload { position: relative; display: inline-block; width: 100%; margin-bottom:10px; }
         .bc-file-input { display: none; }
@@ -174,13 +184,16 @@
         .filter-row button { flex-shrink: 0; padding: 10px 15px; border-radius: 8px; background: #0284c7; border: none; color: white; font-size: 16px; cursor: pointer; transition: 0.2s; }
         .filter-row button:hover { background: #0369a1; transform: scale(1.05); }
 
-        /* CSS MỚI CHO BẢNG NĂNG LỰC NHÂN VIÊN VÀO TAB CÁ NHÂN */
+        /* CSS BẢNG NĂNG LỰC NHÂN VIÊN TRONG TAB CÁ NHÂN */
+        #emp-nlnv-scroll-wrapper { width: 100%; overflow: hidden; background: #fff; border-radius: 8px; touch-action: none;}
+        .nlnv-zoom-area { transform-origin: 0 0; width: max-content;}
+        
         .nlnv-container { width: 100%; max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; background: #fff; }
         .nlnv-table { width: 100%; border-collapse: collapse; text-align: center; font-size: 13px; border: 2px solid #000; color: #000;}
         .nlnv-table th, .nlnv-table td { border: 1px solid #000; padding: 6px 4px; vertical-align: middle; }
         .nlnv-title-cell { background-color: #FFEB3B; font-weight: bold; font-size: 16px; color: #000; text-transform: uppercase; line-height: 1.4; }
         .nlnv-staff-cell { padding: 0 !important; vertical-align: middle; background: #fff;}
-        .nlnv-staff-select { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; color: #0070C0; border: none; outline: none; background: transparent; text-align: center; width: 100%; height: 100%; min-height: 45px; display: block; cursor: pointer; appearance: none; -webkit-appearance: none; }
+        .nlnv-staff-select { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; color: #0070C0; border: none; outline: none; background: transparent; text-align: center; width: 100%; height: 100%; min-height: 45px; display: block; cursor: pointer; appearance: none; -webkit-appearance: none; pointer-events: none;}
         .nlnv-header-cyan { background-color: #00B0F0; color: #fff; font-weight: bold; }
         .nlnv-label { color: #0070C0; font-weight: bold; }
         .nlnv-val-red { color: #FF0000; font-weight: bold; }
@@ -191,17 +204,14 @@
         .nlnv-footer-green { background-color: #00B050; color: white; font-weight: bold; font-size: 14px; }
         .nlnv-footer-yellow { background-color: #FFEB3B; color: red; font-weight: bold; font-size: 14px; }
 
-        .nlnv-daily-wrapper { width: 100%; overflow-x: auto; background: #fff; }
-        .nlnv-daily-table { border-collapse: collapse; width: 100%; text-align: center; font-size: 13px; border: 1px solid #000; font-family: Arial, sans-serif; color: #000;}
+        .nlnv-daily-wrapper { width: 100%; font-family: Arial, sans-serif;}
+        .nlnv-daily-table { border-collapse: collapse; width: 100%; text-align: center; font-size: 13px; border: 1px solid #000; color: #000;}
         .nlnv-daily-table th, .nlnv-daily-table td { border: 1px solid #000; padding: 6px 4px; white-space: nowrap; vertical-align: middle; }
         .nlnv-daily-item { color: #008080; font-weight: bold; text-align: left; padding-left: 8px !important; }
 
         /* Khóa cứng Dropdown nhân viên trong bảng NLNV */
         #emp-nlnv-container * { color: #000; }
-        #emp-nlnv-container .nlnv-staff-select, 
-        #emp-nlnv-container #nlnv-daily-staff-selector { pointer-events: none !important; appearance: none !important; -webkit-appearance: none !important; background: transparent; border: none; font-weight: bold; color: #0070C0; text-align: center; }
 
-        /* RESPONSIVE CHO HEADER VÀ LƯỚI NHẬP LIỆU */
         @media (max-width: 600px) {
             #emp-header { flex-wrap: wrap; flex-direction: column; align-items: flex-start; gap: 10px; padding-bottom: 15px;}
             #emp-header .bc-title { width: 100%; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 10px; }
@@ -234,6 +244,59 @@
         }
         return base64Array;
     };
+
+    // ===============================================================
+    // TÍNH NĂNG ZOOM BẢNG ĐỘC LẬP
+    // ===============================================================
+    const setupTableZoom = (containerId) => {
+        const wrapper = document.getElementById(containerId);
+        if (!wrapper) return;
+        
+        const tableContent = wrapper.innerHTML;
+        wrapper.innerHTML = `<div class="nlnv-zoom-area" id="nlnv-zoom-area">${tableContent}</div>`;
+        const zoomArea = document.getElementById('nlnv-zoom-area');
+        
+        let scale = 1, lastScale = 1, startDist = 0;
+
+        // Cho mobile zoom bằng 2 ngón
+        wrapper.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                startDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+            }
+        }, {passive: true});
+
+        wrapper.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                e.preventDefault(); // Chặn cuộn trang khi zoom
+                const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+                const delta = dist / startDist;
+                scale = Math.min(Math.max(lastScale * delta, 0.4), 3); // Giới hạn zoom
+                zoomArea.style.transform = `scale(${scale})`;
+                
+                // Bù khoảng trống để người dùng có thể lướt xem phần bảng bị phóng to
+                zoomArea.style.marginBottom = `${Math.max(0, (scale - 1) * zoomArea.offsetHeight)}px`;
+                zoomArea.style.marginRight = `${Math.max(0, (scale - 1) * zoomArea.offsetWidth)}px`;
+            }
+        }, {passive: false});
+
+        wrapper.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) lastScale = scale;
+        }, {passive: true});
+
+        // Cho máy tính zoom bằng phím Ctrl + Cuộn chuột
+        wrapper.addEventListener('wheel', (e) => {
+            if (e.ctrlKey) {
+                e.preventDefault();
+                const delta = e.deltaY * -0.01;
+                scale = Math.min(Math.max(lastScale + delta, 0.4), 3);
+                zoomArea.style.transform = `scale(${scale})`;
+                zoomArea.style.marginBottom = `${Math.max(0, (scale - 1) * zoomArea.offsetHeight)}px`;
+                zoomArea.style.marginRight = `${Math.max(0, (scale - 1) * zoomArea.offsetWidth)}px`;
+                lastScale = scale;
+            }
+        }, {passive: false});
+    };
+
 
     // ===============================================================
     // LOCAL BI ENGINE (TỰ ĐỘNG VẼ BẢNG NLNV ĐỘC LẬP TỪ CLOUD)
@@ -520,14 +583,21 @@
                     <div class="bc-screen-body">
                         <div class="bc-card">
                             <h3 class="bc-sec-title">1. Cấu hình Lưu trữ</h3>
+                            <!-- THÊM TÍNH NĂNG KHÓA ID -->
                             <label class="bc-label">ID Thư mục Google Drive:</label>
-                            <input type="text" id="inp-folder-id" class="bc-input" placeholder="VD: 1A2b3C4d5E...">
+                            <div class="input-wrapper">
+                                <input type="text" id="inp-folder-id" class="bc-input" placeholder="VD: 1A2b3C4d5E...">
+                                <button class="btn-unlock" id="btn-edit-folder">✏️ Sửa</button>
+                            </div>
+                            
                             <label class="bc-label">ID Google Sheet:</label>
-                            <input type="text" id="inp-sheet-id" class="bc-input" placeholder="VD: 1xYz_789abc...">
+                            <div class="input-wrapper">
+                                <input type="text" id="inp-sheet-id" class="bc-input" placeholder="VD: 1xYz_789abc...">
+                                <button class="btn-unlock" id="btn-edit-sheet">✏️ Sửa</button>
+                            </div>
                         </div>
                         <div class="bc-card">
                             <h3 class="bc-sec-title">2. Khai báo Nhân viên</h3>
-                            <!-- LƯỚI KHAI BÁO 7 CỘT (CÓ THÊM DOB, ROLE, GROUP) -->
                             <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
                                 <input type="text" id="inp-nv-shop" class="bc-input" style="margin:0; flex:1; min-width:80px;" placeholder="Mã Shop">
                                 <input type="text" id="inp-nv-user" class="bc-input" style="margin:0; flex:1; min-width:80px;" placeholder="User">
@@ -637,9 +707,9 @@
                                 <option value="daily">Bảng Hàng Ngày</option>
                             </select>
                         </div>
-                        <!-- Bọc nền trắng để bảng BI không bị lỗi màu đen -->
-                        <div style="background:#fff; border-radius:8px; overflow-x:auto; padding:10px;">
-                            <div id="emp-nlnv-container"></div>
+                        <!-- Thêm wrapper bên ngoài để thực hiện việc Zoom độc lập -->
+                        <div id="emp-nlnv-scroll-wrapper">
+                            <div id="emp-nlnv-container" style="padding:10px;"></div>
                         </div>
                     </div>
                 </div>
@@ -652,6 +722,22 @@
         const switchSc = (id) => { document.querySelectorAll('.bc-screen').forEach(s => s.classList.remove('active')); $(id).classList.add('active'); };
 
         document.querySelectorAll('.btn-close-app').forEach(btn => btn.onclick = () => app.style.display = 'none');
+
+        // Hàm Khóa/Mở Khóa ô Cấu hình ID
+        const lockConfigInputs = (isLocked) => {
+            const fId = $('inp-folder-id');
+            const sId = $('inp-sheet-id');
+            if (isLocked) {
+                fId.setAttribute('readonly', 'true'); fId.classList.add('locked');
+                sId.setAttribute('readonly', 'true'); sId.classList.add('locked');
+            } else {
+                fId.removeAttribute('readonly'); fId.classList.remove('locked');
+                sId.removeAttribute('readonly'); sId.classList.remove('locked');
+            }
+        };
+
+        $('btn-edit-folder').onclick = () => lockConfigInputs(false);
+        $('btn-edit-sheet').onclick = () => lockConfigInputs(false);
 
         const fallbackDownload = (url, filename) => {
             fetch(url).then(r => r.blob()).then(blob => {
@@ -757,6 +843,12 @@
                         $('inp-folder-id').value = data.folderId || "";
                         MANAGER_SHEET_ID = data.sheetId || ""; 
                         $('inp-sheet-id').value = MANAGER_SHEET_ID;
+                        
+                        // ĐÓNG BĂNG ID NẾU CÓ DỮ LIỆU
+                        if (data.folderId || data.sheetId) {
+                            lockConfigInputs(true);
+                        }
+
                         MANAGER_EMPLOYEES = data.employees && data.employees !== "[]" ? JSON.parse(data.employees) :[];
                         renderNV();
                         if(MANAGER_SHEET_ID) {
@@ -784,12 +876,53 @@
                             🏬 ${nv.s || 'N/A'} - 👤 ${nv.fn ? nv.fn + ' - ' : ''}${nv.u} <br>
                             <span style="color:#94a3b8; font-size:12px;">(Pass: ${nv.p} | Vai trò: <b style="color:#FFD700">${nv.role || 'NV'}</b> | NS: ${nv.dob || '---'} | Nhóm: ${nv.grp || '---'})</span>
                         </span>
-                        <button class="bc-btn btn-danger" style="width:auto; padding:5px 10px; flex-shrink:0;" onclick="document.getElementById('bc-app-wrapper').dispatchEvent(new CustomEvent('delNV', {detail:${idx}}))">Xóa</button>
+                        <div style="flex-shrink:0; display:flex; gap:5px;">
+                            <button class="bc-btn btn-warning" style="width:auto; padding:5px 10px;" onclick="document.getElementById('bc-app-wrapper').dispatchEvent(new CustomEvent('editNV', {detail:${idx}}))">Sửa</button>
+                            <button class="bc-btn btn-danger" style="width:auto; padding:5px 10px;" onclick="document.getElementById('bc-app-wrapper').dispatchEvent(new CustomEvent('delNV', {detail:${idx}}))">Xóa</button>
+                        </div>
                     </div>
                 `).join('');
             };
-            app.addEventListener('delNV', (e) => { MANAGER_EMPLOYEES.splice(e.detail, 1); renderNV(); });
+
+            app.addEventListener('delNV', (e) => { 
+                MANAGER_EMPLOYEES.splice(e.detail, 1); 
+                renderNV(); 
+                if (EDITING_EMP_INDEX === e.detail) {
+                    // Nếu đang sửa mà bấm xóa thì reset luôn khung nhập
+                    EDITING_EMP_INDEX = -1;
+                    resetEmpInputs();
+                }
+            });
+
+            // TÍNH NĂNG SỬA NHÂN VIÊN
+            app.addEventListener('editNV', (e) => {
+                EDITING_EMP_INDEX = e.detail;
+                const nv = MANAGER_EMPLOYEES[e.detail];
+                $('inp-nv-shop').value = nv.s;
+                $('inp-nv-user').value = nv.u;
+                $('inp-nv-fn').value = nv.fn || '';
+                $('inp-nv-dob').value = nv.dob || '';
+                $('inp-nv-pass').value = nv.p;
+                $('inp-nv-role').value = nv.role || 'NV';
+                $('inp-nv-grp').value = nv.grp || '';
+
+                const btnAdd = $('btn-add-nv');
+                btnAdd.innerText = "Cập Nhật Sửa";
+                btnAdd.classList.remove('btn-success');
+                btnAdd.classList.add('btn-primary'); // Đổi màu thành xanh dương cho biết đang ở chế độ sửa
+                
+                // Tự động cuộn lên form nhập liệu để người dùng thấy
+                $('tab-config').querySelector('.bc-screen-body').scrollTop = 0;
+            });
             
+            const resetEmpInputs = () => {
+                $('inp-nv-shop').value = ''; $('inp-nv-user').value = ''; $('inp-nv-fn').value = ''; $('inp-nv-dob').value = ''; $('inp-nv-pass').value = ''; $('inp-nv-grp').value = '';
+                const btnAdd = $('btn-add-nv');
+                btnAdd.innerText = "+ Thêm Nhân Viên";
+                btnAdd.classList.remove('btn-primary');
+                btnAdd.classList.add('btn-success');
+            };
+
             $('btn-add-nv').onclick = () => {
                 let s = $('inp-nv-shop').value.trim();
                 let u = $('inp-nv-user').value.trim();
@@ -811,12 +944,20 @@
                     return alert("Ngày sinh phải theo định dạng dd/mm/yyyy (Ví dụ: 05/09/1998)!");
                 }
 
-                if(MANAGER_EMPLOYEES.some(x => x.s === s && x.u === u)) return alert("User này đã tồn tại trong Shop!");
-                
-                MANAGER_EMPLOYEES.push({s, u, fn, dob, p, role, grp}); 
+                // Xử lý Cập nhật hoặc Thêm mới
+                if (EDITING_EMP_INDEX > -1) {
+                    const dup = MANAGER_EMPLOYEES.findIndex(x => x.s === s && x.u === u);
+                    if(dup !== -1 && dup !== EDITING_EMP_INDEX) return alert("User này đã tồn tại trong Shop!");
+                    
+                    MANAGER_EMPLOYEES[EDITING_EMP_INDEX] = {s, u, fn, dob, p, role, grp}; 
+                    EDITING_EMP_INDEX = -1; // Tắt cờ sửa
+                    resetEmpInputs();
+                } else {
+                    if(MANAGER_EMPLOYEES.some(x => x.s === s && x.u === u)) return alert("User này đã tồn tại trong Shop!");
+                    MANAGER_EMPLOYEES.push({s, u, fn, dob, p, role, grp}); 
+                    resetEmpInputs();
+                }
                 renderNV(); 
-                
-                $('inp-nv-shop').value = ''; $('inp-nv-user').value = ''; $('inp-nv-fn').value = ''; $('inp-nv-dob').value = ''; $('inp-nv-pass').value = ''; $('inp-nv-grp').value = '';
             };
 
             $('btn-save-config').onclick = async () => {
@@ -825,7 +966,12 @@
                 $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang lưu cấu hình...";
                 try {
                     let res = await universalFetch({ method:"POST", url: API_URL_MAIN, data: JSON.stringify({ action: "save_config_manager", user: CURRENT_USER, folderId: fId, sheetId: sId, employees: JSON.stringify(MANAGER_EMPLOYEES) }) });
-                    if(JSON.parse(res).status === 'success') { alert("✅ Đã lưu cấu hình!"); MANAGER_SHEET_ID = sId; await loadStatistics(); }
+                    if(JSON.parse(res).status === 'success') { 
+                        alert("✅ Đã lưu cấu hình!"); 
+                        MANAGER_SHEET_ID = sId; 
+                        lockConfigInputs(true); // Đóng băng ngay sau khi lưu
+                        await loadStatistics(); 
+                    }
                 } catch(e) { alert("❌ Lỗi mạng!"); }
                 $('bc-loading').style.display = 'none';
             };
@@ -1028,7 +1174,7 @@
                 else {
                     let totalFlyers = 0, postCount = 0, liveCount = 0;
                     let activeDays = new Set();
-                    let allFlyerImgs =[], allPostImgs =[], allLiveImgs =[];
+                    let allFlyerImgs = [], allPostImgs =[], allLiveImgs =[];
                     let allPostLinks = [], allLiveLinks =[];
 
                     filteredData.forEach(r => {
@@ -1186,8 +1332,7 @@
                 $('tab-btn-emp-form').classList.add('active'); $('tab-emp-form').classList.add('active'); 
             };
             
-            $('tab-btn-emp-history').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });
-                ['tab-emp-form', 'tab-emp-history', 'tab-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });
+            $('tab-btn-emp-history').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });
                 $('tab-btn-emp-history').classList.add('active'); $('tab-emp-history').classList.add('active'); 
                 loadEmployeeHistory();
             };
@@ -1272,6 +1417,9 @@
                     } else if (mode === 'daily') {
                         container.innerHTML = LOCAL_BI_ENGINE.getNLNVDailyReport(historyCache, mockConfigList, mgrConfig, staffNameInBI, shopIdx, daysPassed, daysInMonth);
                     }
+
+                    // KHỞI TẠO ZOOM ĐỘC LẬP CHO BẢNG MỚI VẼ
+                    setupTableZoom('emp-nlnv-container');
 
                 } catch (e) {
                     console.error(e);
