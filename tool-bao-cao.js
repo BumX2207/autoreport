@@ -46,17 +46,44 @@
     const parseDateFromSheet = (rawStr) => {
         if (!rawStr) return { date: "N/A", time: "N/A", month: "N/A" };
         let str = String(rawStr).trim();
+        
+        // Trường hợp 1: Chuỗi đã được format sẵn dạng dd/mm/yyyy hh:mm
         let match = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{1,2})/);
         if (match) {
             let dd = String(match[1]).padStart(2, '0');
             let mm = String(match[2]).padStart(2, '0');
             return { date: `${dd}/${mm}/${match[3]}`, month: `${mm}/${match[3]}`, time: `${String(match[4]).padStart(2, '0')}:${String(match[5]).padStart(2, '0')}` };
         }
+        
+        // Trường hợp 2: Định dạng ISO chuẩn từ Google Sheets
         let d = new Date(str);
         if (!isNaN(d.getTime())) {
-            let dd = String(d.getDate()).padStart(2, '0');
-            let mm = String(d.getMonth() + 1).padStart(2, '0');
-            return { date: `${dd}/${mm}/${d.getFullYear()}`, month: `${mm}/${d.getFullYear()}`, time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` };
+            try {
+                // ÉP CỨNG MÚI GIỜ VIỆT NAM (Asia/Ho_Chi_Minh) BẤT CHẤP CÀI ĐẶT MÁY TÍNH
+                let formatter = new Intl.DateTimeFormat('en-GB', {
+                    timeZone: 'Asia/Ho_Chi_Minh',
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit', hour12: false
+                });
+                
+                let parts = formatter.formatToParts(d);
+                let p = {};
+                parts.forEach(part => p[part.type] = part.value);
+                
+                // Fix lỗi hiển thị 24:00 thành 00:00 trên một số trình duyệt
+                let hh = p.hour === '24' ? '00' : p.hour;
+                
+                return { 
+                    date: `${p.day}/${p.month}/${p.year}`, 
+                    month: `${p.month}/${p.year}`, 
+                    time: `${hh}:${p.minute}` 
+                };
+            } catch (e) {
+                // Fallback dự phòng nếu trình duyệt quá cũ
+                let dd = String(d.getDate()).padStart(2, '0');
+                let mm = String(d.getMonth() + 1).padStart(2, '0');
+                return { date: `${dd}/${mm}/${d.getFullYear()}`, month: `${mm}/${d.getFullYear()}`, time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` };
+            }
         }
         return { date: "N/A", time: "N/A", month: "N/A" };
     };
