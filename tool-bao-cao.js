@@ -1,6 +1,7 @@
 ((context) => {
-    const { UI, UTILS, CONSTANTS } = context;
+    const { UI, UTILS, CONSTANTS, DATA } = context;
     const GM_xmlhttpRequest = typeof context.GM_xmlhttpRequest !== 'undefined' ? context.GM_xmlhttpRequest : window.GM_xmlhttpRequest;
+    const GM_getValue = typeof context.GM_getValue !== 'undefined' ? context.GM_getValue : window.GM_getValue;
 
     const universalFetch = async (options) => {
         return new Promise((resolve, reject) => {
@@ -43,38 +44,28 @@
     const parseDateFromSheet = (rawStr) => {
         if (!rawStr) return { date: "N/A", time: "N/A", month: "N/A" };
         let str = String(rawStr).trim();
-        
         let match = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{1,2})/);
         if (match) {
             let dd = String(match[1]).padStart(2, '0');
             let mm = String(match[2]).padStart(2, '0');
-            let yyyy = match[3];
-            let hh = String(match[4]).padStart(2, '0');
-            let min = String(match[5]).padStart(2, '0');
-            return { date: `${dd}/${mm}/${yyyy}`, month: `${mm}/${yyyy}`, time: `${hh}:${min}` };
+            return { date: `${dd}/${mm}/${match[3]}`, month: `${mm}/${match[3]}`, time: `${String(match[4]).padStart(2, '0')}:${String(match[5]).padStart(2, '0')}` };
         }
-        
         let d = new Date(str);
         if (!isNaN(d.getTime())) {
             let dd = String(d.getDate()).padStart(2, '0');
             let mm = String(d.getMonth() + 1).padStart(2, '0');
-            let yyyy = d.getFullYear();
-            let hh = String(d.getHours()).padStart(2, '0');
-            let min = String(d.getMinutes()).padStart(2, '0');
-            return { date: `${dd}/${mm}/${yyyy}`, month: `${mm}/${yyyy}`, time: `${hh}:${min}` };
+            return { date: `${dd}/${mm}/${d.getFullYear()}`, month: `${mm}/${d.getFullYear()}`, time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` };
         }
-        
         return { date: "N/A", time: "N/A", month: "N/A" };
     };
 
-    // Helper quy đổi User -> "Họ và Tên - User" cho bảng Quản lý
     const getEmpDisplayName = (u) => {
         const emp = MANAGER_EMPLOYEES.find(x => x.u === u);
         return (emp && emp.fn) ? `${emp.fn} - ${u}` : u;
     };
 
     // ===============================================================
-    // 2. CSS GIAO DIỆN NÂNG CẤP
+    // 2. CSS GIAO DIỆN
     // ===============================================================
     const MY_CSS = `
         #bc-app-wrapper { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.95); backdrop-filter:blur(10px); z-index:2147483647; font-family: 'Segoe UI', sans-serif; color: #f8fafc; display:flex; justify-content:center; align-items:flex-start; padding-top:20px; }
@@ -115,8 +106,8 @@
         .bc-preview-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
         .bc-preview-item { width: 60px; height: 60px; border-radius: 6px; object-fit: cover; border: 1px solid rgba(255,255,255,0.2); }
 
-        .bc-tabs { display: flex; gap: 10px; padding:10px 20px; background: rgba(15, 23, 42, 0.5); flex-shrink:0; border-bottom:1px solid rgba(255,255,255,0.05);}
-        .bc-tab-btn { flex: 1; padding: 10px; border-radius: 6px; border: none; background: rgba(0,0,0,0.2); color: #94a3b8; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .bc-tabs { display: flex; gap: 10px; padding:10px 20px; background: rgba(15, 23, 42, 0.5); flex-shrink:0; border-bottom:1px solid rgba(255,255,255,0.05); overflow-x: auto;}
+        .bc-tab-btn { flex: 1; padding: 10px; border-radius: 6px; border: none; background: rgba(0,0,0,0.2); color: #94a3b8; font-weight: bold; cursor: pointer; transition: 0.2s; white-space: nowrap;}
         .bc-tab-btn.active { background: #38bdf8; color: #0f172a; }
         .bc-tab-content { display: none; flex-direction:column; flex:1; overflow:hidden;}
         .bc-tab-content.active { display: flex; animation: fadeIn 0.3s; }
@@ -183,12 +174,18 @@
         .filter-row button { flex-shrink: 0; padding: 10px 15px; border-radius: 8px; background: #0284c7; border: none; color: white; font-size: 16px; cursor: pointer; transition: 0.2s; }
         .filter-row button:hover { background: #0369a1; transform: scale(1.05); }
 
-        /* RESPONSIVE CHO HEADER (YÊU CẦU 4) */
+        /* Khóa cứng Dropdown nhân viên trong bảng NLNV */
+        #emp-nlnv-container * { color: #000; }
+        #emp-nlnv-container .nlnv-staff-select, 
+        #emp-nlnv-container #nlnv-daily-staff-selector { pointer-events: none !important; appearance: none !important; -webkit-appearance: none !important; background: transparent; border: none; font-weight: bold; color: #0070C0; text-align: center; }
+
+        /* RESPONSIVE CHO HEADER VÀ LƯỚI NHẬP LIỆU */
         @media (max-width: 600px) {
             #emp-header { flex-wrap: wrap; flex-direction: column; align-items: flex-start; gap: 10px; padding-bottom: 15px;}
             #emp-header .bc-title { width: 100%; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 10px; }
             #emp-header .bc-header-right { width: 100%; justify-content: flex-end; margin-left: 0; }
             .emp-display-name { flex: 1; text-align: left; }
+            .bc-tabs { flex-wrap: wrap; }
         }
     `;
 
@@ -223,10 +220,7 @@
         app.innerHTML = `
             <div id="bc-loading"><div class="spinner"></div><h3 id="bc-load-text">Đang tải dữ liệu...</h3></div>
             
-            <div id="bc-lightbox">
-                <button id="bc-lb-close">✕</button>
-                <img id="bc-lb-img" src="">
-            </div>
+            <div id="bc-lightbox"><button id="bc-lb-close">✕</button><img id="bc-lb-img" src=""></div>
 
             <!-- SCREEN 1: QUẢN LÝ -->
             <div class="bc-screen" id="sc-manager">
@@ -269,13 +263,16 @@
                         </div>
                         <div class="bc-card">
                             <h3 class="bc-sec-title">2. Khai báo Nhân viên</h3>
-                            <!-- LƯỚI KHAI BÁO 4 CỘT -->
-                            <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
-                                <input type="text" id="inp-nv-shop" class="bc-input" style="margin:0; flex: 1; min-width:80px;" placeholder="Mã Shop">
-                                <input type="text" id="inp-nv-user" class="bc-input" style="margin:0; flex: 1.5; min-width:100px;" placeholder="User">
-                                <input type="text" id="inp-nv-fn" class="bc-input" style="margin:0; flex: 2; min-width:140px;" placeholder="Họ và Tên">
-                                <input type="text" id="inp-nv-pass" class="bc-input" style="margin:0; flex: 1.5; min-width:100px;" placeholder="Mật khẩu">
-                                <button class="bc-btn btn-success" id="btn-add-nv" style="width:75px; flex-shrink:0;">+ Thêm</button>
+                            <!-- LƯỚI KHAI BÁO 7 CỘT (CÓ THÊM DOB, ROLE, GROUP) -->
+                            <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
+                                <input type="text" id="inp-nv-shop" class="bc-input" style="margin:0; flex:1; min-width:80px;" placeholder="Mã Shop">
+                                <input type="text" id="inp-nv-user" class="bc-input" style="margin:0; flex:1; min-width:80px;" placeholder="User">
+                                <input type="text" id="inp-nv-fn" class="bc-input" style="margin:0; flex:2; min-width:140px;" placeholder="Họ và Tên">
+                                <input type="text" id="inp-nv-dob" class="bc-input" style="margin:0; flex:1.5; min-width:120px;" placeholder="Ngày sinh (dd/mm/yyyy)">
+                                <input type="text" id="inp-nv-pass" class="bc-input" style="margin:0; flex:1.5; min-width:100px;" placeholder="Mật khẩu">
+                                <select id="inp-nv-role" class="bc-input" style="margin:0; flex:0.8; min-width:70px; padding:12px;"><option value="NV">NV</option><option value="PG">PG</option></select>
+                                <input type="text" id="inp-nv-grp" class="bc-input" style="margin:0; flex:1.5; min-width:100px;" placeholder="Nhóm (Tự chọn)">
+                                <button class="bc-btn btn-success" id="btn-add-nv" style="width:100%; flex-shrink:0; margin-top:5px;">+ Thêm Nhân Viên</button>
                             </div>
                             <div id="nv-list-container"></div>
                         </div>
@@ -315,6 +312,7 @@
                 <div class="bc-tabs">
                     <button class="bc-tab-btn active" id="tab-btn-emp-form">📝 Gửi Báo Cáo</button>
                     <button class="bc-tab-btn" id="tab-btn-emp-history">🕒 Lịch Sử</button>
+                    <button class="bc-tab-btn" id="tab-btn-emp-personal" style="display:none; background: linear-gradient(135deg, #FFD700, #F59E0B); color:#0f172a;">👤 Cá nhân</button>
                 </div>
 
                 <div class="bc-tab-content active" id="tab-emp-form">
@@ -363,6 +361,22 @@
                             <button id="btn-refresh-emp-history" class="bc-btn btn-primary" style="width:auto; padding:8px 15px; font-size:13px;">🔄 Load lại lịch sử</button>
                         </div>
                         <div id="emp-history-container"></div>
+                    </div>
+                </div>
+
+                <!-- TÍNH NĂNG CÁ NHÂN MỚI (BẢNG NLNV CỦA BI 8.3) -->
+                <div class="bc-tab-content" id="tab-emp-personal">
+                    <div class="bc-screen-body">
+                        <div class="filter-row" style="justify-content: center; margin-bottom: 20px;">
+                            <select id="emp-nlnv-view-select" style="max-width: 250px; font-weight: bold; text-align: center; background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8;">
+                                <option value="overview">Bảng Tổng Quan</option>
+                                <option value="daily">Bảng Hàng Ngày</option>
+                            </select>
+                        </div>
+                        <!-- Bọc nền trắng để bảng BI không bị lỗi màu đen -->
+                        <div style="background:#fff; border-radius:8px; overflow-x:auto; padding:10px;">
+                            <div id="emp-nlnv-container"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -502,36 +516,44 @@
             const renderNV = () => {
                 $('nv-list-container').innerHTML = MANAGER_EMPLOYEES.map((nv, idx) => `
                     <div class="employee-row">
-                        <span style="flex:1;">🏬 ${nv.s || 'N/A'} - 👤 ${nv.fn ? nv.fn + ' - ' : ''}${nv.u} <span style="color:#94a3b8; font-size:12px;">(Pass: ${nv.p})</span></span>
+                        <span style="flex:1;">
+                            🏬 ${nv.s || 'N/A'} - 👤 ${nv.fn ? nv.fn + ' - ' : ''}${nv.u} <br>
+                            <span style="color:#94a3b8; font-size:12px;">(Pass: ${nv.p} | Vai trò: <b style="color:#FFD700">${nv.role || 'NV'}</b> | NS: ${nv.dob || '---'} | Nhóm: ${nv.grp || '---'})</span>
+                        </span>
                         <button class="bc-btn btn-danger" style="width:auto; padding:5px 10px; flex-shrink:0;" onclick="document.getElementById('bc-app-wrapper').dispatchEvent(new CustomEvent('delNV', {detail:${idx}}))">Xóa</button>
                     </div>
                 `).join('');
             };
             app.addEventListener('delNV', (e) => { MANAGER_EMPLOYEES.splice(e.detail, 1); renderNV(); });
             
-            // XỬ LÝ NÚT THÊM NHÂN VIÊN VỚI REGEX
+            // XỬ LÝ NÚT THÊM NHÂN VIÊN VỚI 7 TRƯỜNG DỮ LIỆU
             $('btn-add-nv').onclick = () => {
                 let s = $('inp-nv-shop').value.trim();
                 let u = $('inp-nv-user').value.trim();
                 let fn = $('inp-nv-fn').value.trim();
+                let dob = $('inp-nv-dob').value.trim();
                 let p = $('inp-nv-pass').value.trim();
+                let role = $('inp-nv-role').value;
+                let grp = $('inp-nv-grp').value.trim();
 
                 if(!s || !u || !fn || !p) return alert("Vui lòng nhập đủ Mã Shop, User, Họ Tên và Mật khẩu!");
                 
-                // Mã shop chỉ nhập số
                 if (!/^\d+$/.test(s)) return alert("Mã Shop chỉ được nhập số!");
                 
-                // Họ và tên chỉ nhập chữ và khoảng trắng (cho phép tiếng Việt có dấu)
                 if (!/^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪỬỮỰỲỴÝỶỸỳỵỷỹ\s]+$/.test(fn)) {
                     return alert("Họ và tên chỉ được chứa chữ cái và khoảng trắng!");
                 }
 
+                if (dob && !/^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/\d{4}$/.test(dob)) {
+                    return alert("Ngày sinh phải theo định dạng dd/mm/yyyy (Ví dụ: 05/09/1998)!");
+                }
+
                 if(MANAGER_EMPLOYEES.some(x => x.s === s && x.u === u)) return alert("User này đã tồn tại trong Shop!");
                 
-                MANAGER_EMPLOYEES.push({s, u, fn, p}); 
+                MANAGER_EMPLOYEES.push({s, u, fn, dob, p, role, grp}); 
                 renderNV(); 
                 
-                $('inp-nv-shop').value = ''; $('inp-nv-user').value = ''; $('inp-nv-fn').value = ''; $('inp-nv-pass').value = '';
+                $('inp-nv-shop').value = ''; $('inp-nv-user').value = ''; $('inp-nv-fn').value = ''; $('inp-nv-dob').value = ''; $('inp-nv-pass').value = ''; $('inp-nv-grp').value = '';
             };
 
             $('btn-save-config').onclick = async () => {
@@ -810,10 +832,10 @@
                     // TỔNG CỘNG TRONG NGÀY
                     // ==========================================
                     let totalToRoi = 0;
-                    let allLinksDB = [];
+                    let allLinksDB =[];
                     let allLinksLive =[];
                     let allImgToRoi =[];
-                    let allImgDB = [];
+                    let allImgDB =[];
                     let allImgLive = [];
 
                     grouped[date].forEach(row => {
@@ -851,7 +873,6 @@
                             </div>
                         </div>
                     `;
-                    // ==========================================
                     
                     grouped[date].forEach((row, idx) => {
                         let uniqueId = `rp-det-${date.replace(/\//g,'-')}-${idx}`;
@@ -884,28 +905,84 @@
 
         } else {
             // ==========================================
-            // LUỒNG NHÂN VIÊN
+            // LUỒNG NHÂN VIÊN & RENDER BẢNG CÁ NHÂN
             // ==========================================
+            const updateEmpTabs = () => {
+                if (EMP_SESSION && EMP_SESSION.role === 'NV') {
+                    $('tab-btn-emp-personal').style.display = 'block';
+                } else {
+                    $('tab-btn-emp-personal').style.display = 'none';
+                }
+            };
+
             if (EMP_SESSION && EMP_SESSION.user) { 
                 switchSc('sc-report'); 
-                // HIỂN THỊ HỌ TÊN - USER Ở ĐÂY
                 $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.fn ? EMP_SESSION.fn + ' - ' : ''}${EMP_SESSION.user}`; 
+                updateEmpTabs();
             } 
             else { switchSc('sc-login'); }
 
-            $('tab-btn-emp-form').onclick = () => { 
-                $('tab-btn-emp-form').classList.add('active'); 
-                $('tab-btn-emp-history').classList.remove('active'); 
-                $('tab-emp-form').classList.add('active'); 
-                $('tab-emp-history').classList.remove('active'); 
+            $('tab-btn-emp-form').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });
+                $('tab-btn-emp-form').classList.add('active'); $('tab-emp-form').classList.add('active'); 
             };
             
-            $('tab-btn-emp-history').onclick = () => { 
-                $('tab-btn-emp-history').classList.add('active'); 
-                $('tab-btn-emp-form').classList.remove('active'); 
-                $('tab-emp-history').classList.add('active'); 
-                $('tab-emp-form').classList.remove('active'); 
+            $('tab-btn-emp-history').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });
+                ['tab-emp-form', 'tab-emp-history', 'tab-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });
+                $('tab-btn-emp-history').classList.add('active'); $('tab-emp-history').classList.add('active'); 
                 loadEmployeeHistory();
+            };
+
+            // TAB "CÁ NHÂN" CLICK
+            $('tab-btn-emp-personal').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });
+                $('tab-btn-emp-personal').classList.add('active'); $('tab-emp-personal').classList.add('active'); 
+                renderNLNV('overview'); // Load bảng tổng quan đầu tiên
+            };
+
+            $('emp-nlnv-view-select').onchange = (e) => {
+                renderNLNV(e.target.value);
+            };
+
+            // HÀM RENDER BẢNG NĂNG LỰC NHÂN VIÊN VÀO TAB CÁ NHÂN
+            const renderNLNV = (mode) => {
+                const container = $('emp-nlnv-container');
+                container.innerHTML = `<div style="text-align:center; padding:20px; color:#000;"><div class="spinner" style="margin:0 auto; border-top-color:#0070C0;"></div><br>Đang tải dữ liệu BI...</div>`;
+                
+                // Lấy Data từ hệ sinh thái BI 8.3
+                const userConfig = UTILS.getPersistentConfig();
+                const configList = GM_getValue(context.CONSTANTS.KEYS.CONFIG_LIST) ||[];
+                const dataCache = GM_getValue(context.CONSTANTS.KEYS.DATA_CACHE) || {};
+                const useBITarget = true; // Mặc định dùng Target BI
+                
+                // Tìm kiếm nhân viên tương ứng trên hệ thống BI
+                let staffNameInBI = EMP_SESSION.user; 
+                const staffListBI = userConfig.staffList ||[];
+                // Ưu tiên tìm theo Họ Tên, không thấy thì tìm theo User
+                const matchedStaff = staffListBI.find(s => (EMP_SESSION.fn && s.name.includes(EMP_SESSION.fn)) || s.name.includes(EMP_SESSION.user));
+                if (matchedStaff) staffNameInBI = matchedStaff.name;
+                
+                // Gán tên cho hàm của BI render
+                window.tgdd_nlnv_selected_staff = staffNameInBI;
+
+                // Vẽ Bảng Tổng Quan
+                if (mode === 'overview') {
+                    setTimeout(() => {
+                        let html = UI.HTML.getNLNVReport(dataCache, configList, userConfig, useBITarget);
+                        container.innerHTML = html;
+                    }, 200);
+                } 
+                // Vẽ Bảng Hàng Ngày (Cần fetch Lịch sử Cloud)
+                else if (mode === 'daily') {
+                    if (window.tgdd_history_cache) {
+                        let html = UI.HTML.getNLNVDailyReport(window.tgdd_history_cache, configList, userConfig, staffNameInBI, dataCache, useBITarget);
+                        container.innerHTML = html;
+                    } else {
+                        DATA.fetchHistoryFromSheet(userConfig, (history) => {
+                            window.tgdd_history_cache = history || {};
+                            let html = UI.HTML.getNLNVDailyReport(window.tgdd_history_cache, configList, userConfig, staffNameInBI, dataCache, useBITarget);
+                            container.innerHTML = html;
+                        });
+                    }
+                }
             };
 
             const loadEmployeeHistory = async () => {
@@ -998,10 +1075,12 @@
                     let res = await universalFetch({ method:"POST", url: API_URL_MAIN, data: JSON.stringify({ action: "login_employee", empShop: s, empUser: u, empPass: p }) });
                     let data = JSON.parse(res);
                     if(data.status === 'success') {
-                        // LƯU THÊM fn (Họ Tên) VÀO SESSION
-                        EMP_SESSION = { user: u, shop: s, folderId: data.folderId, sheetId: data.sheetId, fn: data.fn || "" };
+                        // LƯU THÊM fn (Họ Tên), dob, role, grp VÀO SESSION
+                        EMP_SESSION = { user: u, shop: s, folderId: data.folderId, sheetId: data.sheetId, fn: data.fn || "", dob: data.dob || "", role: data.role || "NV", grp: data.grp || "" };
                         localStorage.setItem('bc_emp_session', JSON.stringify(EMP_SESSION));
                         $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.fn ? EMP_SESSION.fn + ' - ' : ''}${u}`; 
+                        
+                        updateEmpTabs(); // Kiểm tra NV để hiện nút Cá nhân
                         switchSc('sc-report');
                         $('tab-btn-emp-form').click();
                     } else alert("❌ Lỗi: " + data.message);
