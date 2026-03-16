@@ -1,12 +1,11 @@
 // ==UserScript==
-// @name         AutoBI 8.2
+// @name         AutoBI 8.3
 // @namespace    http://tampermonkey.net/
-// @version      8.2
+// @version      8.3
 // @description  Tool báo cáo tự động cho quản lý MWG.
 // @author       42060
 // @match        https://bi.thegioididong.com/*
 // @match        https://crm.thegioididong.com/*
-// @match        https://www.chuyengia.vip/p/kiem-ke.html
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=thegioididong.com
 // @connect      *
 // @grant        GM_setValue
