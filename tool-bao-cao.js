@@ -89,8 +89,10 @@
     };
 
     const getEmpDisplayName = (u) => {
-        const emp = MANAGER_EMPLOYEES.find(x => x.u === u);
-        return (emp && emp.fn) ? `${emp.fn} - ${u}` : u;
+        if (!u) return '---';
+        const emp = MANAGER_EMPLOYEES.find(x => String(x.u).toLowerCase() === String(u).toLowerCase());
+        // Trả về emp.u (Cách viết gốc do quản lý khai báo) thay vì u (cách nhân viên nhập)
+        return (emp && emp.fn) ? `${emp.fn} - ${emp.u}` : u;
     };
 
     // ===============================================================
@@ -1130,11 +1132,15 @@
                 }
                 
                 let allEmps = MANAGER_EMPLOYEES.map(e => String(e.u).trim());
-                let notReportedUsers = allEmps.filter(u => !reportedUsers.includes(u));
+                
+                // FIX LỖI: Ép toàn bộ mảng về chữ thường để so sánh không phân biệt hoa thường
+                let reportedUsersLower = reportedUsers.map(u => String(u).toLowerCase());
+                let notReportedUsers = allEmps.filter(u => !reportedUsersLower.includes(String(u).toLowerCase()));
 
                 let listHtml = `<div id="today-emp-list" style="display:none; margin-bottom: 25px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 15px 10px; max-height: 250px; overflow-y: auto;">
                                     <div style="font-size: 11px; color: #94a3b8; margin-bottom: 10px; text-align: center; font-weight: bold; text-transform: uppercase;">Danh sách NV đã/chưa báo cáo hôm nay</div>`;
                 
+                // Do hàm getEmpDisplayName đã được fix nên truyền chữ thường vào nó vẫn in ra chữ hoa chuẩn
                 reportedUsers.forEach(u => {
                     listHtml += `<div class="emp-status-row">
                         <span class="emp-name reported">${getEmpDisplayName(u)}</span>
@@ -1217,7 +1223,8 @@
                 let filtered = STAT_DATA;
                 if(m !== "ALL") filtered = filtered.filter(x => x.monthStr === m);
                 if(d !== "ALL") filtered = filtered.filter(x => x.dateStr === d);
-                if(e !== "ALL") filtered = filtered.filter(x => x.user === e);
+                // FIX LỖI LỌC: So sánh chữ thường
+                if(e !== "ALL") filtered = filtered.filter(x => String(x.user).toLowerCase() === String(e).toLowerCase());
 
                 renderStatList(filtered, e, m, d);
             };
@@ -1259,10 +1266,15 @@
                 if (selectedEmp === "ALL") {
                     let userStats = {};
                     filteredData.forEach(r => {
-                        if(!userStats[r.user]) userStats[r.user] = { flyers: 0, posts: 0, lives: 0 };
-                        userStats[r.user].flyers += parseInt(r.slToRoi) || 0;
-                        if(r.linkDB || r.imgDB) userStats[r.user].posts += 1;
-                        if(r.linkLive || r.imgLive) userStats[r.user].lives += 1;
+                        // FIX LỖI RANKING: Lấy user gốc từ khai báo của QL để cộng dồn, tránh tạo ra 2 người "xiaomi" và "Xiaomi"
+                        let realUserKey = r.user;
+                        const emp = MANAGER_EMPLOYEES.find(x => String(x.u).toLowerCase() === String(r.user).toLowerCase());
+                        if(emp) realUserKey = emp.u;
+
+                        if(!userStats[realUserKey]) userStats[realUserKey] = { flyers: 0, posts: 0, lives: 0 };
+                        userStats[realUserKey].flyers += parseInt(r.slToRoi) || 0;
+                        if(r.linkDB || r.imgDB) userStats[realUserKey].posts += 1;
+                        if(r.linkLive || r.imgLive) userStats[realUserKey].lives += 1;
                     });
                     
                     let topFlyer = Object.keys(userStats).sort((a,b) => userStats[b].flyers - userStats[a].flyers)[0];
@@ -1639,9 +1651,17 @@
                     let res = await universalFetch({ method:"POST", url: API_URL_MAIN, data: JSON.stringify({ action: "login_employee", empShop: s, empUser: u, empPass: p }) });
                     let data = JSON.parse(res);
                     if(data.status === 'success') {
-                        EMP_SESSION = { user: u, shop: s, folderId: data.folderId, sheetId: data.sheetId, mgrUser: data.mgrUser || "", fn: data.fn || "", dob: data.dob || "", role: data.role || "NV", grp: data.grp || "" };
+                        // Lấy chính xác user từ server trả về (nếu có)
+                        let exactUser = data.exactUser || data.user || data.empUser;
+                        
+                        // FIX LỖI: Nếu server không gửi về tên chính xác, tự động viết hoa chữ cái đầu tiên để khớp với khai báo phổ biến
+                        if (!exactUser) {
+                            exactUser = u.charAt(0).toUpperCase() + u.slice(1).toLowerCase();
+                        }
+
+                        EMP_SESSION = { user: exactUser, shop: s, folderId: data.folderId, sheetId: data.sheetId, mgrUser: data.mgrUser || "", fn: data.fn || "", dob: data.dob || "", role: data.role || "NV", grp: data.grp || "" };
                         localStorage.setItem('bc_emp_session', JSON.stringify(EMP_SESSION));
-                        $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.fn ? EMP_SESSION.fn + ' - ' : ''}${u}`; 
+                        $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.fn ? EMP_SESSION.fn + ' - ' : ''}${exactUser}`; 
                         
                         updateEmpTabs(); 
                         switchSc('sc-report');
