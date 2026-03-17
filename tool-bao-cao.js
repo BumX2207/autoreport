@@ -672,7 +672,7 @@
             <!-- SCREEN 1: QUẢN LÝ -->
             <div class="bc-screen" id="sc-manager">
                 <div class="bc-header">
-                    <div class="bc-title">⚙️ QUẢN LÝ DASHBOARD</div>
+                    <div class="bc-title">⚙️ DASHBOARD</div>
                     <div class="bc-header-right">
                         <span style="color:#94a3b8; font-size:14px; font-weight:600;">👤 ${CURRENT_USER}</span>
                         <button class="bc-close-btn btn-close-app">✕</button>
