@@ -752,13 +752,16 @@
 
             <!-- SCREEN 3: FORM BÁO CÁO NHÂN VIÊN -->
             <div class="bc-screen" id="sc-report">
-                <div class="bc-header" id="emp-header">
-                    <div class="bc-title">📊 BÁO CÁO</div>
-                    <div class="bc-header-right">
-                        <span class="emp-display-name" style="color:#94a3b8; font-size:14px; font-weight:600;" id="lbl-emp-name">👤 ---</span>
-                        <button class="bc-btn btn-danger" id="btn-nv-logout" style="padding:5px 10px; width:auto; font-size:12px;">Thoát</button>
-                        <button class="bc-close-btn btn-close-app">✕</button>
-                    </div>
+                <!-- THANH TIÊU ĐỀ: CHỈ CÓ TÊN TOOL VÀ NÚT X ĐỂ TRÁNH BẤM NHẦM -->
+                <div class="bc-header">
+                    <div class="bc-title">📊 BÁO CÁO NHÂN VIÊN</div>
+                    <button class="bc-close-btn btn-close-app" style="width: 36px; height: 36px; font-size: 16px;">✕</button>
+                </div>
+
+                <!-- THANH THÔNG TIN USER: ĐƯỢC TÁCH XUỐNG DƯỚI ĐỂ AN TOÀN -->
+                <div style="display:flex; justify-content:space-between; align-items:center; padding: 8px 20px; background: rgba(0,0,0,0.3); border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;">
+                    <span class="emp-display-name" style="color:#38bdf8; font-size:13px; font-weight:bold;" id="lbl-emp-name">👤 ---</span>
+                    <button class="bc-btn btn-danger" id="btn-nv-logout" style="padding:5px 12px; width:auto; font-size:11px; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); margin: 0;">Đăng xuất</button>
                 </div>
 
                 <div class="bc-tabs">
