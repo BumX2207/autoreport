@@ -1041,7 +1041,7 @@
             });
 
             // Quyền Hạn
-            const isKeeper = String(currentUser).trim().toLowerCase() === String(keeper).trim().toLowerCase();
+            const isKeeper = keeper && String(keeper).toLowerCase().includes(String(currentUser).toLowerCase());
             const canAdd = isManager || isKeeper;
 
             let html = `
@@ -1061,7 +1061,7 @@
             if (isManager) {
                 let empOpts = `<option value="">-- Chọn nhân viên --</option>`;
                 MANAGER_EMPLOYEES.forEach(e => {
-                    const sel = (String(e.u).trim().toLowerCase() === String(keeper).trim().toLowerCase()) ? 'selected' : '';
+                    const sel = (keeper && String(keeper).toLowerCase().includes(String(e.u).toLowerCase())) ? 'selected' : '';
                     empOpts += `<option value="${e.u}" ${sel}>${getEmpDisplayName(e.u)}</option>`;
                 });
                 
@@ -1079,7 +1079,7 @@
                             </div>
                 `;
             } else {
-                html += `<div><span class="fund-keeper-select locked" style="display:inline-block;">👤 ${getEmpDisplayName(keeper) || 'Chưa chỉ định'}</span></div>`;
+                html += `<div><span class="fund-keeper-select locked" style="display:inline-block;">👤 ${keeper || 'Chưa chỉ định'}</span></div>`;
             }
             
             html += `       </div>
@@ -1089,12 +1089,12 @@
             if (canAdd) {
                 html += `
                 <div class="fund-actions">
-                    <button class="fund-btn-thu" id="btn-fund-thu-${containerId}">+ THÊM THU</button>
-                    <button class="fund-btn-chi" id="btn-fund-chi-${containerId}">- THÊM CHI</button>
+                    <button class="fund-btn-thu" id="btn-fund-thu-${containerId}">+ THU</button>
+                    <button class="fund-btn-chi" id="btn-fund-chi-${containerId}">- CHI</button>
                 </div>`;
             }
 
-            html += `<div class="bc-sec-title">📝 LỊCH SỬ GIAO DỊCH</div><div class="fund-list">`;
+            html += `<div class="bc-sec-title">📝 LỊCH SỬ THU CHI</div><div class="fund-list">`;
             
             if (trans.length === 0) {
                 html += `<div style="padding:20px; text-align:center; color:#94a3b8; border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px;">Chưa có phát sinh thu/chi nào.</div>`;
@@ -1176,7 +1176,8 @@
                             // Trạng thái Lưu
                             const newKeeper = selKeeper.value;
                             if(!newKeeper && !confirm("Bạn đang để trống người giữ quỹ. Đồng ý?")) return;
-                            FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: newKeeper }, sheetId, () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true));
+                            const fullKeeperName = getEmpDisplayName(newKeeper);
+FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true));
                         }
                     };
                 }
