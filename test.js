@@ -888,6 +888,10 @@
                         </div>
                     </div>
                 </div>
+                <!-- TAB QUỸ SIÊU THỊ (EMPLOYEE) -->
+                <div class="bc-tab-content" id="tab-emp-fund">
+                    <div class="bc-screen-body" id="emp-fund-container"></div>
+                </div>
             </div>
         `;
         document.body.appendChild(app);
