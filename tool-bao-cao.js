@@ -381,6 +381,94 @@
             const actualRev = revData[selectedStaffName] || 0;
             const serviceInfo = crmData[selectedStaffName] || { score: '-' };
 
+            let activeGroups = userConfig.compData ? userConfig.compData.map(c => c.group) :[];
+
+            // ====================================================================
+            // TÍNH TOÁN ĐIỂM VÀ RANKING CHO TOÀN BỘ NHÂN VIÊN TRONG SHOP
+            // ====================================================================
+            let rankingData =[];
+            shopStaffGroup.forEach(s => {
+                // 1. Điểm doanh thu
+                let s_actualRev = revData[s.name] || 0;
+                let s_revInMillions = s_actualRev > 1000000 ? Math.round(s_actualRev / 1000000) : Math.round(s_actualRev);
+                let s_diemDoanhThu = Math.floor(s_revInMillions / 20);
+
+                // 2. Điểm phục vụ
+                let s_crm = crmData[s.name] || { ratePct: 0, score: '-' };
+                let s_roundedRate = Math.round(parseFloat(s_crm.ratePct) || 0);
+                let s_diemPhucVu = s_roundedRate < 10 ? -10 : (s_roundedRate - 10) * 2;
+
+                // 3. Điểm thi đua NH
+                let s_diemDat = 0, s_diemKhongDat = 0;
+
+                activeGroups.forEach(cat => {
+                    const configItem = configList.find(c => c.short === cat) || { type: 'soluong' };
+                    const isRevenue = configItem.type.toLowerCase().includes('doanhthu') || configItem.type.toLowerCase().includes('tiền');
+                    const finalMult = isRevenue ? 1000 : 1;
+
+                    let shopTargetRaw = 0;
+                    if (dataCache.link4_smart && dataCache.link4_smart[cat] && dataCache.link4_smart[cat][shopKey]) {
+                        shopTargetRaw = dataCache.link4_smart[cat][shopKey].t || 0;
+                        if (isRevenue) shopTargetRaw = shopTargetRaw / 1000;
+                    } else {
+                        const compRow = userConfig.compData.find(c => c.group === cat);
+                        if (compRow) shopTargetRaw = compRow[`t${shopIdx}`] || 0;
+                    }
+
+                    let personalTarget = 0;
+                    if(s.rate && parseFloat(s.rate) > 0) {
+                        personalTarget = Math.round(shopTargetRaw * parseFloat(s.rate) / 100) * finalMult;
+                    } else if (staffNoRate.length > 0) {
+                        let usedT = 0; staffWithRate.forEach(sr => usedT += Math.round(shopTargetRaw * parseFloat(sr.rate) / 100));
+                        personalTarget = Math.round(Math.max(0, shopTargetRaw - usedT) / staffNoRate.length) * finalMult;
+                    }
+
+                    let s_actual = currentShopStaffData[s.name]?.[cat] || staffRealMap[s.name]?.[cat] || 0;
+                    let forecastPct = personalTarget > 0 ? ((s_actual / daysPassed) * daysInMonth / personalTarget * 100) : (s_actual > 0 ? 100 : 0);
+                    let roundedForecast = Math.round(forecastPct);
+
+                    let baseScore = 0;
+                    if (roundedForecast >= 130) baseScore = 3;
+                    else if (roundedForecast >= 120) baseScore = 2;
+                    else if (roundedForecast >= 110) baseScore = 1;
+                    else if (roundedForecast >= 100) baseScore = 0;
+                    else if (roundedForecast >= 90) baseScore = -1;
+                    else if (roundedForecast >= 80) baseScore = -2;
+                    else baseScore = -3;
+
+                    const compRow = userConfig.compData.find(c => c.group === cat);
+                    const mult = compRow ? (parseInt(compRow.mult) || 1) : 1;
+                    let finalScore = baseScore * mult;
+
+                    if (roundedForecast >= 100) s_diemDat += finalScore;
+                    else s_diemKhongDat += finalScore;
+                });
+
+                let s_tongDiem = 100 + s_diemPhucVu + s_diemDoanhThu + s_diemDat + s_diemKhongDat;
+
+                rankingData.push({
+                    name: s.name,
+                    diemDoanhThu: s_diemDoanhThu,
+                    tongDiem: s_tongDiem,
+                    ratePct: s_roundedRate,
+                    scoreOriginal: s_crm.score
+                });
+            });
+
+            // Xếp hạng Rank thi đua (Theo Tổng điểm)
+            rankingData.sort((a, b) => b.tongDiem - a.tongDiem);
+            rankingData.forEach((item, idx) => item.rankThiDua = idx + 1);
+
+            // Xếp hạng Rank phục vụ (Theo tỉ lệ đánh giá %)
+            rankingData.sort((a, b) => b.ratePct - a.ratePct);
+            rankingData.forEach((item, idx) => item.rankPhucVu = idx + 1);
+
+            // Trích xuất Data của Nhân viên đang chọn để hiển thị
+            const selectedStaffStats = rankingData.find(item => item.name === selectedStaffName) || {
+                diemDoanhThu: 0, tongDiem: 0, rankThiDua: '-', rankPhucVu: '-', scoreOriginal: serviceInfo.score
+            };
+            // ====================================================================
+
             let html = `
             <div class="nlnv-container">
                 <table class="nlnv-table">
@@ -396,12 +484,11 @@
                         <td class="nlnv-label" style="color:#008080;">Điểm Phục vụ</td><td class="nlnv-label" style="color:#008080;">Điểm doanh thu</td><td class="nlnv-label" style="color:#008080;">Điểm thi đua</td><td class="nlnv-label" style="color:#008080;">Rank phục vụ</td><td class="nlnv-label" style="color:#008080;">Rank thi đua</td>
                     </tr>
                     <tr>
-                        <td class="nlnv-val-red">${serviceInfo.score}</td><td class="nlnv-val-red"></td><td class="nlnv-val-red"></td><td class="nlnv-val-red"></td><td class="nlnv-val-red"></td>
+                        <td class="nlnv-val-red">${selectedStaffStats.scoreOriginal}</td><td class="nlnv-val-red">${selectedStaffStats.diemDoanhThu}</td><td class="nlnv-val-red">${selectedStaffStats.tongDiem}</td><td class="nlnv-val-red">${selectedStaffStats.rankPhucVu}</td><td class="nlnv-val-red">${selectedStaffStats.rankThiDua}</td>
                     </tr>
                     <tr class="nlnv-header-cyan"><td>Nhóm hàng</td><td>Target</td><td>Thực hiện</td><td>% Hoàn thành</td><td>Dự kiến</td></tr>
             `;
 
-            let activeGroups = userConfig.compData ? userConfig.compData.map(c => c.group) :[];
             let passCount = 0; let failCount = 0;
 
             activeGroups.forEach((cat, idx) => {
