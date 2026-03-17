@@ -248,6 +248,52 @@
             .emp-display-name { flex: 1; text-align: left; }
             .bc-tabs { flex-wrap: wrap; }
         }
+
+        /* ===== CSS QUỸ SIÊU THỊ MỚI ===== */
+        .fund-dash { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+        .fund-card-main { flex: 1; min-width: 250px; background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 12px; padding: 20px; position: relative; overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+        .fund-card-main::before { content: '💰'; position: absolute; right: 10px; bottom: -10px; font-size: 80px; opacity: 0.1; pointer-events: none;}
+        .fund-balance { font-size: 32px; font-weight: 900; color: #38bdf8; margin: 10px 0; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        
+        /* CSS cho Select Keeper Đóng băng & Chỉnh sửa */
+        .fund-keeper-select { padding: 6px 10px; border-radius: 6px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #38bdf8; outline: none; font-size: 13px; max-width: 150px; transition: 0.2s; }
+        .fund-keeper-select.locked { appearance: none; -webkit-appearance: none; background: rgba(16, 185, 129, 0.2) !important; color: #10b981 !important; border: 1px solid rgba(16, 185, 129, 0.3) !important; border-radius: 20px !important; font-weight: bold; opacity: 1 !important; text-align: center; }
+        
+        .fund-actions { display: flex; gap: 10px; margin-bottom: 20px; }
+        .fund-btn-thu { flex: 1; background: linear-gradient(135deg, #10b981, #047857); border: none; color: white; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); transition: 0.2s;}
+        .fund-btn-chi { flex: 1; background: linear-gradient(135deg, #ef4444, #b91c1c); border: none; color: white; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); transition: 0.2s;}
+        .fund-btn-thu:active, .fund-btn-chi:active { transform: scale(0.95); }
+        
+        /* Layout List Giao dịch MỚI (2 Dòng) */
+        .fund-list { display: flex; flex-direction: column; gap: 10px; }
+        .fund-item-new { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 10px; padding: 12px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; gap: 8px; position: relative;}
+        .fund-item-new:hover { background: rgba(255,255,255,0.05); border-color: rgba(56,189,248,0.4); }
+        
+        .fi-row-1 { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 8px; }
+        .fi-time { font-size: 12px; color: #94a3b8; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+        
+        .fi-row-2 { display: flex; align-items: center; gap: 10px; overflow: hidden; }
+        .fund-icon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; flex-shrink: 0; }
+        .f-icon-thu { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .f-icon-chi { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        
+        .fi-reason { flex: 1; font-size: 14px; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .fi-user { font-size: 11px; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70px; background: rgba(0,0,0,0.3); padding: 3px 6px; border-radius: 4px;}
+        .fi-amount { font-size: 16px; font-weight: 900; white-space: nowrap; flex-shrink: 0;}
+        .f-text-thu { color: #10b981; }
+        .f-text-chi { color: #ef4444; }
+        
+        .fund-badge-pending { background: #ef4444; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 5px; display: inline-block; vertical-align: middle; animation: pulse-text 2s infinite; flex-shrink:0;}
+        .fund-btn-action { padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; border: none; color: white; transition: 0.2s;}
+        .fund-btn-action:hover { filter: brightness(1.1); }
+        .fund-btn-action:active { transform: scale(0.9); }
+
+        /* Modal Dùng Chung */
+        .fund-modal-overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:2147483650; display:flex; justify-content:center; align-items:center; opacity:0; pointer-events:none; transition:0.3s; backdrop-filter: blur(3px);}
+        .fund-modal-overlay.show { opacity:1; pointer-events:auto; }
+        .fund-modal-box { background:linear-gradient(135deg, #1e293b, #0f172a); border:1px solid #38bdf8; border-radius:12px; padding:20px; width:90%; max-width:350px; box-shadow:0 15px 40px rgba(0,0,0,0.5); transform:scale(0.9); transition:0.3s; position: relative; max-height: 90vh; display: flex; flex-direction: column;}
+        .fund-modal-overlay.show .fund-modal-box { transform:scale(1); }
+        .fund-modal-content-scroll { overflow-y: auto; padding-right: 5px; }
     `;
 
     const processImages = async (files) => {
@@ -680,7 +726,8 @@
                 </div>
 
                 <div class="bc-tabs">
-                    <button class="bc-tab-btn active" id="tab-btn-stat">📈 Thống Kê</button>
+                    <button class="bc-tab-btn active" id="tab-btn-stat">📈 Truyền thông</button>
+                    <button class="bc-tab-btn" id="tab-btn-fund">💰 Quỹ Siêu Thị</button>
                     <button class="bc-tab-btn" id="tab-btn-config">⚙️ Cài Đặt</button>
                 </div>
 
@@ -735,6 +782,10 @@
                         <button class="bc-btn btn-primary" id="btn-save-config">💾 LƯU CẤU HÌNH</button>
                     </div>
                 </div>
+                <!-- TAB QUỸ SIÊU THỊ (MANAGER) -->
+                <div class="bc-tab-content" id="tab-fund">
+                    <div class="bc-screen-body" id="mgr-fund-container"></div>
+                </div>
             </div>
 
             <!-- SCREEN 2: LOGIN NHÂN VIÊN -->
@@ -769,6 +820,7 @@
                 <div class="bc-tabs">
                     <button class="bc-tab-btn active" id="tab-btn-emp-form">📝 Gửi Báo Cáo</button>
                     <button class="bc-tab-btn" id="tab-btn-emp-history">🕒 Lịch Sử</button>
+                    <button class="bc-tab-btn" id="tab-btn-emp-fund" style="display:none; background: linear-gradient(135deg, #10b981, #047857); color:#fff;">💰 Quỹ ST</button>
                     <button class="bc-tab-btn" id="tab-btn-emp-personal" style="display:none; background: linear-gradient(135deg, #FFD700, #F59E0B); color:#0f172a;">👤 Cá nhân</button>
                 </div>
 
@@ -835,6 +887,10 @@
                             <div id="emp-nlnv-container" style="padding:10px;"></div>
                         </div>
                     </div>
+                </div>
+                <!-- TAB QUỸ SIÊU THỊ (EMPLOYEE) -->
+                <div class="bc-tab-content" id="tab-emp-fund">
+                    <div class="bc-screen-body" id="emp-fund-container"></div>
                 </div>
             </div>
         `;
@@ -948,15 +1004,377 @@
         };
         handlePreview('file-toroi', 'prev-toroi'); handlePreview('file-dangbai', 'prev-dangbai'); handlePreview('file-live', 'prev-live');
 
+        // ===============================================================
+    // HỆ THỐNG QUẢN LÝ QUỸ SIÊU THỊ
+    // ===============================================================
+    const FUND_SYSTEM = {
+        loaded: {}, 
+        formatVNĐ: (num) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num),
+        
+        loadAndRender: async (containerId, isManager, sheetId, currentUser, forceReload = false) => {
+            if (!forceReload && FUND_SYSTEM.loaded[containerId]) return;
+
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            container.innerHTML = `<div style="text-align:center; padding:30px;"><div class="spinner" style="margin:0 auto;"></div><br>Đang tải dữ liệu quỹ...</div>`;
+            if (!sheetId) { container.innerHTML = `<div style="color:#ef4444; text-align:center;">Vui lòng cài đặt ID Sheet để sử dụng chức năng này.</div>`; return; }
+            
+            try {
+                let res = await universalFetch({ method: "POST", url: API_URL_HISTORY, data: JSON.stringify({ action: "fund_get", sheetId: sheetId }) });
+                let json = JSON.parse(res);
+                if (json.status !== 'success') throw new Error("Lỗi tải dữ liệu.");
+                
+                FUND_SYSTEM.renderUI(containerId, isManager, currentUser, sheetId, json.keeper, json.trans);
+                FUND_SYSTEM.loaded[containerId] = true; 
+            } catch (e) { container.innerHTML = `<div style="color:#ef4444; text-align:center;">Lỗi kết nối Quỹ: ${e.message}</div>`; }
+        },
+
+        renderUI: (containerId, isManager, currentUser, sheetId, keeper, trans) => {
+            let balance = 0;
+
+            trans.forEach(t => {
+                if (t.status === 'Approved') {
+                    if (t.type === 'Thu') balance += parseInt(t.amount);
+                    else balance -= parseInt(t.amount);
+                }
+            });
+
+            // Quyền Hạn
+            const isKeeper = keeper && String(keeper).toLowerCase().includes(String(currentUser).toLowerCase());
+            const canAdd = isManager || isKeeper;
+
+            let html = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <div class="bc-sec-title" style="margin:0;">🏦 TỔNG QUAN QUỸ</div>
+                    <button id="btn-refresh-fund-${containerId}" class="btn-unlock" style="position:static; margin:0;">🔄 Làm mới</button>
+                </div>
+                <div class="fund-dash">
+                    <div class="fund-card-main">
+                        <div style="color:#94a3b8; font-size:14px; font-weight:bold; text-transform:uppercase;">Tổng Quỹ Hiện Tại</div>
+                        <div class="fund-balance">${FUND_SYSTEM.formatVNĐ(balance)}</div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:15px;">
+                            <div><span style="font-size:12px; color:#94a3b8;">Người giữ quỹ:</span></div>
+            `;
+            
+            // Xử lý Giao diện chọn Người giữ quỹ (Chỉ dành cho Manager, nhân viên chỉ xem text bình thường)
+            if (isManager) {
+                let empOpts = `<option value="">-- Chọn nhân viên --</option>`;
+                MANAGER_EMPLOYEES.forEach(e => {
+                    const sel = (keeper && String(keeper).toLowerCase().includes(String(e.u).toLowerCase())) ? 'selected' : '';
+                    empOpts += `<option value="${e.u}" ${sel}>${getEmpDisplayName(e.u)}</option>`;
+                });
+                
+                const isLocked = keeper ? true : false;
+                const lockClass = isLocked ? 'locked' : '';
+                const btnText = isLocked ? 'Thay đổi' : 'Giao quỹ';
+                const btnColor = isLocked ? '#f59e0b' : '#38bdf8';
+
+                html += `
+                            <div style="display:flex; align-items:center; gap:5px;">
+                                <select id="fund-select-keeper-${containerId}" class="fund-keeper-select ${lockClass}" ${isLocked ? 'disabled' : ''}>
+                                    ${empOpts}
+                                </select>
+                                <button id="btn-fund-setkeeper-${containerId}" class="fund-btn-action" data-mode="${isLocked ? 'edit' : 'save'}" style="background:${btnColor};">${btnText}</button>
+                            </div>
+                `;
+            } else {
+                html += `<div><span class="fund-keeper-select locked" style="display:inline-block;">👤 ${keeper || 'Chưa chỉ định'}</span></div>`;
+            }
+            
+            html += `       </div>
+                    </div>
+                </div>`;
+
+            if (canAdd) {
+                html += `
+                <div class="fund-actions">
+                    <button class="fund-btn-thu" id="btn-fund-thu-${containerId}">+ THU</button>
+                    <button class="fund-btn-chi" id="btn-fund-chi-${containerId}">- CHI</button>
+                </div>`;
+            }
+
+            html += `<div class="bc-sec-title">📝 LỊCH SỬ THU CHI</div><div class="fund-list">`;
+            
+            if (trans.length === 0) {
+                html += `<div style="padding:20px; text-align:center; color:#94a3b8; border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px;">Chưa có phát sinh thu/chi nào.</div>`;
+            } else {
+                trans.reverse().forEach(t => {
+                    const isThu = t.type === 'Thu';
+                    const iconClass = isThu ? 'f-icon-thu' : 'f-icon-chi';
+                    const iconTxt = isThu ? '↓' : '↑';
+                    const textClass = isThu ? 'f-text-thu' : 'f-text-chi';
+                    const sign = isThu ? '+' : '-';
+                    const isPending = t.status === 'Pending';
+                    const pendingBadge = isPending ? `<span class="fund-badge-pending">⏳ Chưa duyệt</span>` : '';
+
+                    // Xử lý cắt chuỗi thời gian cho đẹp (dd-mm-yyyy hh:mm)
+                    let shortTime = t.time;
+                    let dObj = new Date(t.time); // Parse từ ISO String
+                    if (!isNaN(dObj.getTime())) {
+                        let dd = String(dObj.getDate()).padStart(2, '0');
+                        let mm = String(dObj.getMonth() + 1).padStart(2, '0');
+                        let yyyy = dObj.getFullYear();
+                        let hh = String(dObj.getHours()).padStart(2, '0');
+                        let min = String(dObj.getMinutes()).padStart(2, '0');
+                        
+                        shortTime = `${dd}-${mm}-${yyyy} ${hh}:${min}`;
+                        t.time = shortTime; // Ghi đè lại t.time để Modal Chi Tiết cũng nhận được format này
+                    }
+
+                    // Tên NV rút gọn (Chỉ lấy Tên, bỏ User phía sau dấu '-')
+                    let shortUser = String(getEmpDisplayName(t.user)).split('-')[0].trim();
+
+                    html += `
+                        <div class="fund-item-new" data-id="${t.id}">
+                            <div class="fi-row-1">
+                                <div class="fi-time">🕒 ${shortTime}</div>
+                                <div class="fund-action-wrap" style="display:flex; gap:5px; z-index:2;">
+                    `;
+
+                    // Nút thao tác (Duyệt / Xóa)
+                    if (isManager || (isKeeper && isPending && String(t.user).trim().toLowerCase() === String(currentUser).trim().toLowerCase())) {
+                        if (isManager && isPending) {
+                            html += `<button class="fund-btn-action fund-act-approve" data-id="${t.id}" style="background:#10b981;">Duyệt</button>`;
+                        }
+                        html += `<button class="fund-btn-action fund-act-delete" data-id="${t.id}" style="background:#ef4444;">Xóa</button>`;
+                    }
+
+                    html += `           </div>
+                            </div>
+                            <div class="fi-row-2">
+                                <div class="fund-icon ${iconClass}">${iconTxt}</div>
+                                <div class="fi-reason">${t.reason} ${pendingBadge}</div>
+                                <div class="fi-user" title="${getEmpDisplayName(t.user)}">👤 ${shortUser}</div>
+                                <div class="fi-amount ${textClass}">${sign}${FUND_SYSTEM.formatVNĐ(t.amount)}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            html += `</div>`;
+            document.getElementById(containerId).innerHTML = html;
+
+            // --- BIND EVENTS ---
+            const btnRefresh = document.getElementById(`btn-refresh-fund-${containerId}`);
+            if (btnRefresh) btnRefresh.onclick = () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true);
+
+            if (isManager) {
+                const btnSetKeeper = document.getElementById(`btn-fund-setkeeper-${containerId}`);
+                const selKeeper = document.getElementById(`fund-select-keeper-${containerId}`);
+                if (btnSetKeeper && selKeeper) {
+                    btnSetKeeper.onclick = () => {
+                        let mode = btnSetKeeper.getAttribute('data-mode');
+                        if (mode === 'edit') {
+                            // Chuyển sang trạng thái chỉnh sửa
+                            selKeeper.disabled = false;
+                            selKeeper.classList.remove('locked');
+                            btnSetKeeper.setAttribute('data-mode', 'save');
+                            btnSetKeeper.innerText = 'Lưu';
+                            btnSetKeeper.style.background = '#10b981'; // Màu xanh lá
+                        } else {
+                            // Trạng thái Lưu
+                            const newKeeper = selKeeper.value;
+                            if(!newKeeper && !confirm("Bạn đang để trống người giữ quỹ. Đồng ý?")) return;
+                            const fullKeeperName = getEmpDisplayName(newKeeper);
+FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true));
+                        }
+                    };
+                }
+            }
+
+            if (canAdd) {
+                const btnThu = document.getElementById(`btn-fund-thu-${containerId}`);
+                const btnChi = document.getElementById(`btn-fund-chi-${containerId}`);
+                
+                if (btnThu) btnThu.onclick = () => FUND_SYSTEM.showTransactionModal('Thu', isManager, currentUser, sheetId, containerId);
+                if (btnChi) btnChi.onclick = () => FUND_SYSTEM.showTransactionModal('Chi', isManager, currentUser, sheetId, containerId);
+            }
+
+            // Gắn sự kiện Xóa và Duyệt
+            const actionWraps = document.getElementById(containerId).querySelectorAll('.fund-action-wrap');
+            actionWraps.forEach(wrap => {
+                wrap.onclick = (e) => {
+                    e.stopPropagation(); // Chặn click lan ra ngoài thẻ item để không mở modal chi tiết
+                    if (e.target.classList.contains('fund-act-delete')) {
+                        const id = e.target.getAttribute('data-id');
+                        if(confirm("Bạn có chắc chắn muốn xóa giao dịch này?")) {
+                            FUND_SYSTEM.executeAPI("fund_delete", { id: id }, sheetId, () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true));
+                        }
+                    } else if (e.target.classList.contains('fund-act-approve')) {
+                        const id = e.target.getAttribute('data-id');
+                        FUND_SYSTEM.executeAPI("fund_approve", { id: id }, sheetId, () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true));
+                    }
+                };
+            });
+
+            // Gắn sự kiện Mở chi tiết giao dịch
+            const items = document.getElementById(containerId).querySelectorAll('.fund-item-new');
+            items.forEach(item => {
+                item.onclick = (e) => {
+                    // Nếu bấm vào khu vực nút Xóa/Duyệt thì bỏ qua (Đã có stopPropagation ở trên bảo vệ)
+                    const id = item.getAttribute('data-id');
+                    const transObj = trans.find(x => x.id === id);
+                    if(transObj) FUND_SYSTEM.showDetailModal(transObj);
+                };
+            });
+        },
+
+        showTransactionModal: (type, isManager, currentUser, sheetId, containerId) => {
+            const modalId = 'fund-custom-modal';
+            let existingModal = document.getElementById(modalId);
+            if (existingModal) existingModal.remove();
+
+            const colorMain = type === 'Thu' ? '#10b981' : '#ef4444';
+            const iconMain = type === 'Thu' ? '↓' : '↑';
+
+            const modalHtml = `
+                <div class="fund-modal-overlay" id="${modalId}">
+                    <div class="fund-modal-box">
+                        <div style="font-size:18px; font-weight:bold; color:${colorMain}; margin-bottom:15px; display:flex; align-items:center; gap:10px;">
+                            <div class="fund-icon" style="background:${colorMain}33; color:${colorMain}; width:30px; height:30px; font-size:16px;">${iconMain}</div>
+                            THÊM PHIẾU ${type.toUpperCase()}
+                        </div>
+                        
+                        <label class="bc-label">Số tiền (VNĐ):</label>
+                        <input type="text" id="fund-mod-amount" class="bc-input" placeholder="Ví dụ: 50,000" style="font-size:20px; font-weight:bold; color:${colorMain};" autocomplete="off">
+                        
+                        <label class="bc-label">Nội dung ${type}:</label>
+                        <textarea id="fund-mod-reason" class="bc-input" placeholder="Nhập nội dung chi tiết..." rows="3" style="resize:none; font-family:inherit;"></textarea>
+                        
+                        <div style="display:flex; gap:10px; margin-top:20px;">
+                            <button id="btn-fmod-cancel" style="flex:1; padding:10px; background:rgba(255,255,255,0.1); border:none; border-radius:8px; color:#fff; font-weight:bold; cursor:pointer;">Hủy</button>
+                            <button id="btn-fmod-save" style="flex:1; padding:10px; background:${colorMain}; border:none; border-radius:8px; color:#fff; font-weight:bold; cursor:pointer;">Lưu</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('bc-app-wrapper').insertAdjacentHTML('beforeend', modalHtml);
+
+            const modalEl = document.getElementById(modalId);
+            const inpAmount = document.getElementById('fund-mod-amount');
+            const inpReason = document.getElementById('fund-mod-reason');
+
+            setTimeout(() => modalEl.classList.add('show'), 10);
+
+            inpAmount.addEventListener('input', (e) => {
+                let val = e.target.value.replace(/[^0-9]/g, '');
+                if (val) e.target.value = new Intl.NumberFormat('en-US').format(val);
+                else e.target.value = '';
+            });
+
+            document.getElementById('btn-fmod-cancel').onclick = () => {
+                modalEl.classList.remove('show');
+                setTimeout(() => modalEl.remove(), 300);
+            };
+            
+            document.getElementById('btn-fmod-save').onclick = () => {
+                const rawAmount = inpAmount.value.replace(/[^0-9]/g, '');
+                const amount = parseInt(rawAmount);
+                const reason = inpReason.value.trim();
+
+                if (isNaN(amount) || amount <= 0) return alert("Vui lòng nhập số tiền hợp lệ!");
+                if (!reason) return alert("Vui lòng nhập nội dung!");
+
+                const status = isManager ? 'Approved' : 'Pending';
+                
+                modalEl.classList.remove('show');
+                setTimeout(() => modalEl.remove(), 300);
+
+                FUND_SYSTEM.executeAPI("fund_add", { type: type, amount: amount, reason: reason, user: currentUser, status: status }, sheetId, () => {
+                    FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true);
+                });
+            };
+        },
+
+        showDetailModal: (t) => {
+            const modalId = 'fund-detail-modal';
+            let existingModal = document.getElementById(modalId);
+            if (existingModal) existingModal.remove();
+
+            const isThu = t.type === 'Thu';
+            const colorMain = isThu ? '#10b981' : '#ef4444';
+            const sign = isThu ? '+' : '-';
+            const statusHtml = t.status === 'Approved' ? `<span style="color:#10b981;">✅ Đã duyệt</span>` : `<span style="color:#ef4444; animation: pulse-text 2s infinite;">⏳ Chờ quản lý duyệt</span>`;
+
+            const modalHtml = `
+                <div class="fund-modal-overlay" id="${modalId}">
+                    <div class="fund-modal-box" style="padding:0;">
+                        <div style="background:rgba(0,0,0,0.3); padding:15px 20px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
+                            <b style="color:#38bdf8; font-size:16px;">Chi Tiết Giao Dịch</b>
+                            <button id="btn-fdet-close" style="background:none; border:none; color:#fff; font-size:18px; cursor:pointer;">✕</button>
+                        </div>
+                        <div class="fund-modal-content-scroll" style="padding:20px;">
+                            <div style="text-align:center; margin-bottom:20px;">
+                                <div style="font-size:12px; color:#94a3b8; text-transform:uppercase; margin-bottom:5px;">Số Tiền ${t.type}</div>
+                                <div style="font-size:30px; font-weight:900; color:${colorMain};">${sign}${FUND_SYSTEM.formatVNĐ(t.amount)}</div>
+                                <div style="margin-top:10px; font-size:13px; background:rgba(255,255,255,0.05); padding:5px 15px; border-radius:20px; display:inline-block;">Trạng thái: ${statusHtml}</div>
+                            </div>
+                            <div style="background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:15px;">
+                                <div style="margin-bottom:12px;">
+                                    <div style="font-size:11px; color:#94a3b8; margin-bottom:3px;">Thời gian:</div>
+                                    <div style="font-size:14px; color:#fff; font-weight:bold;">🕒 ${t.time}</div>
+                                </div>
+                                <div style="margin-bottom:12px;">
+                                    <div style="font-size:11px; color:#94a3b8; margin-bottom:3px;">Người thao tác:</div>
+                                    <div style="font-size:14px; color:#fff; font-weight:bold;">👤 ${getEmpDisplayName(t.user)}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size:11px; color:#94a3b8; margin-bottom:5px;">Nội dung chi tiết:</div>
+                                    <div style="font-size:14px; color:#fff; line-height:1.5; white-space:pre-wrap; background:rgba(255,255,255,0.02); padding:10px; border-radius:6px; border-left:3px solid ${colorMain};">${t.reason}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('bc-app-wrapper').insertAdjacentHTML('beforeend', modalHtml);
+            const modalEl = document.getElementById(modalId);
+            setTimeout(() => modalEl.classList.add('show'), 10);
+
+            const closeFunc = () => {
+                modalEl.classList.remove('show');
+                setTimeout(() => modalEl.remove(), 300);
+            };
+
+            document.getElementById('btn-fdet-close').onclick = closeFunc;
+            modalEl.onclick = (e) => { if(e.target === modalEl) closeFunc(); };
+        },
+
+        executeAPI: async (action, dataObj, sheetId, callback) => {
+            const loading = document.getElementById('bc-loading');
+            const loadText = document.getElementById('bc-load-text');
+            if(loading) loading.style.display = 'flex'; 
+            if(loadText) loadText.innerText = "Đang xử lý quỹ...";
+            
+            try {
+                const payload = Object.assign({ action: action, sheetId: sheetId }, dataObj);
+                let res = await universalFetch({ method: "POST", url: API_URL_HISTORY, data: JSON.stringify(payload) });
+                let json = JSON.parse(res);
+                if (json.status === 'success') { if (callback) callback(); } else alert("Lỗi: " + json.msg);
+            } catch (e) { alert("Lỗi kết nối Server!"); }
+            
+            if(loading) loading.style.display = 'none';
+        }
+    };
         // ==========================================
         // LUỒNG QUẢN LÝ
         // ==========================================
         if (IS_MANAGER) {
             switchSc('sc-manager');
             
-            $('tab-btn-stat').onclick = () => { $('tab-btn-stat').classList.add('active'); $('tab-btn-config').classList.remove('active'); $('tab-stat').classList.add('active'); $('tab-config').classList.remove('active'); };
-            $('tab-btn-config').onclick = () => { $('tab-btn-config').classList.add('active'); $('tab-btn-stat').classList.remove('active'); $('tab-config').classList.add('active'); $('tab-stat').classList.remove('active'); };
-
+            $('tab-btn-fund').onclick = () => { 
+                $('tab-btn-stat').classList.remove('active'); $('tab-btn-config').classList.remove('active'); $('tab-btn-fund').classList.add('active');
+                $('tab-stat').classList.remove('active'); $('tab-config').classList.remove('active'); $('tab-fund').classList.add('active');
+                // Gọi loadAndRender, tham số thứ 5 là "forceReload = false"
+                FUND_SYSTEM.loadAndRender('mgr-fund-container', true, MANAGER_SHEET_ID, CURRENT_USER, false);
+            };
+            
+            // Nhớ sửa lại onclick của stat và config để nó ẩn tab fund đi nhé:
+            $('tab-btn-stat').onclick = () => { $('tab-btn-stat').classList.add('active'); $('tab-btn-config').classList.remove('active'); $('tab-btn-fund').classList.remove('active'); $('tab-stat').classList.add('active'); $('tab-config').classList.remove('active'); $('tab-fund').classList.remove('active'); };
+            $('tab-btn-config').onclick = () => { $('tab-btn-config').classList.add('active'); $('tab-btn-stat').classList.remove('active'); $('tab-btn-fund').classList.remove('active'); $('tab-config').classList.add('active'); $('tab-stat').classList.remove('active'); $('tab-fund').classList.remove('active'); };
             const loadConfig = async () => {
                 $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang tải dữ liệu...";
                 try {
@@ -1449,9 +1867,11 @@
             // ==========================================
             const updateEmpTabs = () => {
                 if (EMP_SESSION && EMP_SESSION.role === 'NV') {
-                    $('tab-btn-emp-personal').style.display = 'block';
+                    if($('tab-btn-emp-personal')) $('tab-btn-emp-personal').style.display = 'block';
+                    if($('tab-btn-emp-fund')) $('tab-btn-emp-fund').style.display = 'block';
                 } else {
-                    $('tab-btn-emp-personal').style.display = 'none';
+                    if($('tab-btn-emp-personal')) $('tab-btn-emp-personal').style.display = 'none';
+                    if($('tab-btn-emp-fund')) $('tab-btn-emp-fund').style.display = 'none';
                 }
             };
 
@@ -1462,7 +1882,16 @@
             } 
             else { switchSc('sc-login'); }
 
-            $('tab-btn-emp-form').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });
+            $('tab-btn-emp-fund').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal', 'tab-btn-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal', 'tab-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });
+                
+                $('tab-btn-emp-fund').classList.add('active'); $('tab-emp-fund').classList.add('active'); 
+                
+                // Truyền forceReload = false
+                FUND_SYSTEM.loadAndRender('emp-fund-container', false, EMP_SESSION.sheetId, EMP_SESSION.user, false);
+            };
+            
+            // Cập nhật lại mảng xóa class 'active' cho các nút khác:
+            $('tab-btn-emp-form').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal', 'tab-btn-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal', 'tab-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });
                 $('tab-btn-emp-form').classList.add('active'); $('tab-emp-form').classList.add('active'); 
             };
             
