@@ -820,7 +820,7 @@
                 <div class="bc-tabs">
                     <button class="bc-tab-btn active" id="tab-btn-emp-form">📝 Gửi Báo Cáo</button>
                     <button class="bc-tab-btn" id="tab-btn-emp-history">🕒 Lịch Sử</button>
-                    <button class="bc-tab-btn" id="tab-btn-emp-fund" style="background: linear-gradient(135deg, #10b981, #047857); color:#fff;">💰 Quỹ ST</button>
+                    <button class="bc-tab-btn" id="tab-btn-emp-fund" style="display:none; background: linear-gradient(135deg, #10b981, #047857); color:#fff;">💰 Quỹ ST</button>
                     <button class="bc-tab-btn" id="tab-btn-emp-personal" style="display:none; background: linear-gradient(135deg, #FFD700, #F59E0B); color:#0f172a;">👤 Cá nhân</button>
                 </div>
 
@@ -1862,9 +1862,11 @@
             // ==========================================
             const updateEmpTabs = () => {
                 if (EMP_SESSION && EMP_SESSION.role === 'NV') {
-                    $('tab-btn-emp-personal').style.display = 'block';
+                    if($('tab-btn-emp-personal')) $('tab-btn-emp-personal').style.display = 'block';
+                    if($('tab-btn-emp-fund')) $('tab-btn-emp-fund').style.display = 'block';
                 } else {
-                    $('tab-btn-emp-personal').style.display = 'none';
+                    if($('tab-btn-emp-personal')) $('tab-btn-emp-personal').style.display = 'none';
+                    if($('tab-btn-emp-fund')) $('tab-btn-emp-fund').style.display = 'none';
                 }
             };
 
