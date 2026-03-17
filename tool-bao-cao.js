@@ -743,8 +743,8 @@
                     <button class="bc-close-btn btn-close-app">✕</button>
                 </div>
                 <div style="padding: 0 30px 40px; text-align:center;">
-                    <h2 style="color:#38bdf8; margin-bottom:5px;">ĐĂNG NHẬP TÀI KHOẢN TRUYỀN THÔNG</h2>
-                    <p style="color:#94a3b8; font-size:13px; margin-bottom:25px;">Hệ thống Báo cáo Truyền thông</p>
+                    <h2 style="color:#38bdf8; margin-bottom:5px;">ĐĂNG NHẬP HỆ THỐNG</h2>
+                    <p style="color:#94a3b8; font-size:13px; margin-bottom:25px;">Hệ thống quản lý All In One</p>
                     <input type="text" id="inp-login-shop" class="bc-input" placeholder="Mã kho">
                     <input type="text" id="inp-login-user" class="bc-input" placeholder="Tài khoản">
                     <input type="password" id="inp-login-pass" class="bc-input" placeholder="Mật khẩu">
@@ -756,7 +756,7 @@
             <div class="bc-screen" id="sc-report">
                 <!-- THANH TIÊU ĐỀ: CHỈ CÓ TÊN TOOL VÀ NÚT X ĐỂ TRÁNH BẤM NHẦM -->
                 <div class="bc-header">
-                    <div class="bc-title">📊 BÁO CÁO NHÂN VIÊN</div>
+                    <div class="bc-title">📊 BÁO CÁO</div>
                     <button class="bc-close-btn btn-close-app" style="width: 36px; height: 36px; font-size: 16px;">✕</button>
                 </div>
 
