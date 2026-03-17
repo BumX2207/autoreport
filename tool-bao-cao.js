@@ -347,7 +347,8 @@
             }
             return result;
         },
-        getNLNVReport: (dataCache, configList, userConfig, selectedStaffName, shopIdx, daysPassed, daysInMonth) => {
+        
+        getNLNVReport: (dataCache, configList, userConfig, selectedStaffName, shopIdx, daysPassed, daysInMonth, latestDate = "") => {
             const staffList = userConfig.staffList ||[];
             const shopKey = `shop${shopIdx}`;
             
@@ -359,6 +360,9 @@
 
             const today = new Date();
             const dateStr = `${today.getDate() < 10 ? '0'+today.getDate() : today.getDate()}/${(today.getMonth() + 1) < 10 ? '0'+(today.getMonth() + 1) : (today.getMonth() + 1)}/${today.getFullYear()}`;
+            
+            // Lấy ngày truyền vào, nếu không có thì lấy ngày hôm nay
+            const displayDate = latestDate ? latestDate : dateStr;
 
             let shopRevTarget = userConfig[`target${shopIdx}`] || 0;
             let personalRevTarget = 0;
@@ -473,7 +477,7 @@
             <div class="nlnv-container">
                 <table class="nlnv-table">
                     <tr>
-                        <td colspan="2" class="nlnv-title-cell">BẢNG NĂNG LỰC NHÂN VIÊN<br><span style="font-size:14px; color:#c00000;">Bản lưu Lịch sử mới nhất</span></td>
+                        <td colspan="2" class="nlnv-title-cell">BẢNG NĂNG LỰC NHÂN VIÊN<br><span style="font-size:14px; color:#c00000;">Dữ liệu ngày: ${displayDate}</span></td>
                         <td colspan="3" class="nlnv-staff-cell"><div class="nlnv-staff-select" style="display: flex; align-items: center; justify-content: center; padding: 5px; white-space: normal; word-break: break-word; min-height: 45px; line-height: 1.3;">${selectedStaffName}</div></td>
                     </tr>
                     <tr>
@@ -1527,7 +1531,7 @@
                     const daysInMonth = (customEOM >= 1 && customEOM <= 31) ? customEOM : new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
 
                     if (mode === 'overview') {
-                        container.innerHTML = LOCAL_BI_ENGINE.getNLNVReport(latestDataCache, mockConfigList, mgrConfig, staffNameInBI, shopIdx, daysPassed, daysInMonth);
+                        container.innerHTML = LOCAL_BI_ENGINE.getNLNVReport(latestDataCache, mockConfigList, mgrConfig, staffNameInBI, shopIdx, daysPassed, daysInMonth, latestDate);
                     } else if (mode === 'daily') {
                         container.innerHTML = LOCAL_BI_ENGINE.getNLNVDailyReport(historyCache, mockConfigList, mgrConfig, staffNameInBI, shopIdx, daysPassed, daysInMonth);
                     }
