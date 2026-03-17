@@ -276,6 +276,12 @@
         
         .fund-badge-pending { background: #ef4444; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 5px; display: inline-block; animation: pulse-text 2s infinite; }
         .fund-btn-action { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; border: none; color: white; }
+
+        /* CSS Modal Quỹ */
+        .fund-modal-overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:2147483650; display:flex; justify-content:center; align-items:center; opacity:0; pointer-events:none; transition:0.3s; }
+        .fund-modal-overlay.show { opacity:1; pointer-events:auto; }
+        .fund-modal-box { background:linear-gradient(135deg, #1e293b, #0f172a); border:1px solid #38bdf8; border-radius:12px; padding:20px; width:90%; max-width:350px; box-shadow:0 15px 40px rgba(0,0,0,0.5); transform:scale(0.9); transition:0.3s; }
+        .fund-modal-overlay.show .fund-modal-box { transform:scale(1); }
     `;
 
     const processImages = async (files) => {
@@ -986,10 +992,16 @@
     // HỆ THỐNG QUẢN LÝ QUỸ SIÊU THỊ
     // ===============================================================
     const FUND_SYSTEM = {
+        loaded: {}, // Cờ theo dõi để không bị load lại liên tục
         formatVNĐ: (num) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num),
         
-        loadAndRender: async (containerId, isManager, sheetId, currentUser) => {
-            const container = $(containerId);
+        loadAndRender: async (containerId, isManager, sheetId, currentUser, forceReload = false) => {
+            // Kiểm tra nếu đã load và không ép buộc làm mới thì bỏ qua
+            if (!forceReload && FUND_SYSTEM.loaded[containerId]) return;
+
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
             container.innerHTML = `<div style="text-align:center; padding:30px;"><div class="spinner" style="margin:0 auto;"></div><br>Đang tải dữ liệu quỹ...</div>`;
             if (!sheetId) { container.innerHTML = `<div style="color:#ef4444; text-align:center;">Vui lòng cài đặt ID Sheet để sử dụng chức năng này.</div>`; return; }
             
@@ -999,6 +1011,7 @@
                 if (json.status !== 'success') throw new Error("Lỗi tải dữ liệu.");
                 
                 FUND_SYSTEM.renderUI(containerId, isManager, currentUser, sheetId, json.keeper, json.trans);
+                FUND_SYSTEM.loaded[containerId] = true; // Đánh dấu là đã load
             } catch (e) { container.innerHTML = `<div style="color:#ef4444; text-align:center;">Lỗi kết nối Quỹ: ${e.message}</div>`; }
         },
 
@@ -1022,6 +1035,10 @@
             const canAdd = isManager || isKeeper;
 
             let html = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <div class="bc-sec-title" style="margin:0;">🏦 TỔNG QUAN QUỸ</div>
+                    <button id="btn-refresh-fund-${containerId}" class="btn-unlock" style="position:static; margin:0;">🔄 Làm mới</button>
+                </div>
                 <div class="fund-dash">
                     <div class="fund-card-main">
                         <div style="color:#94a3b8; font-size:14px; font-weight:bold; text-transform:uppercase;">Tổng Quỹ Hiện Tại</div>
@@ -1038,8 +1055,8 @@
                 MANAGER_EMPLOYEES.forEach(e => empOpts += `<option value="${e.u}">${getEmpDisplayName(e.u)}</option>`);
                 html += `
                             <div>
-                                <select id="fund-select-keeper" style="padding:6px; border-radius:4px; background:rgba(0,0,0,0.5); color:#fff; border:1px solid #38bdf8; outline:none; font-size:12px;">${empOpts}</select>
-                                <button id="btn-fund-setkeeper" class="fund-btn-action" style="background:#38bdf8; padding:6px; margin-left:5px;">Giao Quỹ</button>
+                                <select id="fund-select-keeper-${containerId}" style="padding:6px; border-radius:4px; background:rgba(0,0,0,0.5); color:#fff; border:1px solid #38bdf8; outline:none; font-size:12px; max-width:130px;">${empOpts}</select>
+                                <button id="btn-fund-setkeeper-${containerId}" class="fund-btn-action" style="background:#38bdf8; padding:6px; margin-left:5px;">Giao</button>
                             </div>
                 `;
             }
@@ -1051,8 +1068,8 @@
             if (canAdd) {
                 html += `
                 <div class="fund-actions">
-                    <button class="fund-btn-thu" id="btn-fund-thu">+ THÊM THU</button>
-                    <button class="fund-btn-chi" id="btn-fund-chi">- THÊM CHI</button>
+                    <button class="fund-btn-thu" id="btn-fund-thu-${containerId}">+ THÊM THU</button>
+                    <button class="fund-btn-chi" id="btn-fund-chi-${containerId}">- THÊM CHI</button>
                 </div>`;
             }
 
@@ -1061,7 +1078,6 @@
             if (trans.length === 0) {
                 html += `<div style="padding:20px; text-align:center; color:#94a3b8;">Chưa có phát sinh thu/chi nào.</div>`;
             } else {
-                // Đảo ngược mảng để mới nhất lên đầu
                 trans.reverse().forEach(t => {
                     const isThu = t.type === 'Thu';
                     const iconClass = isThu ? 'f-icon-thu' : 'f-icon-chi';
@@ -1098,58 +1114,130 @@
                 });
             }
             html += `</div>`;
-            $(containerId).innerHTML = html;
+            document.getElementById(containerId).innerHTML = html;
 
             // --- BIND EVENTS ---
+            const btnRefresh = document.getElementById(`btn-refresh-fund-${containerId}`);
+            if (btnRefresh) btnRefresh.onclick = () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true);
+
             if (isManager) {
-                $('btn-fund-setkeeper').onclick = () => {
-                    const newKeeper = $('fund-select-keeper').value;
-                    if(!newKeeper) return alert("Vui lòng chọn nhân viên!");
-                    FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: newKeeper }, sheetId, () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser));
-                };
+                const btnSetKeeper = document.getElementById(`btn-fund-setkeeper-${containerId}`);
+                if (btnSetKeeper) {
+                    btnSetKeeper.onclick = () => {
+                        const newKeeper = document.getElementById(`fund-select-keeper-${containerId}`).value;
+                        if(!newKeeper) return alert("Vui lòng chọn nhân viên!");
+                        FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: newKeeper }, sheetId, () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true));
+                    };
+                }
             }
 
             if (canAdd) {
-                const addTrans = (type) => {
-                    const amountStr = prompt(`Nhập số tiền ${type} (VNĐ):`);
-                    if(!amountStr) return;
-                    const amount = parseInt(amountStr.replace(/[^0-9]/g, ''));
-                    if(isNaN(amount) || amount <= 0) return alert("Số tiền không hợp lệ!");
-                    const reason = prompt(`Nhập nội dung ${type}:`);
-                    if(!reason) return;
-
-                    const status = isManager ? 'Approved' : 'Pending';
-                    FUND_SYSTEM.executeAPI("fund_add", { type: type, amount: amount, reason: reason, user: currentUser, status: status }, sheetId, () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser));
-                };
-                $('btn-fund-thu').onclick = () => addTrans('Thu');
-                $('btn-fund-chi').onclick = () => addTrans('Chi');
+                const btnThu = document.getElementById(`btn-fund-thu-${containerId}`);
+                const btnChi = document.getElementById(`btn-fund-chi-${containerId}`);
+                
+                if (btnThu) btnThu.onclick = () => FUND_SYSTEM.showTransactionModal('Thu', isManager, currentUser, sheetId, containerId);
+                if (btnChi) btnChi.onclick = () => FUND_SYSTEM.showTransactionModal('Chi', isManager, currentUser, sheetId, containerId);
             }
 
-            // Gắn sự kiện Xóa và Duyệt
-            const acts = $(containerId).querySelectorAll('.fund-btn-action');
+            const acts = document.getElementById(containerId).querySelectorAll('.fund-btn-action');
             acts.forEach(btn => {
                 btn.onclick = (e) => {
                     const id = e.target.getAttribute('data-id');
                     if (e.target.classList.contains('fund-act-delete')) {
                         if(confirm("Bạn có chắc chắn muốn xóa giao dịch này?")) {
-                            FUND_SYSTEM.executeAPI("fund_delete", { id: id }, sheetId, () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser));
+                            FUND_SYSTEM.executeAPI("fund_delete", { id: id }, sheetId, () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true));
                         }
                     } else if (e.target.classList.contains('fund-act-approve')) {
-                        FUND_SYSTEM.executeAPI("fund_approve", { id: id }, sheetId, () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser));
+                        FUND_SYSTEM.executeAPI("fund_approve", { id: id }, sheetId, () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true));
                     }
                 };
             });
         },
 
+        showTransactionModal: (type, isManager, currentUser, sheetId, containerId) => {
+            const modalId = 'fund-custom-modal';
+            let existingModal = document.getElementById(modalId);
+            if (existingModal) existingModal.remove();
+
+            const colorMain = type === 'Thu' ? '#10b981' : '#ef4444';
+            const iconMain = type === 'Thu' ? '↓' : '↑';
+
+            const modalHtml = `
+                <div class="fund-modal-overlay" id="${modalId}">
+                    <div class="fund-modal-box">
+                        <div style="font-size:18px; font-weight:bold; color:${colorMain}; margin-bottom:15px; display:flex; align-items:center; gap:10px;">
+                            <div class="fund-icon" style="background:${colorMain}33; color:${colorMain}; width:30px; height:30px; font-size:16px;">${iconMain}</div>
+                            THÊM PHIẾU ${type.toUpperCase()}
+                        </div>
+                        
+                        <label class="bc-label">Số tiền (VNĐ):</label>
+                        <input type="text" id="fund-mod-amount" class="bc-input" placeholder="Ví dụ: 50,000" style="font-size:20px; font-weight:bold; color:${colorMain};" autocomplete="off">
+                        
+                        <label class="bc-label">Nội dung ${type}:</label>
+                        <input type="text" id="fund-mod-reason" class="bc-input" placeholder="Nhập nội dung..." autocomplete="off">
+                        
+                        <div style="display:flex; gap:10px; margin-top:20px;">
+                            <button id="btn-fmod-cancel" style="flex:1; padding:10px; background:rgba(255,255,255,0.1); border:none; border-radius:8px; color:#fff; font-weight:bold; cursor:pointer;">Hủy</button>
+                            <button id="btn-fmod-save" style="flex:1; padding:10px; background:${colorMain}; border:none; border-radius:8px; color:#fff; font-weight:bold; cursor:pointer;">Lưu</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('bc-app-wrapper').insertAdjacentHTML('beforeend', modalHtml);
+
+            const modalEl = document.getElementById(modalId);
+            const inpAmount = document.getElementById('fund-mod-amount');
+            const inpReason = document.getElementById('fund-mod-reason');
+
+            // Animation hiển thị
+            setTimeout(() => modalEl.classList.add('show'), 10);
+
+            // Format tiền khi gõ
+            inpAmount.addEventListener('input', (e) => {
+                let val = e.target.value.replace(/[^0-9]/g, '');
+                if (val) e.target.value = new Intl.NumberFormat('en-US').format(val);
+                else e.target.value = '';
+            });
+
+            document.getElementById('btn-fmod-cancel').onclick = () => {
+                modalEl.classList.remove('show');
+                setTimeout(() => modalEl.remove(), 300);
+            };
+            
+            document.getElementById('btn-fmod-save').onclick = () => {
+                const rawAmount = inpAmount.value.replace(/[^0-9]/g, '');
+                const amount = parseInt(rawAmount);
+                const reason = inpReason.value.trim();
+
+                if (isNaN(amount) || amount <= 0) return alert("Vui lòng nhập số tiền hợp lệ!");
+                if (!reason) return alert("Vui lòng nhập nội dung!");
+
+                const status = isManager ? 'Approved' : 'Pending';
+                
+                modalEl.classList.remove('show');
+                setTimeout(() => modalEl.remove(), 300);
+
+                FUND_SYSTEM.executeAPI("fund_add", { type: type, amount: amount, reason: reason, user: currentUser, status: status }, sheetId, () => {
+                    FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true);
+                });
+            };
+        },
+
         executeAPI: async (action, dataObj, sheetId, callback) => {
-            $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang xử lý quỹ...";
+            const loading = document.getElementById('bc-loading');
+            const loadText = document.getElementById('bc-load-text');
+            if(loading) loading.style.display = 'flex'; 
+            if(loadText) loadText.innerText = "Đang xử lý quỹ...";
+            
             try {
                 const payload = Object.assign({ action: action, sheetId: sheetId }, dataObj);
                 let res = await universalFetch({ method: "POST", url: API_URL_HISTORY, data: JSON.stringify(payload) });
                 let json = JSON.parse(res);
                 if (json.status === 'success') { if (callback) callback(); } else alert("Lỗi: " + json.msg);
             } catch (e) { alert("Lỗi kết nối Server!"); }
-            $('bc-loading').style.display = 'none';
+            
+            if(loading) loading.style.display = 'none';
         }
     };
         // ==========================================
@@ -1161,7 +1249,8 @@
             $('tab-btn-fund').onclick = () => { 
                 $('tab-btn-stat').classList.remove('active'); $('tab-btn-config').classList.remove('active'); $('tab-btn-fund').classList.add('active');
                 $('tab-stat').classList.remove('active'); $('tab-config').classList.remove('active'); $('tab-fund').classList.add('active');
-                FUND_SYSTEM.loadAndRender('mgr-fund-container', true, MANAGER_SHEET_ID, CURRENT_USER);
+                // Gọi loadAndRender, tham số thứ 5 là "forceReload = false"
+                FUND_SYSTEM.loadAndRender('mgr-fund-container', true, MANAGER_SHEET_ID, CURRENT_USER, false);
             };
             
             // Nhớ sửa lại onclick của stat và config để nó ẩn tab fund đi nhé:
@@ -1673,8 +1762,11 @@
             else { switchSc('sc-login'); }
 
             $('tab-btn-emp-fund').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal', 'tab-btn-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal', 'tab-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });
+                
                 $('tab-btn-emp-fund').classList.add('active'); $('tab-emp-fund').classList.add('active'); 
-                FUND_SYSTEM.loadAndRender('emp-fund-container', false, EMP_SESSION.sheetId, EMP_SESSION.user);
+                
+                // Truyền forceReload = false
+                FUND_SYSTEM.loadAndRender('emp-fund-container', false, EMP_SESSION.sheetId, EMP_SESSION.user, false);
             };
             
             // Cập nhật lại mảng xóa class 'active' cho các nút khác:
