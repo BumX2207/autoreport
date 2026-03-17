@@ -1104,12 +1104,18 @@
                     const isPending = t.status === 'Pending';
                     const pendingBadge = isPending ? `<span class="fund-badge-pending">⏳ Chưa duyệt</span>` : '';
 
-                    // Xử lý cắt chuỗi thời gian cho đẹp (dd/MM/yyyy - HH:mm)
+                    // Xử lý cắt chuỗi thời gian cho đẹp (dd-mm-yyyy hh:mm)
                     let shortTime = t.time;
-                    let parts = t.time.split(' ');
-                    if(parts.length === 2) {
-                        let hm = parts[1].split(':');
-                        shortTime = `${parts[0]} - ${hm[0]}:${hm[1]}`;
+                    let dObj = new Date(t.time); // Parse từ ISO String
+                    if (!isNaN(dObj.getTime())) {
+                        let dd = String(dObj.getDate()).padStart(2, '0');
+                        let mm = String(dObj.getMonth() + 1).padStart(2, '0');
+                        let yyyy = dObj.getFullYear();
+                        let hh = String(dObj.getHours()).padStart(2, '0');
+                        let min = String(dObj.getMinutes()).padStart(2, '0');
+                        
+                        shortTime = `${dd}-${mm}-${yyyy} ${hh}:${min}`;
+                        t.time = shortTime; // Ghi đè lại t.time để Modal Chi Tiết cũng nhận được format này
                     }
 
                     // Tên NV rút gọn (Chỉ lấy Tên, bỏ User phía sau dấu '-')
