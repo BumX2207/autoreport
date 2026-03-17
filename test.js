@@ -1123,7 +1123,7 @@
                     }
 
                     // Tên NV rút gọn (Chỉ lấy Tên, bỏ User phía sau dấu '-')
-                    let shortUser = getEmpDisplayName(t.user).split('-')[0].trim();
+                    let shortUser = String(getEmpDisplayName(t.user)).split('-')[0].trim();
 
                     html += `
                         <div class="fund-item-new" data-id="${t.id}">
