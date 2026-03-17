@@ -1133,25 +1133,26 @@
                 
                 let allEmps = MANAGER_EMPLOYEES.map(e => String(e.u).trim());
                 
-                // FIX LỖI: Ép toàn bộ mảng về chữ thường để so sánh không phân biệt hoa thường
+                // Ép toàn bộ mảng về chữ thường để so sánh không phân biệt hoa thường
                 let reportedUsersLower = reportedUsers.map(u => String(u).toLowerCase());
                 let notReportedUsers = allEmps.filter(u => !reportedUsersLower.includes(String(u).toLowerCase()));
 
                 let listHtml = `<div id="today-emp-list" style="display:none; margin-bottom: 25px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 15px 10px; max-height: 250px; overflow-y: auto;">
                                     <div style="font-size: 11px; color: #94a3b8; margin-bottom: 10px; text-align: center; font-weight: bold; text-transform: uppercase;">Danh sách NV đã/chưa báo cáo hôm nay</div>`;
                 
-                // Do hàm getEmpDisplayName đã được fix nên truyền chữ thường vào nó vẫn in ra chữ hoa chuẩn
-                reportedUsers.forEach(u => {
-                    listHtml += `<div class="emp-status-row">
-                        <span class="emp-name reported">${getEmpDisplayName(u)}</span>
-                        <span style="color:#10b981;">✅</span>
-                    </div>`;
-                });
-
+                // 1. ĐẨY NHỮNG NGƯỜI "CHƯA BÁO CÁO" LÊN TRÊN CÙNG
                 notReportedUsers.forEach(u => {
                     listHtml += `<div class="emp-status-row">
                         <span class="emp-name pending">${getEmpDisplayName(u)}</span>
                         <span style="color:#ef4444;">⏳</span>
+                    </div>`;
+                });
+
+                // 2. NHỮNG NGƯỜI "ĐÃ BÁO CÁO" XUỐNG DƯỚI
+                reportedUsers.forEach(u => {
+                    listHtml += `<div class="emp-status-row">
+                        <span class="emp-name reported">${getEmpDisplayName(u)}</span>
+                        <span style="color:#10b981;">✅</span>
                     </div>`;
                 });
 
@@ -1175,7 +1176,7 @@
                     ${listHtml}
                 `;
             };
-
+            
             const updateFilters = () => {
                 let months =[...new Set(STAT_DATA.map(r => r.monthStr))];
                 let emps = MANAGER_EMPLOYEES.map(e => e.u);
