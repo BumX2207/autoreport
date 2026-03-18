@@ -205,6 +205,7 @@
 
         #bc-loading { display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:2147483649; justify-content:center; align-items:center; flex-direction:column; color:#fff; }
         .spinner { border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid #38bdf8; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
         .employee-row { display:flex; justify-content:space-between; background:rgba(255,255,255,0.05); padding:10px; margin-bottom:5px; border-radius:6px; align-items:center; flex-wrap: wrap; gap: 10px;}
         
         .filter-row { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
@@ -1890,18 +1891,17 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                 FUND_SYSTEM.loadAndRender('emp-fund-container', false, EMP_SESSION.sheetId, EMP_SESSION.user, false);
             };
             
-            // Cập nhật lại mảng xóa class 'active' cho các nút khác:
             $('tab-btn-emp-form').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal', 'tab-btn-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal', 'tab-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });
                 $('tab-btn-emp-form').classList.add('active'); $('tab-emp-form').classList.add('active'); 
             };
             
-            $('tab-btn-emp-history').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });
+            $('tab-btn-emp-history').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal', 'tab-btn-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal', 'tab-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });
                 $('tab-btn-emp-history').classList.add('active'); $('tab-emp-history').classList.add('active'); 
                 loadEmployeeHistory();
             };
 
             // TAB CÁ NHÂN CLICK
-            $('tab-btn-emp-personal').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });
+            $('tab-btn-emp-personal').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal', 'tab-btn-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal', 'tab-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });
                 $('tab-btn-emp-personal').classList.add('active'); $('tab-emp-personal').classList.add('active'); 
                 renderNLNV('overview'); 
             };
