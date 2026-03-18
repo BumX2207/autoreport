@@ -1243,7 +1243,7 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                             THÊM PHIẾU ${type.toUpperCase()}
                         </div>
                         
-                        <label class="bc-label">Ngày thu/chi:</label>
+                        <label class="bc-label">Ngày giao dịch:</label>
                         <input type="date" id="fund-mod-date" class="bc-input" value="${defaultDate}" style="color:${colorMain}; font-weight:bold; cursor:pointer;">
 
                         <label class="bc-label">Số tiền (VNĐ):</label>
@@ -1281,12 +1281,12 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
             };
             
             document.getElementById('btn-fmod-save').onclick = () => {
-                const rawDate = inpDate.value; // Sẽ có định dạng yyyy-mm-dd từ input type date
+                const rawDate = inpDate.value; 
                 const rawAmount = inpAmount.value.replace(/[^0-9]/g, '');
                 const amount = parseInt(rawAmount);
                 const reason = inpReason.value.trim();
 
-                if (!rawDate) return alert("Vui lòng chọn ngày thu/chi!");
+                if (!rawDate) return alert("Vui lòng chọn ngày giao dịch!");
                 if (isNaN(amount) || amount <= 0) return alert("Vui lòng nhập số tiền hợp lệ!");
                 if (!reason) return alert("Vui lòng nhập nội dung!");
 
