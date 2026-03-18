@@ -1109,28 +1109,30 @@
                     const isPending = t.status === 'Pending';
                     const pendingBadge = isPending ? `<span class="fund-badge-pending">⏳ Chưa duyệt</span>` : '';
 
-                    // Xử lý cắt chuỗi thời gian cho đẹp (dd-mm-yyyy hh:mm)
+                    // Ép định dạng ngày hiển thị chuẩn dd-mm-yyyy (Bỏ giờ)
                     let shortTime = t.time;
-                    let dObj = new Date(t.time); // Parse từ ISO String
+                    let dObj = new Date(t.time);
                     if (!isNaN(dObj.getTime())) {
                         let dd = String(dObj.getDate()).padStart(2, '0');
                         let mm = String(dObj.getMonth() + 1).padStart(2, '0');
                         let yyyy = dObj.getFullYear();
-                        let hh = String(dObj.getHours()).padStart(2, '0');
-                        let min = String(dObj.getMinutes()).padStart(2, '0');
-                        
-                        shortTime = `${dd}-${mm}-${yyyy} ${hh}:${min}`;
-                        t.time = shortTime; // Ghi đè lại t.time để Modal Chi Tiết cũng nhận được format này
+                        shortTime = `${dd}-${mm}-${yyyy}`;
+                        t.time = shortTime; // Ghi đè để Modal chi tiết cũng format đúng
+                    } else if (typeof t.time === 'string') {
+                        // Nếu dữ liệu dạng dd/mm/yyyy thì đổi dấu / thành -
+                        shortTime = t.time.replace(/\//g, '-').split(' ')[0];
+                        t.time = shortTime;
                     }
 
-                    // Tên NV rút gọn (Chỉ lấy Tên, bỏ User phía sau dấu '-')
                     let shortUser = String(getEmpDisplayName(t.user)).split('-')[0].trim();
 
+                    // Đưa Pending Badge lên dòng 1, Icon + Text + Số tiền nằm dòng 2
                     html += `
                         <div class="fund-item-new" data-id="${t.id}">
                             <div class="fi-row-1">
-                                <div class="fi-time">🕒 ${shortTime}</div>
-                                <div class="fund-action-wrap" style="display:flex; gap:5px; z-index:2;">
+                                <div class="fi-time">📅 ${shortTime}</div>
+                                <div class="fund-action-wrap" style="display:flex; gap:5px; z-index:2; align-items:center;">
+                                    ${pendingBadge}
                     `;
 
                     // Nút thao tác (Duyệt / Xóa)
@@ -1145,7 +1147,7 @@
                             </div>
                             <div class="fi-row-2">
                                 <div class="fund-icon ${iconClass}">${iconTxt}</div>
-                                <div class="fi-reason">${t.reason} ${pendingBadge}</div>
+                                <div class="fi-reason" title="${t.reason}">${t.reason}</div>
                                 <div class="fi-user" title="${getEmpDisplayName(t.user)}">👤 ${shortUser}</div>
                                 <div class="fi-amount ${textClass}">${sign}${FUND_SYSTEM.formatVNĐ(t.amount)}</div>
                             </div>
@@ -1229,6 +1231,10 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
             const colorMain = type === 'Thu' ? '#10b981' : '#ef4444';
             const iconMain = type === 'Thu' ? '↓' : '↑';
 
+            // Tạo ngày mặc định (Hôm nay) cho ô input type="date"
+            const today = new Date();
+            const defaultDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
             const modalHtml = `
                 <div class="fund-modal-overlay" id="${modalId}">
                     <div class="fund-modal-box">
@@ -1237,11 +1243,14 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                             THÊM PHIẾU ${type.toUpperCase()}
                         </div>
                         
+                        <label class="bc-label">Ngày giao dịch:</label>
+                        <input type="date" id="fund-mod-date" class="bc-input" value="${defaultDate}" style="color:${colorMain}; font-weight:bold; cursor:pointer;">
+
                         <label class="bc-label">Số tiền (VNĐ):</label>
                         <input type="text" id="fund-mod-amount" class="bc-input" placeholder="Ví dụ: 50,000" style="font-size:20px; font-weight:bold; color:${colorMain};" autocomplete="off">
                         
                         <label class="bc-label">Nội dung ${type}:</label>
-                        <textarea id="fund-mod-reason" class="bc-input" placeholder="Nhập nội dung chi tiết..." rows="3" style="resize:none; font-family:inherit;"></textarea>
+                        <textarea id="fund-mod-reason" class="bc-input" placeholder="Nhập nội dung chi tiết..." rows="2" style="resize:none; font-family:inherit; margin-bottom:0;"></textarea>
                         
                         <div style="display:flex; gap:10px; margin-top:20px;">
                             <button id="btn-fmod-cancel" style="flex:1; padding:10px; background:rgba(255,255,255,0.1); border:none; border-radius:8px; color:#fff; font-weight:bold; cursor:pointer;">Hủy</button>
@@ -1254,6 +1263,7 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
             document.getElementById('bc-app-wrapper').insertAdjacentHTML('beforeend', modalHtml);
 
             const modalEl = document.getElementById(modalId);
+            const inpDate = document.getElementById('fund-mod-date');
             const inpAmount = document.getElementById('fund-mod-amount');
             const inpReason = document.getElementById('fund-mod-reason');
 
@@ -1271,19 +1281,26 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
             };
             
             document.getElementById('btn-fmod-save').onclick = () => {
+                const rawDate = inpDate.value; // Sẽ có định dạng yyyy-mm-dd từ input type date
                 const rawAmount = inpAmount.value.replace(/[^0-9]/g, '');
                 const amount = parseInt(rawAmount);
                 const reason = inpReason.value.trim();
 
+                if (!rawDate) return alert("Vui lòng chọn ngày giao dịch!");
                 if (isNaN(amount) || amount <= 0) return alert("Vui lòng nhập số tiền hợp lệ!");
                 if (!reason) return alert("Vui lòng nhập nội dung!");
+
+                // Xử lý đảo ngược yyyy-mm-dd thành dd-mm-yyyy để gửi lên Sheet
+                const [yyyy, mm, dd] = rawDate.split('-');
+                const formattedDate = `${dd}-${mm}-${yyyy}`;
 
                 const status = isManager ? 'Approved' : 'Pending';
                 
                 modalEl.classList.remove('show');
                 setTimeout(() => modalEl.remove(), 300);
 
-                FUND_SYSTEM.executeAPI("fund_add", { type: type, amount: amount, reason: reason, user: currentUser, status: status }, sheetId, () => {
+                // Gửi kèm "time: formattedDate" lên GAS
+                FUND_SYSTEM.executeAPI("fund_add", { type: type, amount: amount, reason: reason, user: currentUser, status: status, time: formattedDate }, sheetId, () => {
                     FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true);
                 });
             };
