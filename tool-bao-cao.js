@@ -257,7 +257,7 @@
         .fund-balance { font-size: 32px; font-weight: 900; color: #38bdf8; margin: 10px 0; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
         
         /* CSS cho Select Keeper Đóng băng & Chỉnh sửa */
-        .fund-keeper-select { padding: 6px 10px; border-radius: 6px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #38bdf8; outline: none; font-size: 13px; max-width: 200px; transition: 0.2s; }
+        .fund-keeper-select { padding: 6px 10px; border-radius: 6px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #38bdf8; outline: none; font-size: 13px; max-width: 100%; transition: 0.2s; }
         .fund-keeper-select.locked { appearance: none; -webkit-appearance: none; background: rgba(16, 185, 129, 0.2) !important; color: #10b981 !important; border: 1px solid rgba(16, 185, 129, 0.3) !important; border-radius: 20px !important; font-weight: bold; opacity: 1 !important; text-align: center; }
         
         .fund-actions { display: flex; gap: 10px; margin-bottom: 20px; }
@@ -1243,7 +1243,7 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                             THÊM PHIẾU ${type.toUpperCase()}
                         </div>
                         
-                        <label class="bc-label">Ngày giao dịch:</label>
+                        <label class="bc-label">Ngày thu/chi:</label>
                         <input type="date" id="fund-mod-date" class="bc-input" value="${defaultDate}" style="color:${colorMain}; font-weight:bold; cursor:pointer;">
 
                         <label class="bc-label">Số tiền (VNĐ):</label>
@@ -1286,7 +1286,7 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                 const amount = parseInt(rawAmount);
                 const reason = inpReason.value.trim();
 
-                if (!rawDate) return alert("Vui lòng chọn ngày giao dịch!");
+                if (!rawDate) return alert("Vui lòng chọn ngày thu/chi!");
                 if (isNaN(amount) || amount <= 0) return alert("Vui lòng nhập số tiền hợp lệ!");
                 if (!reason) return alert("Vui lòng nhập nội dung!");
 
@@ -1320,7 +1320,7 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                 <div class="fund-modal-overlay" id="${modalId}">
                     <div class="fund-modal-box" style="padding:0;">
                         <div style="background:rgba(0,0,0,0.3); padding:15px 20px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
-                            <b style="color:#38bdf8; font-size:16px;">Chi Tiết Giao Dịch</b>
+                            <b style="color:#38bdf8; font-size:16px;">Chi Tiết Thu/Chi</b>
                             <button id="btn-fdet-close" style="background:none; border:none; color:#fff; font-size:18px; cursor:pointer;">✕</button>
                         </div>
                         <div class="fund-modal-content-scroll" style="padding:20px;">
