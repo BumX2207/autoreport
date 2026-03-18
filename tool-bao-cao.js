@@ -257,7 +257,7 @@
         .fund-balance { font-size: 32px; font-weight: 900; color: #38bdf8; margin: 10px 0; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
         
         /* CSS cho Select Keeper Đóng băng & Chỉnh sửa */
-        .fund-keeper-select { padding: 6px 10px; border-radius: 6px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #38bdf8; outline: none; font-size: 13px; max-width: 150px; transition: 0.2s; }
+        .fund-keeper-select { padding: 6px 10px; border-radius: 6px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #38bdf8; outline: none; font-size: 13px; max-width: 200px; transition: 0.2s; }
         .fund-keeper-select.locked { appearance: none; -webkit-appearance: none; background: rgba(16, 185, 129, 0.2) !important; color: #10b981 !important; border: 1px solid rgba(16, 185, 129, 0.3) !important; border-radius: 20px !important; font-weight: bold; opacity: 1 !important; text-align: center; }
         
         .fund-actions { display: flex; gap: 10px; margin-bottom: 20px; }
