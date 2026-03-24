@@ -712,6 +712,14 @@
 
 
     const runTool = async () => {
+
+        // --- ĐƯA CÁC ĐỊNH NGHĨA NÀY LÊN ĐẦU TIÊN ---
+        const $ = (id) => document.getElementById(id);
+        const switchSc = (id) => { 
+            document.querySelectorAll('.bc-screen').forEach(s => s.classList.remove('active')); 
+            if($(id)) $(id).classList.add('active'); 
+        };
+        
         // --- ĐOẠN 1: KIỂM TRA QUYỀN TRANG CHỦ (CHÈN MỚI) ---
         const authStore = JSON.parse(localStorage.getItem('tgdd_guest_account_v2') || "null");
         if (!authStore) {
