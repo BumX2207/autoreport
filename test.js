@@ -935,8 +935,6 @@
         document.body.appendChild(app);
 
         const style = document.createElement('style'); style.innerHTML = MY_CSS; document.head.appendChild(style);
-        const switchSc = (id) => { document.querySelectorAll('.bc-screen').forEach(s => s.classList.remove('active')); $(id).classList.add('active'); };
-
         document.querySelectorAll('.btn-close-app').forEach(btn => btn.onclick = () => app.style.display = 'none');
 
         // Hàm Khóa/Mở Khóa ô Cấu hình ID
