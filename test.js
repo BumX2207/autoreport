@@ -26,18 +26,22 @@
     const API_URL_REPORT = "https://script.google.com/macros/s/AKfycbz7Hv3FHg_XiA4g-ujO8bXkLSohxzB2HJvzsOuKZbkGdr-E33vwRJB4Etl-eCtKh5Xr/exec";
     const API_URL_HISTORY = "https://script.google.com/macros/s/AKfycbzL5rzzxfhSdX0WmFR3sB-BBimZgRsHT8v2RyzfZ_7RWG-bYuRTEwqmbwiImyZY5KgC/exec";
 
-    let SYSTEM_USER = "---";
-    if (context.AUTH_STATE && context.AUTH_STATE.isAuthorized && context.AUTH_STATE.userName && context.AUTH_STATE.userName !== "---") {
-        SYSTEM_USER = context.AUTH_STATE.userName;
-    } else {
-        let savedGuest = localStorage.getItem('tgdd_guest_account');
-        if (savedGuest) SYSTEM_USER = JSON.parse(savedGuest).user || "---";
-    }
-
-    const managerRegex = /^\d+\s*-\s*.+$/;
-    let IS_MANAGER = managerRegex.test(SYSTEM_USER);
-    let CURRENT_USER = IS_MANAGER ? SYSTEM_USER : "";
     
+    const managerRegex = /^\d+\s*-\s*.+$/;
+    
+    let AUTH_DATA = JSON.parse(localStorage.getItem('tgdd_guest_account_v2') || "null");
+    let CURRENT_USER = "---";
+    let IS_MANAGER = false;
+    let BOSS_USER = ""; // Lưu user của quản lý (Cột A)
+
+    const checkGlobalAuth = () => {
+        if (!AUTH_DATA) {
+            UI.showMsg("Thông báo", "Vui lòng đăng nhập tài khoản nội bộ do quản lý cấp để sử dụng tiện ích này.", "error");
+            return false;
+        }
+        return true;
+    };
+
     let EMP_SESSION = JSON.parse(localStorage.getItem('bc_emp_session') || "null");
     let MANAGER_EMPLOYEES =[];
     let MANAGER_SHEET_ID = ""; 
@@ -205,6 +209,7 @@
 
         #bc-loading { display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:2147483649; justify-content:center; align-items:center; flex-direction:column; color:#fff; }
         .spinner { border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid #38bdf8; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
         .employee-row { display:flex; justify-content:space-between; background:rgba(255,255,255,0.05); padding:10px; margin-bottom:5px; border-radius:6px; align-items:center; flex-wrap: wrap; gap: 10px;}
         
         .filter-row { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
@@ -256,7 +261,7 @@
         .fund-balance { font-size: 32px; font-weight: 900; color: #38bdf8; margin: 10px 0; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
         
         /* CSS cho Select Keeper Đóng băng & Chỉnh sửa */
-        .fund-keeper-select { padding: 6px 10px; border-radius: 6px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #38bdf8; outline: none; font-size: 13px; max-width: 150px; transition: 0.2s; }
+        .fund-keeper-select { padding: 6px 10px; border-radius: 6px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #38bdf8; outline: none; font-size: 13px; max-width: 100%; transition: 0.2s; }
         .fund-keeper-select.locked { appearance: none; -webkit-appearance: none; background: rgba(16, 185, 129, 0.2) !important; color: #10b981 !important; border: 1px solid rgba(16, 185, 129, 0.3) !important; border-radius: 20px !important; font-weight: bold; opacity: 1 !important; text-align: center; }
         
         .fund-actions { display: flex; gap: 10px; margin-bottom: 20px; }
@@ -706,7 +711,46 @@
     };
 
 
-    const runTool = () => {
+    const runTool = async () => {
+        // --- ĐOẠN 1: KIỂM TRA QUYỀN TRANG CHỦ (CHÈN MỚI) ---
+        const authStore = JSON.parse(localStorage.getItem('tgdd_guest_account_v2') || "null");
+        if (!authStore) {
+            UI.showMsg("Thông báo", "Vui lòng đăng nhập tài khoản ở trang chủ trước!", "info");
+            return;
+        }
+
+        // Hiện loading
+        if (!$('bc-app-wrapper')) { 
+            const app = document.createElement('div'); app.id = 'bc-app-wrapper';
+            app.innerHTML = `<div id="bc-loading" style="display:flex"><div class="spinner"></div><h3 id="bc-load-text">Đang xác thực quyền...</h3></div>`;
+            document.body.appendChild(app);
+        } else { $('bc-app-wrapper').style.display = 'flex'; $('bc-loading').style.display = 'flex'; }
+
+        let userData = null;
+        try {
+            const res = await fetch(CONSTANTS.GSHEET.CONFIG_API, {
+                method: "POST",
+                body: JSON.stringify({ action: 'login_guest', user: authStore.user, password: authStore.pass || "" }),
+                headers: { "Content-Type": "application/x-www-form-urlencoded" }
+            }).then(r => r.text());
+            const json = JSON.parse(res);
+            if (json.status !== 'success' || !json.userData.boss || json.userData.boss.trim() === "") {
+                $('bc-app-wrapper').style.display = 'none';
+                UI.showMsg("Từ chối", "Tài khoản của bạn chưa có quyền Boss (Cột A trống).", "error");
+                return;
+            }
+            userData = json.userData; // Lấy Boss (A), SheetID (B), Name (D)...
+        } catch (e) { UI.showToast("Lỗi kết nối xác thực!"); $('bc-app-wrapper').style.display = 'none'; return; }
+
+        // Ghi đè dữ liệu từ Sheet vào các biến môi trường của tool
+        const isMgr = (userData.user.toLowerCase() === userData.boss.toLowerCase());
+        IS_MANAGER = isMgr;
+        CURRENT_USER = isMgr ? userData.user : "";
+        MANAGER_SHEET_ID = userData.sheetId || ""; 
+        if (!isMgr) {
+            EMP_SESSION = { user: userData.user, fn: userData.name, boss: userData.boss, sheetId: userData.sheetId, role: "NV", mgrUser: userData.boss };
+        }
+        // --- HẾT ĐOẠN 1 ---
         if (document.getElementById('bc-app-wrapper')) { document.getElementById('bc-app-wrapper').style.display = 'flex'; return; }
 
         const app = document.createElement('div'); app.id = 'bc-app-wrapper';
@@ -788,21 +832,7 @@
                 </div>
             </div>
 
-            <!-- SCREEN 2: LOGIN NHÂN VIÊN -->
-            <div class="bc-screen" id="sc-login" style="height:auto; max-height:none;">
-                <div class="bc-header" style="justify-content:flex-end; border:none; background:transparent;">
-                    <button class="bc-close-btn btn-close-app">✕</button>
-                </div>
-                <div style="padding: 0 30px 40px; text-align:center;">
-                    <h2 style="color:#38bdf8; margin-bottom:5px;">ĐĂNG NHẬP HỆ THỐNG</h2>
-                    <p style="color:#94a3b8; font-size:13px; margin-bottom:25px;">Hệ thống quản lý All In One</p>
-                    <input type="text" id="inp-login-shop" class="bc-input" placeholder="Mã kho">
-                    <input type="text" id="inp-login-user" class="bc-input" placeholder="Tài khoản">
-                    <input type="password" id="inp-login-pass" class="bc-input" placeholder="Mật khẩu">
-                    <button class="bc-btn btn-primary" id="btn-nv-login">ĐĂNG NHẬP</button>
-                </div>
-            </div>
-
+            
             <!-- SCREEN 3: FORM BÁO CÁO NHÂN VIÊN -->
             <div class="bc-screen" id="sc-report">
                 <!-- THANH TIÊU ĐỀ: CHỈ CÓ TÊN TOOL VÀ NÚT X ĐỂ TRÁNH BẤM NHẦM -->
@@ -1108,28 +1138,30 @@
                     const isPending = t.status === 'Pending';
                     const pendingBadge = isPending ? `<span class="fund-badge-pending">⏳ Chưa duyệt</span>` : '';
 
-                    // Xử lý cắt chuỗi thời gian cho đẹp (dd-mm-yyyy hh:mm)
+                    // Ép định dạng ngày hiển thị chuẩn dd-mm-yyyy (Bỏ giờ)
                     let shortTime = t.time;
-                    let dObj = new Date(t.time); // Parse từ ISO String
+                    let dObj = new Date(t.time);
                     if (!isNaN(dObj.getTime())) {
                         let dd = String(dObj.getDate()).padStart(2, '0');
                         let mm = String(dObj.getMonth() + 1).padStart(2, '0');
                         let yyyy = dObj.getFullYear();
-                        let hh = String(dObj.getHours()).padStart(2, '0');
-                        let min = String(dObj.getMinutes()).padStart(2, '0');
-                        
-                        shortTime = `${dd}-${mm}-${yyyy} ${hh}:${min}`;
-                        t.time = shortTime; // Ghi đè lại t.time để Modal Chi Tiết cũng nhận được format này
+                        shortTime = `${dd}-${mm}-${yyyy}`;
+                        t.time = shortTime; // Ghi đè để Modal chi tiết cũng format đúng
+                    } else if (typeof t.time === 'string') {
+                        // Nếu dữ liệu dạng dd/mm/yyyy thì đổi dấu / thành -
+                        shortTime = t.time.replace(/\//g, '-').split(' ')[0];
+                        t.time = shortTime;
                     }
 
-                    // Tên NV rút gọn (Chỉ lấy Tên, bỏ User phía sau dấu '-')
                     let shortUser = String(getEmpDisplayName(t.user)).split('-')[0].trim();
 
+                    // Đưa Pending Badge lên dòng 1, Icon + Text + Số tiền nằm dòng 2
                     html += `
                         <div class="fund-item-new" data-id="${t.id}">
                             <div class="fi-row-1">
-                                <div class="fi-time">🕒 ${shortTime}</div>
-                                <div class="fund-action-wrap" style="display:flex; gap:5px; z-index:2;">
+                                <div class="fi-time">📅 ${shortTime}</div>
+                                <div class="fund-action-wrap" style="display:flex; gap:5px; z-index:2; align-items:center;">
+                                    ${pendingBadge}
                     `;
 
                     // Nút thao tác (Duyệt / Xóa)
@@ -1144,7 +1176,7 @@
                             </div>
                             <div class="fi-row-2">
                                 <div class="fund-icon ${iconClass}">${iconTxt}</div>
-                                <div class="fi-reason">${t.reason} ${pendingBadge}</div>
+                                <div class="fi-reason" title="${t.reason}">${t.reason}</div>
                                 <div class="fi-user" title="${getEmpDisplayName(t.user)}">👤 ${shortUser}</div>
                                 <div class="fi-amount ${textClass}">${sign}${FUND_SYSTEM.formatVNĐ(t.amount)}</div>
                             </div>
@@ -1228,6 +1260,10 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
             const colorMain = type === 'Thu' ? '#10b981' : '#ef4444';
             const iconMain = type === 'Thu' ? '↓' : '↑';
 
+            // Tạo ngày mặc định (Hôm nay) cho ô input type="date"
+            const today = new Date();
+            const defaultDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
             const modalHtml = `
                 <div class="fund-modal-overlay" id="${modalId}">
                     <div class="fund-modal-box">
@@ -1236,11 +1272,14 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                             THÊM PHIẾU ${type.toUpperCase()}
                         </div>
                         
+                        <label class="bc-label">Ngày giao dịch:</label>
+                        <input type="date" id="fund-mod-date" class="bc-input" value="${defaultDate}" style="color:${colorMain}; font-weight:bold; cursor:pointer;">
+
                         <label class="bc-label">Số tiền (VNĐ):</label>
                         <input type="text" id="fund-mod-amount" class="bc-input" placeholder="Ví dụ: 50,000" style="font-size:20px; font-weight:bold; color:${colorMain};" autocomplete="off">
                         
                         <label class="bc-label">Nội dung ${type}:</label>
-                        <textarea id="fund-mod-reason" class="bc-input" placeholder="Nhập nội dung chi tiết..." rows="3" style="resize:none; font-family:inherit;"></textarea>
+                        <textarea id="fund-mod-reason" class="bc-input" placeholder="Nhập nội dung chi tiết..." rows="2" style="resize:none; font-family:inherit; margin-bottom:0;"></textarea>
                         
                         <div style="display:flex; gap:10px; margin-top:20px;">
                             <button id="btn-fmod-cancel" style="flex:1; padding:10px; background:rgba(255,255,255,0.1); border:none; border-radius:8px; color:#fff; font-weight:bold; cursor:pointer;">Hủy</button>
@@ -1253,6 +1292,7 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
             document.getElementById('bc-app-wrapper').insertAdjacentHTML('beforeend', modalHtml);
 
             const modalEl = document.getElementById(modalId);
+            const inpDate = document.getElementById('fund-mod-date');
             const inpAmount = document.getElementById('fund-mod-amount');
             const inpReason = document.getElementById('fund-mod-reason');
 
@@ -1270,19 +1310,26 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
             };
             
             document.getElementById('btn-fmod-save').onclick = () => {
+                const rawDate = inpDate.value; 
                 const rawAmount = inpAmount.value.replace(/[^0-9]/g, '');
                 const amount = parseInt(rawAmount);
                 const reason = inpReason.value.trim();
 
+                if (!rawDate) return alert("Vui lòng chọn ngày giao dịch!");
                 if (isNaN(amount) || amount <= 0) return alert("Vui lòng nhập số tiền hợp lệ!");
                 if (!reason) return alert("Vui lòng nhập nội dung!");
+
+                // Xử lý đảo ngược yyyy-mm-dd thành dd-mm-yyyy để gửi lên Sheet
+                const [yyyy, mm, dd] = rawDate.split('-');
+                const formattedDate = `${dd}-${mm}-${yyyy}`;
 
                 const status = isManager ? 'Approved' : 'Pending';
                 
                 modalEl.classList.remove('show');
                 setTimeout(() => modalEl.remove(), 300);
 
-                FUND_SYSTEM.executeAPI("fund_add", { type: type, amount: amount, reason: reason, user: currentUser, status: status }, sheetId, () => {
+                // Gửi kèm "time: formattedDate" lên GAS
+                FUND_SYSTEM.executeAPI("fund_add", { type: type, amount: amount, reason: reason, user: currentUser, status: status, time: formattedDate }, sheetId, () => {
                     FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true);
                 });
             };
@@ -1302,7 +1349,7 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                 <div class="fund-modal-overlay" id="${modalId}">
                     <div class="fund-modal-box" style="padding:0;">
                         <div style="background:rgba(0,0,0,0.3); padding:15px 20px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
-                            <b style="color:#38bdf8; font-size:16px;">Chi Tiết Giao Dịch</b>
+                            <b style="color:#38bdf8; font-size:16px;">Chi Tiết Thu/Chi</b>
                             <button id="btn-fdet-close" style="background:none; border:none; color:#fff; font-size:18px; cursor:pointer;">✕</button>
                         </div>
                         <div class="fund-modal-content-scroll" style="padding:20px;">
@@ -1363,6 +1410,7 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
         // LUỒNG QUẢN LÝ
         // ==========================================
         if (IS_MANAGER) {
+            $('mgr-name-display') ? $('mgr-name-display').innerText = "👤 " + userData.name : null;
             switchSc('sc-manager');
             
             $('tab-btn-fund').onclick = () => { 
@@ -1464,43 +1512,27 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                 btnAdd.classList.add('btn-success');
             };
 
-            $('btn-add-nv').onclick = () => {
-                let s = $('inp-nv-shop').value.trim();
-                let u = $('inp-nv-user').value.trim();
-                let fn = $('inp-nv-fn').value.trim();
-                let dob = $('inp-nv-dob').value.trim();
-                let p = $('inp-nv-pass').value.trim();
-                let role = $('inp-nv-role').value;
-                let grp = $('inp-nv-grp').value.trim();
-
-                if(!s || !u || !fn || !p) return alert("Vui lòng nhập đủ Mã Shop, User, Họ Tên và Mật khẩu!");
-                
-                if (!/^\d+$/.test(s)) return alert("Mã Shop chỉ được nhập số!");
-                
-                if (!/^[\p{L}\s]+$/u.test(fn)) {
-                    return alert("Họ và tên chỉ được chứa chữ cái và khoảng trắng!");
-                }
-
-                if (dob && !/^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/\d{4}$/.test(dob)) {
-                    return alert("Ngày sinh phải theo định dạng dd/mm/yyyy (Ví dụ: 05/09/1998)!");
-                }
-
-                // Xử lý Cập nhật hoặc Thêm mới
-                if (EDITING_EMP_INDEX > -1) {
-                    const dup = MANAGER_EMPLOYEES.findIndex(x => x.s === s && x.u === u);
-                    if(dup !== -1 && dup !== EDITING_EMP_INDEX) return alert("User này đã tồn tại trong Shop!");
-                    
-                    MANAGER_EMPLOYEES[EDITING_EMP_INDEX] = {s, u, fn, dob, p, role, grp}; 
-                    EDITING_EMP_INDEX = -1; // Tắt cờ sửa
-                    resetEmpInputs();
-                } else {
-                    if(MANAGER_EMPLOYEES.some(x => x.s === s && x.u === u)) return alert("User này đã tồn tại trong Shop!");
-                    MANAGER_EMPLOYEES.push({s, u, fn, dob, p, role, grp}); 
-                    resetEmpInputs();
-                }
-                renderNV(); 
-            };
-
+            $('btn-add-nv').onclick = async () => {
+            let u = $('inp-nv-user').value.trim();
+            let p = $('inp-nv-pass').value.trim();
+            let fn = $('inp-nv-fn').value.trim();
+            if(!u || !p || !fn) return alert("Nhập đủ thông tin!");
+            $('bc-loading').style.display = 'flex';
+            try {
+                const res = await fetch(CONSTANTS.GSHEET.CONFIG_API, {
+                    method: "POST",
+                    body: JSON.stringify({ action: 'register_guest', user: u, password: p, name: fn, boss: userData.user, vip: "VIP" }),
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" }
+                }).then(r => r.text());
+                if(JSON.parse(res).status === 'success') {
+                    UI.showToast("✅ Đã thêm nhân viên VIP!");
+                    $('inp-nv-user').value=''; $('inp-nv-pass').value=''; $('inp-nv-fn').value='';
+                    if(typeof loadConfig === 'function') loadConfig();
+                } else alert(JSON.parse(res).message);
+            } catch(e) { alert("Lỗi mạng!"); }
+            $('bc-loading').style.display = 'none';
+        };
+        
             $('btn-save-config').onclick = async () => {
                 let fId = $('inp-folder-id').value.trim(), sId = $('inp-sheet-id').value.trim();
                 if(!fId || !sId) return alert("Nhập đủ ID Folder và ID Sheet!");
@@ -1875,12 +1907,8 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                 }
             };
 
-            if (EMP_SESSION && EMP_SESSION.user) { 
-                switchSc('sc-report'); 
-                $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.fn ? EMP_SESSION.fn + ' - ' : ''}${EMP_SESSION.user}`; 
-                updateEmpTabs();
-            } 
-            else { switchSc('sc-login'); }
+            switchSc('sc-report');
+            if($('lbl-emp-name')) $('lbl-emp-name').innerText = `👤 ${userData.name} - ${userData.user}`;
 
             $('tab-btn-emp-fund').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal', 'tab-btn-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal', 'tab-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });
                 
@@ -1890,18 +1918,17 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                 FUND_SYSTEM.loadAndRender('emp-fund-container', false, EMP_SESSION.sheetId, EMP_SESSION.user, false);
             };
             
-            // Cập nhật lại mảng xóa class 'active' cho các nút khác:
             $('tab-btn-emp-form').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal', 'tab-btn-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal', 'tab-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });
                 $('tab-btn-emp-form').classList.add('active'); $('tab-emp-form').classList.add('active'); 
             };
             
-            $('tab-btn-emp-history').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });
+            $('tab-btn-emp-history').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal', 'tab-btn-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal', 'tab-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });
                 $('tab-btn-emp-history').classList.add('active'); $('tab-emp-history').classList.add('active'); 
                 loadEmployeeHistory();
             };
 
             // TAB CÁ NHÂN CLICK
-            $('tab-btn-emp-personal').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal'].forEach(id => { if($(id)) $(id).classList.remove('active') });
+            $('tab-btn-emp-personal').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal', 'tab-btn-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal', 'tab-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });
                 $('tab-btn-emp-personal').classList.add('active'); $('tab-emp-personal').classList.add('active'); 
                 renderNLNV('overview'); 
             };
@@ -2072,36 +2099,6 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
             };
 
             $('btn-refresh-emp-history').onclick = loadEmployeeHistory;
-
-            $('btn-nv-login').onclick = async () => {
-                let s = $('inp-login-shop').value.trim(), u = $('inp-login-user').value.trim(), p = $('inp-login-pass').value.trim();
-                if(!s || !u || !p) return alert("Nhập đủ thông tin!");
-                $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang kiểm tra tài khoản...";
-                try {
-                    let res = await universalFetch({ method:"POST", url: API_URL_MAIN, data: JSON.stringify({ action: "login_employee", empShop: s, empUser: u, empPass: p }) });
-                    let data = JSON.parse(res);
-                    if(data.status === 'success') {
-                        // Lấy chính xác user từ server trả về (nếu có)
-                        let exactUser = data.exactUser || data.user || data.empUser;
-                        
-                        // FIX LỖI: Nếu server không gửi về tên chính xác, tự động viết hoa chữ cái đầu tiên để khớp với khai báo phổ biến
-                        if (!exactUser) {
-                            exactUser = u.charAt(0).toUpperCase() + u.slice(1).toLowerCase();
-                        }
-
-                        EMP_SESSION = { user: exactUser, shop: s, folderId: data.folderId, sheetId: data.sheetId, mgrUser: data.mgrUser || "", fn: data.fn || "", dob: data.dob || "", role: data.role || "NV", grp: data.grp || "" };
-                        localStorage.setItem('bc_emp_session', JSON.stringify(EMP_SESSION));
-                        $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.fn ? EMP_SESSION.fn + ' - ' : ''}${exactUser}`; 
-                        
-                        updateEmpTabs(); 
-                        switchSc('sc-report');
-                        $('tab-btn-emp-form').click();
-                    } else alert("❌ Lỗi: " + data.message);
-                } catch(e) { alert("❌ Lỗi máy chủ!"); }
-                $('bc-loading').style.display = 'none';
-            };
-
-            $('btn-nv-logout').onclick = () => { localStorage.removeItem('bc_emp_session'); EMP_SESSION = null; switchSc('sc-login'); };
 
             $('btn-submit-report').onclick = async () => {
                 if(!EMP_SESSION || !EMP_SESSION.folderId || !EMP_SESSION.sheetId) return alert("❌ Quản lý chưa cài Thư mục/Sheet. Hãy báo lại QL!");
