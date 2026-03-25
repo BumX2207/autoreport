@@ -26,22 +26,18 @@
     const API_URL_REPORT = "https://script.google.com/macros/s/AKfycbz7Hv3FHg_XiA4g-ujO8bXkLSohxzB2HJvzsOuKZbkGdr-E33vwRJB4Etl-eCtKh5Xr/exec";
     const API_URL_HISTORY = "https://script.google.com/macros/s/AKfycbzL5rzzxfhSdX0WmFR3sB-BBimZgRsHT8v2RyzfZ_7RWG-bYuRTEwqmbwiImyZY5KgC/exec";
 
-    
+    let SYSTEM_USER = "---";
+    if (context.AUTH_STATE && context.AUTH_STATE.isAuthorized && context.AUTH_STATE.userName && context.AUTH_STATE.userName !== "---") {
+        SYSTEM_USER = context.AUTH_STATE.userName;
+    } else {
+        let savedGuest = localStorage.getItem('tgdd_guest_account');
+        if (savedGuest) SYSTEM_USER = JSON.parse(savedGuest).user || "---";
+    }
+
     const managerRegex = /^\d+\s*-\s*.+$/;
+    let IS_MANAGER = managerRegex.test(SYSTEM_USER);
+    let CURRENT_USER = IS_MANAGER ? SYSTEM_USER : "";
     
-    let AUTH_DATA = JSON.parse(localStorage.getItem('tgdd_guest_account_v2') || "null");
-    let CURRENT_USER = "---";
-    let IS_MANAGER = false;
-    let BOSS_USER = ""; // Lưu user của quản lý (Cột A)
-
-    const checkGlobalAuth = () => {
-        if (!AUTH_DATA) {
-            UI.showMsg("Thông báo", "Vui lòng đăng nhập tài khoản nội bộ do quản lý cấp để sử dụng tiện ích này.", "error");
-            return false;
-        }
-        return true;
-    };
-
     let EMP_SESSION = JSON.parse(localStorage.getItem('bc_emp_session') || "null");
     let MANAGER_EMPLOYEES =[];
     let MANAGER_SHEET_ID = ""; 
@@ -712,59 +708,27 @@
 
 
     const runTool = async () => {
-
-        // --- ĐƯA CÁC ĐỊNH NGHĨA NÀY LÊN ĐẦU TIÊN ---
-        const $ = (id) => document.getElementById(id);
-        const switchSc = (id) => { 
-            document.querySelectorAll('.bc-screen').forEach(s => s.classList.remove('active')); 
-            if($(id)) $(id).classList.add('active'); 
-        };
-        
-        // --- ĐOẠN 1: KIỂM TRA QUYỀN TRANG CHỦ (CHÈN MỚI) ---
-        const authStore = JSON.parse(localStorage.getItem('tgdd_guest_account_v2') || "null");
-        if (!authStore) {
-            UI.showMsg("Thông báo", "Vui lòng đăng nhập tài khoản ở trang chủ trước!", "info");
+        // 1. Kiểm tra đăng nhập từ trang Index
+        const savedGlobalUser = localStorage.getItem('tgdd_guest_account_v2');
+        if (!savedGlobalUser) {
+            alert("Bạn chưa đăng nhập hệ thống. Vui lòng đăng nhập tại trang chủ trước khi sử dụng tool!");
             return;
         }
 
-        // Hiện loading
-        if (!$('bc-app-wrapper')) { 
-            const app = document.createElement('div'); app.id = 'bc-app-wrapper';
-            app.innerHTML = `<div id="bc-loading" style="display:flex"><div class="spinner"></div><h3 id="bc-load-text">Đang xác thực quyền...</h3></div>`;
-            document.body.appendChild(app);
-        } else { $('bc-app-wrapper').style.display = 'flex'; $('bc-loading').style.display = 'flex'; }
+        const globalUser = JSON.parse(savedGlobalUser);
+        const USER_ID = globalUser.user;
 
-        let userData = null;
-        try {
-            const res = await fetch(CONSTANTS.GSHEET.CONFIG_API, {
-                method: "POST",
-                body: JSON.stringify({ action: 'login_guest', user: authStore.user, password: authStore.pass || "" }),
-                headers: { "Content-Type": "application/x-www-form-urlencoded" }
-            }).then(r => r.text());
-            const json = JSON.parse(res);
-            if (json.status !== 'success' || !json.userData.boss || json.userData.boss.trim() === "") {
-                $('bc-app-wrapper').style.display = 'none';
-                UI.showMsg("Từ chối", "Tài khoản của bạn chưa có quyền Boss (Cột A trống).", "error");
-                return;
-            }
-            userData = json.userData; // Lấy Boss (A), SheetID (B), Name (D)...
-        } catch (e) { UI.showToast("Lỗi kết nối xác thực!"); $('bc-app-wrapper').style.display = 'none'; return; }
-
-        // Ghi đè dữ liệu từ Sheet vào các biến môi trường của tool
-        const isMgr = (userData.user.toLowerCase() === userData.boss.toLowerCase());
-        IS_MANAGER = isMgr;
-        CURRENT_USER = isMgr ? userData.user : "";
-        MANAGER_SHEET_ID = userData.sheetId || ""; 
-        if (!isMgr) {
-            EMP_SESSION = { user: userData.user, fn: userData.name, boss: userData.boss, sheetId: userData.sheetId, role: "NV", mgrUser: userData.boss };
+        // Nếu app đã mở rồi thì chỉ việc hiện lên
+        if (document.getElementById('bc-app-wrapper')) { 
+            document.getElementById('bc-app-wrapper').style.display = 'flex'; 
+            return; 
         }
-        // --- HẾT ĐOẠN 1 ---
-        if (document.getElementById('bc-app-wrapper')) { document.getElementById('bc-app-wrapper').style.display = 'flex'; return; }
 
-        const app = document.createElement('div'); app.id = 'bc-app-wrapper';
+        // 2. Tạo HTML App (Bỏ màn hình Login cũ)
+        const app = document.createElement('div'); 
+        app.id = 'bc-app-wrapper';
         app.innerHTML = `
-            <div id="bc-loading"><div class="spinner"></div><h3 id="bc-load-text">Đang tải dữ liệu...</h3></div>
-            
+            <div id="bc-loading"><div class="spinner"></div><h3 id="bc-load-text">Đang kiểm tra quyền truy cập...</h3></div>
             <div id="bc-lightbox"><button id="bc-lb-close">✕</button><img id="bc-lb-img" src=""></div>
 
             <!-- SCREEN 1: QUẢN LÝ -->
@@ -772,170 +736,129 @@
                 <div class="bc-header">
                     <div class="bc-title">⚙️ DASHBOARD</div>
                     <div class="bc-header-right">
-                        <span style="color:#94a3b8; font-size:14px; font-weight:600;">👤 ${CURRENT_USER}</span>
+                        <span style="color:#94a3b8; font-size:14px; font-weight:600;">👤 ${SYSTEM_USER}</span>
                         <button class="bc-close-btn btn-close-app">✕</button>
                     </div>
                 </div>
-
                 <div class="bc-tabs">
                     <button class="bc-tab-btn active" id="tab-btn-stat">📈 Truyền thông</button>
                     <button class="bc-tab-btn" id="tab-btn-fund">💰 Quỹ Siêu Thị</button>
                     <button class="bc-tab-btn" id="tab-btn-config">⚙️ Cài Đặt</button>
                 </div>
-
-                <!-- TAB THỐNG KÊ -->
                 <div class="bc-tab-content active" id="tab-stat">
-                    <div class="bc-screen-body" style="padding-top: 10px;">
-                        <div id="stat-summary-container"></div>
-                        <div class="filter-row">
-                            <select id="stat-month-filter" title="Chọn Tháng"></select>
-                            <select id="stat-date-filter" title="Chọn Ngày"></select>
-                            <select id="stat-emp-filter" title="Chọn Nhân viên"></select>
-                            <button id="btn-refresh-stat" title="Load lại dữ liệu">🔄</button>
-                        </div>
-                        <div id="stat-list-container"></div>
-                    </div>
+                    <div class="bc-screen-body"><div id="stat-summary-container"></div><div class="filter-row"><select id="stat-month-filter"></select><select id="stat-date-filter"></select><select id="stat-emp-filter"></select><button id="btn-refresh-stat">🔄</button></div><div id="stat-list-container"></div></div>
                 </div>
-                
-                <!-- TAB CÀI ĐẶT -->
                 <div class="bc-tab-content" id="tab-config">
                     <div class="bc-screen-body">
                         <div class="bc-card">
                             <h3 class="bc-sec-title">1. Cấu hình Lưu trữ</h3>
-                            <!-- THÊM TÍNH NĂNG KHÓA ID -->
-                            <label class="bc-label">ID Thư mục Google Drive:</label>
-                            <div class="input-wrapper">
-                                <input type="text" id="inp-folder-id" class="bc-input" placeholder="VD: 1A2b3C4d5E...">
-                                <button class="btn-unlock" id="btn-edit-folder">✏️ Sửa</button>
-                            </div>
-                            
-                            <label class="bc-label">ID Google Sheet:</label>
-                            <div class="input-wrapper">
-                                <input type="text" id="inp-sheet-id" class="bc-input" placeholder="VD: 1xYz_789abc...">
-                                <button class="btn-unlock" id="btn-edit-sheet">✏️ Sửa</button>
-                            </div>
+                            <label class="bc-label">ID Thư mục Drive:</label><div class="input-wrapper"><input type="text" id="inp-folder-id" class="bc-input" readonly><button class="btn-unlock" id="btn-edit-folder">✏️ Sửa</button></div>
+                            <label class="bc-label">ID Google Sheet:</label><div class="input-wrapper"><input type="text" id="inp-sheet-id" class="bc-input" readonly><button class="btn-unlock" id="btn-edit-sheet">✏️ Sửa</button></div>
                         </div>
                         <div class="bc-card">
                             <h3 class="bc-sec-title">2. Khai báo Nhân viên</h3>
                             <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
-                                <input type="text" id="inp-nv-shop" class="bc-input" style="margin:0; flex:1; min-width:80px;" placeholder="Mã Shop">
-                                <input type="text" id="inp-nv-user" class="bc-input" style="margin:0; flex:1; min-width:80px;" placeholder="User">
-                                <input type="text" id="inp-nv-fn" class="bc-input" style="margin:0; flex:2; min-width:140px;" placeholder="Họ và Tên">
-                                <input type="text" id="inp-nv-dob" class="bc-input" style="margin:0; flex:1.5; min-width:120px;" placeholder="Ngày sinh (dd/mm/yyyy)">
-                                <input type="text" id="inp-nv-pass" class="bc-input" style="margin:0; flex:1.5; min-width:100px;" placeholder="Mật khẩu">
-                                <select id="inp-nv-role" class="bc-input" style="margin:0; flex:0.8; min-width:70px; padding:12px;"><option value="NV">NV</option><option value="PG">PG</option></select>
-                                <input type="text" id="inp-nv-grp" class="bc-input" style="margin:0; flex:0; min-width:60px;" placeholder="Nhóm (Tự chọn)">
-                                <button class="bc-btn btn-success" id="btn-add-nv" style="width:100%; flex-shrink:0; margin-top:5px;">+ Thêm Nhân Viên</button>
+                                <input type="text" id="inp-nv-shop" class="bc-input" style="flex:1" placeholder="Mã Shop">
+                                <input type="text" id="inp-nv-user" class="bc-input" style="flex:1" placeholder="User">
+                                <input type="text" id="inp-nv-fn" class="bc-input" style="flex:2" placeholder="Họ và Tên">
+                                <input type="text" id="inp-nv-dob" class="bc-input" style="flex:1.5" placeholder="dd/mm/yyyy">
+                                <input type="text" id="inp-nv-pass" class="bc-input" style="flex:1.5" placeholder="Mật khẩu">
+                                <select id="inp-nv-role" class="bc-input" style="flex:0.8"><option value="NV">NV</option><option value="PG">PG</option></select>
+                                <input type="text" id="inp-nv-grp" class="bc-input" style="flex:1" placeholder="Nhóm">
+                                <button class="bc-btn btn-success" id="btn-add-nv">+ Thêm/Sửa NV</button>
                             </div>
                             <div id="nv-list-container"></div>
                         </div>
                     </div>
-                    <div class="bc-footer">
-                        <button class="bc-btn btn-primary" id="btn-save-config">💾 LƯU CẤU HÌNH</button>
-                    </div>
+                    <div class="bc-footer"><button class="bc-btn btn-primary" id="btn-save-config">💾 LƯU & ĐỒNG BỘ HỆ THỐNG</button></div>
                 </div>
-                <!-- TAB QUỸ SIÊU THỊ (MANAGER) -->
-                <div class="bc-tab-content" id="tab-fund">
-                    <div class="bc-screen-body" id="mgr-fund-container"></div>
-                </div>
+                <div class="bc-tab-content" id="tab-fund"><div class="bc-screen-body" id="mgr-fund-container"></div></div>
             </div>
 
-            
             <!-- SCREEN 3: FORM BÁO CÁO NHÂN VIÊN -->
             <div class="bc-screen" id="sc-report">
-                <!-- THANH TIÊU ĐỀ: CHỈ CÓ TÊN TOOL VÀ NÚT X ĐỂ TRÁNH BẤM NHẦM -->
-                <div class="bc-header">
-                    <div class="bc-title">📊 BÁO CÁO</div>
-                    <button class="bc-close-btn btn-close-app" style="width: 36px; height: 36px; font-size: 16px;">✕</button>
+                <div class="bc-header"><div class="bc-title">📊 BÁO CÁO</div><button class="bc-close-btn btn-close-app">✕</button></div>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding: 8px 20px; background: rgba(0,0,0,0.3);">
+                    <span id="lbl-emp-name" style="color:#38bdf8; font-size:13px; font-weight:bold;">👤 ---</span>
                 </div>
-
-                <!-- THANH THÔNG TIN USER: ĐƯỢC TÁCH XUỐNG DƯỚI ĐỂ AN TOÀN -->
-                <div style="display:flex; justify-content:space-between; align-items:center; padding: 8px 20px; background: rgba(0,0,0,0.3); border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;">
-                    <span class="emp-display-name" style="color:#38bdf8; font-size:13px; font-weight:bold;" id="lbl-emp-name">👤 ---</span>
-                    <button class="bc-btn btn-danger" id="btn-nv-logout" style="padding:5px 12px; width:auto; font-size:11px; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); margin: 0;">Đăng xuất</button>
-                </div>
-
                 <div class="bc-tabs">
                     <button class="bc-tab-btn active" id="tab-btn-emp-form">📝 Gửi Báo Cáo</button>
                     <button class="bc-tab-btn" id="tab-btn-emp-history">🕒 Lịch Sử</button>
-                    <button class="bc-tab-btn" id="tab-btn-emp-fund" style="display:none; background: linear-gradient(135deg, #10b981, #047857); color:#fff;">💰 Quỹ ST</button>
-                    <button class="bc-tab-btn" id="tab-btn-emp-personal" style="display:none; background: linear-gradient(135deg, #FFD700, #F59E0B); color:#0f172a;">👤 Cá nhân</button>
+                    <button class="bc-tab-btn" id="tab-btn-emp-fund">💰 Quỹ ST</button>
+                    <button class="bc-tab-btn" id="tab-btn-emp-personal">👤 Cá nhân</button>
                 </div>
-
                 <div class="bc-tab-content active" id="tab-emp-form">
                     <div class="bc-screen-body">
-                        <div class="bc-card">
-                            <div class="bc-sec-title">📄 1. Phát Tờ Rơi</div>
-                            <label class="bc-label">Số lượng tờ rơi đã phát</label>
-                            <input type="number" id="inp-toroi-sl" class="bc-input" placeholder="Nhập số lượng..." min="0">
-                            <div class="bc-file-upload">
-                                <label for="file-toroi" class="bc-file-label">📸 Nhấn để chọn ảnh phát tờ rơi</label>
-                                <input type="file" id="file-toroi" class="bc-file-input" multiple accept="image/*">
-                                <div class="bc-preview-grid" id="prev-toroi"></div>
-                            </div>
-                        </div>
-
-                        <div class="bc-card">
-                            <div class="bc-sec-title">🌐 2. Đăng Bài Truyền Thông</div>
-                            <label class="bc-label">Link bài đăng</label>
-                            <input type="text" id="inp-dangbai-link" class="bc-input" placeholder="Dán link bài đăng vào đây...">
-                            <div class="bc-file-upload">
-                                <label for="file-dangbai" class="bc-file-label">📸 Nhấn để chọn ảnh bài đăng</label>
-                                <input type="file" id="file-dangbai" class="bc-file-input" multiple accept="image/*">
-                                <div class="bc-preview-grid" id="prev-dangbai"></div>
-                            </div>
-                        </div>
-
-                        <div class="bc-card">
-                            <div class="bc-sec-title">🎥 3. Livestream</div>
-                            <label class="bc-label">Link Livestream</label>
-                            <input type="text" id="inp-live-link" class="bc-input" placeholder="Dán link livestream vào đây...">
-                            <div class="bc-file-upload">
-                                <label for="file-live" class="bc-file-label">📸 Nhấn để chọn ảnh Livestream</label>
-                                <input type="file" id="file-live" class="bc-file-input" multiple accept="image/*">
-                                <div class="bc-preview-grid" id="prev-live"></div>
-                            </div>
-                        </div>
+                        <div class="bc-card"><div class="bc-sec-title">📄 1. Phát Tờ Rơi</div><input type="number" id="inp-toroi-sl" class="bc-input" placeholder="Số lượng..."><input type="file" id="file-toroi" class="bc-file-input" multiple><label for="file-toroi" class="bc-file-label">📸 Chọn ảnh</label><div class="bc-preview-grid" id="prev-toroi"></div></div>
+                        <div class="bc-card"><div class="bc-sec-title">🌐 2. Truyền Thông</div><input type="text" id="inp-dangbai-link" class="bc-input" placeholder="Link bài đăng..."><input type="file" id="file-dangbai" class="bc-file-input" multiple><label for="file-dangbai" class="bc-file-label">📸 Chọn ảnh</label><div class="bc-preview-grid" id="prev-dangbai"></div></div>
+                        <div class="bc-card"><div class="bc-sec-title">🎥 3. Livestream</div><input type="text" id="inp-live-link" class="bc-input" placeholder="Link livestream..."><input type="file" id="file-live" class="bc-file-input" multiple><label for="file-live" class="bc-file-label">📸 Chọn ảnh</label><div class="bc-preview-grid" id="prev-live"></div></div>
                     </div>
-                    <div class="bc-footer">
-                        <button class="bc-btn btn-primary" id="btn-submit-report" style="padding:15px; font-size:16px;">🚀 GỬI BÁO CÁO</button>
-                    </div>
+                    <div class="bc-footer"><button class="bc-btn btn-primary" id="btn-submit-report">🚀 GỬI BÁO CÁO</button></div>
                 </div>
-
-                <div class="bc-tab-content" id="tab-emp-history">
-                    <div class="bc-screen-body">
-                        <div style="text-align:right; margin-bottom: 15px;">
-                            <button id="btn-refresh-emp-history" class="bc-btn btn-primary" style="width:auto; padding:8px 15px; font-size:13px;">🔄 Load lại lịch sử</button>
-                        </div>
-                        <div id="emp-history-container"></div>
-                    </div>
-                </div>
-
-                <!-- TÍNH NĂNG CÁ NHÂN MỚI (BẢNG NLNV CỦA BI 8.3) -->
-                <div class="bc-tab-content" id="tab-emp-personal">
-                    <div class="bc-screen-body">
-                        <div class="filter-row" style="justify-content: center; margin-bottom: 20px;">
-                            <select id="emp-nlnv-view-select" style="max-width: 250px; font-weight: bold; text-align: center; background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8;">
-                                <option value="overview">Bảng Tổng Quan</option>
-                                <option value="daily">Bảng Hàng Ngày</option>
-                            </select>
-                        </div>
-                        <!-- Thêm wrapper bên ngoài để thực hiện việc Zoom độc lập -->
-                        <div id="emp-nlnv-scroll-wrapper">
-                            <div id="emp-nlnv-container" style="padding:10px;"></div>
-                        </div>
-                    </div>
-                </div>
-                <!-- TAB QUỸ SIÊU THỊ (EMPLOYEE) -->
-                <div class="bc-tab-content" id="tab-emp-fund">
-                    <div class="bc-screen-body" id="emp-fund-container"></div>
-                </div>
+                <div class="bc-tab-content" id="tab-emp-history"><div class="bc-screen-body" id="emp-history-container"></div></div>
+                <div class="bc-tab-content" id="tab-emp-personal"><div class="bc-screen-body" id="emp-nlnv-container"></div></div>
+                <div class="bc-tab-content" id="tab-emp-fund"><div class="bc-screen-body" id="emp-fund-container"></div></div>
             </div>
         `;
         document.body.appendChild(app);
 
+        // --- CÀI ĐẶT CƠ BẢN ---
         const style = document.createElement('style'); style.innerHTML = MY_CSS; document.head.appendChild(style);
+        const $ = (id) => document.getElementById(id);
+        const switchSc = (id) => { document.querySelectorAll('.bc-screen').forEach(s => s.classList.remove('active')); if($(id)) $(id).classList.add('active'); };
         document.querySelectorAll('.btn-close-app').forEach(btn => btn.onclick = () => app.style.display = 'none');
+
+        // --- LOGIC KIỂM TRA QUYỀN TRUY CẬP ---
+        const checkPermission = async () => {
+            $('bc-loading').style.display = 'flex';
+            try {
+                let res = await universalFetch({ 
+                    method: "POST", 
+                    url: API_URL_MAIN, 
+                    data: JSON.stringify({ action: "check_tool_permission", user: USER_ID }) 
+                });
+                let data = JSON.parse(res);
+
+                if (data.status === 'success') {
+                    // Nếu là quản lý (Tự quản lý chính mình) hoặc nhân viên có boss
+                    if (IS_MANAGER) {
+                        switchSc('sc-manager');
+                        loadConfig(); // Load cấu hình quản lý
+                    } else {
+                        // Lưu thông tin phiên làm việc của nhân viên từ boss trả về
+                        EMP_SESSION = { 
+                            user: data.userData.user, 
+                            fn: data.userData.name, 
+                            role: data.userData.role,
+                            mgrUser: data.userData.boss,
+                            shop: data.userData.shop,
+                            // Quan trọng: lấy ID từ cấu hình của boss
+                            sheetId: data.userData.sheetId || "", 
+                            folderId: data.userData.folderId || ""
+                        };
+                        localStorage.setItem('bc_emp_session', JSON.stringify(EMP_SESSION));
+                        
+                        switchSc('sc-report');
+                        $('lbl-emp-name').innerText = `👤 ${data.userData.name} - ${data.userData.user}`;
+                        updateEmpTabs();
+                    }
+                } else {
+                    // Trường hợp no_permission hoặc lỗi khác
+                    $('bc-app-wrapper').innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:white; text-align:center; padding:20px;">
+                        <h2 style="color:#ef4444;">⚠️ THÔNG BÁO</h2>
+                        <p style="margin:20px 0;">${data.message}</p>
+                        <button class="bc-btn btn-primary" style="width:200px" onclick="document.getElementById('bc-app-wrapper').remove()">Đóng</button>
+                    </div>`;
+                }
+            } catch (e) {
+                alert("Lỗi kết nối server kiểm tra quyền!");
+            } finally {
+                $('bc-loading').style.display = 'none';
+            }
+        };
+
+        // --- GỌI KIỂM TRA QUYỀN ---
+        checkPermission();
 
         // Hàm Khóa/Mở Khóa ô Cấu hình ID
         const lockConfigInputs = (isLocked) => {
@@ -1411,11 +1334,61 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
             if(loading) loading.style.display = 'none';
         }
     };
+
+    const checkPermission = async () => {
+        $('bc-loading').style.display = 'flex';
+        $('bc-load-text').innerText = "Đang kiểm tra quyền truy cập...";
+        
+        try {
+            let res = await universalFetch({ 
+                method: "POST", 
+                url: API_URL_MAIN, 
+                data: JSON.stringify({ action: "check_tool_permission", user: USER_ID }) 
+            });
+            let data = JSON.parse(res);
+
+            if (data.status === 'success') {
+                // ĐÃ CÓ QUYỀN (CỘT A CÓ BOSS)
+                EMP_SESSION = { 
+                    user: data.userData.user, 
+                    shop: data.userData.shop, 
+                    fn: data.userData.name, 
+                    role: data.userData.role,
+                    mgrUser: data.userData.boss,
+                    // Lấy ID Sheet/Folder từ Manager (Bạn cần bổ sung API lấy config Manager nếu chưa có)
+                    // Ở đây tôi tạm lấy theo logic hiện tại của bạn
+                    sheetId: MANAGER_SHEET_ID 
+                };
+                
+                // Hiển thị màn hình báo cáo hoặc Dashboard Manager nếu là Manager
+                if (IS_MANAGER) {
+                    switchSc('sc-manager');
+                } else {
+                    switchSc('sc-report');
+                    $('lbl-emp-name').innerText = `👤 ${data.userData.name} - ${data.userData.user}`;
+                    updateEmpTabs();
+                }
+            } else if (data.status === 'no_permission') {
+                // ĐÃ ĐĂNG NHẬP NHƯNG CỘT A TRỐNG
+                $('bc-loading').innerHTML = `<div style="text-align:center; padding:20px;">
+                    <h2 style="color:#ef4444;">⚠️ TỪ CHỐI TRUY CẬP</h2>
+                    <p>${data.message}</p>
+                    <button class="bc-btn btn-primary" onclick="document.getElementById('bc-app-wrapper').style.display='none'">Đóng</button>
+                </div>`;
+            } else {
+                alert(data.message);
+                app.style.display = 'none';
+            }
+        } catch (e) {
+            alert("Lỗi kết nối hệ thống kiểm tra quyền!");
+        } finally {
+            $('bc-loading').style.display = 'none';
+        }
+    };
         // ==========================================
         // LUỒNG QUẢN LÝ
         // ==========================================
         if (IS_MANAGER) {
-            $('mgr-name-display') ? $('mgr-name-display').innerText = "👤 " + userData.name : null;
             switchSc('sc-manager');
             
             $('tab-btn-fund').onclick = () => { 
@@ -1517,27 +1490,43 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                 btnAdd.classList.add('btn-success');
             };
 
-            $('btn-add-nv').onclick = async () => {
-            let u = $('inp-nv-user').value.trim();
-            let p = $('inp-nv-pass').value.trim();
-            let fn = $('inp-nv-fn').value.trim();
-            if(!u || !p || !fn) return alert("Nhập đủ thông tin!");
-            $('bc-loading').style.display = 'flex';
-            try {
-                const res = await fetch(CONSTANTS.GSHEET.CONFIG_API, {
-                    method: "POST",
-                    body: JSON.stringify({ action: 'register_guest', user: u, password: p, name: fn, boss: userData.user, vip: "VIP" }),
-                    headers: { "Content-Type": "application/x-www-form-urlencoded" }
-                }).then(r => r.text());
-                if(JSON.parse(res).status === 'success') {
-                    UI.showToast("✅ Đã thêm nhân viên VIP!");
-                    $('inp-nv-user').value=''; $('inp-nv-pass').value=''; $('inp-nv-fn').value='';
-                    if(typeof loadConfig === 'function') loadConfig();
-                } else alert(JSON.parse(res).message);
-            } catch(e) { alert("Lỗi mạng!"); }
-            $('bc-loading').style.display = 'none';
-        };
-        
+            $('btn-add-nv').onclick = () => {
+                let s = $('inp-nv-shop').value.trim();
+                let u = $('inp-nv-user').value.trim();
+                let fn = $('inp-nv-fn').value.trim();
+                let dob = $('inp-nv-dob').value.trim();
+                let p = $('inp-nv-pass').value.trim();
+                let role = $('inp-nv-role').value;
+                let grp = $('inp-nv-grp').value.trim();
+
+                if(!s || !u || !fn || !p) return alert("Vui lòng nhập đủ Mã Shop, User, Họ Tên và Mật khẩu!");
+                
+                if (!/^\d+$/.test(s)) return alert("Mã Shop chỉ được nhập số!");
+                
+                if (!/^[\p{L}\s]+$/u.test(fn)) {
+                    return alert("Họ và tên chỉ được chứa chữ cái và khoảng trắng!");
+                }
+
+                if (dob && !/^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/\d{4}$/.test(dob)) {
+                    return alert("Ngày sinh phải theo định dạng dd/mm/yyyy (Ví dụ: 05/09/1998)!");
+                }
+
+                // Xử lý Cập nhật hoặc Thêm mới
+                if (EDITING_EMP_INDEX > -1) {
+                    const dup = MANAGER_EMPLOYEES.findIndex(x => x.s === s && x.u === u);
+                    if(dup !== -1 && dup !== EDITING_EMP_INDEX) return alert("User này đã tồn tại trong Shop!");
+                    
+                    MANAGER_EMPLOYEES[EDITING_EMP_INDEX] = {s, u, fn, dob, p, role, grp}; 
+                    EDITING_EMP_INDEX = -1; // Tắt cờ sửa
+                    resetEmpInputs();
+                } else {
+                    if(MANAGER_EMPLOYEES.some(x => x.s === s && x.u === u)) return alert("User này đã tồn tại trong Shop!");
+                    MANAGER_EMPLOYEES.push({s, u, fn, dob, p, role, grp}); 
+                    resetEmpInputs();
+                }
+                renderNV(); 
+            };
+
             $('btn-save-config').onclick = async () => {
                 let fId = $('inp-folder-id').value.trim(), sId = $('inp-sheet-id').value.trim();
                 if(!fId || !sId) return alert("Nhập đủ ID Folder và ID Sheet!");
@@ -1912,8 +1901,12 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                 }
             };
 
-            switchSc('sc-report');
-            if($('lbl-emp-name')) $('lbl-emp-name').innerText = `👤 ${userData.name} - ${userData.user}`;
+            if (EMP_SESSION && EMP_SESSION.user) { 
+                switchSc('sc-report'); 
+                $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.fn ? EMP_SESSION.fn + ' - ' : ''}${EMP_SESSION.user}`; 
+                updateEmpTabs();
+            } 
+            else { switchSc('sc-login'); }
 
             $('tab-btn-emp-fund').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal', 'tab-btn-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal', 'tab-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });
                 
