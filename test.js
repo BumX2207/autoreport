@@ -727,7 +727,7 @@
             let res = await universalFetch({
                 method: "POST",
                 url: API_URL_MAIN,
-                data: JSON.stringify({ action: "login_guest", user: authData.user, password: authData.password || "" })
+                data: JSON.stringify({ action: "check_permission", user: authData.user })
             });
             let check = JSON.parse(res);
             if (ld) ld.remove();
