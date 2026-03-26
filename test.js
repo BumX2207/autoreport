@@ -886,8 +886,7 @@
 
                 <!-- THANH THÔNG TIN USER: ĐƯỢC TÁCH XUỐNG DƯỚI ĐỂ AN TOÀN -->
                 <div style="display:flex; justify-content:space-between; align-items:center; padding: 8px 20px; background: rgba(0,0,0,0.3); border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;">
-                    <span class="emp-display-name" style="color:#38bdf8; font-size:13px; font-weight:bold;" id="lbl-emp-name">👤 ${CURRENT_USER}</span>
-                    <button class="bc-btn btn-danger" id="btn-nv-logout" style="padding:5px 12px; width:auto; font-size:11px; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); margin: 0;">Đăng xuất</button>
+                    <span class="emp-display-name" style="color:#38bdf8; font-size:13px; font-weight:bold;" id="lbl-emp-name">👤 ${CURRENT_USER}</span>   
                 </div>
 
                 <div class="bc-tabs">
