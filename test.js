@@ -22,7 +22,7 @@
     // ===============================================================
     // 1. CẤU HÌNH API
     // ===============================================================
-    const API_URL_MAIN = "https://script.google.com/macros/s/AKfycbxDRSg1JDNTyuYf2TSQovNIWhFk3ls9hPXxtRSMu6xI0oNjql53nJo0G1H5k1b2iq_3/exec";   
+    const API_URL_MAIN = "https://script.google.com/macros/s/AKfycbyE_RBQ_svQjPaA6z_3EBtcxyIjmubhRyLq_eHxfdE-1pVbszxZul1Ow1n8SNfGFyvq/exec"; 
     const API_URL_REPORT = "https://script.google.com/macros/s/AKfycbz7Hv3FHg_XiA4g-ujO8bXkLSohxzB2HJvzsOuKZbkGdr-E33vwRJB4Etl-eCtKh5Xr/exec";
     const API_URL_HISTORY = "https://script.google.com/macros/s/AKfycbzL5rzzxfhSdX0WmFR3sB-BBimZgRsHT8v2RyzfZ_7RWG-bYuRTEwqmbwiImyZY5KgC/exec";
 
