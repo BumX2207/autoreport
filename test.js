@@ -1430,7 +1430,6 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                 FUND_SYSTEM.loadAndRender('mgr-fund-container', true, MANAGER_SHEET_ID, CURRENT_USER, false);
             };
             
-            // Nhớ sửa lại onclick của stat và config để nó ẩn tab fund đi nhé:
             $('tab-btn-stat').onclick = () => { $('tab-btn-stat').classList.add('active'); $('tab-btn-config').classList.remove('active'); $('tab-btn-fund').classList.remove('active'); $('tab-stat').classList.add('active'); $('tab-config').classList.remove('active'); $('tab-fund').classList.remove('active'); };
             $('tab-btn-config').onclick = () => { $('tab-btn-config').classList.add('active'); $('tab-btn-stat').classList.remove('active'); $('tab-btn-fund').classList.remove('active'); $('tab-config').classList.add('active'); $('tab-stat').classList.remove('active'); $('tab-fund').classList.remove('active'); };
             const loadConfig = async () => {
@@ -1941,13 +1940,9 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                 }
             };
 
-            
-
             $('tab-btn-emp-fund').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal', 'tab-btn-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal', 'tab-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });
                 
                 $('tab-btn-emp-fund').classList.add('active'); $('tab-emp-fund').classList.add('active'); 
-                
-                // Truyền forceReload = false
                 FUND_SYSTEM.loadAndRender('emp-fund-container', false, EMP_SESSION.sheetId, EMP_SESSION.user, false);
             };
             
@@ -1960,7 +1955,6 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                 loadEmployeeHistory();
             };
 
-            // TAB CÁ NHÂN CLICK
             $('tab-btn-emp-personal').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal', 'tab-btn-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal', 'tab-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });
                 $('tab-btn-emp-personal').classList.add('active'); $('tab-emp-personal').classList.add('active'); 
                 renderNLNV('overview'); 
@@ -2050,7 +2044,6 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                 }
             };
 
-
             const loadEmployeeHistory = async () => {
                 if(!EMP_SESSION || !EMP_SESSION.sheetId) return;
                 $('bc-loading').style.display = 'flex';
@@ -2132,36 +2125,6 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
             };
 
             $('btn-refresh-emp-history').onclick = loadEmployeeHistory;
-
-            $('btn-nv-login').onclick = async () => {
-                let s = $('inp-login-shop').value.trim(), u = $('inp-login-user').value.trim(), p = $('inp-login-pass').value.trim();
-                if(!s || !u || !p) return alert("Nhập đủ thông tin!");
-                $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang kiểm tra tài khoản...";
-                try {
-                    let res = await universalFetch({ method:"POST", url: API_URL_MAIN, data: JSON.stringify({ action: "login_employee", empShop: s, empUser: u, empPass: p }) });
-                    let data = JSON.parse(res);
-                    if(data.status === 'success') {
-                        // Lấy chính xác user từ server trả về (nếu có)
-                        let exactUser = data.exactUser || data.user || data.empUser;
-                        
-                        // FIX LỖI: Nếu server không gửi về tên chính xác, tự động viết hoa chữ cái đầu tiên để khớp với khai báo phổ biến
-                        if (!exactUser) {
-                            exactUser = u.charAt(0).toUpperCase() + u.slice(1).toLowerCase();
-                        }
-
-                        EMP_SESSION = { user: exactUser, shop: s, folderId: data.folderId, sheetId: data.sheetId, mgrUser: data.mgrUser || "", fn: data.fn || "", dob: data.dob || "", role: data.role || "NV", grp: data.grp || "" };
-                        localStorage.setItem('bc_emp_session', JSON.stringify(EMP_SESSION));
-                        $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.fn ? EMP_SESSION.fn + ' - ' : ''}${exactUser}`; 
-                        
-                        updateEmpTabs(); 
-                        switchSc('sc-report');
-                        $('tab-btn-emp-form').click();
-                    } else alert("❌ Lỗi: " + data.message);
-                } catch(e) { alert("❌ Lỗi máy chủ!"); }
-                $('bc-loading').style.display = 'none';
-            };
-
-            $('btn-nv-logout').onclick = () => { localStorage.removeItem('bc_emp_session'); EMP_SESSION = null; switchSc('sc-login'); };
 
             $('btn-submit-report').onclick = async () => {
                 if(!EMP_SESSION || !EMP_SESSION.folderId || !EMP_SESSION.sheetId) return alert("❌ Quản lý chưa cài Thư mục/Sheet. Hãy báo lại QL!");
