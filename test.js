@@ -27,10 +27,13 @@
     const API_URL_HISTORY = "https://script.google.com/macros/s/AKfycbzL5rzzxfhSdX0WmFR3sB-BBimZgRsHT8v2RyzfZ_7RWG-bYuRTEwqmbwiImyZY5KgC/exec";
 
     let SYSTEM_USER = "---";
-    if (context.AUTH_STATE && context.AUTH_STATE.isAuthorized && context.AUTH_STATE.userName && context.AUTH_STATE.userName !== "---") {
+    // ƯU TIÊN 1: Lấy từ context của Tampermonkey (Nếu đang chạy trên BI)
+    if (context.AUTH_STATE && context.AUTH_STATE.userName && context.AUTH_STATE.userName !== "---") {
         SYSTEM_USER = context.AUTH_STATE.userName;
-    } else {
-        let savedGuest = localStorage.getItem('tgdd_guest_account');
+    } 
+    // ƯU TIÊN 2: Lấy từ localStorage của trang standalone (Netlify)
+    else {
+        let savedGuest = localStorage.getItem('tgdd_guest_account_v2');
         if (savedGuest) SYSTEM_USER = JSON.parse(savedGuest).user || "---";
     }
 
@@ -708,49 +711,57 @@
 
 
     const runTool = async () => {
-        // 1. Lấy account từ index
-        let savedGuest = localStorage.getItem('tgdd_guest_account_v2');
-        if (!savedGuest) {
-            alert("⚠️ Bạn chưa đăng nhập tại trang chủ. Vui lòng đăng nhập trước!");
+        // 1. XÁC ĐỊNH USER TỪ CẢ 2 NỀN TẢNG
+        let userLogin = "";
+        
+        // Kiểm tra xem có user từ Tampermonkey (BI) không
+        if (context.AUTH_STATE && context.AUTH_STATE.userName && context.AUTH_STATE.userName !== "---") {
+            userLogin = context.AUTH_STATE.userName;
+        } else {
+            // Nếu không có, thử lấy từ Netlify index
+            let savedGuest = localStorage.getItem('tgdd_guest_account_v2');
+            if (savedGuest) userLogin = JSON.parse(savedGuest).user;
+        }
+
+        if (!userLogin || userLogin === "---") {
+            alert("⚠️ Bạn chưa đăng nhập! Vui lòng đăng nhập tại trang chủ hoặc hệ thống BI trước.");
             return;
         }
-        const authData = JSON.parse(savedGuest);
 
-        // 2. Hiện loading check quyền
+        // 2. HIỆN LOADING KIỂM TRA QUYỀN TRÊN SHEET
         const ld = document.createElement('div');
         ld.id = 'bc-pre-load';
-        ld.innerHTML = '<div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(15,23,42,0.9);z-index:2147483647;display:flex;justify-content:center;align-items:center;color:#38bdf8;font-family:sans-serif;"><b>🔄 Đang kiểm tra quyền truy cập...</b></div>';
+        ld.innerHTML = '<div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(15,23,42,0.9);z-index:2147483647;display:flex;justify-content:center;align-items:center;color:#38bdf8;font-family:sans-serif;flex-direction:column;"><b>🔄 Đang xác thực quyền truy cập...</b><p style="font-size:12px;color:#94a3b8;margin-top:10px;">User: '+userLogin+'</p></div>';
         document.body.appendChild(ld);
 
         try {
-            // Gọi GAS để lấy thông tin Boss (cột A)
+            // Gọi GAS check permission
             let res = await universalFetch({
                 method: "POST",
                 url: API_URL_MAIN,
-                data: JSON.stringify({ action: "check_permission", user: authData.user })
+                data: JSON.stringify({ action: "check_permission", user: userLogin })
             });
             let check = JSON.parse(res);
             if (ld) ld.remove();
 
             if (check.status !== 'success') {
-                alert("❌ Không thể xác thực tài khoản!"); return;
+                alert("❌ Lỗi: " + (check.message || "Tài khoản không hợp lệ")); return;
             }
 
             const userData = check.userData;
-            const managerRegex = /^\d+\s*-\s*.+$/;
-            let isUserBoss = managerRegex.test(userData.user);
+            const isUserBoss = managerRegex.test(userData.user);
 
-            // KIỂM TRA CỘT A (BOSS)
+            // KIỂM TRA QUYỀN SỬ DỤNG TOOL (CỘT A TRỐNG THÌ CHẶN)
             if (!userData.boss && !isUserBoss) {
                 alert("🚫 Tài khoản của bạn không có quyền sử dụng tool này. Hãy báo quản lý khai báo tài khoản!");
                 return;
             }
 
-            // Thiết lập thông tin phiên làm việc
+            // THIẾT LẬP THÔNG TIN PHIÊN LÀM VIỆC
             IS_MANAGER = isUserBoss;
             SYSTEM_USER = userData.user;
-            CURRENT_USER = `${userData.name} - ${userData.user}`;
-            MANAGER_SHEET_ID = userData.sheetId || "1iuApMwdKYx9ofo0oJR84AlzXka0PmTQPudXzx0Uub0o";
+            CURRENT_USER = (userData.name && userData.name !== "") ? `${userData.name} - ${userData.user}` : userData.user;
+            MANAGER_SHEET_ID = userData.sheetId; 
             
             EMP_SESSION = { 
                 user: userData.user, shop: userData.shop, sheetId: MANAGER_SHEET_ID, 
@@ -759,7 +770,7 @@
 
         } catch (e) {
             if (ld) ld.remove();
-            alert("❌ Lỗi kết nối hệ thống!"); return;
+            alert("❌ Lỗi kết nối hệ thống xác thực!"); return;
         }
 
         // --- TIẾP TỤC DỰNG UI ---
