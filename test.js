@@ -732,7 +732,21 @@
                 alert("⚠️ Bạn chưa đăng nhập tại trang chủ. Vui lòng đăng nhập trước!");
                 return;
             }
-            const authData = JSON.parse(savedGuest);
+            
+            let authData;
+            try {
+                authData = JSON.parse(savedGuest);
+            } catch(e) {
+                alert("❌ Lỗi dữ liệu đăng nhập. Vui lòng đăng xuất và đăng nhập lại!");
+                return;
+            }
+
+            // Kiểm tra xem authData có chứa trường user không
+            const userToCheck = authData.user || authData.userName || "";
+            if (!userToCheck) {
+                alert("❌ Không tìm thấy tên tài khoản! Vui lòng đăng nhập lại.");
+                return;
+            }
             
             const ld = document.createElement('div');
             ld.id = 'bc-pre-load';
@@ -743,8 +757,12 @@
                 let res = await universalFetch({
                     method: "POST",
                     url: API_URL_MAIN,
-                    data: JSON.stringify({ action: "check_permission", user: authData.user })
+                    data: JSON.stringify({ 
+                        action: "check_permission", 
+                        user: String(userToCheck) // Ép kiểu string ngay từ đây cho chắc
+                    })
                 });
+                
                 let check = JSON.parse(res);
                 if (ld) ld.remove();
 
