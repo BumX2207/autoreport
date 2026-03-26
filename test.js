@@ -1941,15 +1941,7 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                 }
             };
 
-            // Tự động chuyển màn hình dựa trên quyền đã check ở Bước 2
-        if (IS_MANAGER) {
-            switchSc('sc-manager');
-            await loadConfig();
-        } else {
-            switchSc('sc-report');
-            updateEmpTabs();
-            loadEmployeeHistory();
-        }
+            
 
             $('tab-btn-emp-fund').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal', 'tab-btn-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal', 'tab-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });
                 
@@ -2203,6 +2195,16 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                 } catch (err) { alert("❌ Lỗi mạng. Không thể gửi lúc này!"); } 
                 finally { $('bc-loading').style.display = 'none'; }
             };
+        }
+
+        // Tự động chuyển màn hình dựa trên quyền đã check ở Bước 2
+        if (IS_MANAGER) {
+            switchSc('sc-manager');
+            await loadConfig();
+        } else {
+            switchSc('sc-report');
+            updateEmpTabs();
+            loadEmployeeHistory();
         }
     };
 
