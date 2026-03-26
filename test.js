@@ -937,6 +937,16 @@
         `;
         document.body.appendChild(app);
 
+        const updateEmpTabs = () => {
+                if (EMP_SESSION && EMP_SESSION.role === 'NV') {
+                    if($('tab-btn-emp-personal')) $('tab-btn-emp-personal').style.display = 'block';
+                    if($('tab-btn-emp-fund')) $('tab-btn-emp-fund').style.display = 'block';
+                } else {
+                    if($('tab-btn-emp-personal')) $('tab-btn-emp-personal').style.display = 'none';
+                    if($('tab-btn-emp-fund')) $('tab-btn-emp-fund').style.display = 'none';
+                }
+            };
+
         const style = document.createElement('style'); style.innerHTML = MY_CSS; document.head.appendChild(style);
         const $ = (id) => document.getElementById(id);
         const switchSc = (id) => { document.querySelectorAll('.bc-screen').forEach(s => s.classList.remove('active')); $(id).classList.add('active'); };
@@ -1930,15 +1940,7 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
             // ==========================================
             // LUỒNG NHÂN VIÊN
             // ==========================================
-            const updateEmpTabs = () => {
-                if (EMP_SESSION && EMP_SESSION.role === 'NV') {
-                    if($('tab-btn-emp-personal')) $('tab-btn-emp-personal').style.display = 'block';
-                    if($('tab-btn-emp-fund')) $('tab-btn-emp-fund').style.display = 'block';
-                } else {
-                    if($('tab-btn-emp-personal')) $('tab-btn-emp-personal').style.display = 'none';
-                    if($('tab-btn-emp-fund')) $('tab-btn-emp-fund').style.display = 'none';
-                }
-            };
+            
 
             $('tab-btn-emp-fund').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal', 'tab-btn-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal', 'tab-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });
                 
@@ -2159,7 +2161,7 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                 finally { $('bc-loading').style.display = 'none'; }
             };
         }
-
+        
         // Tự động chuyển màn hình dựa trên quyền đã check ở Bước 2
         if (IS_MANAGER) {
             switchSc('sc-manager');
