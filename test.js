@@ -708,63 +708,58 @@
 
 
     const runTool = async () => {
-        // 1. Lấy thông tin đăng nhập từ index.html
+        // 1. Lấy account từ index
         let savedGuest = localStorage.getItem('tgdd_guest_account_v2');
         if (!savedGuest) {
-            alert("⚠️ Bạn chưa đăng nhập tại trang chủ. Vui lòng đăng nhập trước khi sử dụng tool!");
+            alert("⚠️ Bạn chưa đăng nhập tại trang chủ. Vui lòng đăng nhập trước!");
             return;
         }
-        
-        const loginData = JSON.parse(savedGuest);
-        const userLogin = loginData.user;
+        const authData = JSON.parse(savedGuest);
 
-        // 2. Hiện loading kiểm tra quyền
-        if (document.getElementById('bc-app-wrapper')) {
-            document.getElementById('bc-app-wrapper').style.display = 'flex';
-        }
+        // 2. Hiện loading check quyền
+        const ld = document.createElement('div');
+        ld.id = 'bc-pre-load';
+        ld.innerHTML = '<div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(15,23,42,0.9);z-index:2147483647;display:flex;justify-content:center;align-items:center;color:#38bdf8;font-family:sans-serif;"><b>🔄 Đang kiểm tra quyền truy cập...</b></div>';
+        document.body.appendChild(ld);
 
-        // 3. Gọi GAS kiểm tra cột Boss (Cột A)
         try {
+            // Gọi GAS để lấy thông tin Boss (cột A)
             let res = await universalFetch({
                 method: "POST",
                 url: API_URL_MAIN,
-                data: JSON.stringify({ action: "login_guest", user: userLogin, password: loginData.password || "" })
+                data: JSON.stringify({ action: "login_guest", user: authData.user, password: authData.password || "" })
             });
             let check = JSON.parse(res);
-            
-            // Tìm thông tin boss trong dữ liệu trả về (Bạn cần đảm bảo GAS loginUser trả về cả boss)
-            // Lưu ý: Tôi giả định GAS loginUser của bạn đã trả về boss ở cột A
-            if (check.status === 'success') {
-                // Kiểm tra nếu cột A (Boss) bỏ trống
-                // Giả sử dữ liệu trả về có check.userData.boss
-                // Chúng ta sẽ lấy dữ liệu này từ hàm loginUser ở file GAS
-                
-                // --- CHÈN KIỂM TRA BOSS TẠI ĐÂY ---
-                if (!check.userData.boss || check.userData.boss.trim() === "") {
-                    alert("🚫 Tài khoản của bạn không có quyền sử dụng tool này. Hãy báo quản lý khai báo tài khoản!");
-                    return;
-                }
-                
-                // Nếu hợp lệ, gán thông tin để tool chạy
-                SYSTEM_USER = check.userData.user;
-                EMP_SESSION = {
-                    user: check.userData.user,
-                    fn: check.userData.name,
-                    mgrUser: check.userData.boss,
-                    role: check.userData.role || "NV",
-                    sheetId: check.userData.sheetId || "" // ID sheet của quản lý
-                };
-                // Hiển thị dạng: Họ và tên - User
-                CURRENT_USER = `${check.userData.name} - ${check.userData.user}`;
-                
-            } else {
-                alert("❌ Lỗi xác thực tài khoản!");
+            if (ld) ld.remove();
+
+            if (check.status !== 'success') {
+                alert("❌ Không thể xác thực tài khoản!"); return;
+            }
+
+            const userData = check.userData;
+            const managerRegex = /^\d+\s*-\s*.+$/;
+            let isUserBoss = managerRegex.test(userData.user);
+
+            // KIỂM TRA CỘT A (BOSS)
+            if (!userData.boss && !isUserBoss) {
+                alert("🚫 Tài khoản của bạn không có quyền sử dụng tool này. Hãy báo quản lý khai báo tài khoản!");
                 return;
             }
+
+            // Thiết lập thông tin phiên làm việc
+            IS_MANAGER = isUserBoss;
+            SYSTEM_USER = userData.user;
+            CURRENT_USER = `${userData.name} - ${userData.user}`;
+            MANAGER_SHEET_ID = userData.sheetId || "1iuApMwdKYx9ofo0oJR84AlzXka0PmTQPudXzx0Uub0o";
+            
+            EMP_SESSION = { 
+                user: userData.user, shop: userData.shop, sheetId: MANAGER_SHEET_ID, 
+                mgrUser: userData.boss || userData.user, fn: userData.name, role: userData.role || "NV" 
+            };
+
         } catch (e) {
-            console.error(e);
-            alert("❌ Không thể kết nối hệ thống để kiểm tra quyền!");
-            return;
+            if (ld) ld.remove();
+            alert("❌ Lỗi kết nối hệ thống!"); return;
         }
 
         // --- TIẾP TỤC DỰNG UI ---
@@ -859,7 +854,7 @@
 
                 <!-- THANH THÔNG TIN USER: ĐƯỢC TÁCH XUỐNG DƯỚI ĐỂ AN TOÀN -->
                 <div style="display:flex; justify-content:space-between; align-items:center; padding: 8px 20px; background: rgba(0,0,0,0.3); border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;">
-                    <span class="emp-display-name" style="color:#38bdf8; font-size:13px; font-weight:bold;" id="lbl-emp-name">👤 ${EMP_SESSION.fn} - ${EMP_SESSION.user}</span>
+                    <span class="emp-display-name" style="color:#38bdf8; font-size:13px; font-weight:bold;" id="lbl-emp-name">👤 ${CURRENT_USER}</span>
                     <button class="bc-btn btn-danger" id="btn-nv-logout" style="padding:5px 12px; width:auto; font-size:11px; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); margin: 0;">Đăng xuất</button>
                 </div>
 
@@ -1536,44 +1531,39 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                 let role = $('inp-nv-role').value;
                 let grp = $('inp-nv-grp').value.trim();
 
-                if(!s || !u || !fn || !p) return alert("Vui lòng nhập đủ Mã Shop, User, Họ Tên và Mật khẩu!");
+                if(!s || !u || !fn || !p) return alert("Nhập đủ Mã Shop, User, Họ Tên và Mật khẩu!");
 
-                // Gửi dữ liệu lên GAS để đăng ký vào sheet User
                 $('bc-loading').style.display = 'flex';
-                $('bc-load-text').innerText = "Đang tạo tài khoản nhân viên...";
+                $('bc-load-text').innerText = "Đang cấp quyền trên hệ thống...";
                 
                 try {
                     let res = await universalFetch({
                         method: "POST",
-                        url: API_URL_MAIN, // URL của file gas.txt
+                        url: API_URL_MAIN,
                         data: JSON.stringify({
                             action: "register_guest",
-                            boss: SYSTEM_USER, // User của quản lý hiện tại
-                            shop: s,
-                            user: u,
-                            name: fn,
-                            email: "", // Bỏ trống theo yêu cầu
-                            password: p,
-                            dob: dob,
-                            role: role,
-                            grp: grp,
-                            vip: "VIP" // Mặc định là VIP
+                            boss: SYSTEM_USER, // Cột A: User quản lý
+                            shop: s,           // Cột B
+                            user: u,           // Cột C
+                            name: fn,          // Cột D
+                            password: p,       // Cột F
+                            dob: dob,          // Cột G
+                            role: role,        // Cột H
+                            grp: grp,          // Cột I
+                            vip: "VIP"         // Cột J
                         })
                     });
                     
                     let result = JSON.parse(res);
                     if (result.status === 'success') {
-                        alert("✅ Đã thêm nhân viên và cấp quyền thành công!");
-                        // Thêm vào danh sách hiển thị tạm thời
+                        alert("✅ Đã cấp quyền thành công!");
                         MANAGER_EMPLOYEES.push({s, u, fn, dob, p, role, grp});
                         renderNV();
                         resetEmpInputs();
                     } else {
                         alert("❌ " + result.message);
                     }
-                } catch (e) {
-                    alert("❌ Lỗi hệ thống khi thêm nhân viên!");
-                }
+                } catch (e) { alert("❌ Lỗi mạng!"); }
                 $('bc-loading').style.display = 'none';
             };
 
@@ -1951,12 +1941,15 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                 }
             };
 
-            if (EMP_SESSION && EMP_SESSION.user) { 
-                switchSc('sc-report'); 
-                $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.fn ? EMP_SESSION.fn + ' - ' : ''}${EMP_SESSION.user}`; 
-                updateEmpTabs();
-            } 
-            else { switchSc('sc-login'); }
+            // Tự động chuyển màn hình dựa trên quyền đã check ở Bước 2
+        if (IS_MANAGER) {
+            switchSc('sc-manager');
+            await loadConfig();
+        } else {
+            switchSc('sc-report');
+            updateEmpTabs();
+            loadEmployeeHistory();
+        }
 
             $('tab-btn-emp-fund').onclick = () => {['tab-btn-emp-form', 'tab-btn-emp-history', 'tab-btn-emp-personal', 'tab-btn-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });['tab-emp-form', 'tab-emp-history', 'tab-emp-personal', 'tab-emp-fund'].forEach(id => { if($(id)) $(id).classList.remove('active') });
                 
