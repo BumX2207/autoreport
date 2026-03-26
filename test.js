@@ -947,6 +947,87 @@
                 }
             };
 
+        const loadEmployeeHistory = async () => {
+                if(!EMP_SESSION || !EMP_SESSION.sheetId) return;
+                $('bc-loading').style.display = 'flex';
+                $('bc-load-text').innerText = "Đang tải lịch sử của bạn...";
+                try {
+                    let res = await universalFetch({ method:"POST", url: API_URL_MAIN, data: JSON.stringify({ action: "get_manager_reports", sheetId: EMP_SESSION.sheetId }) });
+                    let json = JSON.parse(res);
+                    if(json.status === 'success' && Array.isArray(json.data) && json.data.length > 1) {
+                        let d = new Date();
+                        let todayStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth()+1).padStart(2, '0')}/${d.getFullYear()}`;
+                        
+                        let myData = json.data.slice(1).map(r => {
+                            let parsed = parseDateFromSheet(r[0]);
+                            return { dateStr: parsed.date, timeStr: parsed.time, user: String(r[1] || "").trim(), slToRoi: r[2], linkDB: r[3], linkLive: r[4], imgToRoi: r[5], imgDB: r[6], imgLive: r[7] };
+                        }).filter(r => r.dateStr === todayStr && r.user === EMP_SESSION.user);
+                        
+                        myData.reverse(); 
+                        
+                        if(myData.length === 0) {
+                            $('emp-history-container').innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">Bạn chưa có báo cáo nào trong hôm nay.</div>`;
+                        } else {
+                            let html = '';
+                            const renderImgGrid = (str, horizontal = false, prefixName = "Anh") => {
+                                if(!str) return '';
+                                if(str.includes('ảnh') && !str.includes('http')) return `<span style="color:#fbbf24; font-size:12px;">${str} (Cũ)</span>`;
+                                let links = str.split('|||').filter(l => l.trim() !== '');
+                                if(links.length === 0) return '';
+                                
+                                let className = horizontal ? "rp-grid scroll-x" : "rp-grid";
+                                let linksJson = JSON.stringify(links).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+                                
+                                let downloadAllBtn = `<div style="text-align: right; margin-bottom: 5px; margin-top: 5px;">
+                                    <span class="btn-dl-all" style="font-size: 11px; color: #38bdf8; cursor: pointer; text-decoration: underline;" data-links="${linksJson}" data-prefix="${prefixName}">📥 Tải tất cả ${links.length} ảnh</span>
+                                </div>`;
+
+                                let gridHtml = `<div class="${className}">` + links.map((l, idx) => {
+                                    let match = l.match(/id=([a-zA-Z0-9_-]+)/);
+                                    let imgUrl = match ? `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800` : l;
+                                    return `
+                                        <div class="rp-img-wrap">
+                                            <img src="${imgUrl}" class="rp-img">
+                                            <div class="rp-img-dl btn-dl-single" data-url="${imgUrl}" data-filename="${prefixName}_${idx+1}.jpg" title="Tải ảnh này">📥</div>
+                                        </div>`; 
+                                }).join('') + `</div>`;
+                                
+                                return downloadAllBtn + gridHtml;
+                            };
+
+                            myData.forEach((row, idx) => {
+                                let uniqueId = `emp-rp-det-${idx}`;
+                                html += `
+                                    <div class="rp-card">
+                                        <div class="rp-header-row" onclick="document.getElementById('${uniqueId}').style.display = document.getElementById('${uniqueId}').style.display === 'block' ? 'none' : 'block'">
+                                            <div><b style="color:#38bdf8;">🕒 Báo cáo lúc: ${row.timeStr}</b></div>
+                                            <span style="font-size:12px; color:#FFD700;">▼ Xem chi tiết</span>
+                                        </div>
+                                        <div class="rp-detail" id="${uniqueId}">
+                                            <div style="margin-bottom:10px;"><b>📄 Lượt Phát Tờ Rơi:</b> ${row.slToRoi} tờ</div>
+                                            ${renderImgGrid(row.imgToRoi, false, `ToRoi_ToiNay_${idx+1}`)}
+                                            
+                                            <div style="margin:15px 0 10px;"><b>🌐 Lượt Đăng/Share Bài:</b> ${row.linkDB ? `<a href="${row.linkDB}" target="_blank" class="rp-link">${row.linkDB}</a>` : 'Không có link'}</div>
+                                            ${renderImgGrid(row.imgDB, false, `DangBai_ToiNay_${idx+1}`)}
+                                            
+                                            <div style="margin:15px 0 10px;"><b>🎥 Livestream:</b> ${row.linkLive ? `<a href="${row.linkLive}" target="_blank" class="rp-link">${row.linkLive}</a>` : 'Không có link'}</div>
+                                            ${renderImgGrid(row.imgLive, false, `Livestream_ToiNay_${idx+1}`)}
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                            $('emp-history-container').innerHTML = html;
+                        }
+                    } else {
+                        $('emp-history-container').innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">Bạn chưa có báo cáo nào trong hôm nay.</div>`;
+                    }
+                } catch(e) { 
+                    $('emp-history-container').innerHTML = `<div style="text-align:center; color:#ef4444; padding:20px;">Lỗi tải dữ liệu lịch sử!</div>`;
+                }
+                $('bc-loading').style.display = 'none';
+            };
+    
+
         const style = document.createElement('style'); style.innerHTML = MY_CSS; document.head.appendChild(style);
         const $ = (id) => document.getElementById(id);
         const switchSc = (id) => { document.querySelectorAll('.bc-screen').forEach(s => s.classList.remove('active')); $(id).classList.add('active'); };
@@ -2046,86 +2127,7 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
                 }
             };
 
-            const loadEmployeeHistory = async () => {
-                if(!EMP_SESSION || !EMP_SESSION.sheetId) return;
-                $('bc-loading').style.display = 'flex';
-                $('bc-load-text').innerText = "Đang tải lịch sử của bạn...";
-                try {
-                    let res = await universalFetch({ method:"POST", url: API_URL_MAIN, data: JSON.stringify({ action: "get_manager_reports", sheetId: EMP_SESSION.sheetId }) });
-                    let json = JSON.parse(res);
-                    if(json.status === 'success' && Array.isArray(json.data) && json.data.length > 1) {
-                        let d = new Date();
-                        let todayStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth()+1).padStart(2, '0')}/${d.getFullYear()}`;
-                        
-                        let myData = json.data.slice(1).map(r => {
-                            let parsed = parseDateFromSheet(r[0]);
-                            return { dateStr: parsed.date, timeStr: parsed.time, user: String(r[1] || "").trim(), slToRoi: r[2], linkDB: r[3], linkLive: r[4], imgToRoi: r[5], imgDB: r[6], imgLive: r[7] };
-                        }).filter(r => r.dateStr === todayStr && r.user === EMP_SESSION.user);
-                        
-                        myData.reverse(); 
-                        
-                        if(myData.length === 0) {
-                            $('emp-history-container').innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">Bạn chưa có báo cáo nào trong hôm nay.</div>`;
-                        } else {
-                            let html = '';
-                            const renderImgGrid = (str, horizontal = false, prefixName = "Anh") => {
-                                if(!str) return '';
-                                if(str.includes('ảnh') && !str.includes('http')) return `<span style="color:#fbbf24; font-size:12px;">${str} (Cũ)</span>`;
-                                let links = str.split('|||').filter(l => l.trim() !== '');
-                                if(links.length === 0) return '';
-                                
-                                let className = horizontal ? "rp-grid scroll-x" : "rp-grid";
-                                let linksJson = JSON.stringify(links).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
-                                
-                                let downloadAllBtn = `<div style="text-align: right; margin-bottom: 5px; margin-top: 5px;">
-                                    <span class="btn-dl-all" style="font-size: 11px; color: #38bdf8; cursor: pointer; text-decoration: underline;" data-links="${linksJson}" data-prefix="${prefixName}">📥 Tải tất cả ${links.length} ảnh</span>
-                                </div>`;
-
-                                let gridHtml = `<div class="${className}">` + links.map((l, idx) => {
-                                    let match = l.match(/id=([a-zA-Z0-9_-]+)/);
-                                    let imgUrl = match ? `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800` : l;
-                                    return `
-                                        <div class="rp-img-wrap">
-                                            <img src="${imgUrl}" class="rp-img">
-                                            <div class="rp-img-dl btn-dl-single" data-url="${imgUrl}" data-filename="${prefixName}_${idx+1}.jpg" title="Tải ảnh này">📥</div>
-                                        </div>`; 
-                                }).join('') + `</div>`;
-                                
-                                return downloadAllBtn + gridHtml;
-                            };
-
-                            myData.forEach((row, idx) => {
-                                let uniqueId = `emp-rp-det-${idx}`;
-                                html += `
-                                    <div class="rp-card">
-                                        <div class="rp-header-row" onclick="document.getElementById('${uniqueId}').style.display = document.getElementById('${uniqueId}').style.display === 'block' ? 'none' : 'block'">
-                                            <div><b style="color:#38bdf8;">🕒 Báo cáo lúc: ${row.timeStr}</b></div>
-                                            <span style="font-size:12px; color:#FFD700;">▼ Xem chi tiết</span>
-                                        </div>
-                                        <div class="rp-detail" id="${uniqueId}">
-                                            <div style="margin-bottom:10px;"><b>📄 Lượt Phát Tờ Rơi:</b> ${row.slToRoi} tờ</div>
-                                            ${renderImgGrid(row.imgToRoi, false, `ToRoi_ToiNay_${idx+1}`)}
-                                            
-                                            <div style="margin:15px 0 10px;"><b>🌐 Lượt Đăng/Share Bài:</b> ${row.linkDB ? `<a href="${row.linkDB}" target="_blank" class="rp-link">${row.linkDB}</a>` : 'Không có link'}</div>
-                                            ${renderImgGrid(row.imgDB, false, `DangBai_ToiNay_${idx+1}`)}
-                                            
-                                            <div style="margin:15px 0 10px;"><b>🎥 Livestream:</b> ${row.linkLive ? `<a href="${row.linkLive}" target="_blank" class="rp-link">${row.linkLive}</a>` : 'Không có link'}</div>
-                                            ${renderImgGrid(row.imgLive, false, `Livestream_ToiNay_${idx+1}`)}
-                                        </div>
-                                    </div>
-                                `;
-                            });
-                            $('emp-history-container').innerHTML = html;
-                        }
-                    } else {
-                        $('emp-history-container').innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">Bạn chưa có báo cáo nào trong hôm nay.</div>`;
-                    }
-                } catch(e) { 
-                    $('emp-history-container').innerHTML = `<div style="text-align:center; color:#ef4444; padding:20px;">Lỗi tải dữ liệu lịch sử!</div>`;
-                }
-                $('bc-loading').style.display = 'none';
-            };
-
+            
             $('btn-refresh-emp-history').onclick = loadEmployeeHistory;
 
             $('btn-submit-report').onclick = async () => {
