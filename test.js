@@ -712,86 +712,71 @@
 
 
     const runTool = async () => {
-        // --- NHÁNH 1: NẾU ĐĂNG NHẬP TỪ BI (TAMPERMONKEY) -> VÀO THẲNG QUẢN LÝ ---
+        let userToCheck = "";
+        
+        // Xác định nguồn truy cập
         if (IS_FROM_BI) {
-            IS_MANAGER = true;
-            CURRENT_USER = SYSTEM_USER;
-            MANAGER_SHEET_ID = "1iuApMwdKYx9ofo0oJR84AlzXka0PmTQPudXzx0Uub0o"; // ID sheet mặc định
-            EMP_SESSION = { 
-                user: SYSTEM_USER, 
-                mgrUser: SYSTEM_USER, 
-                role: "NV", // Hoặc QL tùy mày
-                sheetId: MANAGER_SHEET_ID 
-            };
-            console.log("🚀 Đăng nhập từ BI: Chế độ Quản lý kích hoạt.");
-        } 
-        // --- NHÁNH 2: NẾU ĐĂNG NHẬP TỪ NETLIFY -> PHẢI CHECK_PERMISSION ---
-        else {
+            userToCheck = SYSTEM_USER;
+        } else {
             let savedGuest = localStorage.getItem('tgdd_guest_account_v2');
-            if (!savedGuest) {
-                alert("⚠️ Bạn chưa đăng nhập tại trang chủ. Vui lòng đăng nhập trước!");
-                return;
-            }
-            
-            let authData;
-            try {
-                authData = JSON.parse(savedGuest);
-            } catch(e) {
-                alert("❌ Lỗi dữ liệu đăng nhập. Vui lòng đăng xuất và đăng nhập lại!");
-                return;
-            }
+            if (!savedGuest) return alert("⚠️ Bạn chưa đăng nhập tại trang chủ!");
+            userToCheck = JSON.parse(savedGuest).user;
+        }
 
-            // Kiểm tra xem authData có chứa trường user không
-            const userToCheck = authData.user || authData.userName || "";
-            if (!userToCheck) {
-                alert("❌ Không tìm thấy tên tài khoản! Vui lòng đăng nhập lại.");
-                return;
-            }
-            
-            const ld = document.createElement('div');
-            ld.id = 'bc-pre-load';
-            ld.innerHTML = '<div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(15,23,42,0.9);z-index:2147483647;display:flex;justify-content:center;align-items:center;color:#38bdf8;font-family:sans-serif;flex-direction:column;"><b>🔄 Đang xác thực quyền truy cập...</b></div>';
-            document.body.appendChild(ld);
+        const ld = document.createElement('div');
+        ld.id = 'bc-pre-load';
+        ld.innerHTML = '<div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(15,23,42,0.95);z-index:2147483647;display:flex;justify-content:center;align-items:center;color:#38bdf8;font-family:sans-serif;flex-direction:column;"><b>🔄 Đang đồng bộ dữ liệu hệ thống...</b></div>';
+        document.body.appendChild(ld);
 
-            try {
-                let res = await universalFetch({
-                    method: "POST",
-                    url: API_URL_MAIN,
-                    data: JSON.stringify({ 
-                        action: "check_permission", 
-                        user: String(userToCheck) // Ép kiểu string ngay từ đây cho chắc
-                    })
-                });
-                
-                let check = JSON.parse(res);
-                if (ld) ld.remove();
+        try {
+            // Cả BI và Netlify đều gọi cái này để lấy ID Folder/Sheet về
+            let res = await universalFetch({
+                method: "POST",
+                url: API_URL_MAIN,
+                data: JSON.stringify({ action: "check_permission", user: String(userToCheck) })
+            });
+            let check = JSON.parse(res);
+            if (ld) ld.remove();
 
-                if (check.status !== 'success') {
-                    alert("❌ Lỗi: " + (check.message || "Tài khoản không hợp lệ")); return;
+            if (check.status !== 'success') {
+                // Nếu là BI thì cho qua (vì có thể Boss chưa kịp khai báo tên mình vào sheet Auth)
+                if (IS_FROM_BI) {
+                    alert("⚠️ Chú ý: Boss chưa khai báo ID Folder/Sheet trong sheet Auth!");
+                } else {
+                    alert("❌ Lỗi: " + check.message); return;
                 }
-
-                const userData = check.userData;
-                const isUserBoss = managerRegex.test(userData.user);
-
-                // KIỂM TRA CỘT A (BOSS) - CHỈ DÀNH CHO USER NETLIFY
-                if (!userData.boss && !isUserBoss) {
-                    alert("🚫 Tài khoản của bạn không có quyền sử dụng tool này. Hãy báo quản lý khai báo tài khoản!");
-                    return;
-                }
-
-                IS_MANAGER = isUserBoss;
-                SYSTEM_USER = userData.user;
-                CURRENT_USER = (userData.name && userData.name !== "") ? `${userData.name} - ${userData.user}` : userData.user;
-                MANAGER_SHEET_ID = userData.sheetId;
-                
-                EMP_SESSION = { 
-                    user: userData.user, shop: userData.shop, sheetId: MANAGER_SHEET_ID, 
-                    mgrUser: userData.boss || userData.user, fn: userData.name, role: userData.role || "NV" 
-                };
-            } catch (e) {
-                if (ld) ld.remove();
-                alert("❌ Lỗi kết nối hệ thống xác thực!"); return;
             }
+
+            const userData = check.userData || {};
+            
+            // BI mặc định là Manager, Netlify thì theo kết quả GAS
+            IS_MANAGER = IS_FROM_BI ? true : userData.isBoss;
+            SYSTEM_USER = userToCheck;
+            CURRENT_USER = userData.name ? `${userData.name} - ${userToCheck}` : userToCheck;
+            
+            MANAGER_SHEET_ID = userData.sheetId || "";
+            
+            EMP_SESSION = { 
+                user: userToCheck, 
+                folderId: userData.folderId || "", 
+                sheetId: userData.sheetId || "", 
+                mgrUser: (IS_FROM_BI || userData.isBoss) ? userToCheck : (userData.boss || ""), 
+                fn: userData.name || "", 
+                role: "NV" 
+            };
+
+            // Tự động điền cho Boss
+            if (IS_MANAGER) {
+                setTimeout(() => {
+                    if ($('inp-folder-id')) $('inp-folder-id').value = userData.folderId || "";
+                    if ($('inp-sheet-id')) $('inp-sheet-id').value = userData.sheetId || "";
+                    if (userData.folderId || userData.sheetId) lockConfigInputs(true);
+                }, 500);
+            }
+
+        } catch (e) {
+            if (ld) ld.remove();
+            alert("❌ Lỗi kết nối dữ liệu!"); return;
         }
 
         // --- TIẾP TỤC DỰNG UI ---
