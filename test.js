@@ -38,8 +38,7 @@
         if (savedGuest) SYSTEM_USER = JSON.parse(savedGuest).user || "---";
     }
 
-    const managerRegex = /^\d+\s*-\s*.+$/;
-    let IS_MANAGER = managerRegex.test(SYSTEM_USER);
+    let IS_MANAGER = false; 
     let CURRENT_USER = IS_MANAGER ? SYSTEM_USER : "";
     
     let EMP_SESSION = JSON.parse(localStorage.getItem('bc_emp_session') || "null");
@@ -2182,14 +2181,20 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
             };
         }
         
-        // Tự động chuyển màn hình dựa trên quyền đã check ở Bước 2
+        // --- ĐOẠN KHỞI CHẠY SAU KHI ĐÃ NHẬN DỮ LIỆU TỪ GAS ---
         if (IS_MANAGER) {
             switchSc('sc-manager');
-            await loadConfig();
+            // Cập nhật lại MANAGER_SHEET_ID để loadStatistics chạy đúng
+            if (EMP_SESSION.sheetId) {
+                MANAGER_SHEET_ID = EMP_SESSION.sheetId;
+                await loadStatistics();
+            } else {
+                $('stat-list-container').innerHTML = `<div style="text-align:center; color:#fbbf24; padding:20px;">Bạn chưa khai báo ID Sheet Lịch sử trong tab Cài Đặt!</div>`;
+            }
         } else {
             switchSc('sc-report');
             updateEmpTabs();
-            loadEmployeeHistory();
+            await loadEmployeeHistory();
         }
     };
 
