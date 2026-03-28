@@ -730,48 +730,48 @@
         try {
             // Cả BI và Netlify đều gọi cái này để lấy ID Folder/Sheet về
             let res = await universalFetch({
-                method: "POST",
-                url: API_URL_MAIN,
-                data: JSON.stringify({ action: "check_permission", user: String(userToCheck) })
-            });
-            let check = JSON.parse(res);
-            if (ld) ld.remove();
+                    method: "POST",
+                    url: API_URL_MAIN,
+                    data: JSON.stringify({ action: "check_permission", user: String(userToCheck) })
+                });
+                let check = JSON.parse(res);
+                if (ld) ld.remove();
 
-            if (check.status !== 'success') {
-                // Nếu là BI thì cho qua (vì có thể Boss chưa kịp khai báo tên mình vào sheet Auth)
-                if (IS_FROM_BI) {
-                    alert("⚠️ Chú ý: Boss chưa khai báo ID Folder/Sheet trong sheet Auth!");
+                if (check.status !== 'success') {
+                    // Nếu lỗi và là BI, vẫn cho vào màn quản lý nhưng báo chưa khai báo
+                    if (IS_FROM_BI) {
+                        alert("⚠️ Tài khoản Boss chưa có trong sheet Auth. Hãy liên hệ Admin!");
+                        IS_MANAGER = true; 
+                        CURRENT_USER = userToCheck;
+                    } else {
+                        alert("❌ " + check.message); return;
+                    }
                 } else {
-                    alert("❌ Lỗi: " + check.message); return;
+                    const userData = check.userData;
+                    // FIX LỖI 1: Không gán bừa IS_MANAGER nếu là nhân viên truy cập Netlify
+                    IS_MANAGER = IS_FROM_BI ? true : userData.isBoss;
+                    SYSTEM_USER = userData.user;
+                    // FIX LỖI 2: Hiển thị tên Boss từ Cột B
+                    CURRENT_USER = userData.name; 
+                    
+                    MANAGER_SHEET_ID = userData.sheetId;
+                    EMP_SESSION = { 
+                        user: userData.user, 
+                        folderId: userData.folderId, 
+                        sheetId: userData.sheetId, 
+                        mgrUser: (IS_FROM_BI || userData.isBoss) ? userData.user : userData.boss, 
+                        fn: userData.name, 
+                        role: "NV" 
+                    };
                 }
-            }
 
-            const userData = check.userData || {};
-            
-            // BI mặc định là Manager, Netlify thì theo kết quả GAS
-            IS_MANAGER = IS_FROM_BI ? true : userData.isBoss;
-            SYSTEM_USER = userToCheck;
-            CURRENT_USER = userData.name ? `${userData.name} - ${userToCheck}` : userToCheck;
-            
-            MANAGER_SHEET_ID = userData.sheetId || "";
-            
-            EMP_SESSION = { 
-                user: userToCheck, 
-                folderId: userData.folderId || "", 
-                sheetId: userData.sheetId || "", 
-                mgrUser: (IS_FROM_BI || userData.isBoss) ? userToCheck : (userData.boss || ""), 
-                fn: userData.name || "", 
-                role: "NV" 
-            };
-
-            // Tự động điền cho Boss
-            if (IS_MANAGER) {
-                setTimeout(() => {
-                    if ($('inp-folder-id')) $('inp-folder-id').value = userData.folderId || "";
-                    if ($('inp-sheet-id')) $('inp-sheet-id').value = userData.sheetId || "";
-                    if (userData.folderId || userData.sheetId) lockConfigInputs(true);
-                }, 500);
-            }
+                // Điền ID cho Quản lý
+                if (IS_MANAGER) {
+                    setTimeout(() => {
+                        if ($('inp-folder-id')) $('inp-folder-id').value = EMP_SESSION.folderId || "";
+                        if ($('inp-sheet-id')) $('inp-sheet-id').value = EMP_SESSION.sheetId || "";
+                    }, 500);
+                }
 
         } catch (e) {
             if (ld) ld.remove();
@@ -963,31 +963,32 @@
             };
 
         const loadConfig = async () => {
-                $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang tải dữ liệu...";
-                try {
-                    let res = await universalFetch({ method:"POST", url: API_URL_MAIN, data: JSON.stringify({action:"get_config_manager", user: CURRENT_USER})});
-                    let data = JSON.parse(res);
-                    if(data.status === 'success') {
-                        $('inp-folder-id').value = data.folderId || "";
-                        MANAGER_SHEET_ID = data.sheetId || ""; 
-                        $('inp-sheet-id').value = MANAGER_SHEET_ID;
-                        
-                        // ĐÓNG BĂNG ID NẾU CÓ DỮ LIỆU
-                        if (data.folderId || data.sheetId) {
-                            lockConfigInputs(true);
-                        }
-
-                        MANAGER_EMPLOYEES = data.employees && data.employees !== "[]" ? JSON.parse(data.employees) :[];
-                        renderNV();
-                        if(MANAGER_SHEET_ID) {
-                            await loadStatistics(); 
-                        } else {
-                            $('stat-list-container').innerHTML = `<div style="text-align:center; color:#fbbf24; padding:20px;">Vui lòng cài đặt ID Sheet ở tab Cài Đặt trước!</div>`;
-                        }
-                    }
-                } catch(e) { $('stat-list-container').innerHTML = `<div style="color:#ef4444; text-align:center;">Lỗi mạng! Không tải được cấu hình.</div>`; }
-                $('bc-loading').style.display = 'none';
-            };
+            if (!SYSTEM_USER || SYSTEM_USER === "---") return;
+            $('bc-loading').style.display = 'flex';
+            $('bc-load-text').innerText = "Đang đồng bộ danh sách nhân viên...";
+            try {
+                let res = await universalFetch({ 
+                    method: "POST", 
+                    url: API_URL_MAIN, 
+                    data: JSON.stringify({ action: "get_config_manager", user: SYSTEM_USER }) 
+                });
+                let data = JSON.parse(res);
+                if (data.status === 'success') {
+                    // Cập nhật IDs
+                    if ($('inp-folder-id')) $('inp-folder-id').value = data.folderId || "";
+                    if ($('inp-sheet-id')) $('inp-sheet-id').value = data.sheetId || "";
+                    
+                    MANAGER_SHEET_ID = data.sheetId || "";
+                    
+                    // Cập nhật danh sách nhân viên (Lấy từ sheet User)
+                    MANAGER_EMPLOYEES = data.employees ? JSON.parse(data.employees) : [];
+                    renderNV(); 
+                    
+                    if (MANAGER_SHEET_ID) await loadStatistics();
+                }
+            } catch (e) { console.error("Lỗi loadConfig:", e); }
+            $('bc-loading').style.display = 'none';
+        };
             loadConfig();
 
         const loadEmployeeHistory = async () => {
