@@ -963,6 +963,34 @@
                 }
             };
 
+        const loadConfig = async () => {
+                $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang tải dữ liệu...";
+                try {
+                    let res = await universalFetch({ method:"POST", url: API_URL_MAIN, data: JSON.stringify({action:"get_config_manager", user: CURRENT_USER})});
+                    let data = JSON.parse(res);
+                    if(data.status === 'success') {
+                        $('inp-folder-id').value = data.folderId || "";
+                        MANAGER_SHEET_ID = data.sheetId || ""; 
+                        $('inp-sheet-id').value = MANAGER_SHEET_ID;
+                        
+                        // ĐÓNG BĂNG ID NẾU CÓ DỮ LIỆU
+                        if (data.folderId || data.sheetId) {
+                            lockConfigInputs(true);
+                        }
+
+                        MANAGER_EMPLOYEES = data.employees && data.employees !== "[]" ? JSON.parse(data.employees) :[];
+                        renderNV();
+                        if(MANAGER_SHEET_ID) {
+                            await loadStatistics(); 
+                        } else {
+                            $('stat-list-container').innerHTML = `<div style="text-align:center; color:#fbbf24; padding:20px;">Vui lòng cài đặt ID Sheet ở tab Cài Đặt trước!</div>`;
+                        }
+                    }
+                } catch(e) { $('stat-list-container').innerHTML = `<div style="color:#ef4444; text-align:center;">Lỗi mạng! Không tải được cấu hình.</div>`; }
+                $('bc-loading').style.display = 'none';
+            };
+            loadConfig();
+
         const loadEmployeeHistory = async () => {
                 if(!EMP_SESSION || !EMP_SESSION.sheetId) return;
                 $('bc-loading').style.display = 'flex';
@@ -1539,33 +1567,7 @@ FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: fullKeeperName }, sheetId, (
             
             $('tab-btn-stat').onclick = () => { $('tab-btn-stat').classList.add('active'); $('tab-btn-config').classList.remove('active'); $('tab-btn-fund').classList.remove('active'); $('tab-stat').classList.add('active'); $('tab-config').classList.remove('active'); $('tab-fund').classList.remove('active'); };
             $('tab-btn-config').onclick = () => { $('tab-btn-config').classList.add('active'); $('tab-btn-stat').classList.remove('active'); $('tab-btn-fund').classList.remove('active'); $('tab-config').classList.add('active'); $('tab-stat').classList.remove('active'); $('tab-fund').classList.remove('active'); };
-            const loadConfig = async () => {
-                $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang tải dữ liệu...";
-                try {
-                    let res = await universalFetch({ method:"POST", url: API_URL_MAIN, data: JSON.stringify({action:"get_config_manager", user: CURRENT_USER})});
-                    let data = JSON.parse(res);
-                    if(data.status === 'success') {
-                        $('inp-folder-id').value = data.folderId || "";
-                        MANAGER_SHEET_ID = data.sheetId || ""; 
-                        $('inp-sheet-id').value = MANAGER_SHEET_ID;
-                        
-                        // ĐÓNG BĂNG ID NẾU CÓ DỮ LIỆU
-                        if (data.folderId || data.sheetId) {
-                            lockConfigInputs(true);
-                        }
-
-                        MANAGER_EMPLOYEES = data.employees && data.employees !== "[]" ? JSON.parse(data.employees) :[];
-                        renderNV();
-                        if(MANAGER_SHEET_ID) {
-                            await loadStatistics(); 
-                        } else {
-                            $('stat-list-container').innerHTML = `<div style="text-align:center; color:#fbbf24; padding:20px;">Vui lòng cài đặt ID Sheet ở tab Cài Đặt trước!</div>`;
-                        }
-                    }
-                } catch(e) { $('stat-list-container').innerHTML = `<div style="color:#ef4444; text-align:center;">Lỗi mạng! Không tải được cấu hình.</div>`; }
-                $('bc-loading').style.display = 'none';
-            };
-            loadConfig();
+            
 
             $('btn-refresh-stat').onclick = async () => {
                 if(!MANAGER_SHEET_ID) return alert("Vui lòng cài đặt ID Sheet trước!");
