@@ -1697,7 +1697,7 @@
                         
                     } else {
                         // Trạng thái 2: Không tìm thấy khai báo từ Boss
-                        showErrorScreen("KHÔNG CÓ QUYỀN", "Tài khoản của bạn chưa được Quản lý khai báo quyền truy cập.\nHãy báo lại với Quản lý để được cấp quyền!");
+                       showErrorScreen("KHÔNG CÓ QUYỀN", data.message || "Tài khoản của bạn chưa được Quản lý khai báo quyền truy cập.\nHãy báo lại với Quản lý để được cấp quyền!");
                     }
                 } catch(e) {
                     showErrorScreen("LỖI MÁY CHỦ", "Không thể kết nối đến máy chủ. Vui lòng thử lại sau!");
