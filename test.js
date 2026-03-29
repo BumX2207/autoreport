@@ -1359,12 +1359,21 @@
                 if(!fId || !sId) return alert("Nhập đủ ID Folder và ID Sheet!");
                 $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang lưu cấu hình...";
                 try {
+                    // Chú ý API_URL_APP hay API_URL_MAIN tùy theo bên nào chứa hàm syncEmployeesToSheet của bạn nhé
                     let res = await universalFetch({ method:"POST", url: API_URL_MAIN, data: JSON.stringify({ action: "save_config_manager", user: CURRENT_USER, folderId: fId, sheetId: sId, employees: JSON.stringify(MANAGER_EMPLOYEES) }) });
-                    if(JSON.parse(res).status === 'success') { 
-                        alert("✅ Đã lưu cấu hình!"); 
-                        MANAGER_SHEET_ID = sId; lockConfigInputs(true); await loadStatistics(); 
+                    let json = JSON.parse(res);
+                    if(json.status === 'success') { 
+                        alert("✅ Đã lưu cấu hình thành công!"); 
+                        MANAGER_SHEET_ID = sId; 
+                        lockConfigInputs(true); 
+                        await loadStatistics(); 
+                    } else {
+                        // Hiển thị lỗi trùng User cho Quản lý biết
+                        alert("❌ LỖI: " + json.message);
                     }
-                } catch(e) { alert("❌ Lỗi mạng!"); }
+                } catch(e) { 
+                    alert("❌ Lỗi mạng hoặc máy chủ không phản hồi!"); 
+                }
                 $('bc-loading').style.display = 'none';
             };
 
