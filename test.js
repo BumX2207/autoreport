@@ -1664,14 +1664,36 @@
                     // 2. Gọi API để check Boss & quyền
                     let res = await universalFetch({
                         method: "POST",
-                        url: API_URL_APP, // Đảm bảo API này trỏ đến đúng script có hàm doPost checkPermission
+                        url: API_URL_APP, 
                         data: JSON.stringify({ action: "check_permission", user: guestData.user, userName: guestData.user })
                     });
                     
                     let data = JSON.parse(res);
                     if (data.status === 'success' && data.userData) {
-                        // User hợp lệ
                         let uData = data.userData;
+                        
+                        // =========================================================
+                        // TỰ ĐỘNG SỬA LỖI TRỐNG ID FOLDER VÀ ID SHEET
+                        // Nếu API_URL_APP trả về ID bị rỗng (do lệch cột), 
+                        // tool sẽ gọi sang API_URL_MAIN để lấy ID chuẩn của Boss.
+                        // =========================================================
+                        if (!uData.folderId || !uData.sheetId) {
+                            try {
+                                let bossRes = await universalFetch({
+                                    method: "POST",
+                                    url: API_URL_MAIN,
+                                    data: JSON.stringify({ action: "get_config_manager", user: uData.boss })
+                                });
+                                let bossData = JSON.parse(bossRes);
+                                if (bossData.status === 'success') {
+                                    uData.folderId = bossData.folderId || uData.folderId;
+                                    uData.sheetId = bossData.sheetId || uData.sheetId;
+                                }
+                            } catch (err) {
+                                console.log("Không thể fetch dự phòng ID Boss");
+                            }
+                        }
+                        // =========================================================
                         
                         // Nạp dữ liệu vào EMP_SESSION
                         EMP_SESSION = {
@@ -1697,8 +1719,7 @@
                         $('tab-btn-emp-form').click();
                         
                     } else {
-                        // Trạng thái 2: Không tìm thấy khai báo từ Boss
-                       showErrorScreen("KHÔNG CÓ QUYỀN", data.message || "Tài khoản của bạn chưa được Quản lý khai báo quyền truy cập.\nHãy báo lại với Quản lý để được cấp quyền!");
+                        showErrorScreen("KHÔNG CÓ QUYỀN", data.message || "Tài khoản của bạn chưa được Quản lý khai báo quyền truy cập.\nHãy báo lại với Quản lý để được cấp quyền!");
                     }
                 } catch(e) {
                     showErrorScreen("LỖI MÁY CHỦ", "Không thể kết nối đến máy chủ. Vui lòng thử lại sau!");
