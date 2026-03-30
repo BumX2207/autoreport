@@ -647,7 +647,15 @@
     };
 
     const runTool = () => {
-        if (document.getElementById('bc-app-wrapper')) { document.getElementById('bc-app-wrapper').style.display = 'flex'; return; }
+        const appWrapper = document.getElementById('bc-app-wrapper');
+        if (appWrapper) { 
+            appWrapper.style.display = 'flex'; 
+            // FIX: Gọi lại hàm kiểm tra đăng nhập mỗi khi mở lại popup (nếu là nhân viên)
+            if (typeof appWrapper.recheckAuth === 'function') {
+                appWrapper.recheckAuth();
+            }
+            return; 
+        }
 
         const app = document.createElement('div'); app.id = 'bc-app-wrapper';
         app.innerHTML = `
@@ -1681,6 +1689,13 @@
                     return;
                 }
 
+                // FIX: Tối ưu - Nếu đã check API thành công ở lần trước đó cho đúng user này, thì chỉ cần vào thẳng màn hình báo cáo
+                if (EMP_SESSION && EMP_SESSION.user === guestData.user && EMP_SESSION.sheetId) {
+                    $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.fn ? EMP_SESSION.fn + ' - ' : ''}${EMP_SESSION.user}`; 
+                    switchSc('sc-report');
+                    return;
+                }
+
                 $('bc-loading').style.display = 'flex';
                 $('bc-load-text').innerText = "Đang kiểm tra quyền truy cập...";
 
@@ -1698,9 +1713,6 @@
                         
                         // =========================================================
                         // TỰ ĐỘNG SỬA LỖI TRỐNG ID FOLDER VÀ ID SHEET
-                        // Nếu API_URL_APP trả về ID bị rỗng (do lệch cột), 
-                        // tool sẽ gọi sang API_URL_MAIN để lấy ID chuẩn của Boss.
-                        // =========================================================
                         if (!uData.folderId || !uData.sheetId) {
                             try {
                                 let bossRes = await universalFetch({
@@ -1751,6 +1763,8 @@
                     $('bc-loading').style.display = 'none';
                 }
             };
+
+            app.recheckAuth = checkEmployeeAuth;
 
             // Gọi SSO ngay khi chạy tool
             checkEmployeeAuth();
