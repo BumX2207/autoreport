@@ -925,7 +925,9 @@
         formatVNĐ: (num) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num),
         
         loadAndRender: async (containerId, isManager, sheetId, currentUser, forceReload = false) => {
-            if (!forceReload && FUND_SYSTEM.loaded[containerId]) return;
+            // [FIX CACHE] Kiểm tra xem User đang đăng nhập có giống với User đã lưu cache không
+            if (!forceReload && FUND_SYSTEM.loaded[containerId] === currentUser) return;
+            
             const container = document.getElementById(containerId);
             if (!container) return;
 
@@ -936,8 +938,11 @@
                 let res = await universalFetch({ method: "POST", url: API_URL_HISTORY, data: JSON.stringify({ action: "fund_get", sheetId: sheetId }) });
                 let json = JSON.parse(res);
                 if (json.status !== 'success') throw new Error("Lỗi tải dữ liệu.");
+                
                 FUND_SYSTEM.renderUI(containerId, isManager, currentUser, sheetId, json.keeper, json.trans);
-                FUND_SYSTEM.loaded[containerId] = true; 
+                
+                // [FIX CACHE] Lưu lại tên User đã load quỹ, thay vì chỉ lưu true
+                FUND_SYSTEM.loaded[containerId] = currentUser; 
             } catch (e) { container.innerHTML = `<div style="color:#ef4444; text-align:center;">Lỗi kết nối Quỹ: ${e.message}</div>`; }
         },
 
