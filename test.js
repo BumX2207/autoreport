@@ -280,8 +280,6 @@
         .fund-sub-tabs { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px; overflow-x: auto; }
         .fund-sub-tab { padding: 8px 15px; background: rgba(0,0,0,0.3); border-radius: 6px; cursor: pointer; color: #94a3b8; font-weight: bold; border: 1px solid transparent; transition: 0.2s; white-space: nowrap; }
         .fund-sub-tab.active { background: rgba(56,189,248,0.1); color: #38bdf8; border-color: #38bdf8; }
-        .fund-shop-content { display: none; animation: fadeIn 0.3s; }
-        .fund-shop-content.active { display: block; }
     `;
 
     const processImages = async (files) => {
@@ -920,7 +918,7 @@
         handlePreview('file-toroi', 'prev-toroi'); handlePreview('file-dangbai', 'prev-dangbai'); handlePreview('file-live', 'prev-live');
 
     // ===============================================================
-    // HỆ THỐNG QUẢN LÝ QUỸ SIÊU THỊ (HỖ TRỢ ĐA KHO - FIX CRASH)
+    // HỆ THỐNG QUẢN LÝ QUỸ SIÊU THỊ (ĐA KHO - CHUẨN BACKEND)
     // ===============================================================
     const FUND_SYSTEM = {
         loaded: {}, 
@@ -944,6 +942,7 @@
         },
 
         renderUI: (containerId, isManager, currentUser, sheetId, keeper, trans) => {
+            // Lọc ra các kho Boss có quản lý (Tối đa 3)
             let shops =[];
             if (isManager) {
                 shops =[...new Set(MANAGER_EMPLOYEES.map(e => String(e.s).trim()).filter(s => s))].slice(0, 3);
@@ -952,7 +951,7 @@
                 shops =[EMP_SESSION.shop || 'CHUNG'];
             }
 
-            // CHỐNG CRASH KHI KEEPER RỖNG
+            // Xử lý Thủ quỹ: Giải mã JSON an toàn, nếu cũ thì nhét vào kho đầu tiên
             let keeperObj = {};
             if (keeper) {
                 let kStr = String(keeper).trim();
@@ -961,33 +960,25 @@
                 } else { keeperObj[shops[0]] = kStr; }
             }
 
+            // Khởi tạo quỹ cho từng Kho
             let shopTrans = {};
             shops.forEach(s => shopTrans[s] = { balance: 0, list:[] });
 
+            // Rải dữ liệu thu/chi về các kho tương ứng
             trans.forEach(t => {
-                let assignedShop = shops[0];
-                let displayReason = t.reason;
-                
-                let match = t.reason.match(/^\[(.*?)\]\s*(.*)$/);
-                if (match) {
-                    if (shops.includes(match[1]) || !isManager) assignedShop = match[1];
-                    displayReason = match[2];
-                } else {
-                    if (isManager) {
-                        let emp = MANAGER_EMPLOYEES.find(e => String(e.u).toLowerCase() === String(t.user).toLowerCase());
-                        if (emp && shops.includes(emp.s)) assignedShop = emp.s;
-                    }
+                let assignedShop = t.shop ? String(t.shop).trim() : '';
+                // Nếu giao dịch cũ không có mã kho -> Dò tìm theo tên nhân viên, nếu không thấy -> Gắn vào kho đầu tiên
+                if (!assignedShop || !shops.includes(assignedShop)) {
+                    let emp = MANAGER_EMPLOYEES.find(e => String(e.u).toLowerCase() === String(t.user).toLowerCase());
+                    assignedShop = (emp && shops.includes(String(emp.s).trim())) ? String(emp.s).trim() : shops[0];
                 }
 
-                if (!shopTrans[assignedShop]) assignedShop = shops[0];
+                if (!shopTrans[assignedShop]) shopTrans[assignedShop] = { balance: 0, list: [] };
 
-                t.displayReason = displayReason; 
-                if (shopTrans[assignedShop]) {
-                    shopTrans[assignedShop].list.push(t);
-                    if (t.status === 'Approved') {
-                        if (t.type === 'Thu') shopTrans[assignedShop].balance += parseInt(t.amount);
-                        else shopTrans[assignedShop].balance -= parseInt(t.amount);
-                    }
+                shopTrans[assignedShop].list.push(t);
+                if (t.status === 'Approved') {
+                    if (t.type === 'Thu') shopTrans[assignedShop].balance += parseInt(t.amount);
+                    else shopTrans[assignedShop].balance -= parseInt(t.amount);
                 }
             });
 
@@ -998,23 +989,23 @@
                 </div>
             `;
 
+            // Vẽ Tab nếu là Manager và có từ 2 Kho trở lên
             if (isManager && shops.length > 1) {
-                html += `<div class="fund-sub-tabs" id="fund-sub-tabs-${containerId}">`;
+                html += `<div class="fund-sub-tabs">`;
                 shops.forEach((s, idx) => {
-                    let safeS = String(s).replace(/[^a-zA-Z0-9]/g, '_'); // Bọc mã HTML an toàn
-                    html += `<div class="fund-sub-tab ${idx === 0 ? 'active' : ''}" data-target="fund-shop-${containerId}-${safeS}">🏬 Kho ${s}</div>`;
+                    html += `<div class="fund-sub-tab ${idx === 0 ? 'active' : ''}" data-target="fund-shop-${containerId}-${s}">🏬 Kho ${s}</div>`;
                 });
                 html += `</div>`;
             }
 
+            // Vẽ giao diện cho từng kho
             shops.forEach((s, idx) => {
-                let safeS = String(s).replace(/[^a-zA-Z0-9]/g, '_');
                 const currentKeeper = keeperObj[s] || "";
                 const isKeeper = currentKeeper && String(currentKeeper).toLowerCase().includes(String(currentUser).toLowerCase());
                 const canAdd = isManager || isKeeper;
+                const displayStyle = idx === 0 ? 'display:block;' : 'display:none;';
 
-                html += `<div id="fund-shop-${containerId}-${safeS}" class="fund-shop-content ${idx === 0 ? 'active' : ''}">`;
-                
+                html += `<div id="fund-shop-${containerId}-${s}" class="fund-shop-content ${idx === 0 ? 'active' : ''}" style="${displayStyle}">`;
                 html += `
                     <div class="fund-dash">
                         <div class="fund-card-main">
@@ -1026,7 +1017,7 @@
                 
                 if (isManager) {
                     let empOpts = `<option value="">-- Chọn nhân viên --</option>`;
-                    MANAGER_EMPLOYEES.filter(e => String(e.s) === String(s)).forEach(e => {
+                    MANAGER_EMPLOYEES.filter(e => String(e.s).trim() === String(s).trim()).forEach(e => {
                         const sel = (currentKeeper && String(currentKeeper).toLowerCase().includes(String(e.u).toLowerCase())) ? 'selected' : '';
                         empOpts += `<option value="${e.u}" ${sel}>${getEmpDisplayName(e.u)}</option>`;
                     });
@@ -1034,14 +1025,13 @@
                     const isLocked = currentKeeper ? true : false;
                     html += `
                                 <div style="display:flex; align-items:center; gap:5px;">
-                                    <select id="fund-select-keeper-${containerId}-${safeS}" class="fund-keeper-select ${isLocked ? 'locked' : ''}" ${isLocked ? 'disabled' : ''}>${empOpts}</select>
-                                    <button class="fund-btn-action btn-fund-setkeeper" data-shop="${s}" data-safe="${safeS}" data-mode="${isLocked ? 'edit' : 'save'}" style="background:${isLocked ? '#f59e0b' : '#38bdf8'};">${isLocked ? 'Thay đổi' : 'Giao quỹ'}</button>
+                                    <select id="fund-select-keeper-${containerId}-${s}" class="fund-keeper-select ${isLocked ? 'locked' : ''}" ${isLocked ? 'disabled' : ''}>${empOpts}</select>
+                                    <button class="fund-btn-action btn-fund-setkeeper" data-shop="${s}" data-mode="${isLocked ? 'edit' : 'save'}" style="background:${isLocked ? '#f59e0b' : '#38bdf8'};">${isLocked ? 'Thay đổi' : 'Giao quỹ'}</button>
                                 </div>
                     `;
                 } else {
                     html += `<div><span class="fund-keeper-select locked" style="display:inline-block;">👤 ${currentKeeper || 'Chưa chỉ định'}</span></div>`;
                 }
-                
                 html += `</div></div></div>`;
 
                 if (canAdd) {
@@ -1055,7 +1045,7 @@
                 html += `<div class="bc-sec-title">📝 LỊCH SỬ THU CHI</div><div class="fund-list">`;
                 
                 if (shopTrans[s].list.length === 0) {
-                    html += `<div style="padding:20px; text-align:center; color:#94a3b8; border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px;">Chưa có phát sinh thu/chi nào cho Kho ${s}.</div>`;
+                    html += `<div style="padding:20px; text-align:center; color:#94a3b8; border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px;">Chưa có phát sinh thu/chi nào.</div>`;
                 } else {
                     shopTrans[s].list.slice().reverse().forEach(t => {
                         const isThu = t.type === 'Thu';
@@ -1081,7 +1071,7 @@
                         html += `</div></div>
                                 <div class="fi-row-2">
                                     <div class="fund-icon ${isThu ? 'f-icon-thu' : 'f-icon-chi'}">${isThu ? '↓' : '↑'}</div>
-                                    <div class="fi-reason" title="${t.displayReason}">${t.displayReason}</div>
+                                    <div class="fi-reason" title="${t.reason}">${t.reason}</div>
                                     <div class="fi-user" title="${getEmpDisplayName(t.user)}">👤 ${String(getEmpDisplayName(t.user)).split('-')[0].trim()}</div>
                                     <div class="fi-amount ${isThu ? 'f-text-thu' : 'f-text-chi'}">${isThu ? '+' : '-'}${FUND_SYSTEM.formatVNĐ(t.amount)}</div>
                                 </div>
@@ -1089,32 +1079,41 @@
                         `;
                     });
                 }
-                html += `</div></div>`; 
+                html += `</div></div>`; // Đóng kho block
             });
 
             document.getElementById(containerId).innerHTML = html;
 
-            const btnRefresh = document.getElementById(`btn-refresh-fund-${containerId}`);
-            if (btnRefresh) btnRefresh.onclick = () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true);
-
-            const tabContainer = document.getElementById(`fund-sub-tabs-${containerId}`);
+            // Xử lý chuyển đổi Tab
+            const containerEl = document.getElementById(containerId);
+            const tabContainer = containerEl.querySelector('.fund-sub-tabs');
             if (tabContainer) {
                 tabContainer.querySelectorAll('.fund-sub-tab').forEach(tab => {
                     tab.onclick = () => {
                         tabContainer.querySelectorAll('.fund-sub-tab').forEach(t => t.classList.remove('active'));
-                        document.getElementById(containerId).querySelectorAll('.fund-shop-content').forEach(c => c.classList.remove('active'));
+                        containerEl.querySelectorAll('.fund-shop-content').forEach(c => {
+                            c.classList.remove('active');
+                            c.style.display = 'none';
+                        });
                         tab.classList.add('active');
-                        document.getElementById(tab.getAttribute('data-target')).classList.add('active');
+                        const targetEl = document.getElementById(tab.getAttribute('data-target'));
+                        if (targetEl) {
+                            targetEl.classList.add('active');
+                            targetEl.style.display = 'block';
+                        }
                     };
                 });
             }
 
+            // Bind Events Buttons
+            const btnRefresh = document.getElementById(`btn-refresh-fund-${containerId}`);
+            if (btnRefresh) btnRefresh.onclick = () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true);
+
             if (isManager) {
-                document.getElementById(containerId).querySelectorAll('.btn-fund-setkeeper').forEach(btn => {
+                containerEl.querySelectorAll('.btn-fund-setkeeper').forEach(btn => {
                     btn.onclick = () => {
                         const s = btn.getAttribute('data-shop');
-                        const safeS = btn.getAttribute('data-safe');
-                        const selKeeper = document.getElementById(`fund-select-keeper-${containerId}-${safeS}`);
+                        const selKeeper = document.getElementById(`fund-select-keeper-${containerId}-${s}`);
                         let mode = btn.getAttribute('data-mode');
                         
                         if (mode === 'edit') {
@@ -1130,11 +1129,11 @@
                 });
             }
 
-            document.getElementById(containerId).querySelectorAll('.btn-fund-add').forEach(btn => {
+            containerEl.querySelectorAll('.btn-fund-add').forEach(btn => {
                 btn.onclick = () => FUND_SYSTEM.showTransactionModal(btn.getAttribute('data-type'), isManager, currentUser, sheetId, containerId, btn.getAttribute('data-shop'));
             });
 
-            document.getElementById(containerId).querySelectorAll('.fund-action-wrap').forEach(wrap => {
+            containerEl.querySelectorAll('.fund-action-wrap').forEach(wrap => {
                 wrap.onclick = (e) => {
                     e.stopPropagation(); 
                     if (e.target.classList.contains('fund-act-delete')) {
@@ -1145,7 +1144,7 @@
                 };
             });
 
-            document.getElementById(containerId).querySelectorAll('.fund-item-new').forEach(item => {
+            containerEl.querySelectorAll('.fund-item-new').forEach(item => {
                 item.onclick = (e) => {
                     const transObj = trans.find(x => x.id === item.getAttribute('data-id'));
                     if(transObj) FUND_SYSTEM.showDetailModal(transObj, item.getAttribute('data-shop'));
@@ -1196,10 +1195,10 @@
 
                 const [yyyy, mm, dd] = rawDate.split('-');
                 const status = isManager ? 'Approved' : 'Pending';
-                const finalReason = shopCode ? `[${shopCode}] ${reasonRaw}` : reasonRaw; // Gắn Tag mã Kho
                 
                 modalEl.classList.remove('show'); setTimeout(() => modalEl.remove(), 300);
-                FUND_SYSTEM.executeAPI("fund_add", { type: type, amount: amount, reason: finalReason, user: currentUser, status: status, time: `${dd}-${mm}-${yyyy}` }, sheetId, () => {
+                // TRUYỀN shopCode THEO ĐÚNG CẤU TRÚC BACKEND
+                FUND_SYSTEM.executeAPI("fund_add", { type: type, amount: amount, reason: reasonRaw, user: currentUser, status: status, time: `${dd}-${mm}-${yyyy}`, shop: shopCode }, sheetId, () => {
                     FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true);
                 });
             };
@@ -1224,7 +1223,7 @@
                             <div style="background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:15px;">
                                 <div style="margin-bottom:12px;"><div style="font-size:11px; color:#94a3b8; margin-bottom:3px;">Thời gian:</div><div style="font-size:14px; color:#fff; font-weight:bold;">🕒 ${t.time}</div></div>
                                 <div style="margin-bottom:12px;"><div style="font-size:11px; color:#94a3b8; margin-bottom:3px;">Người thao tác:</div><div style="font-size:14px; color:#fff; font-weight:bold;">👤 ${getEmpDisplayName(t.user)}</div></div>
-                                <div><div style="font-size:11px; color:#94a3b8; margin-bottom:5px;">Nội dung chi tiết:</div><div style="font-size:14px; color:#fff; line-height:1.5; white-space:pre-wrap; background:rgba(255,255,255,0.02); padding:10px; border-radius:6px; border-left:3px solid ${colorMain};">${t.displayReason || t.reason}</div></div>
+                                <div><div style="font-size:11px; color:#94a3b8; margin-bottom:5px;">Nội dung chi tiết:</div><div style="font-size:14px; color:#fff; line-height:1.5; white-space:pre-wrap; background:rgba(255,255,255,0.02); padding:10px; border-radius:6px; border-left:3px solid ${colorMain};">${t.reason}</div></div>
                             </div>
                         </div>
                     </div>
@@ -1672,71 +1671,103 @@
             // LUỒNG SSO NHÂN VIÊN (THAY THẾ LOGIN THỦ CÔNG)
             // ==========================================
             const checkEmployeeAuth = async () => {
+                // 1. Kiểm tra session trên Netlify
                 let guestStr = localStorage.getItem('tgdd_guest_account_v2');
-                if (!guestStr) { showErrorScreen("CHƯA ĐĂNG NHẬP", "Bạn chưa đăng nhập. Vui lòng đăng nhập ở trang chủ!"); return; }
+                if (!guestStr) {
+                    showErrorScreen("CHƯA ĐĂNG NHẬP", "Bạn chưa đăng nhập. Vui lòng đăng nhập ở màn hình trang chủ để sử dụng tiện ích này!");
+                    return;
+                }
 
                 let guestData;
-                try { guestData = JSON.parse(guestStr); } catch(e) { showErrorScreen("LỖI", "Dữ liệu lỗi. Vui lòng đăng nhập lại!"); return; }
+                try {
+                    guestData = JSON.parse(guestStr);
+                } catch(e) {
+                    showErrorScreen("LỖI DỮ LIỆU", "Dữ liệu đăng nhập bị lỗi. Vui lòng đăng xuất và đăng nhập lại!");
+                    return;
+                }
 
-                $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang kiểm tra quyền truy cập...";
+                // FIX: Tối ưu - Nếu đã check API thành công ở lần trước đó cho đúng user này, thì chỉ cần vào thẳng màn hình báo cáo
+                if (EMP_SESSION && EMP_SESSION.user === guestData.user && EMP_SESSION.sheetId) {
+                    $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.fn ? EMP_SESSION.fn + ' - ' : ''}${EMP_SESSION.user}`; 
+                    switchSc('sc-report');
+                    return;
+                }
+
+                $('bc-loading').style.display = 'flex';
+                $('bc-load-text').innerText = "Đang kiểm tra quyền truy cập...";
 
                 try {
-                    let res = await universalFetch({ method: "POST", url: API_URL_APP, data: JSON.stringify({ action: "check_permission", user: guestData.user, userName: guestData.user }) });
+                    // 2. Gọi API để check Boss & quyền
+                    let res = await universalFetch({
+                        method: "POST",
+                        url: API_URL_APP, 
+                        data: JSON.stringify({ action: "check_permission", user: guestData.user, userName: guestData.user })
+                    });
+                    
                     let data = JSON.parse(res);
                     if (data.status === 'success' && data.userData) {
                         let uData = data.userData;
                         
-                        // --- ĐỒNG BỘ DATA TỪ BOSS ĐỂ LẤY CHÍNH XÁC MÃ KHO VÀ ROLE ---
-                        try {
-                            let bossRes = await universalFetch({ method: "POST", url: API_URL_MAIN, data: JSON.stringify({ action: "get_config_manager", user: uData.boss }) });
-                            let bossData = JSON.parse(bossRes);
-                            if (bossData.status === 'success') {
-                                uData.folderId = bossData.folderId || uData.folderId;
-                                uData.sheetId = bossData.sheetId || uData.sheetId;
-                                
-                                if (bossData.employees && bossData.employees !== "[]") {
-                                    let emps = JSON.parse(bossData.employees);
-                                    let myEmp = emps.find(e => String(e.u).toLowerCase() === String(uData.user).toLowerCase());
-                                    if (myEmp) {
-                                        uData.shop = myEmp.s;
-                                        uData.role = myEmp.role;
-                                        uData.grp = myEmp.grp;
-                                    }
+                        // =========================================================
+                        // TỰ ĐỘNG SỬA LỖI TRỐNG ID FOLDER VÀ ID SHEET
+                        if (!uData.folderId || !uData.sheetId) {
+                            try {
+                                let bossRes = await universalFetch({
+                                    method: "POST",
+                                    url: API_URL_MAIN,
+                                    data: JSON.stringify({ action: "get_config_manager", user: uData.boss })
+                                });
+                                let bossData = JSON.parse(bossRes);
+                                if (bossData.status === 'success') {
+                                    uData.folderId = bossData.folderId || uData.folderId;
+                                    uData.sheetId = bossData.sheetId || uData.sheetId;
                                 }
+                            } catch (err) {
+                                console.log("Không thể fetch dự phòng ID Boss");
                             }
-                        } catch (err) { console.log("Bỏ qua đồng bộ nâng cao"); }
-                        // ------------------------------------------------------------
+                        }
+                        // =========================================================
                         
+                        // Nạp dữ liệu vào EMP_SESSION
                         EMP_SESSION = {
                             user: uData.user || guestData.user,
-                            shop: uData.shop || guestData.shop || "", // Lấy cực chuẩn mã kho của Boss gán
+                            shop: guestData.shop || "",
                             folderId: uData.folderId || "",
                             sheetId: uData.sheetId || "",
                             mgrUser: uData.boss || "", 
                             fn: guestData.name || "",
                             dob: guestData.dob || "",
-                            role: uData.role || guestData.role || "NV",
-                            grp: uData.grp || guestData.grp || ""
+                            role: guestData.role || "NV",
+                            grp: guestData.grp || ""
                         };
                         
                         localStorage.setItem('bc_emp_session', JSON.stringify(EMP_SESSION));
+                        
+                        // Update UI
                         $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.fn ? EMP_SESSION.fn + ' - ' : ''}${EMP_SESSION.user}`; 
                         updateEmpTabs(); 
+                        
+                        // Bay thẳng vào màn hình báo cáo
                         switchSc('sc-report');
                         $('tab-btn-emp-form').click();
+                        
                     } else {
-                        showErrorScreen("KHÔNG CÓ QUYỀN", data.message || "Tài khoản của bạn chưa được Quản lý cấp quyền!");
+                        showErrorScreen("KHÔNG CÓ QUYỀN", data.message || "Tài khoản của bạn chưa được Quản lý khai báo quyền truy cập.\nHãy báo lại với Quản lý để được cấp quyền!");
                     }
-                } catch(e) { showErrorScreen("LỖI MÁY CHỦ", "Không thể kết nối đến máy chủ. Vui lòng thử lại!"); } 
-                finally { $('bc-loading').style.display = 'none'; }
+                } catch(e) {
+                    showErrorScreen("LỖI MÁY CHỦ", "Không thể kết nối đến máy chủ. Vui lòng thử lại sau!");
+                } finally {
+                    $('bc-loading').style.display = 'none';
+                }
             };
+
             app.recheckAuth = checkEmployeeAuth;
+
+            // Gọi SSO ngay khi chạy tool
             checkEmployeeAuth();
 
             const updateEmpTabs = () => {
-                // Chỉ ẩn tab khi Role được khai báo rõ ràng là PG, còn lại mặc định hiện tất cả
-                const isPG = EMP_SESSION && String(EMP_SESSION.role).toUpperCase().includes('PG');
-                if (!isPG) {
+                if (EMP_SESSION && EMP_SESSION.role === 'NV') {
                     if($('tab-btn-emp-personal')) $('tab-btn-emp-personal').style.display = 'block';
                     if($('tab-btn-emp-fund')) $('tab-btn-emp-fund').style.display = 'block';
                 } else {
