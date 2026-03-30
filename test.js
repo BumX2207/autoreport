@@ -961,23 +961,40 @@
             }
 
             // 3. Khởi tạo quỹ cho TẤT CẢ và TỪNG KHO
-            let shopTrans = { 'ALL': { balance: 0, list: [] } };
+            let shopTrans = { 'ALL': { balance: 0, list:[] } };
             actualShops.forEach(s => shopTrans[s] = { balance: 0, list:[] });
 
             // 4. Rải dữ liệu thu/chi về các kho tương ứng
             trans.forEach(t => {
                 let assignedShop = t.shop ? String(t.shop).trim() : '';
 
-                // Xử lý giao dịch cũ chưa có Mã Kho
-                if (!assignedShop || !actualShops.includes(assignedShop)) {
+                // Xử lý giao dịch cũ chưa có Mã Kho (hoặc dính Tag)
+                if (!assignedShop) {
+                    let match = t.reason ? String(t.reason).match(/^\[(.*?)\]\s*(.*)$/) : null;
+                    if (match) {
+                        assignedShop = match[1].trim();
+                        t.reason = match[2]; 
+                    }
+                }
+
+                // Bảo đảm so sánh bất chấp hoa thường
+                let matchedShop = actualShops.find(s => String(s).toLowerCase() === String(assignedShop).toLowerCase());
+
+                if (matchedShop) {
+                    assignedShop = matchedShop;
+                } else {
                     if (isManager) {
                         let emp = MANAGER_EMPLOYEES.find(e => String(e.u).toLowerCase() === String(t.user).toLowerCase());
                         assignedShop = (emp && actualShops.includes(String(emp.s).trim())) ? String(emp.s).trim() : actualShops[0];
                     } else {
-                        // Nhân viên: Nếu giao dịch cũ là của chính họ -> gán vào kho của họ. Nếu không -> Bỏ qua.
-                        if (String(t.user).toLowerCase() === String(currentUser).toLowerCase()) {
+                        // ĐỐI VỚI NHÂN VIÊN: 
+                        if (!assignedShop) {
+                            // Nếu giao dịch cũ hoàn toàn không có mã kho -> Gắn vào kho hiện tại để NV không bị mất tiền
                             assignedShop = actualShops[0];
-                        } else return; 
+                        } else {
+                            // Giao dịch có mã kho khác -> Ẩn đi hoàn toàn
+                            return; 
+                        }
                     }
                 }
 
@@ -988,8 +1005,8 @@
                 if (shopTrans[assignedShop]) {
                     shopTrans[assignedShop].list.push(t);
                     if (t.status === 'Approved') {
-                        if (t.type === 'Thu') shopTrans[assignedShop].balance += parseInt(t.amount);
-                        else shopTrans[assignedShop].balance -= parseInt(t.amount);
+                        if (t.type === 'Thu') shopTrans[assignedShop].balance += parseInt(t.amount || 0);
+                        else shopTrans[assignedShop].balance -= parseInt(t.amount || 0);
                     }
                 }
 
@@ -997,8 +1014,8 @@
                 if (isManager) {
                     shopTrans['ALL'].list.push(t);
                     if (t.status === 'Approved') {
-                        if (t.type === 'Thu') shopTrans['ALL'].balance += parseInt(t.amount);
-                        else shopTrans['ALL'].balance -= parseInt(t.amount);
+                        if (t.type === 'Thu') shopTrans['ALL'].balance += parseInt(t.amount || 0);
+                        else shopTrans['ALL'].balance -= parseInt(t.amount || 0);
                     }
                 }
             });
@@ -1022,7 +1039,7 @@
                 html += `</div>`;
             }
 
-            // Hàm phụ hỗ trợ vẽ danh sách giao dịch (Tránh lặp code)
+            // Hàm phụ hỗ trợ vẽ danh sách giao dịch
             const renderTransactionHTML = (tList, showShopBadge = false, isTabAll = false) => {
                 if (tList.length === 0) return `<div style="padding:20px; text-align:center; color:#94a3b8; border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px;">Chưa có phát sinh thu/chi nào.</div>`;
                 let tHtml = '';
@@ -1038,7 +1055,6 @@
 
                     const shopBadge = showShopBadge ? `<span style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; font-size:10px; margin-right:5px; color:#38bdf8;">Kho ${t.displayShop}</span>` : '';
                     
-                    // Logic duyệt/xóa: Quản lý thấy hết trong tab Tổng hoặc tab Kho, Thủ quỹ kho nào chỉ thấy của kho đó
                     let canAction = isManager;
                     if (!isManager && keeperObj[t.displayShop] && String(keeperObj[t.displayShop]).toLowerCase().includes(String(currentUser).toLowerCase()) && isPending && String(t.user).trim().toLowerCase() === String(currentUser).trim().toLowerCase()) {
                         canAction = true;
@@ -1051,7 +1067,7 @@
                                 <div class="fund-action-wrap" style="display:flex; gap:5px; z-index:2; align-items:center;">
                                     ${isPending ? `<span class="fund-badge-pending">⏳ Chưa duyệt</span>` : ''}
                     `;
-                    // Ẩn nút hành động ở Tab Tổng quan (Chỉ để xem) - Muốn duyệt thì vào từng tab kho cho chắc chắn
+                    // Ẩn nút hành động ở Tab Tổng quan
                     if (canAction && !isTabAll) {
                         if (isManager && isPending) tHtml += `<button class="fund-btn-action fund-act-approve" data-id="${t.id}" style="background:#10b981;">Duyệt</button>`;
                         tHtml += `<button class="fund-btn-action fund-act-delete" data-id="${t.id}" style="background:#ef4444;">Xóa</button>`;
@@ -1099,19 +1115,19 @@
                 html += `
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                         <div class="bc-sec-title" style="margin:0;">📝 LỊCH SỬ CHUNG</div>
-                        <select id="fund-filter-ALL" class="fund-keeper-select" style="max-width:140px; border-radius: 6px;">
+                        <select id="fund-filter-ALL-${containerId}" class="fund-keeper-select" style="max-width:140px; border-radius: 6px;">
                             <option value="ALL">Tất cả Kho</option>
                             ${actualShops.map(s => `<option value="${s}">Kho ${s}</option>`).join('')}
                         </select>
                     </div>
-                    <div class="fund-list" id="fund-list-ALL-container">
+                    <div class="fund-list" id="fund-list-ALL-container-${containerId}">
                         ${renderTransactionHTML(shopTrans['ALL'].list, true, true)}
                     </div>
                 </div>`;
             }
 
             // -----------------------------------------------------------
-            // VẼ GIAO DIỆN CHO TỪNG KHO CỤ THỂ (Dành cho Cả NV và Quản lý)
+            // VẼ GIAO DIỆN CHO TỪNG KHO CỤ THỂ
             // -----------------------------------------------------------
             actualShops.forEach((s, idx) => {
                 let safeS = String(s).replace(/[^a-zA-Z0-9]/g, '_');
@@ -1177,11 +1193,11 @@
             if (btnRefresh) btnRefresh.onclick = () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true);
 
             // Sự kiện Lọc trong Tab Tổng Quan
-            const filterAll = document.getElementById('fund-filter-ALL');
+            const filterAll = document.getElementById(`fund-filter-ALL-${containerId}`);
             if (filterAll) {
                 filterAll.onchange = (e) => {
                     const selectedVal = e.target.value;
-                    const listContainer = document.getElementById('fund-list-ALL-container');
+                    const listContainer = document.getElementById(`fund-list-ALL-container-${containerId}`);
                     if(listContainer) {
                         listContainer.querySelectorAll('.fund-item-new').forEach(item => {
                             if (selectedVal === 'ALL' || item.getAttribute('data-shop') === selectedVal) {
