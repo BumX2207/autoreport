@@ -920,7 +920,7 @@
         handlePreview('file-toroi', 'prev-toroi'); handlePreview('file-dangbai', 'prev-dangbai'); handlePreview('file-live', 'prev-live');
 
     // ===============================================================
-    // HỆ THỐNG QUẢN LÝ QUỸ SIÊU THỊ (HỖ TRỢ ĐA KHO - TỐI ĐA 3 KHO)
+    // HỆ THỐNG QUẢN LÝ QUỸ SIÊU THỊ (HỖ TRỢ ĐA KHO - FIX CRASH)
     // ===============================================================
     const FUND_SYSTEM = {
         loaded: {}, 
@@ -928,7 +928,6 @@
         
         loadAndRender: async (containerId, isManager, sheetId, currentUser, forceReload = false) => {
             if (!forceReload && FUND_SYSTEM.loaded[containerId]) return;
-
             const container = document.getElementById(containerId);
             if (!container) return;
 
@@ -939,34 +938,29 @@
                 let res = await universalFetch({ method: "POST", url: API_URL_HISTORY, data: JSON.stringify({ action: "fund_get", sheetId: sheetId }) });
                 let json = JSON.parse(res);
                 if (json.status !== 'success') throw new Error("Lỗi tải dữ liệu.");
-                
                 FUND_SYSTEM.renderUI(containerId, isManager, currentUser, sheetId, json.keeper, json.trans);
                 FUND_SYSTEM.loaded[containerId] = true; 
             } catch (e) { container.innerHTML = `<div style="color:#ef4444; text-align:center;">Lỗi kết nối Quỹ: ${e.message}</div>`; }
         },
 
         renderUI: (containerId, isManager, currentUser, sheetId, keeper, trans) => {
-            // 1. Xác định danh sách Kho (Tối đa 3)
             let shops =[];
             if (isManager) {
-                // Lọc ra các mã kho duy nhất từ danh sách nhân viên Boss đã khai báo
                 shops =[...new Set(MANAGER_EMPLOYEES.map(e => String(e.s).trim()).filter(s => s))].slice(0, 3);
                 if (shops.length === 0) shops =['CHUNG'];
             } else {
-                shops = [EMP_SESSION.shop || 'CHUNG'];
+                shops =[EMP_SESSION.shop || 'CHUNG'];
             }
 
-            // 2. Xử lý Thủ quỹ (Chuyển đổi chuỗi cũ sang JSON an toàn)
+            // CHỐNG CRASH KHI KEEPER RỖNG
             let keeperObj = {};
             if (keeper) {
-                if (keeper.trim().startsWith('{')) {
-                    try { keeperObj = JSON.parse(keeper); } catch(e) { keeperObj[shops[0]] = keeper; }
-                } else {
-                    keeperObj[shops[0]] = keeper; // Bảo tồn dữ liệu cũ: Nhét thủ quỹ cũ vào kho đầu tiên
-                }
+                let kStr = String(keeper).trim();
+                if (kStr.startsWith('{')) {
+                    try { keeperObj = JSON.parse(kStr); } catch(e) { keeperObj[shops[0]] = kStr; }
+                } else { keeperObj[shops[0]] = kStr; }
             }
 
-            // 3. Phân bổ Giao dịch về từng Kho
             let shopTrans = {};
             shops.forEach(s => shopTrans[s] = { balance: 0, list:[] });
 
@@ -974,30 +968,29 @@
                 let assignedShop = shops[0];
                 let displayReason = t.reason;
                 
-                // Kiểm tra xem reason có chứa tag [Mã Kho] không
                 let match = t.reason.match(/^\[(.*?)\]\s*(.*)$/);
                 if (match) {
                     if (shops.includes(match[1]) || !isManager) assignedShop = match[1];
                     displayReason = match[2];
                 } else {
-                    // Dữ liệu cũ không có tag -> Dò tìm user đó thuộc kho nào
-                    let emp = MANAGER_EMPLOYEES.find(e => String(e.u).toLowerCase() === String(t.user).toLowerCase());
-                    if (emp && shops.includes(emp.s)) assignedShop = emp.s;
+                    if (isManager) {
+                        let emp = MANAGER_EMPLOYEES.find(e => String(e.u).toLowerCase() === String(t.user).toLowerCase());
+                        if (emp && shops.includes(emp.s)) assignedShop = emp.s;
+                    }
                 }
 
-                // Nếu kho không tồn tại trong danh sách hiện tại (VD: Nhân viên xem), nhét vào kho đang có
                 if (!shopTrans[assignedShop]) assignedShop = shops[0];
 
-                t.displayReason = displayReason; // Lưu lại reason hiển thị cho đẹp
-                shopTrans[assignedShop].list.push(t);
-
-                if (t.status === 'Approved') {
-                    if (t.type === 'Thu') shopTrans[assignedShop].balance += parseInt(t.amount);
-                    else shopTrans[assignedShop].balance -= parseInt(t.amount);
+                t.displayReason = displayReason; 
+                if (shopTrans[assignedShop]) {
+                    shopTrans[assignedShop].list.push(t);
+                    if (t.status === 'Approved') {
+                        if (t.type === 'Thu') shopTrans[assignedShop].balance += parseInt(t.amount);
+                        else shopTrans[assignedShop].balance -= parseInt(t.amount);
+                    }
                 }
             });
 
-            // 4. Render HTML
             let html = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <div class="bc-sec-title" style="margin:0;">🏦 TỔNG QUAN QUỸ</div>
@@ -1005,24 +998,23 @@
                 </div>
             `;
 
-            // Vẽ Thanh Tabs chọn Kho nếu là Quản lý và có > 1 Kho
             if (isManager && shops.length > 1) {
                 html += `<div class="fund-sub-tabs" id="fund-sub-tabs-${containerId}">`;
                 shops.forEach((s, idx) => {
-                    html += `<div class="fund-sub-tab ${idx === 0 ? 'active' : ''}" data-target="fund-shop-${containerId}-${s}">🏬 Kho ${s}</div>`;
+                    let safeS = String(s).replace(/[^a-zA-Z0-9]/g, '_'); // Bọc mã HTML an toàn
+                    html += `<div class="fund-sub-tab ${idx === 0 ? 'active' : ''}" data-target="fund-shop-${containerId}-${safeS}">🏬 Kho ${s}</div>`;
                 });
                 html += `</div>`;
             }
 
-            // Vẽ Nội dung từng Kho
             shops.forEach((s, idx) => {
+                let safeS = String(s).replace(/[^a-zA-Z0-9]/g, '_');
                 const currentKeeper = keeperObj[s] || "";
                 const isKeeper = currentKeeper && String(currentKeeper).toLowerCase().includes(String(currentUser).toLowerCase());
                 const canAdd = isManager || isKeeper;
 
-                html += `<div id="fund-shop-${containerId}-${s}" class="fund-shop-content ${idx === 0 ? 'active' : ''}">`;
+                html += `<div id="fund-shop-${containerId}-${safeS}" class="fund-shop-content ${idx === 0 ? 'active' : ''}">`;
                 
-                // Card Tổng Quỹ & Chọn Thủ Quỹ
                 html += `
                     <div class="fund-dash">
                         <div class="fund-card-main">
@@ -1034,34 +1026,24 @@
                 
                 if (isManager) {
                     let empOpts = `<option value="">-- Chọn nhân viên --</option>`;
-                    // Chỉ hiển thị nhân viên thuộc Kho này
                     MANAGER_EMPLOYEES.filter(e => String(e.s) === String(s)).forEach(e => {
                         const sel = (currentKeeper && String(currentKeeper).toLowerCase().includes(String(e.u).toLowerCase())) ? 'selected' : '';
                         empOpts += `<option value="${e.u}" ${sel}>${getEmpDisplayName(e.u)}</option>`;
                     });
                     
                     const isLocked = currentKeeper ? true : false;
-                    const lockClass = isLocked ? 'locked' : '';
-                    const btnText = isLocked ? 'Thay đổi' : 'Giao quỹ';
-                    const btnColor = isLocked ? '#f59e0b' : '#38bdf8';
-
                     html += `
                                 <div style="display:flex; align-items:center; gap:5px;">
-                                    <select id="fund-select-keeper-${containerId}-${s}" class="fund-keeper-select ${lockClass}" ${isLocked ? 'disabled' : ''}>
-                                        ${empOpts}
-                                    </select>
-                                    <button class="fund-btn-action btn-fund-setkeeper" data-shop="${s}" data-mode="${isLocked ? 'edit' : 'save'}" style="background:${btnColor};">${btnText}</button>
+                                    <select id="fund-select-keeper-${containerId}-${safeS}" class="fund-keeper-select ${isLocked ? 'locked' : ''}" ${isLocked ? 'disabled' : ''}>${empOpts}</select>
+                                    <button class="fund-btn-action btn-fund-setkeeper" data-shop="${s}" data-safe="${safeS}" data-mode="${isLocked ? 'edit' : 'save'}" style="background:${isLocked ? '#f59e0b' : '#38bdf8'};">${isLocked ? 'Thay đổi' : 'Giao quỹ'}</button>
                                 </div>
                     `;
                 } else {
                     html += `<div><span class="fund-keeper-select locked" style="display:inline-block;">👤 ${currentKeeper || 'Chưa chỉ định'}</span></div>`;
                 }
                 
-                html += `       </div>
-                        </div>
-                    </div>`;
+                html += `</div></div></div>`;
 
-                // Nút Thu/Chi
                 if (canAdd) {
                     html += `
                     <div class="fund-actions">
@@ -1070,7 +1052,6 @@
                     </div>`;
                 }
 
-                // Lịch sử Giao dịch của Kho này
                 html += `<div class="bc-sec-title">📝 LỊCH SỬ THU CHI</div><div class="fund-list">`;
                 
                 if (shopTrans[s].list.length === 0) {
@@ -1078,61 +1059,44 @@
                 } else {
                     shopTrans[s].list.slice().reverse().forEach(t => {
                         const isThu = t.type === 'Thu';
-                        const iconClass = isThu ? 'f-icon-thu' : 'f-icon-chi';
-                        const textClass = isThu ? 'f-text-thu' : 'f-text-chi';
-                        const sign = isThu ? '+' : '-';
                         const isPending = t.status === 'Pending';
-                        const pendingBadge = isPending ? `<span class="fund-badge-pending">⏳ Chưa duyệt</span>` : '';
-
                         let shortTime = t.time;
                         let dObj = new Date(t.time);
                         if (!isNaN(dObj.getTime())) {
                             shortTime = `${String(dObj.getDate()).padStart(2, '0')}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${dObj.getFullYear()}`;
                             t.time = shortTime;
-                        } else if (typeof t.time === 'string') {
-                            shortTime = t.time.replace(/\//g, '-').split(' ')[0];
-                            t.time = shortTime;
-                        }
-
-                        let shortUser = String(getEmpDisplayName(t.user)).split('-')[0].trim();
+                        } else if (typeof t.time === 'string') { t.time = t.time.replace(/\//g, '-').split(' ')[0]; shortTime = t.time; }
 
                         html += `
                             <div class="fund-item-new" data-id="${t.id}" data-shop="${s}">
                                 <div class="fi-row-1">
                                     <div class="fi-time">📅 ${shortTime}</div>
                                     <div class="fund-action-wrap" style="display:flex; gap:5px; z-index:2; align-items:center;">
-                                        ${pendingBadge}
+                                        ${isPending ? `<span class="fund-badge-pending">⏳ Chưa duyệt</span>` : ''}
                         `;
-
                         if (isManager || (isKeeper && isPending && String(t.user).trim().toLowerCase() === String(currentUser).trim().toLowerCase())) {
-                            if (isManager && isPending) {
-                                html += `<button class="fund-btn-action fund-act-approve" data-id="${t.id}" style="background:#10b981;">Duyệt</button>`;
-                            }
+                            if (isManager && isPending) html += `<button class="fund-btn-action fund-act-approve" data-id="${t.id}" style="background:#10b981;">Duyệt</button>`;
                             html += `<button class="fund-btn-action fund-act-delete" data-id="${t.id}" style="background:#ef4444;">Xóa</button>`;
                         }
-
-                        html += `           </div>
-                                </div>
+                        html += `</div></div>
                                 <div class="fi-row-2">
-                                    <div class="fund-icon ${iconClass}">${isThu ? '↓' : '↑'}</div>
+                                    <div class="fund-icon ${isThu ? 'f-icon-thu' : 'f-icon-chi'}">${isThu ? '↓' : '↑'}</div>
                                     <div class="fi-reason" title="${t.displayReason}">${t.displayReason}</div>
-                                    <div class="fi-user" title="${getEmpDisplayName(t.user)}">👤 ${shortUser}</div>
-                                    <div class="fi-amount ${textClass}">${sign}${FUND_SYSTEM.formatVNĐ(t.amount)}</div>
+                                    <div class="fi-user" title="${getEmpDisplayName(t.user)}">👤 ${String(getEmpDisplayName(t.user)).split('-')[0].trim()}</div>
+                                    <div class="fi-amount ${isThu ? 'f-text-thu' : 'f-text-chi'}">${isThu ? '+' : '-'}${FUND_SYSTEM.formatVNĐ(t.amount)}</div>
                                 </div>
                             </div>
                         `;
                     });
                 }
-                html += `</div></div>`; // Đóng danh sách và nội dung kho
+                html += `</div></div>`; 
             });
 
             document.getElementById(containerId).innerHTML = html;
 
-            // --- BIND SỰ KIỆN TƯƠNG TÁC ---
             const btnRefresh = document.getElementById(`btn-refresh-fund-${containerId}`);
             if (btnRefresh) btnRefresh.onclick = () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true);
 
-            // Xử lý chuyển Tab Kho
             const tabContainer = document.getElementById(`fund-sub-tabs-${containerId}`);
             if (tabContainer) {
                 tabContainer.querySelectorAll('.fund-sub-tab').forEach(tab => {
@@ -1145,115 +1109,85 @@
                 });
             }
 
-            // Xử lý nút Chọn Thủ Quỹ
             if (isManager) {
                 document.getElementById(containerId).querySelectorAll('.btn-fund-setkeeper').forEach(btn => {
                     btn.onclick = () => {
                         const s = btn.getAttribute('data-shop');
-                        const selKeeper = document.getElementById(`fund-select-keeper-${containerId}-${s}`);
+                        const safeS = btn.getAttribute('data-safe');
+                        const selKeeper = document.getElementById(`fund-select-keeper-${containerId}-${safeS}`);
                         let mode = btn.getAttribute('data-mode');
                         
                         if (mode === 'edit') {
-                            selKeeper.disabled = false;
-                            selKeeper.classList.remove('locked');
-                            btn.setAttribute('data-mode', 'save');
-                            btn.innerText = 'Lưu';
-                            btn.style.background = '#10b981'; 
+                            selKeeper.disabled = false; selKeeper.classList.remove('locked');
+                            btn.setAttribute('data-mode', 'save'); btn.innerText = 'Lưu'; btn.style.background = '#10b981'; 
                         } else {
                             const newKeeper = selKeeper.value;
                             if(!newKeeper && !confirm(`Bạn đang để trống người giữ quỹ cho Kho ${s}. Đồng ý?`)) return;
-                            
-                            const fullKeeperName = getEmpDisplayName(newKeeper);
-                            keeperObj[s] = fullKeeperName; // Cập nhật JSON object
-                            
+                            keeperObj[s] = getEmpDisplayName(newKeeper);
                             FUND_SYSTEM.executeAPI("fund_set_keeper", { keeper: JSON.stringify(keeperObj) }, sheetId, () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true));
                         }
                     };
                 });
             }
 
-            // Xử lý nút Thu/Chi
             document.getElementById(containerId).querySelectorAll('.btn-fund-add').forEach(btn => {
-                btn.onclick = () => {
-                    FUND_SYSTEM.showTransactionModal(btn.getAttribute('data-type'), isManager, currentUser, sheetId, containerId, btn.getAttribute('data-shop'));
-                };
+                btn.onclick = () => FUND_SYSTEM.showTransactionModal(btn.getAttribute('data-type'), isManager, currentUser, sheetId, containerId, btn.getAttribute('data-shop'));
             });
 
-            // Gắn sự kiện Xóa và Duyệt
             document.getElementById(containerId).querySelectorAll('.fund-action-wrap').forEach(wrap => {
                 wrap.onclick = (e) => {
                     e.stopPropagation(); 
                     if (e.target.classList.contains('fund-act-delete')) {
-                        const id = e.target.getAttribute('data-id');
-                        if(confirm("Bạn có chắc chắn muốn xóa giao dịch này?")) {
-                            FUND_SYSTEM.executeAPI("fund_delete", { id: id }, sheetId, () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true));
-                        }
+                        if(confirm("Xóa giao dịch này?")) FUND_SYSTEM.executeAPI("fund_delete", { id: e.target.getAttribute('data-id') }, sheetId, () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true));
                     } else if (e.target.classList.contains('fund-act-approve')) {
-                        const id = e.target.getAttribute('data-id');
-                        FUND_SYSTEM.executeAPI("fund_approve", { id: id }, sheetId, () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true));
+                        FUND_SYSTEM.executeAPI("fund_approve", { id: e.target.getAttribute('data-id') }, sheetId, () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true));
                     }
                 };
             });
 
-            // Gắn sự kiện Mở chi tiết
             document.getElementById(containerId).querySelectorAll('.fund-item-new').forEach(item => {
                 item.onclick = (e) => {
-                    const id = item.getAttribute('data-id');
-                    const transObj = trans.find(x => x.id === id);
+                    const transObj = trans.find(x => x.id === item.getAttribute('data-id'));
                     if(transObj) FUND_SYSTEM.showDetailModal(transObj, item.getAttribute('data-shop'));
                 };
             });
         },
 
         showTransactionModal: (type, isManager, currentUser, sheetId, containerId, shopCode) => {
-            const modalId = 'fund-custom-modal';
-            let existingModal = document.getElementById(modalId);
+            let existingModal = document.getElementById('fund-custom-modal');
             if (existingModal) existingModal.remove();
 
             const colorMain = type === 'Thu' ? '#10b981' : '#ef4444';
-            const iconMain = type === 'Thu' ? '↓' : '↑';
             const today = new Date();
             const defaultDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
             const modalHtml = `
-                <div class="fund-modal-overlay" id="${modalId}">
+                <div class="fund-modal-overlay" id="fund-custom-modal">
                     <div class="fund-modal-box">
                         <div style="font-size:18px; font-weight:bold; color:${colorMain}; margin-bottom:15px; display:flex; align-items:center; gap:10px;">
-                            <div class="fund-icon" style="background:${colorMain}33; color:${colorMain}; width:30px; height:30px; font-size:16px;">${iconMain}</div>
-                            THÊM PHIẾU ${type.toUpperCase()}
+                            <div class="fund-icon" style="background:${colorMain}33; color:${colorMain}; width:30px; height:30px; font-size:16px;">${type === 'Thu' ? '↓' : '↑'}</div>THÊM PHIẾU ${type.toUpperCase()}
                         </div>
-                        <label class="bc-label">Ngày giao dịch:</label>
-                        <input type="date" id="fund-mod-date" class="bc-input" value="${defaultDate}" style="color:${colorMain}; font-weight:bold; cursor:pointer;">
-                        <label class="bc-label">Số tiền (VNĐ):</label>
-                        <input type="text" id="fund-mod-amount" class="bc-input" placeholder="Ví dụ: 50,000" style="font-size:20px; font-weight:bold; color:${colorMain};" autocomplete="off">
-                        <label class="bc-label">Nội dung ${type} ${shopCode ? `(Kho ${shopCode})` : ''}:</label>
-                        <textarea id="fund-mod-reason" class="bc-input" placeholder="Nhập nội dung chi tiết..." rows="2" style="resize:none; font-family:inherit; margin-bottom:0;"></textarea>
-                        <div style="display:flex; gap:10px; margin-top:20px;">
-                            <button id="btn-fmod-cancel" style="flex:1; padding:10px; background:rgba(255,255,255,0.1); border:none; border-radius:8px; color:#fff; font-weight:bold; cursor:pointer;">Hủy</button>
-                            <button id="btn-fmod-save" style="flex:1; padding:10px; background:${colorMain}; border:none; border-radius:8px; color:#fff; font-weight:bold; cursor:pointer;">Lưu</button>
-                        </div>
+                        <label class="bc-label">Ngày giao dịch:</label><input type="date" id="fund-mod-date" class="bc-input" value="${defaultDate}" style="color:${colorMain}; font-weight:bold; cursor:pointer;">
+                        <label class="bc-label">Số tiền (VNĐ):</label><input type="text" id="fund-mod-amount" class="bc-input" placeholder="Ví dụ: 50,000" style="font-size:20px; font-weight:bold; color:${colorMain};" autocomplete="off">
+                        <label class="bc-label">Nội dung ${type} ${shopCode ? `(Kho ${shopCode})` : ''}:</label><textarea id="fund-mod-reason" class="bc-input" placeholder="Nhập nội dung chi tiết..." rows="2" style="resize:none; font-family:inherit; margin-bottom:0;"></textarea>
+                        <div style="display:flex; gap:10px; margin-top:20px;"><button id="btn-fmod-cancel" style="flex:1; padding:10px; background:rgba(255,255,255,0.1); border:none; border-radius:8px; color:#fff; font-weight:bold; cursor:pointer;">Hủy</button><button id="btn-fmod-save" style="flex:1; padding:10px; background:${colorMain}; border:none; border-radius:8px; color:#fff; font-weight:bold; cursor:pointer;">Lưu</button></div>
                     </div>
                 </div>
             `;
-            
             document.getElementById('bc-app-wrapper').insertAdjacentHTML('beforeend', modalHtml);
-            const modalEl = document.getElementById(modalId);
+            const modalEl = document.getElementById('fund-custom-modal');
             setTimeout(() => modalEl.classList.add('show'), 10);
 
             document.getElementById('fund-mod-amount').addEventListener('input', (e) => {
                 let val = e.target.value.replace(/[^0-9]/g, '');
-                if (val) e.target.value = new Intl.NumberFormat('en-US').format(val);
-                else e.target.value = '';
+                if (val) e.target.value = new Intl.NumberFormat('en-US').format(val); else e.target.value = '';
             });
 
-            document.getElementById('btn-fmod-cancel').onclick = () => {
-                modalEl.classList.remove('show'); setTimeout(() => modalEl.remove(), 300);
-            };
+            document.getElementById('btn-fmod-cancel').onclick = () => { modalEl.classList.remove('show'); setTimeout(() => modalEl.remove(), 300); };
             
             document.getElementById('btn-fmod-save').onclick = () => {
                 const rawDate = document.getElementById('fund-mod-date').value; 
-                const rawAmount = document.getElementById('fund-mod-amount').value.replace(/[^0-9]/g, '');
-                const amount = parseInt(rawAmount);
+                const amount = parseInt(document.getElementById('fund-mod-amount').value.replace(/[^0-9]/g, ''));
                 const reasonRaw = document.getElementById('fund-mod-reason').value.trim();
 
                 if (!rawDate) return alert("Vui lòng chọn ngày giao dịch!");
@@ -1261,56 +1195,36 @@
                 if (!reasonRaw) return alert("Vui lòng nhập nội dung!");
 
                 const [yyyy, mm, dd] = rawDate.split('-');
-                const formattedDate = `${dd}-${mm}-${yyyy}`;
                 const status = isManager ? 'Approved' : 'Pending';
-                
-                // Mấu chốt: Nhồi mã kho vào đầu nội dung trước khi gửi lên Server
-                const finalReason = shopCode ? `[${shopCode}] ${reasonRaw}` : reasonRaw;
+                const finalReason = shopCode ? `[${shopCode}] ${reasonRaw}` : reasonRaw; // Gắn Tag mã Kho
                 
                 modalEl.classList.remove('show'); setTimeout(() => modalEl.remove(), 300);
-
-                FUND_SYSTEM.executeAPI("fund_add", { type: type, amount: amount, reason: finalReason, user: currentUser, status: status, time: formattedDate }, sheetId, () => {
+                FUND_SYSTEM.executeAPI("fund_add", { type: type, amount: amount, reason: finalReason, user: currentUser, status: status, time: `${dd}-${mm}-${yyyy}` }, sheetId, () => {
                     FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true);
                 });
             };
         },
 
         showDetailModal: (t, shopCode) => {
-            const modalId = 'fund-detail-modal';
-            let existingModal = document.getElementById(modalId);
+            let existingModal = document.getElementById('fund-detail-modal');
             if (existingModal) existingModal.remove();
 
             const isThu = t.type === 'Thu';
             const colorMain = isThu ? '#10b981' : '#ef4444';
-            const sign = isThu ? '+' : '-';
             const statusHtml = t.status === 'Approved' ? `<span style="color:#10b981;">✅ Đã duyệt</span>` : `<span style="color:#ef4444; animation: pulse-text 2s infinite;">⏳ Chờ quản lý duyệt</span>`;
 
             const modalHtml = `
-                <div class="fund-modal-overlay" id="${modalId}">
+                <div class="fund-modal-overlay" id="fund-detail-modal">
                     <div class="fund-modal-box" style="padding:0;">
                         <div style="background:rgba(0,0,0,0.3); padding:15px 20px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
-                            <b style="color:#38bdf8; font-size:16px;">Chi Tiết Thu/Chi ${shopCode ? `(Kho ${shopCode})` : ''}</b>
-                            <button id="btn-fdet-close" style="background:none; border:none; color:#fff; font-size:18px; cursor:pointer;">✕</button>
+                            <b style="color:#38bdf8; font-size:16px;">Chi Tiết Thu/Chi ${shopCode ? `(Kho ${shopCode})` : ''}</b><button id="btn-fdet-close" style="background:none; border:none; color:#fff; font-size:18px; cursor:pointer;">✕</button>
                         </div>
                         <div class="fund-modal-content-scroll" style="padding:20px;">
-                            <div style="text-align:center; margin-bottom:20px;">
-                                <div style="font-size:12px; color:#94a3b8; text-transform:uppercase; margin-bottom:5px;">Số Tiền ${t.type}</div>
-                                <div style="font-size:30px; font-weight:900; color:${colorMain};">${sign}${FUND_SYSTEM.formatVNĐ(t.amount)}</div>
-                                <div style="margin-top:10px; font-size:13px; background:rgba(255,255,255,0.05); padding:5px 15px; border-radius:20px; display:inline-block;">Trạng thái: ${statusHtml}</div>
-                            </div>
+                            <div style="text-align:center; margin-bottom:20px;"><div style="font-size:12px; color:#94a3b8; text-transform:uppercase; margin-bottom:5px;">Số Tiền ${t.type}</div><div style="font-size:30px; font-weight:900; color:${colorMain};">${isThu ? '+' : '-'}${FUND_SYSTEM.formatVNĐ(t.amount)}</div><div style="margin-top:10px; font-size:13px; background:rgba(255,255,255,0.05); padding:5px 15px; border-radius:20px; display:inline-block;">Trạng thái: ${statusHtml}</div></div>
                             <div style="background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:15px;">
-                                <div style="margin-bottom:12px;">
-                                    <div style="font-size:11px; color:#94a3b8; margin-bottom:3px;">Thời gian:</div>
-                                    <div style="font-size:14px; color:#fff; font-weight:bold;">🕒 ${t.time}</div>
-                                </div>
-                                <div style="margin-bottom:12px;">
-                                    <div style="font-size:11px; color:#94a3b8; margin-bottom:3px;">Người thao tác:</div>
-                                    <div style="font-size:14px; color:#fff; font-weight:bold;">👤 ${getEmpDisplayName(t.user)}</div>
-                                </div>
-                                <div>
-                                    <div style="font-size:11px; color:#94a3b8; margin-bottom:5px;">Nội dung chi tiết:</div>
-                                    <div style="font-size:14px; color:#fff; line-height:1.5; white-space:pre-wrap; background:rgba(255,255,255,0.02); padding:10px; border-radius:6px; border-left:3px solid ${colorMain};">${t.displayReason || t.reason}</div>
-                                </div>
+                                <div style="margin-bottom:12px;"><div style="font-size:11px; color:#94a3b8; margin-bottom:3px;">Thời gian:</div><div style="font-size:14px; color:#fff; font-weight:bold;">🕒 ${t.time}</div></div>
+                                <div style="margin-bottom:12px;"><div style="font-size:11px; color:#94a3b8; margin-bottom:3px;">Người thao tác:</div><div style="font-size:14px; color:#fff; font-weight:bold;">👤 ${getEmpDisplayName(t.user)}</div></div>
+                                <div><div style="font-size:11px; color:#94a3b8; margin-bottom:5px;">Nội dung chi tiết:</div><div style="font-size:14px; color:#fff; line-height:1.5; white-space:pre-wrap; background:rgba(255,255,255,0.02); padding:10px; border-radius:6px; border-left:3px solid ${colorMain};">${t.displayReason || t.reason}</div></div>
                             </div>
                         </div>
                     </div>
@@ -1318,9 +1232,8 @@
             `;
             
             document.getElementById('bc-app-wrapper').insertAdjacentHTML('beforeend', modalHtml);
-            const modalEl = document.getElementById(modalId);
+            const modalEl = document.getElementById('fund-detail-modal');
             setTimeout(() => modalEl.classList.add('show'), 10);
-
             const closeFunc = () => { modalEl.classList.remove('show'); setTimeout(() => modalEl.remove(), 300); };
             document.getElementById('btn-fdet-close').onclick = closeFunc;
             modalEl.onclick = (e) => { if(e.target === modalEl) closeFunc(); };
@@ -1331,14 +1244,12 @@
             const loadText = document.getElementById('bc-load-text');
             if(loading) loading.style.display = 'flex'; 
             if(loadText) loadText.innerText = "Đang xử lý quỹ...";
-            
             try {
                 const payload = Object.assign({ action: action, sheetId: sheetId }, dataObj);
                 let res = await universalFetch({ method: "POST", url: API_URL_HISTORY, data: JSON.stringify(payload) });
                 let json = JSON.parse(res);
                 if (json.status === 'success') { if (callback) callback(); } else alert("Lỗi: " + json.msg);
             } catch (e) { alert("Lỗi kết nối Server!"); }
-            
             if(loading) loading.style.display = 'none';
         }
     };
@@ -1761,103 +1672,71 @@
             // LUỒNG SSO NHÂN VIÊN (THAY THẾ LOGIN THỦ CÔNG)
             // ==========================================
             const checkEmployeeAuth = async () => {
-                // 1. Kiểm tra session trên Netlify
                 let guestStr = localStorage.getItem('tgdd_guest_account_v2');
-                if (!guestStr) {
-                    showErrorScreen("CHƯA ĐĂNG NHẬP", "Bạn chưa đăng nhập. Vui lòng đăng nhập ở màn hình trang chủ để sử dụng tiện ích này!");
-                    return;
-                }
+                if (!guestStr) { showErrorScreen("CHƯA ĐĂNG NHẬP", "Bạn chưa đăng nhập. Vui lòng đăng nhập ở trang chủ!"); return; }
 
                 let guestData;
-                try {
-                    guestData = JSON.parse(guestStr);
-                } catch(e) {
-                    showErrorScreen("LỖI DỮ LIỆU", "Dữ liệu đăng nhập bị lỗi. Vui lòng đăng xuất và đăng nhập lại!");
-                    return;
-                }
+                try { guestData = JSON.parse(guestStr); } catch(e) { showErrorScreen("LỖI", "Dữ liệu lỗi. Vui lòng đăng nhập lại!"); return; }
 
-                // FIX: Tối ưu - Nếu đã check API thành công ở lần trước đó cho đúng user này, thì chỉ cần vào thẳng màn hình báo cáo
-                if (EMP_SESSION && EMP_SESSION.user === guestData.user && EMP_SESSION.sheetId) {
-                    $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.fn ? EMP_SESSION.fn + ' - ' : ''}${EMP_SESSION.user}`; 
-                    switchSc('sc-report');
-                    return;
-                }
-
-                $('bc-loading').style.display = 'flex';
-                $('bc-load-text').innerText = "Đang kiểm tra quyền truy cập...";
+                $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang kiểm tra quyền truy cập...";
 
                 try {
-                    // 2. Gọi API để check Boss & quyền
-                    let res = await universalFetch({
-                        method: "POST",
-                        url: API_URL_APP, 
-                        data: JSON.stringify({ action: "check_permission", user: guestData.user, userName: guestData.user })
-                    });
-                    
+                    let res = await universalFetch({ method: "POST", url: API_URL_APP, data: JSON.stringify({ action: "check_permission", user: guestData.user, userName: guestData.user }) });
                     let data = JSON.parse(res);
                     if (data.status === 'success' && data.userData) {
                         let uData = data.userData;
                         
-                        // =========================================================
-                        // TỰ ĐỘNG SỬA LỖI TRỐNG ID FOLDER VÀ ID SHEET
-                        if (!uData.folderId || !uData.sheetId) {
-                            try {
-                                let bossRes = await universalFetch({
-                                    method: "POST",
-                                    url: API_URL_MAIN,
-                                    data: JSON.stringify({ action: "get_config_manager", user: uData.boss })
-                                });
-                                let bossData = JSON.parse(bossRes);
-                                if (bossData.status === 'success') {
-                                    uData.folderId = bossData.folderId || uData.folderId;
-                                    uData.sheetId = bossData.sheetId || uData.sheetId;
+                        // --- ĐỒNG BỘ DATA TỪ BOSS ĐỂ LẤY CHÍNH XÁC MÃ KHO VÀ ROLE ---
+                        try {
+                            let bossRes = await universalFetch({ method: "POST", url: API_URL_MAIN, data: JSON.stringify({ action: "get_config_manager", user: uData.boss }) });
+                            let bossData = JSON.parse(bossRes);
+                            if (bossData.status === 'success') {
+                                uData.folderId = bossData.folderId || uData.folderId;
+                                uData.sheetId = bossData.sheetId || uData.sheetId;
+                                
+                                if (bossData.employees && bossData.employees !== "[]") {
+                                    let emps = JSON.parse(bossData.employees);
+                                    let myEmp = emps.find(e => String(e.u).toLowerCase() === String(uData.user).toLowerCase());
+                                    if (myEmp) {
+                                        uData.shop = myEmp.s;
+                                        uData.role = myEmp.role;
+                                        uData.grp = myEmp.grp;
+                                    }
                                 }
-                            } catch (err) {
-                                console.log("Không thể fetch dự phòng ID Boss");
                             }
-                        }
-                        // =========================================================
+                        } catch (err) { console.log("Bỏ qua đồng bộ nâng cao"); }
+                        // ------------------------------------------------------------
                         
-                        // Nạp dữ liệu vào EMP_SESSION
                         EMP_SESSION = {
                             user: uData.user || guestData.user,
-                            shop: guestData.shop || "",
+                            shop: uData.shop || guestData.shop || "", // Lấy cực chuẩn mã kho của Boss gán
                             folderId: uData.folderId || "",
                             sheetId: uData.sheetId || "",
                             mgrUser: uData.boss || "", 
                             fn: guestData.name || "",
                             dob: guestData.dob || "",
-                            role: guestData.role || "NV",
-                            grp: guestData.grp || ""
+                            role: uData.role || guestData.role || "NV",
+                            grp: uData.grp || guestData.grp || ""
                         };
                         
                         localStorage.setItem('bc_emp_session', JSON.stringify(EMP_SESSION));
-                        
-                        // Update UI
                         $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.fn ? EMP_SESSION.fn + ' - ' : ''}${EMP_SESSION.user}`; 
                         updateEmpTabs(); 
-                        
-                        // Bay thẳng vào màn hình báo cáo
                         switchSc('sc-report');
                         $('tab-btn-emp-form').click();
-                        
                     } else {
-                        showErrorScreen("KHÔNG CÓ QUYỀN", data.message || "Tài khoản của bạn chưa được Quản lý khai báo quyền truy cập.\nHãy báo lại với Quản lý để được cấp quyền!");
+                        showErrorScreen("KHÔNG CÓ QUYỀN", data.message || "Tài khoản của bạn chưa được Quản lý cấp quyền!");
                     }
-                } catch(e) {
-                    showErrorScreen("LỖI MÁY CHỦ", "Không thể kết nối đến máy chủ. Vui lòng thử lại sau!");
-                } finally {
-                    $('bc-loading').style.display = 'none';
-                }
+                } catch(e) { showErrorScreen("LỖI MÁY CHỦ", "Không thể kết nối đến máy chủ. Vui lòng thử lại!"); } 
+                finally { $('bc-loading').style.display = 'none'; }
             };
-
             app.recheckAuth = checkEmployeeAuth;
-
-            // Gọi SSO ngay khi chạy tool
             checkEmployeeAuth();
 
             const updateEmpTabs = () => {
-                if (EMP_SESSION && EMP_SESSION.role === 'NV') {
+                // Chỉ ẩn tab khi Role được khai báo rõ ràng là PG, còn lại mặc định hiện tất cả
+                const isPG = EMP_SESSION && String(EMP_SESSION.role).toUpperCase().includes('PG');
+                if (!isPG) {
                     if($('tab-btn-emp-personal')) $('tab-btn-emp-personal').style.display = 'block';
                     if($('tab-btn-emp-fund')) $('tab-btn-emp-fund').style.display = 'block';
                 } else {
