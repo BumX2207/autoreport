@@ -77,6 +77,23 @@
         const emp = MANAGER_EMPLOYEES.find(x => String(x.u).toLowerCase() === String(u).toLowerCase());
         return (emp && emp.fn) ? `${emp.fn} - ${emp.u}` : u;
     };
+    
+    const formatDOB = (rawDate) => {
+        if (!rawDate) return '';
+        let str = String(rawDate).trim();
+        // Nếu đã là chuỗi dd/mm/yyyy rồi thì giữ nguyên
+        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) return str;
+        
+        // Nếu là dạng ISO từ Google Sheet, chuyển về ngày nội địa
+        let d = new Date(str);
+        if (!isNaN(d.getTime())) {
+            let dd = String(d.getDate()).padStart(2, '0');
+            let mm = String(d.getMonth() + 1).padStart(2, '0');
+            let yyyy = d.getFullYear();
+            return `${dd}/${mm}/${yyyy}`;
+        }
+        return str;
+    };
 
     // ===============================================================
     // 2. CSS GIAO DIỆN TỔNG HỢP
@@ -1292,7 +1309,7 @@
                     <div class="employee-row">
                         <span style="flex:1;">
                             🏬 ${nv.s || 'N/A'} - 👤 ${nv.fn ? nv.fn + ' - ' : ''}${nv.u} <br>
-                            <span style="color:#94a3b8; font-size:12px;">(Pass: ${nv.p} | Vai trò: <b style="color:#FFD700">${nv.role || 'NV'}</b> | NS: ${nv.dob || '---'} | Nhóm: ${nv.grp || '---'})</span>
+                            <span style="color:#94a3b8; font-size:12px;">(Pass: ${nv.p} | Vai trò: <b style="color:#FFD700">${nv.role || 'NV'}</b> | NS: ${formatDOB(nv.dob) || '---'} | Nhóm: ${nv.grp || '---'})</span>
                         </span>
                         <div style="flex-shrink:0; display:flex; gap:5px;">
                             <button class="bc-btn btn-warning" style="width:auto; padding:5px 10px;" onclick="document.getElementById('bc-app-wrapper').dispatchEvent(new CustomEvent('editNV', {detail:${idx}}))">Sửa</button>
@@ -1314,7 +1331,8 @@
                 $('inp-nv-shop').value = nv.s;
                 $('inp-nv-user').value = nv.u;
                 $('inp-nv-fn').value = nv.fn || '';
-                $('inp-nv-dob').value = nv.dob || '';
+                $('inp-nv-dob').value = formatDOB(nv.dob) || '';
+                
                 $('inp-nv-pass').value = nv.p;
                 $('inp-nv-role').value = nv.role || 'NV';
                 $('inp-nv-grp').value = nv.grp || '';
