@@ -968,16 +968,34 @@
             trans.forEach(t => {
                 let assignedShop = t.shop ? String(t.shop).trim() : '';
 
-                // Xử lý giao dịch cũ chưa có Mã Kho
-                if (!assignedShop || !actualShops.includes(assignedShop)) {
+                // (Fix) Nhận diện lại các giao dịch cũ lúc bạn test bị dính tag [Mã Kho] ở nội dung
+                if (!assignedShop) {
+                    let match = t.reason.match(/^\[(.*?)\]\s*(.*)$/);
+                    if (match) {
+                        assignedShop = match[1].trim();
+                        t.reason = match[2]; // Xóa tag để hiển thị đẹp
+                    }
+                }
+
+                // Kiểm tra xem mã kho có khớp với danh sách không (Chống lỗi sai hoa/thường)
+                let matchedShop = actualShops.find(s => s.toLowerCase() === assignedShop.toLowerCase());
+
+                if (matchedShop) {
+                    assignedShop = matchedShop; // Ép về đúng tên chuẩn
+                } else {
+                    // NẾU GIAO DỊCH KHÔNG CÓ MÃ KHO HOẶC THUỘC KHO KHÁC
                     if (isManager) {
                         let emp = MANAGER_EMPLOYEES.find(e => String(e.u).toLowerCase() === String(t.user).toLowerCase());
                         assignedShop = (emp && actualShops.includes(String(emp.s).trim())) ? String(emp.s).trim() : actualShops[0];
                     } else {
-                        // Nhân viên: Nếu giao dịch cũ là của chính họ -> gán vào kho của họ. Nếu không -> Bỏ qua.
-                        if (String(t.user).toLowerCase() === String(currentUser).toLowerCase()) {
+                        // ĐỐI VỚI NHÂN VIÊN: 
+                        if (!assignedShop) {
+                            // Nếu giao dịch cũ hoàn toàn không có mã kho -> Tạm thời cho hiện ở kho hiện tại để không bị mất tiền
                             assignedShop = actualShops[0];
-                        } else return; 
+                        } else {
+                            // Nếu giao dịch có mã kho, nhưng LÀ CỦA KHO KHÁC -> Ẩn đi hoàn toàn
+                            return; 
+                        }
                     }
                 }
 
@@ -993,7 +1011,7 @@
                     }
                 }
 
-                // Cộng vào Quỹ Tổng (Chỉ dành cho Quản lý)
+                // Cộng vào Quỹ Tổng (Chỉ dành cho Quản lý thấy)
                 if (isManager) {
                     shopTrans['ALL'].list.push(t);
                     if (t.status === 'Approved') {
