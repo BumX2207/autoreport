@@ -18,7 +18,7 @@
         });
     };
 
-    let API_URL = "https://script.google.com/macros/s/AKfycbxDRSg1JDNTyuYf2TSQovNIWhFk3ls9hPXxtRSMu6xI0oNjql53nJo0G1H5k1b2iq_3/exec";
+    let API_URL = "https://script.google.com/macros/s/AKfycbyilVgP9qgHd66IsNVJahl19G35BVTCCxGnGVYL4NeHoYUV7u2FzYL1VGfM9lCbdo1xZQ/exec";
     
     let USER_ID = "---";   
     let USER_NAME = "---"; 
