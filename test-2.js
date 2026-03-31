@@ -26,9 +26,9 @@
     // ===============================================================
     let API_URL = "https://script.google.com/macros/s/AKfycbxDRSg1JDNTyuYf2TSQovNIWhFk3ls9hPXxtRSMu6xI0oNjql53nJo0G1H5k1b2iq_3/exec";
     
-    // [MỚI] Tách riêng USER_ID (để lưu DB) và USER_NAME (để hiển thị)
-    let USER_ID = "---"; 
-    let USER_NAME = "---";
+    // Tách biệt rõ ràng biến lưu ID và Name
+    let USER_ID = "---";   // Dùng làm Key duy nhất lưu Data (ví dụ: 137495)
+    let USER_NAME = "---"; // Dùng để hiển thị cho đẹp (ví dụ: Nguyễn Hoài Nam)
     
     let QUIZ_LIST =[]; 
     let CURRENT_QUIZ = null; 
@@ -39,7 +39,7 @@
     let TIME_LEFT = 0;
 
     // ===============================================================
-    // 2. CSS GIAO DIỆN (DARK MODE CHUẨN + HIỆU ỨNG VẼ BÚT)
+    // 2. CSS GIAO DIỆN
     // ===============================================================
     const MY_CSS = `
         #qz-app-wrapper { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.9); backdrop-filter:blur(15px); -webkit-backdrop-filter:blur(15px); z-index:2147483647; font-family: 'Segoe UI', sans-serif; overflow-y:auto; overflow-x:hidden; box-sizing:border-box; color: #fff; }
@@ -301,13 +301,12 @@
         let activeUserId = "---";
         let activeUserName = "---";
 
-        // Môi trường 1: Chạy trên web độc lập Netlify
+        // Môi trường 1: Chạy trên web độc lập Netlify (Kiểm tra Netlify trước)
         if (typeof window !== 'undefined' && window.GLOBAL_AUTH) {
             if (window.GLOBAL_AUTH.currentUserData) {
-                // Lấy ID duy nhất (vd: account123)
-                activeUserId = window.GLOBAL_AUTH.currentUserData.user; 
-                // Lấy tên hiển thị (vd: Nguyễn Văn A), nếu không có tên thì lấy ID
-                activeUserName = window.GLOBAL_AUTH.currentUserData.name || window.GLOBAL_AUTH.currentUserData.user;
+                let d = window.GLOBAL_AUTH.currentUserData;
+                activeUserId = d.user; // Chắc chắn d.user là Account / ID đăng nhập
+                activeUserName = d.name || d.user; // d.name là Tên hiển thị
             } else {
                 window.GLOBAL_AUTH.openModal();
                 if (context.UI && context.UI.showToast) context.UI.showToast("Vui lòng đăng nhập để sử dụng tiện ích!");
@@ -317,8 +316,8 @@
         // Môi trường 2: Chạy trên trang BI (Tampermonkey)
         else {
             if (context.AUTH_STATE && context.AUTH_STATE.isAuthorized && context.AUTH_STATE.userName !== "---") {
-                // Thường trên BI thì tài khoản duy nhất (userName) là mã nhân viên.
-                activeUserId = context.AUTH_STATE.userName; 
+                // Trên tool BI cũ, mã nhân viên duy nhất thường nằm ở userName hoặc user
+                activeUserId = context.AUTH_STATE.userId || context.AUTH_STATE.user || context.AUTH_STATE.userName; 
                 activeUserName = context.AUTH_STATE.userName;
             } else {
                 if (context.UI && context.UI.showToast) context.UI.showToast("Vui lòng đăng nhập để sử dụng tiện ích!");
@@ -327,13 +326,13 @@
             }
         }
 
-        // Gán vào 2 biến riêng biệt
+        // Gán vào 2 biến riêng biệt dùng trong toàn cục Tool Bài Thi
         USER_ID = activeUserId;
         USER_NAME = activeUserName;
 
         let app = document.getElementById('qz-app-wrapper');
         
-        // CÁC HÀM XỬ LÝ
+        // CÁC HÀM XỬ LÝ DOM
         const $ = (id) => document.getElementById(id);
         const switchScreen = (id) => { document.querySelectorAll('.qz-screen').forEach(s => s.classList.remove('active')); $(id).classList.add('active'); };
 
@@ -344,7 +343,7 @@
             
             if(API_URL) {
                 try {
-                    // => Dùng USER_ID ĐỂ GET LỊCH SỬ DUY NHẤT CỦA MỖI NGƯỜI
+                    // => DÙNG USER_ID ĐỂ TẢI LỊCH SỬ CỦA ĐÚNG USER ĐÓ (KHÔNG TRÙNG TÊN)
                     const resText = await universalFetch({ method: "GET", url: `${API_URL}?action=get_config&type=quiz_history&user=${USER_ID}` });
                     let json = JSON.parse(resText);
                     if (json.data) QUIZ_HISTORY = typeof json.data === 'string' ? JSON.parse(json.data) : json.data;
@@ -418,12 +417,14 @@
             let timeSpent = (CURRENT_QUIZ.timeLimit * 60) - TIME_LEFT;
             $('qz-final-time').innerText = `${Math.floor(timeSpent/60)} phút ${timeSpent%60} giây`;
             
-            // => Dùng USER_NAME để show kết quả sau khi thi xong cho đẹp
-            $('qz-result-user').innerText = USER_NAME;
+            $('qz-result-user').innerText = USER_NAME; // UI show Tên cho đẹp
             switchScreen('sc-result');
 
+            // [QUAN TRỌNG] GHI THÊM CẢ ID VÀ NAME VÀO BÊN TRONG CỦA LỊCH SỬ JSON
             let hisRecord = {
                 time: new Date().getTime(),
+                userId: USER_ID,     // Đưa thẳng ID vào data
+                userName: USER_NAME, // Đưa thẳng Tên vào data
                 quizName: CURRENT_QUIZ.name,
                 score: `${score}/${CURRENT_QUIZ.questions.length}`
             };
@@ -434,11 +435,16 @@
                 $('qz-sync-status').style.color = "#FFD700";
                 
                 try {
-                    // => Dùng USER_ID ĐỂ LƯU CHÍNH XÁC VÀO CỘT USER ĐÓ, KHÔNG BỊ TRÙNG
+                    //[QUAN TRỌNG] TRUYỀN ĐÍCH DANH `user: USER_ID` (137495) ĐỂ GOOGLE APP SCRIPT LƯU THEO CỘT NÀY
                     await universalFetch({
                         method: "POST", 
                         url: API_URL, 
-                        data: JSON.stringify({ action: 'save_config', type: 'quiz_history', user: USER_ID, config: QUIZ_HISTORY.slice(0, 20) }),
+                        data: JSON.stringify({ 
+                            action: 'save_config', 
+                            type: 'quiz_history', 
+                            user: USER_ID,  // CHẮC CHẮN GỬI ID 
+                            config: QUIZ_HISTORY.slice(0, 20) 
+                        }),
                         headers: { "Content-Type": "application/x-www-form-urlencoded" }
                     });
                     $('qz-sync-status').innerText = "✅ Đã lưu kết quả thành công!"; 
@@ -624,13 +630,13 @@
                 switchScreen('sc-review');
             };
             
-            // => Chỉ dùng USER_NAME (Tên người dùng) để hiển thị trên UI cho đẹp mắt.
-            $('qz-user-display').innerHTML = `👤 ${USER_NAME}`;
+            // => Hiển thị ra cả Name và ID để bạn test xem code nhận đúng chưa (Ví dụ: Nguyễn Hoài Nam - 137495)
+            $('qz-user-display').innerHTML = `👤 ${USER_NAME} - ${USER_ID}`;
             switchScreen('sc-home');
             loadHomeData();
         } else {
-            // => Chỉ dùng USER_NAME (Tên người dùng) để hiển thị trên UI cho đẹp mắt.
-            document.getElementById('qz-user-display').innerHTML = `👤 ${USER_NAME}`;
+            // => Cập nhật nếu bật lại App
+            document.getElementById('qz-user-display').innerHTML = `👤 ${USER_NAME} - ${USER_ID}`;
         }
         
         // Hiện UI tool lên
