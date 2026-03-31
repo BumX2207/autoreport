@@ -2,6 +2,9 @@
     const { UI, UTILS, CONSTANTS } = context;
     const GM_xmlhttpRequest = typeof context.GM_xmlhttpRequest !== 'undefined' ? context.GM_xmlhttpRequest : window.GM_xmlhttpRequest;
 
+    // ===============================================================
+    // 0. UNIVERSAL FETCH (HỖ TRỢ CẢ TAMPERMONKEY VÀ NETLIFY)
+    // ===============================================================
     const universalFetch = async (options) => {
         return new Promise((resolve, reject) => {
             if (typeof GM_xmlhttpRequest !== 'undefined') {
@@ -18,6 +21,10 @@
         });
     };
 
+    // ===============================================================
+    // 1. CẤU HÌNH & BIẾN STATE
+    // ===============================================================
+    // Đã thay thế sang link API mới của bạn!
     let API_URL = "https://script.google.com/macros/s/AKfycbyilVgP9qgHd66IsNVJahl19G35BVTCCxGnGVYL4NeHoYUV7u2FzYL1VGfM9lCbdo1xZQ/exec";
     
     let USER_ID = "---";   
@@ -31,6 +38,9 @@
     let TIMER_INTERVAL = null;
     let TIME_LEFT = 0;
 
+    // ===============================================================
+    // 2. CSS GIAO DIỆN
+    // ===============================================================
     const MY_CSS = `
         #qz-app-wrapper { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.9); backdrop-filter:blur(15px); -webkit-backdrop-filter:blur(15px); z-index:2147483647; font-family: 'Segoe UI', sans-serif; overflow-y:auto; overflow-x:hidden; box-sizing:border-box; color: #fff; }
         #qz-app-wrapper * { box-sizing:border-box; }
@@ -133,6 +143,9 @@
         #qz-review-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
     `;
 
+    // ===============================================================
+    // 3. PARSE API DATA
+    // ===============================================================
     const fetchAndParseQuizzes = async () => {
         try {
             if(!API_URL) return[];
@@ -193,6 +206,9 @@
         } catch (e) { console.error("Lỗi parse dữ liệu đề thi:", e); return[]; }
     };
 
+    // ===============================================================
+    // 4. MODULE LOGIC CÂU HỎI (QUIZ TYPES)
+    // ===============================================================
     const QZ_TYPES = {
         'text': {
             render: (q, ans, idx) => { let parts = q.question.split('{input}'); let html = `<div class="qz-q-text">Câu ${idx+1}: `; for(let i=0; i<parts.length; i++) { html += parts[i]; if(i < parts.length - 1) { let val = (ans && ans[i]) ? ans[i] : ''; html += `<input type="text" class="qz-inline-input" oninput="window.QZ_FN.saveAns(${idx}, ${i}, 'text', this.value)" value="${val}" autocomplete="off"/>`; } } return html + `</div>`; },
@@ -251,11 +267,14 @@
         drawMatchLines: (idx) => { const con = document.querySelector('.qz-match-container'); if(!con) return; let svg = con.querySelector('.match-svg'); while(svg.firstChild) svg.removeChild(svg.firstChild); let ans = USER_ANSWERS[idx]; if(!ans) return; const cR = con.getBoundingClientRect(); for(let l in ans) { let elL=document.getElementById(`m-left-${l}`), elR=document.getElementById(`m-right-${ans[l]}`); if(elL && elR) { let rL=elL.getBoundingClientRect(), rR=elR.getBoundingClientRect(); let ln=document.createElementNS('http://www.w3.org/2000/svg','line'); ln.setAttribute('x1', rL.right-cR.left); ln.setAttribute('y1', rL.top+rL.height/2-cR.top); ln.setAttribute('x2', rR.left-cR.left); ln.setAttribute('y2', rR.top+rR.height/2-cR.top); ln.setAttribute('class','match-line'); svg.appendChild(ln); } } }
     };
 
+    // ===============================================================
+    // 5. MAIN LOGIC FLOW
+    // ===============================================================
     const runTool = () => {
         let activeUserId = "---";
         let activeUserName = "---";
 
-        // Môi trường 1: Netlify
+        // Môi trường 1: Chạy trên web độc lập Netlify
         if (typeof window !== 'undefined' && window.GLOBAL_AUTH) {
             if (window.GLOBAL_AUTH.currentUserData) {
                 let d = window.GLOBAL_AUTH.currentUserData;
@@ -267,7 +286,7 @@
                 return; 
             }
         } 
-        // Môi trường 2: Tampermonkey (BI)
+        // Môi trường 2: Chạy trên trang BI (Tampermonkey)
         else {
             if (context.AUTH_STATE && context.AUTH_STATE.isAuthorized && context.AUTH_STATE.userName !== "---") {
                 let rawName = context.AUTH_STATE.userName;
@@ -303,7 +322,7 @@
             
             if(API_URL) {
                 try {
-                    // => GET DATA THEO USER_ID
+                    // => GET DATA THEO USER_ID ĐỂ ĐẢM BẢO CHÍNH XÁC KHÔNG TRÙNG LẪN
                     const resText = await universalFetch({ method: "GET", url: `${API_URL}?action=get_config&type=quiz_history&userId=${USER_ID}` });
                     let json = JSON.parse(resText);
                     if (json.data) QUIZ_HISTORY = typeof json.data === 'string' ? JSON.parse(json.data) : json.data;
@@ -376,15 +395,15 @@
                 $('qz-sync-status').innerText = "⏳ Đang lưu kết quả...";
                 $('qz-sync-status').style.color = "#FFD700";
                 try {
-                    // => GỬI ĐỒNG THỜI userId VÀ userName ĐỂ GAS LƯU VÀO 2 CỘT RIÊNG
+                    // => GỬI GỌI API LÊN BACKEND (KÈM ID + NAME ĐỂ GOOGLE SHEET TỰ ĐỘNG PHÂN TÁCH LƯU TRỮ)
                     await universalFetch({
                         method: "POST", 
                         url: API_URL, 
                         data: JSON.stringify({ 
                             action: 'save_config', 
                             type: 'quiz_history', 
-                            userId: USER_ID,     // GỬI ID
-                            userName: USER_NAME, // GỬI TÊN
+                            userId: USER_ID,     // <--- Đảm bảo lưu đúng cột A (137495)
+                            userName: USER_NAME, // <--- Đảm bảo lưu đúng cột B (Nguyễn Hoài Nam)
                             config: QUIZ_HISTORY.slice(0, 20) 
                         }),
                         headers: { "Content-Type": "application/x-www-form-urlencoded" }
@@ -498,6 +517,7 @@
                 switchScreen('sc-review');
             };
             
+            // => HIỂN THỊ TÊN - ID LÊN MÀN HÌNH CHÍNH CỦA APP ĐỂ DỄ QUAN SÁT
             $('qz-user-display').innerHTML = `👤 ${USER_NAME} (${USER_ID})`;
             switchScreen('sc-home');
             loadHomeData();
