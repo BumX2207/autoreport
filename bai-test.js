@@ -495,11 +495,11 @@
                 switchScreen('sc-review');
             };
             
-            $('qz-user-display').innerHTML = `👤 ${USER_NAME} (${USER_ID})`;
+            $('qz-user-display').innerHTML = `👤 ${USER_NAME}`;
             switchScreen('sc-home');
             loadHomeData();
         } else {
-            document.getElementById('qz-user-display').innerHTML = `👤 ${USER_NAME} (${USER_ID})`;
+            document.getElementById('qz-user-display').innerHTML = `👤 ${USER_NAME}`;
         }
         
         app.style.display = 'block';
