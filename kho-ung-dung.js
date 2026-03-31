@@ -383,7 +383,7 @@
 
     return {
         name: "Kho Phần Mềm",
-        icon: `<svg viewBox="0 0 24 24"><path fill="white" d="M19 2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h4l3 3 3-3h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 16H5V4h14v14z"/><path fill="white" d="M7 12h2v5H7zm4-5h2v10h-2zm4 3h2v7h-2z"/></svg>`,
+        icon: `<svg viewBox="0 0 24 24"><path fill="white" d="M19 4h-2V2h-2v2h-2V2h-2v2H9V2H7v2H5c-1.1 0-2 .9-2 2v2H1v2h2v2H1v2h2v2H1v2h2v2c0 1.1.9 2 2 2h2v2h2v-2h2v2h2v-2h2v2h2v-2h2c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2v-2h-2v-2h2V7h-2V5c0-1.1-.9-2-2-2zM7 17h10V7H7v10z"/></svg>`,
         bgColor: "#2563eb", 
         action: runTool
     };
