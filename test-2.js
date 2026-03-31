@@ -506,7 +506,7 @@
     };
 
     return {
-        name: "Bài test",
+        name: "Bài test 2",
         icon: `<svg viewBox="0 0 24 24"><path fill="white" d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2.12-1.15-.31-1.39-1.81.98L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72l5 2.73 5-2.73v3.72z"/></svg>`,
         bgColor: "#10b981", 
         action: runTool
