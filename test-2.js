@@ -2,9 +2,6 @@
     const { UI, UTILS, CONSTANTS } = context;
     const GM_xmlhttpRequest = typeof context.GM_xmlhttpRequest !== 'undefined' ? context.GM_xmlhttpRequest : window.GM_xmlhttpRequest;
 
-    // ===============================================================
-    // 0. UNIVERSAL FETCH (HỖ TRỢ CẢ TAMPERMONKEY VÀ NETLIFY)
-    // ===============================================================
     const universalFetch = async (options) => {
         return new Promise((resolve, reject) => {
             if (typeof GM_xmlhttpRequest !== 'undefined') {
@@ -21,14 +18,10 @@
         });
     };
 
-    // ===============================================================
-    // 1. CẤU HÌNH & BIẾN STATE
-    // ===============================================================
     let API_URL = "https://script.google.com/macros/s/AKfycbxDRSg1JDNTyuYf2TSQovNIWhFk3ls9hPXxtRSMu6xI0oNjql53nJo0G1H5k1b2iq_3/exec";
     
-    // Tách biệt rõ ràng biến lưu ID và Name
-    let USER_ID = "---";   // Dùng làm Key duy nhất lưu Data (ví dụ: 137495)
-    let USER_NAME = "---"; // Dùng để hiển thị cho đẹp (ví dụ: Nguyễn Hoài Nam)
+    let USER_ID = "---";   
+    let USER_NAME = "---"; 
     
     let QUIZ_LIST =[]; 
     let CURRENT_QUIZ = null; 
@@ -38,9 +31,6 @@
     let TIMER_INTERVAL = null;
     let TIME_LEFT = 0;
 
-    // ===============================================================
-    // 2. CSS GIAO DIỆN
-    // ===============================================================
     const MY_CSS = `
         #qz-app-wrapper { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.9); backdrop-filter:blur(15px); -webkit-backdrop-filter:blur(15px); z-index:2147483647; font-family: 'Segoe UI', sans-serif; overflow-y:auto; overflow-x:hidden; box-sizing:border-box; color: #fff; }
         #qz-app-wrapper * { box-sizing:border-box; }
@@ -71,7 +61,6 @@
         .qz-card-title { font-size:16px; font-weight:bold; color:#FFD700; margin-bottom:5px; line-height:1.4; }
         .qz-card-desc { font-size:12px; color:#aaa; }
 
-        /* PLAY SCREEN & DARK THEME QUESTION BOX */
         .qz-play-header { display:flex; justify-content:space-between; align-items: center; background:rgba(0,0,0,0.3); padding:10px 20px; border-radius:12px; margin-bottom:20px; font-weight:bold; }
         .qz-timer { color:#ff5252; font-size:18px; font-family:monospace; }
         
@@ -89,7 +78,6 @@
         .qz-btn-quit { background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 5px 15px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; transition: 0.2s;}
         .qz-btn-quit:hover { background: #ef4444; color: white;}
 
-        /* QUIZ TYPES - DARK UI */
         .qz-opts { display:flex; gap:15px; flex-wrap:wrap; }
         .qz-opt-label { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); border-radius:10px; padding:15px; cursor:pointer; display:flex; align-items:center; width:calc(50% - 8px); transition:0.2s; color:#fff; font-weight:600;}
         .qz-opt-label:hover { background:rgba(255,255,255,0.1); border-color:#FFD700; }
@@ -107,7 +95,6 @@
         .match-svg { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1; }
         .match-line { stroke:#FFD700; stroke-width:3px; stroke-linecap:round; }
 
-        /* VẼ VÒNG TRÒN (HAND-DRAWN EFFECT) */
         .qz-circle-container { display:flex; flex-direction:column; gap:15px; }
         .qz-circle-item { display:flex; align-items:center; gap:15px; cursor:pointer; padding:10px 15px; border-radius:12px; transition:0.2s; border:1px solid transparent; }
         .qz-circle-item:hover { background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.2); }
@@ -126,7 +113,6 @@
         .qz-word.r-wrong { border-bottom-color:#ef4444; color:#ef4444; background:rgba(239,68,68,0.2); text-decoration:line-through; }
         .qz-word.r-missed { border-bottom:2px dashed #10b981; color:#94a3b8; }
 
-        /* RESULT & HISTORY */
         .qz-score-box { width:120px; height:120px; background:#FFD700; color:#1e293b; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:36px; font-weight:900; margin:0 auto 20px; box-shadow:0 0 20px rgba(255,215,0,0.5); }
         .qz-history-table { width:100%; border-collapse:collapse; margin-top:20px; background:rgba(255,255,255,0.05); border-radius:12px; overflow:hidden; }
         .qz-history-table th { background:rgba(0,0,0,0.5); padding:12px; text-align:left; color:#FFD700; }
@@ -139,37 +125,14 @@
 
         @keyframes fadeIn { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }
 
-        #sc-review {
-            display: none; 
-            flex-direction: column;
-            height: calc(100vh - 80px);
-            padding-bottom: 10px;
-            overflow: hidden;
-        }
-        #sc-review.active {
-            display: flex;
-        }
-        #sc-review .qz-page-title {
-            flex-shrink: 0;
-        }
-        #qz-review-content {
-            flex-grow: 1;
-            overflow-y: auto;
-            background: rgba(30, 41, 59, 0.8);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 16px; 
-            padding: 20px; 
-            color: #fff;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-        }
+        #sc-review { display: none; flex-direction: column; height: calc(100vh - 80px); padding-bottom: 10px; overflow: hidden; }
+        #sc-review.active { display: flex; }
+        #sc-review .qz-page-title { flex-shrink: 0; }
+        #qz-review-content { flex-grow: 1; overflow-y: auto; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 20px; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.4); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
         #qz-review-content::-webkit-scrollbar { width: 6px; }
         #qz-review-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
     `;
 
-    // ===============================================================
-    // 3. PARSE API DATA
-    // ===============================================================
     const fetchAndParseQuizzes = async () => {
         try {
             if(!API_URL) return[];
@@ -227,15 +190,9 @@
                 }
             }
             return quizzes;
-        } catch (e) {
-            console.error("Lỗi parse dữ liệu đề thi:", e);
-            return[];
-        }
+        } catch (e) { console.error("Lỗi parse dữ liệu đề thi:", e); return[]; }
     };
 
-    // ===============================================================
-    // 4. MODULE LOGIC CÂU HỎI (QUIZ TYPES)
-    // ===============================================================
     const QZ_TYPES = {
         'text': {
             render: (q, ans, idx) => { let parts = q.question.split('{input}'); let html = `<div class="qz-q-text">Câu ${idx+1}: `; for(let i=0; i<parts.length; i++) { html += parts[i]; if(i < parts.length - 1) { let val = (ans && ans[i]) ? ans[i] : ''; html += `<input type="text" class="qz-inline-input" oninput="window.QZ_FN.saveAns(${idx}, ${i}, 'text', this.value)" value="${val}" autocomplete="off"/>`; } } return html + `</div>`; },
@@ -294,31 +251,37 @@
         drawMatchLines: (idx) => { const con = document.querySelector('.qz-match-container'); if(!con) return; let svg = con.querySelector('.match-svg'); while(svg.firstChild) svg.removeChild(svg.firstChild); let ans = USER_ANSWERS[idx]; if(!ans) return; const cR = con.getBoundingClientRect(); for(let l in ans) { let elL=document.getElementById(`m-left-${l}`), elR=document.getElementById(`m-right-${ans[l]}`); if(elL && elR) { let rL=elL.getBoundingClientRect(), rR=elR.getBoundingClientRect(); let ln=document.createElementNS('http://www.w3.org/2000/svg','line'); ln.setAttribute('x1', rL.right-cR.left); ln.setAttribute('y1', rL.top+rL.height/2-cR.top); ln.setAttribute('x2', rR.left-cR.left); ln.setAttribute('y2', rR.top+rR.height/2-cR.top); ln.setAttribute('class','match-line'); svg.appendChild(ln); } } }
     };
 
-    // ===============================================================
-    // 5. MAIN LOGIC FLOW
-    // ===============================================================
     const runTool = () => {
         let activeUserId = "---";
         let activeUserName = "---";
 
-        // Môi trường 1: Chạy trên web độc lập Netlify (Kiểm tra Netlify trước)
+        // Môi trường 1: Netlify
         if (typeof window !== 'undefined' && window.GLOBAL_AUTH) {
             if (window.GLOBAL_AUTH.currentUserData) {
                 let d = window.GLOBAL_AUTH.currentUserData;
-                activeUserId = d.user; // Chắc chắn d.user là Account / ID đăng nhập
-                activeUserName = d.name || d.user; // d.name là Tên hiển thị
+                activeUserId = d.user; 
+                activeUserName = d.name || d.user; 
             } else {
                 window.GLOBAL_AUTH.openModal();
                 if (context.UI && context.UI.showToast) context.UI.showToast("Vui lòng đăng nhập để sử dụng tiện ích!");
                 return; 
             }
         } 
-        // Môi trường 2: Chạy trên trang BI (Tampermonkey)
+        // Môi trường 2: Tampermonkey (BI)
         else {
             if (context.AUTH_STATE && context.AUTH_STATE.isAuthorized && context.AUTH_STATE.userName !== "---") {
-                // Trên tool BI cũ, mã nhân viên duy nhất thường nằm ở userName hoặc user
-                activeUserId = context.AUTH_STATE.userId || context.AUTH_STATE.user || context.AUTH_STATE.userName; 
-                activeUserName = context.AUTH_STATE.userName;
+                let rawName = context.AUTH_STATE.userName;
+                // Bóc tách phòng trường hợp tên bị nối "137495 - Nguyễn Văn A"
+                if (context.AUTH_STATE.userId) {
+                    activeUserId = context.AUTH_STATE.userId;
+                    activeUserName = rawName;
+                } else if (rawName.includes('-')) {
+                    activeUserId = rawName.split('-')[0].trim();
+                    activeUserName = rawName.split('-').slice(1).join('-').trim();
+                } else {
+                    activeUserId = rawName; 
+                    activeUserName = rawName;
+                }
             } else {
                 if (context.UI && context.UI.showToast) context.UI.showToast("Vui lòng đăng nhập để sử dụng tiện ích!");
                 else alert("Vui lòng đăng nhập ở màn hình chính trước khi sử dụng!");
@@ -326,13 +289,10 @@
             }
         }
 
-        // Gán vào 2 biến riêng biệt dùng trong toàn cục Tool Bài Thi
         USER_ID = activeUserId;
         USER_NAME = activeUserName;
 
         let app = document.getElementById('qz-app-wrapper');
-        
-        // CÁC HÀM XỬ LÝ DOM
         const $ = (id) => document.getElementById(id);
         const switchScreen = (id) => { document.querySelectorAll('.qz-screen').forEach(s => s.classList.remove('active')); $(id).classList.add('active'); };
 
@@ -343,8 +303,8 @@
             
             if(API_URL) {
                 try {
-                    // => DÙNG USER_ID ĐỂ TẢI LỊCH SỬ CỦA ĐÚNG USER ĐÓ (KHÔNG TRÙNG TÊN)
-                    const resText = await universalFetch({ method: "GET", url: `${API_URL}?action=get_config&type=quiz_history&user=${USER_ID}` });
+                    // => GET DATA THEO USER_ID
+                    const resText = await universalFetch({ method: "GET", url: `${API_URL}?action=get_config&type=quiz_history&userId=${USER_ID}` });
                     let json = JSON.parse(resText);
                     if (json.data) QUIZ_HISTORY = typeof json.data === 'string' ? JSON.parse(json.data) : json.data;
                 } catch(e) { console.log("Không tải được lịch sử", e); }
@@ -362,10 +322,7 @@
                     </div>
                 `;
             });
-
-            document.querySelectorAll('.qz-card').forEach(card => {
-                card.onclick = () => startQuiz(parseInt(card.getAttribute('data-idx')));
-            });
+            document.querySelectorAll('.qz-card').forEach(card => card.onclick = () => startQuiz(parseInt(card.getAttribute('data-idx'))));
         };
 
         const startQuiz = (idx) => {
@@ -373,7 +330,6 @@
             USER_ANSWERS = new Array(CURRENT_QUIZ.questions.length).fill(null);
             CURRENT_Q_IDX = 0;
             TIME_LEFT = CURRENT_QUIZ.timeLimit * 60; 
-            
             switchScreen('sc-play');
             renderQuestion(0);
             
@@ -389,16 +345,11 @@
         const renderQuestion = (idx) => {
             const q = CURRENT_QUIZ.questions[idx];
             $('qz-progress-text').innerText = `Câu ${idx+1} / ${CURRENT_QUIZ.questions.length}`;
-            
             let imgHtml = q.image ? `<img src="${q.image}" class="qz-img">` : '';
             let content = "";
             let handler = QZ_TYPES[q.type];
-            if (handler) {
-                content = (q.type === 'text') ? handler.render(q, USER_ANSWERS[idx], idx) : `<div class="qz-q-text">Câu ${idx+1}: ${q.question}</div>` + handler.render(q, USER_ANSWERS[idx], idx);
-            }
-            
+            if (handler) content = (q.type === 'text') ? handler.render(q, USER_ANSWERS[idx], idx) : `<div class="qz-q-text">Câu ${idx+1}: ${q.question}</div>` + handler.render(q, USER_ANSWERS[idx], idx);
             $('qz-question-render').innerHTML = imgHtml + content;
-            
             $('qz-btn-prev').disabled = (idx === 0);
             $('qz-btn-next').innerText = (idx === CURRENT_QUIZ.questions.length - 1) ? "Nộp Bài" : "Tiếp theo ➡";
             window.QZ_FN.checkNextBtn(idx);
@@ -413,36 +364,27 @@
             });
 
             $('qz-final-score').innerText = `${score}/${CURRENT_QUIZ.questions.length}`;
-            
             let timeSpent = (CURRENT_QUIZ.timeLimit * 60) - TIME_LEFT;
             $('qz-final-time').innerText = `${Math.floor(timeSpent/60)} phút ${timeSpent%60} giây`;
-            
-            $('qz-result-user').innerText = USER_NAME; // UI show Tên cho đẹp
+            $('qz-result-user').innerText = USER_NAME;
             switchScreen('sc-result');
 
-            // [QUAN TRỌNG] GHI THÊM CẢ ID VÀ NAME VÀO BÊN TRONG CỦA LỊCH SỬ JSON
-            let hisRecord = {
-                time: new Date().getTime(),
-                userId: USER_ID,     // Đưa thẳng ID vào data
-                userName: USER_NAME, // Đưa thẳng Tên vào data
-                quizName: CURRENT_QUIZ.name,
-                score: `${score}/${CURRENT_QUIZ.questions.length}`
-            };
+            let hisRecord = { time: new Date().getTime(), quizName: CURRENT_QUIZ.name, score: `${score}/${CURRENT_QUIZ.questions.length}` };
             QUIZ_HISTORY.unshift(hisRecord);
             
             if (API_URL) {
                 $('qz-sync-status').innerText = "⏳ Đang lưu kết quả...";
                 $('qz-sync-status').style.color = "#FFD700";
-                
                 try {
-                    //[QUAN TRỌNG] TRUYỀN ĐÍCH DANH `user: USER_ID` (137495) ĐỂ GOOGLE APP SCRIPT LƯU THEO CỘT NÀY
+                    // => GỬI ĐỒNG THỜI userId VÀ userName ĐỂ GAS LƯU VÀO 2 CỘT RIÊNG
                     await universalFetch({
                         method: "POST", 
                         url: API_URL, 
                         data: JSON.stringify({ 
                             action: 'save_config', 
                             type: 'quiz_history', 
-                            user: USER_ID,  // CHẮC CHẮN GỬI ID 
+                            userId: USER_ID,     // GỬI ID
+                            userName: USER_NAME, // GỬI TÊN
                             config: QUIZ_HISTORY.slice(0, 20) 
                         }),
                         headers: { "Content-Type": "application/x-www-form-urlencoded" }
@@ -458,7 +400,6 @@
             }
         };
 
-        // KHỞI TẠO DOM NẾU CHƯA CÓ
         if (!app) {
             app = document.createElement('div');
             app.id = 'qz-app-wrapper';
@@ -470,95 +411,23 @@
                         <button class="qz-btn-close-app" id="btn-qz-close" title="Đóng">✕</button>
                     </div>
                 </div>
-
-                <!-- SCREEN 1: HOME (QUIZ LIST) -->
-                <div class="qz-screen" id="sc-home">
-                    <div class="qz-page-title">
-                        <span>📚 DANH SÁCH</span>
-                        <button class="qz-btn-history" id="btn-qz-history">📜 Lịch sử thi</button>
-                    </div>
-                    <div id="qz-loading-text" style="text-align:center; color:#94a3b8; padding:30px;">⏳ Đang tải bộ câu hỏi...</div>
-                    <div class="qz-grid" id="qz-quiz-grid"></div>
-                </div>
-
-                <!-- SCREEN 2: PLAYING -->
-                <div class="qz-screen" id="sc-play">
-                    <div class="qz-play-header">
-                        <div>
-                            <button id="qz-btn-quit" class="qz-btn-quit">❌ Thoát</button>
-                            <span id="qz-progress-text" style="color:#4fc3f7; margin-left: 15px;">Câu 1/10</span>
-                        </div>
-                        <span class="qz-timer" id="qz-timer-display">15:00</span>
-                    </div>
-                    <div class="qz-question-container" id="qz-question-render"></div>
-                    <div class="qz-play-footer">
-                        <button class="qz-btn-nav qz-btn-prev" id="qz-btn-prev">⬅ Quay lại</button>
-                        <button class="qz-btn-nav qz-btn-next" id="qz-btn-next" disabled>Tiếp theo ➡</button>
-                    </div>
-                </div>
-
-                <!-- SCREEN 3: RESULT -->
-                <div class="qz-screen" id="sc-result">
-                    <div class="qz-auth-box" style="max-width:500px; margin: 20px auto;">
-                        <h2 style="color:#FFD700; margin-bottom:20px;">KẾT QUẢ BÀI THI</h2>
-                        <div class="qz-score-box" id="qz-final-score">0/10</div>
-                        <p style="color:#cbd5e1; margin-bottom:5px;">Người thi: <b style="color:#fff;" id="qz-result-user">---</b></p>
-                        <p style="color:#cbd5e1; margin-bottom:20px;">Thời gian: <b style="color:#fff;" id="qz-final-time">0 phút</b></p>
-                        <p id="qz-sync-status" style="color:#00e676; font-size:13px; margin-bottom:20px;">⏳ Đang lưu kết quả lên hệ thống...</p>
-                        
-                        <div style="display:flex; gap:10px;">
-                            <button class="qz-btn" style="background:#64748b;" id="btn-qz-review">Xem chi tiết đáp án</button>
-                            <button class="qz-btn qz-btn-primary" id="btn-qz-gohome">Về trang chủ</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- SCREEN 4: HISTORY -->
-                <div class="qz-screen" id="sc-history">
-                    <div class="qz-page-title">
-                        <span>📜 LỊCH SỬ</span>
-                        <button class="qz-btn-history" id="btn-qz-his-home">Quay lại</button>
-                    </div>
-                    <div style="overflow-x:auto;">
-                        <table class="qz-history-table">
-                            <thead><tr><th>Thời gian</th><th>Tên bài thi</th><th>Điểm số</th></tr></thead>
-                            <tbody id="qz-history-body">
-                                <tr><td colspan="3" style="text-align:center; color:#94a3b8;">Chưa có dữ liệu</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- SCREEN 5: REVIEW -->
-                <div class="qz-screen" id="sc-review">
-                    <div class="qz-page-title">
-                        <span>🔍 CHI TIẾT ĐÁP ÁN</span>
-                        <button class="qz-btn-history" id="btn-qz-rev-home">⬅ Đóng</button>
-                    </div>
-                    <div id="qz-review-content"></div>
-                </div>
+                <div class="qz-screen" id="sc-home"><div class="qz-page-title"><span>📚 DANH SÁCH</span><button class="qz-btn-history" id="btn-qz-history">📜 Lịch sử thi</button></div><div id="qz-loading-text" style="text-align:center; color:#94a3b8; padding:30px;">⏳ Đang tải bộ câu hỏi...</div><div class="qz-grid" id="qz-quiz-grid"></div></div>
+                <div class="qz-screen" id="sc-play"><div class="qz-play-header"><div><button id="qz-btn-quit" class="qz-btn-quit">❌ Thoát</button><span id="qz-progress-text" style="color:#4fc3f7; margin-left: 15px;">Câu 1/10</span></div><span class="qz-timer" id="qz-timer-display">15:00</span></div><div class="qz-question-container" id="qz-question-render"></div><div class="qz-play-footer"><button class="qz-btn-nav qz-btn-prev" id="qz-btn-prev">⬅ Quay lại</button><button class="qz-btn-nav qz-btn-next" id="qz-btn-next" disabled>Tiếp theo ➡</button></div></div>
+                <div class="qz-screen" id="sc-result"><div class="qz-auth-box" style="max-width:500px; margin: 20px auto;"><h2 style="color:#FFD700; margin-bottom:20px;">KẾT QUẢ BÀI THI</h2><div class="qz-score-box" id="qz-final-score">0/10</div><p style="color:#cbd5e1; margin-bottom:5px;">Người thi: <b style="color:#fff;" id="qz-result-user">---</b></p><p style="color:#cbd5e1; margin-bottom:20px;">Thời gian: <b style="color:#fff;" id="qz-final-time">0 phút</b></p><p id="qz-sync-status" style="color:#00e676; font-size:13px; margin-bottom:20px;">⏳ Đang lưu kết quả lên hệ thống...</p><div style="display:flex; gap:10px;"><button class="qz-btn" style="background:#64748b;" id="btn-qz-review">Xem chi tiết đáp án</button><button class="qz-btn qz-btn-primary" id="btn-qz-gohome">Về trang chủ</button></div></div></div>
+                <div class="qz-screen" id="sc-history"><div class="qz-page-title"><span>📜 LỊCH SỬ</span><button class="qz-btn-history" id="btn-qz-his-home">Quay lại</button></div><div style="overflow-x:auto;"><table class="qz-history-table"><thead><tr><th>Thời gian</th><th>Tên bài thi</th><th>Điểm số</th></tr></thead><tbody id="qz-history-body"><tr><td colspan="3" style="text-align:center; color:#94a3b8;">Chưa có dữ liệu</td></tr></tbody></table></div></div>
+                <div class="qz-screen" id="sc-review"><div class="qz-page-title"><span>🔍 CHI TIẾT ĐÁP ÁN</span><button class="qz-btn-history" id="btn-qz-rev-home">⬅ Đóng</button></div><div id="qz-review-content"></div></div>
             `;
             document.body.appendChild(app);
             
             const style = document.createElement('style'); style.innerHTML = MY_CSS; document.head.appendChild(style);
             if(!document.querySelector('link[href*="font-awesome"]')) {
-                const fa = document.createElement('link'); fa.rel = 'stylesheet'; fa.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css';
-                document.head.appendChild(fa);
+                const fa = document.createElement('link'); fa.rel = 'stylesheet'; fa.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'; document.head.appendChild(fa);
             }
 
-            // GÁN SỰ KIỆN CLICK CHO CÁC NÚT
             $('btn-qz-close').onclick = () => { app.style.display = 'none'; };
-            $('qz-btn-quit').onclick = () => {
-                if(confirm("Bạn có chắc chắn muốn thoát? Kết quả bài thi sẽ không được lưu!")) {
-                    clearInterval(TIMER_INTERVAL);
-                    switchScreen('sc-home');
-                }
-            };
+            $('qz-btn-quit').onclick = () => { if(confirm("Bạn có chắc chắn muốn thoát? Kết quả bài thi sẽ không được lưu!")) { clearInterval(TIMER_INTERVAL); switchScreen('sc-home'); } };
             $('qz-btn-prev').onclick = () => { if(CURRENT_Q_IDX > 0) renderQuestion(--CURRENT_Q_IDX); };
-            $('qz-btn-next').onclick = () => { 
-                if(CURRENT_Q_IDX < CURRENT_QUIZ.questions.length - 1) renderQuestion(++CURRENT_Q_IDX); 
-                else submitQuiz(); 
-            };
+            $('qz-btn-next').onclick = () => { if(CURRENT_Q_IDX < CURRENT_QUIZ.questions.length - 1) renderQuestion(++CURRENT_Q_IDX); else submitQuiz(); };
             $('btn-qz-gohome').onclick = () => switchScreen('sc-home');
             $('btn-qz-his-home').onclick = () => switchScreen('sc-home');
             $('btn-qz-rev-home').onclick = () => switchScreen('sc-result');
@@ -625,21 +494,17 @@
                     if(q.explain) html += `<div class="qz-explain">💡 ${q.explain}</div>`; 
                     html += `</div>`; 
                 });
-                
                 $('qz-review-content').innerHTML = html;
                 switchScreen('sc-review');
             };
             
-            // => Hiển thị ra cả Name và ID để bạn test xem code nhận đúng chưa (Ví dụ: Nguyễn Hoài Nam - 137495)
-            $('qz-user-display').innerHTML = `👤 ${USER_NAME} - ${USER_ID}`;
+            $('qz-user-display').innerHTML = `👤 ${USER_NAME} (${USER_ID})`;
             switchScreen('sc-home');
             loadHomeData();
         } else {
-            // => Cập nhật nếu bật lại App
-            document.getElementById('qz-user-display').innerHTML = `👤 ${USER_NAME} - ${USER_ID}`;
+            document.getElementById('qz-user-display').innerHTML = `👤 ${USER_NAME} (${USER_ID})`;
         }
         
-        // Hiện UI tool lên
         app.style.display = 'block';
     };
 
