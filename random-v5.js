@@ -23,7 +23,7 @@
         .vq-pointer { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 20px solid transparent; border-right: 20px solid transparent; border-top: 40px solid #d63031; z-index: 10; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.2)); }
         
         .vq-controls { width: 100%; max-width: 500px; display: flex; gap: 10px; align-items: center; background: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #eee; }
-        .vq-time-input { width: 100px; flex: 1; padding: 12px; border: 2px solid #dfe6e9; border-radius: 8px; font-size: 15px; font-weight:bold; text-align:center; outline:none; }
+        .vq-time-input { width: 85px; padding: 12px; border: 2px solid #dfe6e9; border-radius: 8px; font-size: 15px; font-weight:bold; text-align:center; outline:none; }
         .vq-time-input:focus { border-color:#e84393; }
         .vq-btn-spin { flex: 2; background: #e84393; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 18px; font-weight: 900; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 10px rgba(232, 67, 147, 0.3); }
         .vq-btn-spin:hover:not(:disabled) { background: #d81b60; transform: translateY(-2px); }
