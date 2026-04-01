@@ -82,7 +82,7 @@
                 <div class="vq-header">
                     <div class="vq-logo">
                         <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v4h-2zm0 6h2v2h-2z"/></svg>
-                        Chiếc Nón Kỳ Diệu
+                        Vòng Quay Ngẫu Nhiên
                     </div>
                     <button class="vq-btn-close" id="vq-btn-close" title="Đóng">✖</button>
                 </div>
@@ -352,7 +352,7 @@
     };
 
     return {
-        name: "Vòng Quay May Mắn",
+        name: "Quay Random",
         icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm-1-13h2v4h-2zm0 6h2v2h-2z"/></svg>`,
         bgColor: "#e84393",
         action: runTool
