@@ -41,6 +41,90 @@
     let MANAGER_SHEET_ID = ""; 
     let EDITING_EMP_INDEX = -1; 
 
+    // ===============================================================
+    // HỆ THỐNG NHẮC NHỞ SINH NHẬT TRONG TUẦN
+    // ===============================================================
+    const getShortDob = (rawDate) => {
+        if (!rawDate) return null;
+        let str = String(rawDate).trim();
+        // Ép các định dạng 2/4/1997 thành chuẩn 02/04
+        if (str.includes('/')) {
+            let parts = str.split('/');
+            return `${String(parts[0]).padStart(2, '0')}/${String(parts[1]).padStart(2, '0')}`;
+        }
+        let d = new Date(str);
+        if (!isNaN(d.getTime())) return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+        return null;
+    };
+
+    const showBirthdayPopup = (birthdayPeople) => {
+        let existingModal = document.getElementById('hpbd-modal');
+        if (existingModal) existingModal.remove();
+
+        let listHtml = birthdayPeople.map(p => `
+            <div class="hpbd-item">
+                <span class="hpbd-date">🎂 ${p.date}</span>
+                <span style="flex:1;">${p.name} <small style="color:#94a3b8;">(Kho ${p.shop})</small></span>
+            </div>
+        `).join('');
+
+        const modalHtml = `
+            <div class="hpbd-overlay" id="hpbd-modal">
+                <div class="hpbd-box">
+                    <div class="hpbd-icon">🎉</div>
+                    <div class="hpbd-title">Sắp Tới Sinh Nhật!</div>
+                    <p style="color: #cbd5e1; font-size: 13px; margin-bottom: 15px; line-height: 1.5;">Trong tuần này, có sinh nhật của các thành viên sau. Đừng quên gửi lời chúc nhé!</p>
+                    <div class="hpbd-list">${listHtml}</div>
+                    <button class="hpbd-btn" id="btn-hpbd-close">Đã Rõ & Đóng</button>
+                </div>
+            </div>
+        `;
+        document.getElementById('bc-app-wrapper').insertAdjacentHTML('beforeend', modalHtml);
+        const modalEl = document.getElementById('hpbd-modal');
+        setTimeout(() => modalEl.classList.add('show'), 50);
+
+        document.getElementById('btn-hpbd-close').onclick = () => { modalEl.classList.remove('show'); setTimeout(() => modalEl.remove(), 300); };
+    };
+
+    const processBirthdays = (empList, currentUser, targetShops) => {
+        let daysInWeek =[];
+        let d = new Date();
+        let day = d.getDay();
+        let diffToMonday = d.getDate() - day + (day === 0 ? -6 : 1);
+        let startOfWeek = new Date(d.getFullYear(), d.getMonth(), diffToMonday);
+        
+        for(let i = 0; i < 7; i++) {
+            let tempDate = new Date(startOfWeek);
+            tempDate.setDate(startOfWeek.getDate() + i);
+            let dd = String(tempDate.getDate()).padStart(2, '0');
+            let mm = String(tempDate.getMonth() + 1).padStart(2, '0');
+            daysInWeek.push(`${dd}/${mm}`);
+        }
+
+        let bdayPeople =[];
+        empList.forEach(e => {
+            // Lọc nhân viên nằm trong danh sách Kho cần check VÀ không phải là chính mình
+            if (targetShops.includes(String(e.s).trim()) && String(e.u).toLowerCase() !== String(currentUser).toLowerCase()) {
+                let shortDob = getShortDob(e.dob);
+                if (shortDob && daysInWeek.includes(shortDob)) {
+                    bdayPeople.push({ name: e.fn || e.u, date: shortDob, shop: e.s });
+                }
+            }
+        });
+
+        if (bdayPeople.length > 0) {
+            let todayKey = new Date().toLocaleDateString();
+            // Nếu bạn muốn test nhiều lần, hãy chuyển 'localStorage' thành 'sessionStorage'
+            if (localStorage.getItem('bc_bday_shown_' + currentUser) !== todayKey) {
+                setTimeout(() => {
+                    showBirthdayPopup(bdayPeople);
+                    localStorage.setItem('bc_bday_shown_' + currentUser, todayKey);
+                }, 800);
+            }
+        }
+    };
+    // ===============================================================
+
     const parseDateFromSheet = (rawStr) => {
         if (!rawStr) return { date: "N/A", time: "N/A", month: "N/A" };
         let str = String(rawStr).trim();
@@ -280,6 +364,21 @@
         .fund-sub-tabs { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px; overflow-x: auto; }
         .fund-sub-tab { padding: 8px 15px; background: rgba(0,0,0,0.3); border-radius: 6px; cursor: pointer; color: #94a3b8; font-weight: bold; border: 1px solid transparent; transition: 0.2s; white-space: nowrap; }
         .fund-sub-tab.active { background: rgba(56,189,248,0.1); color: #38bdf8; border-color: #38bdf8; }
+
+        /* ===== CSS POPUP SINH NHẬT ===== */
+        .hpbd-overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:2147483660; display:flex; justify-content:center; align-items:center; opacity:0; pointer-events:none; transition:0.3s; backdrop-filter: blur(5px);}
+        .hpbd-overlay.show { opacity:1; pointer-events:auto; }
+        .hpbd-box { background: linear-gradient(135deg, #1e1b4b, #3b0764); border: 2px solid #f59e0b; border-radius: 20px; padding: 30px; width: 90%; max-width: 380px; text-align: center; position: relative; box-shadow: 0 15px 50px rgba(245, 158, 11, 0.3); transform: scale(0.8); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .hpbd-overlay.show .hpbd-box { transform: scale(1); }
+        .hpbd-icon { font-size: 60px; margin-bottom: 10px; animation: bounce 2s infinite; }
+        .hpbd-title { font-size: 22px; font-weight: 900; color: #fbbf24; text-transform: uppercase; margin-bottom: 10px; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .hpbd-list { background: rgba(255,255,255,0.05); border-radius: 10px; padding: 15px; margin-bottom: 20px; border: 1px dashed rgba(245, 158, 11, 0.4); text-align: left; max-height: 150px; overflow-y: auto;}
+        .hpbd-item { font-size: 14px; color: #fff; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; font-weight: bold;}
+        .hpbd-item:last-child { margin-bottom: 0; }
+        .hpbd-date { background: #ef4444; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; flex-shrink: 0; }
+        .hpbd-btn { background: linear-gradient(to right, #f59e0b, #d97706); color: white; border: none; padding: 12px 30px; border-radius: 25px; font-weight: bold; font-size: 15px; cursor: pointer; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); transition: 0.2s;}
+        .hpbd-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6); }
+        @keyframes bounce { 0%, 20%, 50%, 80%, 100% {transform: translateY(0);} 40% {transform: translateY(-15px);} 60% {transform: translateY(-7px);} }
     `;
 
     const processImages = async (files) => {
@@ -1412,7 +1511,6 @@
             const loadConfig = async () => {
                 $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang tải dữ liệu...";
                 try {
-                    // ĐỔI API_URL_MAIN THÀNH API_URL_APP Ở ĐÂY 👇
                     let res = await universalFetch({ method:"POST", url: API_URL_APP, data: JSON.stringify({action:"get_config_manager", user: CURRENT_USER})});
                     let data = JSON.parse(res);
                     if(data.status === 'success') {
@@ -1422,8 +1520,15 @@
                         
                         if (data.folderId || data.sheetId) lockConfigInputs(true);
 
-                        MANAGER_EMPLOYEES = data.employees && data.employees !== "[]" ? JSON.parse(data.employees) :[];
+                        MANAGER_EMPLOYEES = data.employees && data.employees !== "[]" ? JSON.parse(data.employees) : [];
                         renderNV();
+
+                        // [THÊM MỚI TẠI ĐÂY]: KÍCH HOẠT CHECK SINH NHẬT CHO QUẢN LÝ
+                        if (MANAGER_EMPLOYEES.length > 0) {
+                            let mgrShops =[...new Set(MANAGER_EMPLOYEES.map(e => String(e.s).trim()))];
+                            processBirthdays(MANAGER_EMPLOYEES, CURRENT_USER, mgrShops);
+                        }
+
                         if(MANAGER_SHEET_ID) {
                             await loadStatistics(); 
                         } else {
@@ -1803,95 +1908,100 @@
             // ==========================================
             // LUỒNG SSO NHÂN VIÊN (THAY THẾ LOGIN THỦ CÔNG)
             // ==========================================
+            // --- HÀM PHỤ: HIỂN THỊ POPUP SINH NHẬT ---
+            const showBirthdayPopup = (birthdayPeople) => {
+                let existingModal = document.getElementById('hpbd-modal');
+                if (existingModal) existingModal.remove();
+
+                let listHtml = birthdayPeople.map(p => `
+                    <div class="hpbd-item">
+                        <span class="hpbd-date">🎂 ${p.date}</span>
+                        <span style="flex:1;">${p.name}</span>
+                    </div>
+                `).join('');
+
+                const modalHtml = `
+                    <div class="hpbd-overlay" id="hpbd-modal">
+                        <div class="hpbd-box">
+                            <div class="hpbd-icon">🎉</div>
+                            <div class="hpbd-title">Sắp Tới Sinh Nhật!</div>
+                            <p style="color: #cbd5e1; font-size: 13px; margin-bottom: 15px; line-height: 1.5;">Trong tuần này, siêu thị của bạn có sinh nhật của các thành viên sau. Đừng quên gửi lời chúc nhé!</p>
+                            <div class="hpbd-list">${listHtml}</div>
+                            <button class="hpbd-btn" id="btn-hpbd-close">Đã Rõ & Đóng</button>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('bc-app-wrapper').insertAdjacentHTML('beforeend', modalHtml);
+                const modalEl = document.getElementById('hpbd-modal');
+                setTimeout(() => modalEl.classList.add('show'), 50);
+
+                document.getElementById('btn-hpbd-close').onclick = () => {
+                    modalEl.classList.remove('show');
+                    setTimeout(() => modalEl.remove(), 300);
+                };
+            };
+
+            // --- HÀM CHÍNH: XÁC THỰC VÀ KIỂM TRA ---
             const checkEmployeeAuth = async () => {
-                // 1. Kiểm tra session trên Netlify
                 let guestStr = localStorage.getItem('tgdd_guest_account_v2');
-                if (!guestStr) {
-                    showErrorScreen("CHƯA ĐĂNG NHẬP", "Bạn chưa đăng nhập. Vui lòng đăng nhập ở màn hình trang chủ để sử dụng tiện ích này!");
-                    return;
-                }
+                if (!guestStr) { showErrorScreen("CHƯA ĐĂNG NHẬP", "Bạn chưa đăng nhập. Vui lòng đăng nhập ở trang chủ!"); return; }
 
                 let guestData;
-                try {
-                    guestData = JSON.parse(guestStr);
-                } catch(e) {
-                    showErrorScreen("LỖI DỮ LIỆU", "Dữ liệu đăng nhập bị lỗi. Vui lòng đăng xuất và đăng nhập lại!");
-                    return;
-                }
+                try { guestData = JSON.parse(guestStr); } catch(e) { showErrorScreen("LỖI", "Dữ liệu lỗi. Vui lòng đăng nhập lại!"); return; }
 
-                // FIX: Tối ưu - Nếu đã check API thành công ở lần trước đó cho đúng user này, thì chỉ cần vào thẳng màn hình báo cáo
-                if (EMP_SESSION && EMP_SESSION.user === guestData.user && EMP_SESSION.sheetId) {
-                    $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.fn ? EMP_SESSION.fn + ' - ' : ''}${EMP_SESSION.user}`; 
-                    switchSc('sc-report');
-                    return;
-                }
-
-                $('bc-loading').style.display = 'flex';
-                $('bc-load-text').innerText = "Đang kiểm tra quyền truy cập...";
+                $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang kiểm tra quyền truy cập...";
 
                 try {
-                    // 2. Gọi API để check Boss & quyền
-                    let res = await universalFetch({
-                        method: "POST",
-                        url: API_URL_APP, 
-                        data: JSON.stringify({ action: "check_permission", user: guestData.user, userName: guestData.user })
-                    });
-                    
+                    let res = await universalFetch({ method: "POST", url: API_URL_APP, data: JSON.stringify({ action: "check_permission", user: guestData.user, userName: guestData.user }) });
                     let data = JSON.parse(res);
                     if (data.status === 'success' && data.userData) {
                         let uData = data.userData;
                         
-                        // =========================================================
-                        // TỰ ĐỘNG SỬA LỖI TRỐNG ID FOLDER VÀ ID SHEET
-                        if (!uData.folderId || !uData.sheetId) {
-                            try {
-                                let bossRes = await universalFetch({
-                                    method: "POST",
-                                    url: API_URL_MAIN,
-                                    data: JSON.stringify({ action: "get_config_manager", user: uData.boss })
-                                });
-                                let bossData = JSON.parse(bossRes);
-                                if (bossData.status === 'success') {
-                                    uData.folderId = bossData.folderId || uData.folderId;
-                                    uData.sheetId = bossData.sheetId || uData.sheetId;
+                        try {
+                            let bossRes = await universalFetch({ method: "POST", url: API_URL_MAIN, data: JSON.stringify({ action: "get_config_manager", user: uData.boss }) });
+                            let bossData = JSON.parse(bossRes);
+                            if (bossData.status === 'success') {
+                                uData.folderId = bossData.folderId || uData.folderId;
+                                uData.sheetId = bossData.sheetId || uData.sheetId;
+                                
+                                if (bossData.employees && bossData.employees !== "[]") {
+                                    let emps = JSON.parse(bossData.employees);
+                                    let myEmp = emps.find(e => String(e.u).toLowerCase() === String(uData.user).toLowerCase());
+                                    if (myEmp) {
+                                        uData.shop = myEmp.s;
+                                        uData.role = myEmp.role;
+                                        uData.grp = myEmp.grp;
+                                    }
+
+                                    //[THÊM MỚI TẠI ĐÂY]: KÍCH HOẠT CHECK SINH NHẬT CHO NHÂN VIÊN
+                                    processBirthdays(emps, uData.user, [String(uData.shop).trim()]);
                                 }
-                            } catch (err) {
-                                console.log("Không thể fetch dự phòng ID Boss");
                             }
-                        }
-                        // =========================================================
+                        } catch (err) { console.log("Bỏ qua đồng bộ nâng cao"); }
                         
-                        // Nạp dữ liệu vào EMP_SESSION
                         EMP_SESSION = {
                             user: uData.user || guestData.user,
-                            shop: guestData.shop || "",
+                            shop: uData.shop || guestData.shop || "", 
                             folderId: uData.folderId || "",
                             sheetId: uData.sheetId || "",
                             mgrUser: uData.boss || "", 
                             fn: guestData.name || "",
                             dob: guestData.dob || "",
-                            role: guestData.role || "NV",
-                            grp: guestData.grp || ""
+                            role: uData.role || guestData.role || "NV",
+                            grp: uData.grp || guestData.grp || ""
                         };
                         
                         localStorage.setItem('bc_emp_session', JSON.stringify(EMP_SESSION));
-                        
-                        // Update UI
                         $('lbl-emp-name').innerText = `👤 ${EMP_SESSION.fn ? EMP_SESSION.fn + ' - ' : ''}${EMP_SESSION.user}`; 
                         updateEmpTabs(); 
-                        
-                        // Bay thẳng vào màn hình báo cáo
                         switchSc('sc-report');
                         $('tab-btn-emp-form').click();
-                        
+
                     } else {
-                        showErrorScreen("KHÔNG CÓ QUYỀN", data.message || "Tài khoản của bạn chưa được Quản lý khai báo quyền truy cập.\nHãy báo lại với Quản lý để được cấp quyền!");
+                        showErrorScreen("KHÔNG CÓ QUYỀN", data.message || "Tài khoản của bạn chưa được Quản lý cấp quyền!");
                     }
-                } catch(e) {
-                    showErrorScreen("LỖI MÁY CHỦ", "Không thể kết nối đến máy chủ. Vui lòng thử lại sau!");
-                } finally {
-                    $('bc-loading').style.display = 'none';
-                }
+                } catch(e) { showErrorScreen("LỖI MÁY CHỦ", "Không thể kết nối đến máy chủ. Vui lòng thử lại!"); } 
+                finally { $('bc-loading').style.display = 'none'; }
             };
 
             app.recheckAuth = checkEmployeeAuth;
