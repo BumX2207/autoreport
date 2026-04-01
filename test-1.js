@@ -41,6 +41,90 @@
     let MANAGER_SHEET_ID = ""; 
     let EDITING_EMP_INDEX = -1; 
 
+    // ===============================================================
+    // HỆ THỐNG NHẮC NHỞ SINH NHẬT TRONG TUẦN
+    // ===============================================================
+    const getShortDob = (rawDate) => {
+        if (!rawDate) return null;
+        let str = String(rawDate).trim();
+        // Ép các định dạng 2/4/1997 thành chuẩn 02/04
+        if (str.includes('/')) {
+            let parts = str.split('/');
+            return `${String(parts[0]).padStart(2, '0')}/${String(parts[1]).padStart(2, '0')}`;
+        }
+        let d = new Date(str);
+        if (!isNaN(d.getTime())) return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+        return null;
+    };
+
+    const showBirthdayPopup = (birthdayPeople) => {
+        let existingModal = document.getElementById('hpbd-modal');
+        if (existingModal) existingModal.remove();
+
+        let listHtml = birthdayPeople.map(p => `
+            <div class="hpbd-item">
+                <span class="hpbd-date">🎂 ${p.date}</span>
+                <span style="flex:1;">${p.name} <small style="color:#94a3b8;">(Kho ${p.shop})</small></span>
+            </div>
+        `).join('');
+
+        const modalHtml = `
+            <div class="hpbd-overlay" id="hpbd-modal">
+                <div class="hpbd-box">
+                    <div class="hpbd-icon">🎉</div>
+                    <div class="hpbd-title">Sắp Tới Sinh Nhật!</div>
+                    <p style="color: #cbd5e1; font-size: 13px; margin-bottom: 15px; line-height: 1.5;">Trong tuần này, có sinh nhật của các thành viên sau. Đừng quên gửi lời chúc nhé!</p>
+                    <div class="hpbd-list">${listHtml}</div>
+                    <button class="hpbd-btn" id="btn-hpbd-close">Đã Rõ & Đóng</button>
+                </div>
+            </div>
+        `;
+        document.getElementById('bc-app-wrapper').insertAdjacentHTML('beforeend', modalHtml);
+        const modalEl = document.getElementById('hpbd-modal');
+        setTimeout(() => modalEl.classList.add('show'), 50);
+
+        document.getElementById('btn-hpbd-close').onclick = () => { modalEl.classList.remove('show'); setTimeout(() => modalEl.remove(), 300); };
+    };
+
+    const processBirthdays = (empList, currentUser, targetShops) => {
+        let daysInWeek =[];
+        let d = new Date();
+        let day = d.getDay();
+        let diffToMonday = d.getDate() - day + (day === 0 ? -6 : 1);
+        let startOfWeek = new Date(d.getFullYear(), d.getMonth(), diffToMonday);
+        
+        for(let i = 0; i < 7; i++) {
+            let tempDate = new Date(startOfWeek);
+            tempDate.setDate(startOfWeek.getDate() + i);
+            let dd = String(tempDate.getDate()).padStart(2, '0');
+            let mm = String(tempDate.getMonth() + 1).padStart(2, '0');
+            daysInWeek.push(`${dd}/${mm}`);
+        }
+
+        let bdayPeople =[];
+        empList.forEach(e => {
+            // Lọc nhân viên nằm trong danh sách Kho cần check VÀ không phải là chính mình
+            if (targetShops.includes(String(e.s).trim()) && String(e.u).toLowerCase() !== String(currentUser).toLowerCase()) {
+                let shortDob = getShortDob(e.dob);
+                if (shortDob && daysInWeek.includes(shortDob)) {
+                    bdayPeople.push({ name: e.fn || e.u, date: shortDob, shop: e.s });
+                }
+            }
+        });
+
+        if (bdayPeople.length > 0) {
+            let todayKey = new Date().toLocaleDateString();
+            // Nếu bạn muốn test nhiều lần, hãy chuyển 'localStorage' thành 'sessionStorage'
+            if (localStorage.getItem('bc_bday_shown_' + currentUser) !== todayKey) {
+                setTimeout(() => {
+                    showBirthdayPopup(bdayPeople);
+                    localStorage.setItem('bc_bday_shown_' + currentUser, todayKey);
+                }, 800);
+            }
+        }
+    };
+    // ===============================================================
+
     const parseDateFromSheet = (rawStr) => {
         if (!rawStr) return { date: "N/A", time: "N/A", month: "N/A" };
         let str = String(rawStr).trim();
@@ -1427,7 +1511,6 @@
             const loadConfig = async () => {
                 $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang tải dữ liệu...";
                 try {
-                    // ĐỔI API_URL_MAIN THÀNH API_URL_APP Ở ĐÂY 👇
                     let res = await universalFetch({ method:"POST", url: API_URL_APP, data: JSON.stringify({action:"get_config_manager", user: CURRENT_USER})});
                     let data = JSON.parse(res);
                     if(data.status === 'success') {
@@ -1437,8 +1520,15 @@
                         
                         if (data.folderId || data.sheetId) lockConfigInputs(true);
 
-                        MANAGER_EMPLOYEES = data.employees && data.employees !== "[]" ? JSON.parse(data.employees) :[];
+                        MANAGER_EMPLOYEES = data.employees && data.employees !== "[]" ? JSON.parse(data.employees) : [];
                         renderNV();
+
+                        // [THÊM MỚI TẠI ĐÂY]: KÍCH HOẠT CHECK SINH NHẬT CHO QUẢN LÝ
+                        if (MANAGER_EMPLOYEES.length > 0) {
+                            let mgrShops =[...new Set(MANAGER_EMPLOYEES.map(e => String(e.s).trim()))];
+                            processBirthdays(MANAGER_EMPLOYEES, CURRENT_USER, mgrShops);
+                        }
+
                         if(MANAGER_SHEET_ID) {
                             await loadStatistics(); 
                         } else {
@@ -1866,7 +1956,6 @@
                     let data = JSON.parse(res);
                     if (data.status === 'success' && data.userData) {
                         let uData = data.userData;
-                        let bdayPeople =[]; // Chứa danh sách người sinh nhật
                         
                         try {
                             let bossRes = await universalFetch({ method: "POST", url: API_URL_MAIN, data: JSON.stringify({ action: "get_config_manager", user: uData.boss }) });
@@ -1884,35 +1973,8 @@
                                         uData.grp = myEmp.grp;
                                     }
 
-                                    // ==========================================================
-                                    // THUẬT TOÁN TÌM SINH NHẬT TRONG TUẦN (Thứ 2 -> Chủ Nhật)
-                                    // ==========================================================
-                                    let daysInWeek =[];
-                                    let d = new Date();
-                                    let day = d.getDay();
-                                    let diffToMonday = d.getDate() - day + (day === 0 ? -6 : 1);
-                                    let startOfWeek = new Date(d.getFullYear(), d.getMonth(), diffToMonday);
-                                    
-                                    for(let i = 0; i < 7; i++) {
-                                        let tempDate = new Date(startOfWeek);
-                                        tempDate.setDate(startOfWeek.getDate() + i);
-                                        let dd = String(tempDate.getDate()).padStart(2, '0');
-                                        let mm = String(tempDate.getMonth() + 1).padStart(2, '0');
-                                        daysInWeek.push(`${dd}/${mm}`); // Tạo mảng các ngày trong tuần:["01/04", "02/04"...]
-                                    }
-
-                                    emps.forEach(e => {
-                                        // Kiểm tra: Cùng kho & KHÔNG PHẢI là user đang đăng nhập
-                                        if (String(e.s).trim() === String(uData.shop).trim() && String(e.u).toLowerCase() !== String(uData.user).toLowerCase()) {
-                                            if (e.dob) {
-                                                let dobStr = formatDOB(e.dob); // Ép về dạng chuẩn dd/mm/yyyy
-                                                let shortDob = dobStr.substring(0, 5); // Chỉ lấy phần "dd/mm"
-                                                if (daysInWeek.includes(shortDob)) {
-                                                    bdayPeople.push({ name: e.fn || e.u, date: shortDob });
-                                                }
-                                            }
-                                        }
-                                    });
+                                    //[THÊM MỚI TẠI ĐÂY]: KÍCH HOẠT CHECK SINH NHẬT CHO NHÂN VIÊN
+                                    processBirthdays(emps, uData.user, [String(uData.shop).trim()]);
                                 }
                             }
                         } catch (err) { console.log("Bỏ qua đồng bộ nâng cao"); }
@@ -1934,18 +1996,6 @@
                         updateEmpTabs(); 
                         switchSc('sc-report');
                         $('tab-btn-emp-form').click();
-
-                        // ==========================================================
-                        // HIỂN THỊ POPUP SAU KHI VÀO GIAO DIỆN
-                        // ==========================================================
-                        let todayKey = new Date().toLocaleDateString();
-                        // Chỉ hiển thị nếu có người sinh nhật VÀ hôm nay chưa hiện popup này
-                        if (bdayPeople.length > 0 && localStorage.getItem('bc_bday_shown_' + uData.user) !== todayKey) {
-                            setTimeout(() => {
-                                showBirthdayPopup(bdayPeople);
-                                localStorage.setItem('bc_bday_shown_' + uData.user, todayKey);
-                            }, 800); // Đợi 0.8s cho tool load xong giao diện rồi mới bay popup ra
-                        }
 
                     } else {
                         showErrorScreen("KHÔNG CÓ QUYỀN", data.message || "Tài khoản của bạn chưa được Quản lý cấp quyền!");
