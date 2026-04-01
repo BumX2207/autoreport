@@ -82,7 +82,7 @@
                 <div class="vq-header">
                     <div class="vq-logo">
                         <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v4h-2zm0 6h2v2h-2z"/></svg>
-                        Vòng Quay Ngẫu Nhiên
+                        Chiếc Nón Kỳ Diệu
                     </div>
                     <button class="vq-btn-close" id="vq-btn-close" title="Đóng">✖</button>
                 </div>
@@ -123,7 +123,7 @@
 
                         <hr style="border:0; border-top:1px dashed #ddd; margin: 15px 0;">
 
-                        <!-- List Lịch sử -->
+                        <!-- List Lịch sử trúng -->
                         <div class="vq-section-title" style="color:#d63031;">
                             Lịch sử <span class="vq-count-badge" style="background:#d63031;" id="vq-history-count">0</span>
                         </div>
@@ -181,7 +181,7 @@
                 $('vq-history-count').innerText = history.length;
             };
 
-            // Hàm hỗ trợ xóa (gắn vào window tạm để xài trong chuỗi HTML)
+            // Hàm hỗ trợ xóa
             window._vqRemoveItem = (index) => {
                 if(isSpinning) return;
                 items.splice(index, 1);
@@ -248,13 +248,12 @@
                     // Vẽ chữ
                     ctx.save();
                     ctx.rotate(angleStart + arcAngle / 2); // Xoay tới giữa miếng cắt
-                    ctx.textAlign = "right"; // Căn lề phải để đẩy chữ ra viền
+                    ctx.textAlign = "right"; 
                     ctx.fillStyle = "#fff";
                     ctx.font = "bold 24px 'Segoe UI', Arial";
                     ctx.shadowColor = "rgba(0,0,0,0.5)";
                     ctx.shadowBlur = 4;
                     
-                    // Vẽ text, cách lề ngoài một chút
                     const text = items[i].length > 18 ? items[i].substring(0, 18) + '...' : items[i];
                     ctx.fillText(text, radius - 30, 8); 
                     ctx.restore();
@@ -263,7 +262,7 @@
             };
 
             // ==========================================
-            // THUẬT TOÁN QUAY NGẪU NHIÊN
+            // THUẬT TOÁN QUAY NGẪU NHIÊN (VẬT LÝ THỰC TẾ)
             // ==========================================
             const easeOutQuart = (t) => 1 - Math.pow(1 - t, 4);
 
@@ -271,34 +270,20 @@
                 if (isSpinning || items.length === 0) return;
 
                 const seconds = parseFloat($('vq-time').value) || 5;
-                const duration = seconds * 1000; // Đổi ra mili giây
+                const duration = seconds * 1000; 
 
                 // Trạng thái nút
                 isSpinning = true;
                 $('vq-btn-spin').disabled = true;
                 $('vq-btn-spin').innerText = "ĐANG QUAY...";
 
-                // Chọn trước ngẫu nhiên 1 người chiến thắng
-                const winnerIndex = Math.floor(Math.random() * items.length);
-                const arcAngle = (Math.PI * 2) / items.length;
-
-                // Tính toán góc để điểm dừng chính xác nằm ở vị trí Kim chỉ (Top = -90 độ = -Math.PI / 2)
-                // Tuy nhiên trong Canvas vòng tròn, bắt đầu vẽ là 0 độ (Bên phải), nên Kim chỉ ở Top tức là -Math.PI/2.
-                const pointerAngle = -Math.PI / 2; 
-                
-                // Cần tính góc quay thêm (finalRotation) để slice của winner tới đúng pointer.
-                const sliceCenterAngle = winnerIndex * arcAngle + (arcAngle / 2);
-                
-                // Tính khoảng cách góc cần bù
-                const baseTarget = pointerAngle - sliceCenterAngle;
-                
-                // Số vòng xoay thêm (tạo hiệu ứng quay tít) - Giả sử 1 giây quay 2 vòng
-                const spinSpins = Math.floor(seconds * 1.5); 
-                const totalRotationNeeded = baseTarget + (spinSpins * Math.PI * 2) + (Math.PI * 2 * 5); // Cộng thêm 5 vòng cơ bản
+                // Quay 1 góc hoàn toàn ngẫu nhiên
+                // Số vòng cơ bản (tối thiểu 3 vòng) + Góc dư ngẫu nhiên
+                const baseSpins = Math.max(3, Math.floor(seconds * 1.5)); 
+                const extraRandomAngle = Math.random() * Math.PI * 2; 
 
                 const startRotation = currentRotation;
-                // Đảm bảo finalRotation luôn lớn hơn startRotation và kết thúc đúng điểm
-                const finalRotation = startRotation + totalRotationNeeded - (startRotation % (Math.PI*2)) + baseTarget % (Math.PI*2) + (Math.PI*2 * spinSpins);
+                const finalRotation = startRotation + (baseSpins * Math.PI * 2) + extraRandomAngle;
 
                 let startTime = null;
 
@@ -318,24 +303,43 @@
                     if (progress < 1) {
                         requestAnimationFrame(animateSpin);
                     } else {
-                        // KẾT THÚC QUAY
-                        isSpinning = false;
-                        $('vq-btn-spin').disabled = false;
-                        $('vq-btn-spin').innerText = "QUAY NGAY";
+                        // KẾT THÚC QUAY - BẮT ĐẦU ĐO GÓC ĐỂ XÁC ĐỊNH NGƯỜI TRÚNG
+                        // Kim chỉ nam ở Top tức là tương đương góc 270 độ (1.5 * PI)
+                        const pointerAngle = Math.PI * 1.5; 
+                        
+                        // Đưa góc quay hiện tại về chuẩn [0, 2PI]
+                        let normalizedRot = currentRotation % (Math.PI * 2);
+                        if (normalizedRot < 0) normalizedRot += Math.PI * 2;
+                        
+                        // Tính xem điểm 0 độ của hình tròn đang lệch với kim bao nhiêu
+                        let pointerWheelAngle = pointerAngle - normalizedRot;
+                        if (pointerWheelAngle < 0) pointerWheelAngle += Math.PI * 2;
+                        
+                        // Từ đó suy ra index của ô đang nằm dưới kim
+                        const arcAngle = (Math.PI * 2) / items.length;
+                        const winnerIndex = Math.floor(pointerWheelAngle / arcAngle);
                         
                         const winnerName = items[winnerIndex];
-                        alert(`🎉 CHÚC MỪNG: ${winnerName} 🎉`);
-                        
-                        // Đẩy vào lịch sử
-                        history.push(winnerName);
 
-                        // Tự động xóa nếu được tick
-                        if ($('vq-chk-autoremove').checked) {
-                            items.splice(winnerIndex, 1);
-                        }
-                        
-                        renderLists();
-                        drawWheel();
+                        // Dùng setTimeout 50ms để Canvas kịp render frame cuối cùng trước khi Alert chặn màn hình
+                        setTimeout(() => {
+                            isSpinning = false;
+                            $('vq-btn-spin').disabled = false;
+                            $('vq-btn-spin').innerText = "QUAY NGAY";
+                            
+                            alert(`🎉 CHÚC MỪNG: ${winnerName} 🎉`);
+                            
+                            // Đẩy vào lịch sử
+                            history.push(winnerName);
+
+                            // Tự động xóa nếu được tick
+                            if ($('vq-chk-autoremove').checked) {
+                                items.splice(winnerIndex, 1);
+                            }
+                            
+                            renderLists();
+                            drawWheel();
+                        }, 50);
                     }
                 };
 
