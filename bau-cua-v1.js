@@ -22,10 +22,10 @@
     const formatMoney = (num) => num.toLocaleString('vi-VN');
 
     // ===============================================================
-    // 2. CSS GIAO DIỆN
+    // 2. CSS GIAO DIỆN (Đã đổi Font Tahoma)
     // ===============================================================
     const MY_CSS = `
-        #bc-app { display:none; position:fixed; top:0; left:0; right:0; bottom:0; width:100%; height:100%; background:#1e272e; z-index:2147483647; font-family: 'Segoe UI', Tahoma, sans-serif; flex-direction:column; overflow:hidden; box-sizing: border-box; }
+        #bc-app { display:none; position:fixed; top:0; left:0; right:0; bottom:0; width:100%; height:100%; background:#1e272e; z-index:2147483647; font-family: Tahoma, 'Segoe UI', Arial, sans-serif; flex-direction:column; overflow:hidden; box-sizing: border-box; }
         #bc-app * { box-sizing: border-box; user-select: none; }
         
         /* Header */
@@ -44,7 +44,7 @@
         .bc-player-manager { background: #2f3640; border-radius: 10px; padding: 12px; border: 1px solid #353b48; }
         .bc-pm-title { color: #f1c40f; font-weight: bold; font-size: 14px; text-transform: uppercase; margin-bottom: 8px;}
         .bc-input-group { display: flex; gap: 8px; margin-bottom: 10px; }
-        .bc-input-group input { flex:1; padding:8px 12px; border-radius:6px; border:none; outline:none; font-weight:bold; }
+        .bc-input-group input { flex:1; padding:8px 12px; border-radius:6px; border:none; outline:none; font-weight:bold; font-family: Tahoma, sans-serif;}
         .bc-btn-add { background:#0984e3; color:white; border:none; border-radius:6px; padding:0 15px; font-weight:bold; cursor:pointer;}
         
         .bc-player-list { display:flex; flex-wrap:wrap; gap:8px; max-height:80px; overflow-y:auto; }
@@ -66,7 +66,7 @@
         @keyframes bowlShake { 0% { transform: translate(0, 0) rotate(0deg); } 25% { transform: translate(-8px, 5px) rotate(-3deg); } 50% { transform: translate(8px, -5px) rotate(3deg); } 75% { transform: translate(-8px, -5px) rotate(-3deg); } 100% { transform: translate(0, 0) rotate(0deg); } }
 
         .bc-controls { display:flex; gap:10px; margin-top: auto; }
-        .bc-btn { flex:1; padding:12px; border:none; border-radius:8px; font-size:15px; font-weight:900; text-transform:uppercase; cursor:pointer; transition:0.2s; color:white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .bc-btn { flex:1; padding:12px; border:none; border-radius:8px; font-size:15px; font-weight:900; text-transform:uppercase; cursor:pointer; transition:0.2s; color:white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-family: Tahoma, sans-serif;}
         .bc-btn-shake { background:#f39c12; }
         .bc-btn-shake:hover:not(:disabled) { background:#e67e22; transform:translateY(-2px); }
         .bc-btn-open { background:#27ae60; }
@@ -78,7 +78,7 @@
         
         .bc-turn-bar { background: #2f3640; padding: 12px 15px; border-radius: 10px; display:flex; justify-content:space-between; align-items:center; border: 1px solid #353b48; }
         .bc-turn-info { color:#f5f6fa; font-size:15px; font-weight:bold; }
-        .bc-btn-next-turn { background:#e84393; color:white; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; cursor:pointer; transition:0.2s;}
+        .bc-btn-next-turn { background:#e84393; color:white; border:none; padding:8px 15px; border-radius:6px; font-weight:bold; cursor:pointer; transition:0.2s; font-family: Tahoma, sans-serif;}
         .bc-btn-next-turn:hover:not(:disabled) { background:#d81b60; }
         .bc-btn-next-turn:disabled { background:#636e72; cursor:not-allowed;}
         
@@ -103,7 +103,7 @@
         .bc-result-box { background:#2f3640; width:90%; max-width:400px; border-radius:15px; border:2px solid #f1c40f; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.8); text-align:center;}
         .bc-rb-title { color:#f1c40f; font-size:22px; font-weight:900; margin-bottom:15px; text-transform:uppercase;}
         .bc-rb-list { max-height:200px; overflow-y:auto; text-align:left; background:#1e272e; padding:10px; border-radius:8px; margin-bottom:15px;}
-        .bc-rb-item { display:flex; justify-content:space-between; margin-bottom:8px; font-size:14px; font-weight:bold; border-bottom:1px dashed #353b48; padding-bottom:5px;}
+        .bc-rb-item { display:flex; justify-content:space-between; margin-bottom:8px; font-size:15px; font-weight:bold; border-bottom:1px dashed #353b48; padding-bottom:5px; color:white;} /* Fix màu tên người chơi */
         .bc-rb-item:last-child { border-bottom:none; margin-bottom:0; padding-bottom:0;}
         .bc-win-text { color: #2ecc71; }
         .bc-lose-text { color: #e74c3c; }
@@ -112,7 +112,7 @@
         .bc-rb-dealer-title { font-size:14px; font-weight:bold; text-transform:uppercase; margin-bottom:5px;}
         .bc-rb-dealer-amt { font-size:24px; font-weight:900; text-shadow:0 2px 5px rgba(0,0,0,0.5);}
 
-        .bc-btn-restart { background:#f1c40f; color:#2d3436; border:none; padding:12px 20px; border-radius:8px; font-weight:900; font-size:16px; width:100%; cursor:pointer; text-transform:uppercase;}
+        .bc-btn-restart { background:#f1c40f; color:#2d3436; border:none; padding:12px 20px; border-radius:8px; font-weight:900; font-size:16px; width:100%; cursor:pointer; text-transform:uppercase; font-family: Tahoma, sans-serif;}
 
         @media (max-width: 768px) {
             .bc-body { flex-direction: column; }
@@ -153,7 +153,7 @@
                 <div class="bc-header">
                     <div class="bc-logo">
                         <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-                        Bầu Cua (Chế Độ Nhà Cái)
+                        Bầu Cua
                     </div>
                     <button class="bc-btn-close" id="bc-btn-close" title="Đóng">✖</button>
                 </div>
@@ -180,8 +180,9 @@
                         </div>
                         
                         <div class="bc-controls">
-                            <button class="bc-btn bc-btn-shake" id="btn-shake" disabled>1. CÁI LẮC</button>
-                            <button class="bc-btn bc-btn-open" id="btn-open" disabled>2. MỞ BÁT</button>
+                            <!-- Sửa tên nút theo yêu cầu -->
+                            <button class="bc-btn bc-btn-shake" id="btn-shake" disabled>LẮC BÁT</button>
+                            <button class="bc-btn bc-btn-open" id="btn-open" disabled>MỞ BÁT</button>
                         </div>
                     </div>
 
@@ -232,8 +233,8 @@
             let players = []; 
             let currentPlayerIndex = -1;
             let currentChip = 10000;
-            let placedBets = []; // { id, playerId, playerName, symbolId, amount }
-            let gameState = 'waiting'; // waiting (cái chưa lắc), betting (đang cược), ready (cược xong), opened
+            let placedBets = []; 
+            let gameState = 'waiting'; 
             let rollResults = [];
 
             // ==========================================
@@ -254,7 +255,7 @@
                 } else if(gameState === 'waiting') {
                     $('bc-turn-text').innerHTML = "Cái vui lòng <b>LẮC BÁT</b> để bắt đầu cược!";
                     $('btn-next-turn').disabled = true;
-                    $('btn-shake').disabled = false; // Cái được quyền lắc
+                    $('btn-shake').disabled = false;
                 }
             };
 
@@ -278,21 +279,33 @@
                 renderPlayers();
             };
 
-            // CHUYỂN LƯỢT CƯỢC
+            // Hàm tự động đổi tên nút "Chốt cược / Bỏ qua lượt"
+            const updateNextTurnButton = () => {
+                if(currentPlayerIndex < 0 || currentPlayerIndex >= players.length) return;
+                const p = players[currentPlayerIndex];
+                const hasBet = placedBets.some(b => b.playerId === p.id);
+                const btn = $('btn-next-turn');
+                
+                if (currentPlayerIndex === players.length - 1) {
+                    btn.innerText = "Hoàn tất cược ✔";
+                } else {
+                    btn.innerText = hasBet ? "Chốt cược ⏭" : "Bỏ qua lượt ⏭";
+                }
+            };
+
             const updateTurnUI = () => {
                 renderPlayers();
                 if(currentPlayerIndex >= 0 && currentPlayerIndex < players.length) {
                     const p = players[currentPlayerIndex];
                     $('bc-turn-text').innerHTML = `Đến lượt: <span style="color:#f1c40f;font-size:18px;">${p.name}</span> đặt cược`;
                     $('btn-next-turn').disabled = false;
-                    $('btn-next-turn').innerText = (currentPlayerIndex === players.length - 1) ? "Hoàn tất cược ✔" : "Bỏ qua lượt ⏭";
+                    updateNextTurnButton(); // Cập nhật text của nút
                 } else {
-                    // Đã hết vòng cược của người chơi
                     gameState = 'ready';
                     $('bc-turn-text').innerHTML = `<span style="color:#2ecc71;">Tất cả đã cược xong. Cái chuẩn bị mở bát!</span>`;
                     $('btn-next-turn').disabled = true;
                     $('btn-open').disabled = false;
-                    renderPlayers(); // Xóa active
+                    renderPlayers(); 
                 }
             };
 
@@ -327,16 +340,13 @@
 
             window._bcCancelBet = (betId) => {
                 if(gameState !== 'betting') return;
-                const bet = placedBets.find(b => b.id === betId);
-                // Chỉ cho phép hủy cược của người đang tới lượt (Hoặc cái tự ý hủy dùm)
-                // Ở đây cho phép tự do click hủy nếu cược sai cho nhanh
                 placedBets = placedBets.filter(b => b.id !== betId);
                 renderBetsOnBoard();
+                updateNextTurnButton(); // Cập nhật lại nút nếu hủy hết cược
             };
 
             app.querySelectorAll('.bc-card').forEach(card => {
                 card.onclick = (e) => {
-                    // Tránh click nhầm vào tag hủy cược
                     if(e.target.classList.contains('bc-bet-badge')) return;
                     
                     if(gameState !== 'betting') {
@@ -355,7 +365,9 @@
                         symbolId: symId,
                         amount: currentChip
                     });
+                    
                     renderBetsOnBoard();
+                    updateNextTurnButton(); // Đổi nút thành "Chốt cược" ngay khi vừa cược
                 };
             });
 
@@ -365,8 +377,8 @@
             $('btn-shake').onclick = () => {
                 if(players.length === 0) return;
                 
-                gameState = 'betting'; // Chuyển sang cho khách cược
-                currentPlayerIndex = 0; // Bắt đầu từ người đầu tiên
+                gameState = 'betting'; 
+                currentPlayerIndex = 0; 
                 placedBets = [];
                 renderBetsOnBoard();
                 
@@ -374,12 +386,10 @@
                 $('bc-bowl').classList.remove('open');
                 $('bc-bowl').classList.add('shake');
                 
-                // Thu Xúc xắc lại
                 $('dice-1').classList.remove('show');
                 $('dice-2').classList.remove('show');
                 $('dice-3').classList.remove('show');
 
-                // Sinh kết quả ngẫu nhiên ngầm bên dưới
                 rollResults = [
                     SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],
                     SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],
@@ -392,10 +402,9 @@
                     diceEl.style.setProperty('--rot', Math.floor(Math.random() * 360));
                 });
 
-                // Dừng lắc sau 1.5 giây
                 setTimeout(() => {
                     $('bc-bowl').classList.remove('shake');
-                    updateTurnUI(); // Gọi người đầu tiên cược
+                    updateTurnUI(); 
                 }, 1500);
             };
 
@@ -404,41 +413,34 @@
                 gameState = 'opened';
                 $('btn-open').disabled = true;
 
-                // Mở nắp
                 $('bc-bowl').classList.add('open');
                 setTimeout(() => $('dice-1').classList.add('show'), 100);
                 setTimeout(() => $('dice-2').classList.add('show'), 200);
                 setTimeout(() => $('dice-3').classList.add('show'), 300);
 
-                // Tính toán tiền trúng
                 setTimeout(() => {
                     let dealerProfit = 0;
-                    let playerSummary = {}; // { id: {name, profit} }
+                    let playerSummary = {}; 
 
                     players.forEach(p => {
                         playerSummary[p.id] = { name: p.name, profit: 0 };
                     });
 
-                    // Đếm kết quả
                     let counts = { nai:0, bau:0, ga:0, ca:0, cua:0, tom:0 };
                     rollResults.forEach(res => counts[res.id]++);
 
-                    // Quyết toán từng phỉnh cược
                     placedBets.forEach(bet => {
                         const hits = counts[bet.symbolId];
                         if(hits > 0) {
-                            // Người chơi trúng (Cái đền tiền = Tiền cược * số con trúng)
                             const winAmt = bet.amount * hits;
                             dealerProfit -= winAmt;
                             playerSummary[bet.playerId].profit += winAmt;
                         } else {
-                            // Người chơi thua (Cái ăn tiền cược)
                             dealerProfit += bet.amount;
                             playerSummary[bet.playerId].profit -= bet.amount;
                         }
                     });
 
-                    // Render Bảng kết quả
                     const dealerEl = $('bc-res-dealer');
                     if(dealerProfit > 0) {
                         dealerEl.innerHTML = `<span class="bc-win-text">+ ${formatMoney(dealerProfit)}</span>`;
@@ -456,11 +458,11 @@
                         else if(p.profit < 0) pStatus = `<span class="bc-lose-text">Thua: ${formatMoney(p.profit)}</span>`;
                         else if(placedBets.some(b => b.playerId == key)) pStatus = `<span style="color:#f1c40f;">Hòa vốn</span>`;
 
+                        // Fix hiển thị tên màu trắng sáng
                         pListHtml += `<div class="bc-rb-item"><span>${p.name}</span> ${pStatus}</div>`;
                     }
                     $('bc-res-players').innerHTML = pListHtml || '<div style="text-align:center; color:#7f8c8d;">Không có ai cược</div>';
 
-                    // Hiện Modal
                     $('bc-result-modal').style.display = 'flex';
                 }, 1000);
             };
@@ -471,13 +473,11 @@
                 currentPlayerIndex = -1;
                 placedBets = [];
                 renderBetsOnBoard();
-                renderPlayers(); // Reset UI
+                renderPlayers(); 
             };
 
-            // Đóng tool
             $('bc-btn-close').onclick = () => { app.style.display = 'none'; };
 
-            // Khởi tạo
             renderPlayers();
         }
         
@@ -485,7 +485,7 @@
     };
 
     return {
-        name: "Bầu Cua (Làm Cái)",
+        name: "Bầu Cua",
         icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm-4 4c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm8 0c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>`,
         bgColor: "#c0392b",
         action: runTool
