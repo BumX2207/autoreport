@@ -2097,19 +2097,18 @@
                 try {
                     let res = await universalFetch({ method:"POST", url: API_URL_MAIN, data: JSON.stringify({ action: "get_manager_reports", sheetId: EMP_SESSION.sheetId }) });
                     let json = JSON.parse(res);
+                    
                     if(json.status === 'success' && Array.isArray(json.data) && json.data.length > 1) {
-                        let d = new Date();
-                        let todayStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth()+1).padStart(2, '0')}/${d.getFullYear()}`;
-                        
+                        // Lọc lấy toàn bộ lịch sử của riêng User này (Không phân biệt hoa/thường)
                         let myData = json.data.slice(1).map(r => {
                             let parsed = parseDateFromSheet(r[0]);
                             return { dateStr: parsed.date, timeStr: parsed.time, user: String(r[1] || "").trim(), slToRoi: r[2], linkDB: r[3], linkLive: r[4], imgToRoi: r[5], imgDB: r[6], imgLive: r[7] };
-                        }).filter(r => r.dateStr === todayStr && r.user === EMP_SESSION.user);
+                        }).filter(r => String(r.user).toLowerCase() === String(EMP_SESSION.user).toLowerCase());
                         
-                        myData.reverse(); 
+                        myData.reverse(); // Sắp xếp mới nhất lên đầu
                         
                         if(myData.length === 0) {
-                            $('emp-history-container').innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">Bạn chưa có báo cáo nào trong hôm nay.</div>`;
+                            $('emp-history-container').innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">Bạn chưa có dữ liệu báo cáo nào.</div>`;
                         } else {
                             let html = '';
                             const renderImgGrid = (str, horizontal = false, prefixName = "Anh") => {
@@ -2138,33 +2137,49 @@
                                 return downloadAllBtn + gridHtml;
                             };
 
-                            myData.forEach((row, idx) => {
-                                let uniqueId = `emp-rp-det-${idx}`;
-                                html += `
-                                    <div class="rp-card">
-                                        <div class="rp-header-row" onclick="document.getElementById('${uniqueId}').style.display = document.getElementById('${uniqueId}').style.display === 'block' ? 'none' : 'block'">
-                                            <div><b style="color:#38bdf8;">🕒 Báo cáo lúc: ${row.timeStr}</b></div>
-                                            <span style="font-size:12px; color:#FFD700;">▼ Xem chi tiết</span>
-                                        </div>
-                                        <div class="rp-detail" id="${uniqueId}">
-                                            <div style="margin-bottom:10px;"><b>📄 Lượt Phát Tờ Rơi:</b> ${row.slToRoi} tờ</div>
-                                            ${renderImgGrid(row.imgToRoi, false, `ToRoi_ToiNay_${idx+1}`)}
-                                            
-                                            <div style="margin:15px 0 10px;"><b>🌐 Lượt Đăng/Share Bài:</b> ${row.linkDB ? `<a href="${row.linkDB}" target="_blank" class="rp-link">${row.linkDB}</a>` : 'Không có link'}</div>
-                                            ${renderImgGrid(row.imgDB, false, `DangBai_ToiNay_${idx+1}`)}
-                                            
-                                            <div style="margin:15px 0 10px;"><b>🎥 Livestream:</b> ${row.linkLive ? `<a href="${row.linkLive}" target="_blank" class="rp-link">${row.linkLive}</a>` : 'Không có link'}</div>
-                                            ${renderImgGrid(row.imgLive, false, `Livestream_ToiNay_${idx+1}`)}
-                                        </div>
-                                    </div>
-                                `;
+                            // Gom nhóm dữ liệu theo Ngày
+                            let grouped = {};
+                            myData.forEach(item => {
+                                if(!grouped[item.dateStr]) grouped[item.dateStr] = [];
+                                grouped[item.dateStr].push(item);
                             });
+
+                            // Render giao diện Lịch sử
+                            for(let date in grouped) {
+                                html += `<div class="date-group-wrapper" style="margin-bottom: 15px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; overflow: hidden;">
+                                            <div class="date-group-title" style="background: rgba(56, 189, 248, 0.1); padding: 10px 15px; font-weight: bold; color: #38bdf8;">📅 Ngày: ${date}</div>
+                                            <div class="date-group-content" style="padding: 10px;">`;
+                                
+                                grouped[date].forEach((row, idx) => {
+                                    let uniqueId = `emp-rp-det-${date.replace(/\//g,'-')}-${idx}`;
+                                    html += `
+                                        <div class="rp-card" style="margin-bottom: 10px;">
+                                            <div class="rp-header-row" onclick="document.getElementById('${uniqueId}').style.display = document.getElementById('${uniqueId}').style.display === 'block' ? 'none' : 'block'">
+                                                <div><b style="color:#fff;">🕒 Báo cáo lúc: ${row.timeStr}</b></div>
+                                                <span style="font-size:12px; color:#FFD700;">▼ Xem chi tiết</span>
+                                            </div>
+                                            <div class="rp-detail" id="${uniqueId}">
+                                                <div style="margin-bottom:10px;"><b>📄 Lượt Phát Tờ Rơi:</b> ${row.slToRoi} tờ</div>
+                                                ${renderImgGrid(row.imgToRoi, false, `ToRoi_${date.replace(/\//g,'')}_${idx+1}`)}
+                                                
+                                                <div style="margin:15px 0 10px;"><b>🌐 Lượt Đăng/Share Bài:</b> ${row.linkDB ? `<a href="${row.linkDB}" target="_blank" class="rp-link">${row.linkDB}</a>` : 'Không có link'}</div>
+                                                ${renderImgGrid(row.imgDB, false, `DangBai_${date.replace(/\//g,'')}_${idx+1}`)}
+                                                
+                                                <div style="margin:15px 0 10px;"><b>🎥 Livestream:</b> ${row.linkLive ? `<a href="${row.linkLive}" target="_blank" class="rp-link">${row.linkLive}</a>` : 'Không có link'}</div>
+                                                ${renderImgGrid(row.imgLive, false, `Live_${date.replace(/\//g,'')}_${idx+1}`)}
+                                            </div>
+                                        </div>
+                                    `;
+                                });
+                                html += `</div></div>`;
+                            }
                             $('emp-history-container').innerHTML = html;
                         }
                     } else {
-                        $('emp-history-container').innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">Bạn chưa có báo cáo nào trong hôm nay.</div>`;
+                        $('emp-history-container').innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">Bạn chưa có dữ liệu báo cáo nào.</div>`;
                     }
                 } catch(e) { 
+                    console.error("Lỗi History:", e);
                     $('emp-history-container').innerHTML = `<div style="text-align:center; color:#ef4444; padding:20px;">Lỗi tải dữ liệu lịch sử!</div>`;
                 }
                 $('bc-loading').style.display = 'none';
