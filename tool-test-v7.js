@@ -1701,7 +1701,11 @@
                         renderTodaySummary(true);
                         $('stat-list-container').innerHTML = `<div style="text-align:center; color:#94a3b8; padding:20px;">Chưa có báo cáo nào.</div>`;
                     }
-                } catch(e) { $('stat-list-container').innerHTML = `<div style="color:#ef4444; text-align:center; padding:20px;">Lỗi tải thống kê! File Sheet cấu hình bị sai hoặc chưa được cấp quyền truy cập.</div>`; }
+                } catch(e) { 
+                    // In thẳng tên lỗi ra màn hình để nếu có lỗi khác sẽ biết ngay
+                    console.error(e);
+                    $('stat-list-container').innerHTML = `<div style="color:#ef4444; text-align:center; padding:20px;">Lỗi xử lý dữ liệu!<br><span style="font-size:13px; color:#fca5a5;">(Chi tiết: ${e.message})</span></div>`; 
+                }
             };
 
             const renderTodaySummary = (empty = false) => {
@@ -1786,8 +1790,16 @@
                 renderStatList(filtered, e, m, d);
             };
 
-            const renderImgGrid = (str, horizontal = false, prefixName = "Anh") => {
-                if(!str) return '';
+            // Ép chuỗi an toàn cho Link
+            const renderMultipleLinks = (linkStr) => {
+                if (!linkStr) return 'Không có link';
+                return String(linkStr).split('\n').filter(l => l.trim() !== '').map(l => `<a href="${l.trim()}" target="_blank" class="rp-link" style="display:block; margin-bottom:4px; word-break: break-all;">${l.trim()}</a>`).join('');
+            };
+
+            // Ép chuỗi an toàn cho Ảnh (Chống Crash nếu dữ liệu từ Sheet trả về số)
+            const renderImgGrid = (rawStr, horizontal = false, prefixName = "Anh") => {
+                if(!rawStr) return '';
+                let str = String(rawStr); // ÉP KIỂU STRING ĐỂ CHỐNG LỖI
                 if(str.includes('ảnh') && !str.includes('http')) return `<span style="color:#fbbf24; font-size:12px;">${str} (Cũ)</span>`;
                 let links = str.split('|||').filter(l => l.trim() !== '');
                 if(links.length === 0) return '';
@@ -1821,22 +1833,14 @@
                 if (selectedEmp === "ALL") {
                     let userStats = {};
                     filteredData.forEach(r => {
-                        activeDays.add(r.dateStr);
-                        totalFlyers += parseInt(r.slToRoi) || 0;
-                        
-                        if (r.linkDB) { 
-                            postCount++; 
-                            String(r.linkDB).split('\n').filter(l=>l.trim()!=='').forEach(l => allPostLinks.push(`<li><a href="${l}" target="_blank" class="rp-link">${l}</a></li>`)); 
-                        } else if (r.imgDB) { postCount++; } 
-                        
-                        if (r.linkLive) { 
-                            liveCount++; 
-                            String(r.linkLive).split('\n').filter(l=>l.trim()!=='').forEach(l => allLiveLinks.push(`<li><a href="${l}" target="_blank" class="rp-link">${l}</a></li>`)); 
-                        } else if (r.imgLive) { liveCount++; }
+                        let realUserKey = r.user;
+                        const emp = MANAGER_EMPLOYEES.find(x => String(x.u).toLowerCase() === String(r.user).toLowerCase());
+                        if(emp) realUserKey = emp.u;
 
-                        if (r.imgToRoi) allFlyerImgs.push(r.imgToRoi);
-                        if (r.imgDB) allPostImgs.push(r.imgDB);
-                        if (r.imgLive) allLiveImgs.push(r.imgLive);
+                        if(!userStats[realUserKey]) userStats[realUserKey] = { flyers: 0, posts: 0, lives: 0 };
+                        userStats[realUserKey].flyers += parseInt(r.slToRoi) || 0;
+                        if(r.linkDB || r.imgDB) userStats[realUserKey].posts += 1;
+                        if(r.linkLive || r.imgLive) userStats[realUserKey].lives += 1;
                     });
                     
                     let topFlyer = Object.keys(userStats).sort((a,b) => userStats[b].flyers - userStats[a].flyers)[0];
@@ -1877,12 +1881,12 @@
                         
                         if (r.linkDB) { 
                             postCount++; 
-                            r.linkDB.split('\n').filter(l=>l.trim()!=='').forEach(l => allPostLinks.push(`<li><a href="${l}" target="_blank" class="rp-link">${l}</a></li>`)); 
+                            String(r.linkDB).split('\n').filter(l=>l.trim()!=='').forEach(l => allPostLinks.push(`<li><a href="${l}" target="_blank" class="rp-link">${l}</a></li>`)); 
                         } else if (r.imgDB) { postCount++; } 
                         
                         if (r.linkLive) { 
                             liveCount++; 
-                            r.linkLive.split('\n').filter(l=>l.trim()!=='').forEach(l => allLiveLinks.push(`<li><a href="${l}" target="_blank" class="rp-link">${l}</a></li>`)); 
+                            String(r.linkLive).split('\n').filter(l=>l.trim()!=='').forEach(l => allLiveLinks.push(`<li><a href="${l}" target="_blank" class="rp-link">${l}</a></li>`)); 
                         } else if (r.imgLive) { liveCount++; }
 
                         if (r.imgToRoi) allFlyerImgs.push(r.imgToRoi);
@@ -2272,5 +2276,5 @@
         }
     };
 
-    return { name: "Báo Cáo 2", icon: `<svg viewBox="0 0 24 24"><path fill="white" d="M3 3v18h18V3H3zm16 16H5V5h14v14zM7 10h2v7H7v-7zm4-3h2v10h-2V7zm4 6h2v4h-2v-4z"/></svg>`, bgColor: "#0284c7", action: runTool };
+    return { name: "Báo Cáo", icon: `<svg viewBox="0 0 24 24"><path fill="white" d="M3 3v18h18V3H3zm16 16H5V5h14v14zM7 10h2v7H7v-7zm4-3h2v10h-2V7zm4 6h2v4h-2v-4z"/></svg>`, bgColor: "#0284c7", action: runTool };
 })
