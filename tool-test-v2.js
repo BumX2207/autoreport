@@ -157,6 +157,10 @@
     };
 
     const getEmpDisplayName = (u) => {
+        const renderMultipleLinks = (linkStr) => {
+        if (!linkStr) return 'Không có link';
+        return linkStr.split('\n').filter(l => l.trim() !== '').map(l => `<a href="${l.trim()}" target="_blank" class="rp-link" style="display:block; margin-bottom:4px; word-break: break-all;">${l.trim()}</a>`).join('');
+    };
         if (!u) return '---';
         const emp = MANAGER_EMPLOYEES.find(x => String(x.u).toLowerCase() === String(u).toLowerCase());
         return (emp && emp.fn) ? `${emp.fn} - ${emp.u}` : u;
@@ -177,12 +181,6 @@
             return `${dd}/${mm}/${yyyy}`;
         }
         return str;
-    };
-
-    // Hàm hỗ trợ xuất nhiều link thành mã HTML an toàn (Dùng chung)
-    const renderMultipleLinks = (linkStr) => {
-        if (!linkStr) return 'Không có link';
-        return linkStr.split('\n').filter(l => l.trim() !== '').map(l => `<a href="${l.trim()}" target="_blank" class="rp-link" style="display:block; margin-bottom:4px; word-break: break-all;">${l.trim()}</a>`).join('');
     };
 
     // ===============================================================
@@ -841,7 +839,7 @@
                 </div>
             </div>
 
-            <!-- SCREEN 2: LỖI / XÁC THỰC SSO -->
+            <!-- SCREEN 2: LỖI / XÁC THỰC SSO (THAY CHO LOGIN CŨ) -->
             <div class="bc-screen" id="sc-error" style="height:auto; max-height:none;">
                 <div class="bc-header" style="justify-content:flex-end; border:none; background:transparent;">
                     <button class="bc-close-btn btn-close-app">✕</button>
@@ -885,7 +883,6 @@
                             </div>
                         </div>
 
-                        <!-- ĐÃ SỬA: Bọc khối Nhập Link Bài Đăng để thêm nhiều Link -->
                         <div class="bc-card">
                             <div class="bc-sec-title">🌐 2. Đăng Bài Truyền Thông</div>
                             <label class="bc-label">Link bài đăng</label>
@@ -902,7 +899,6 @@
                             </div>
                         </div>
 
-                        <!-- ĐÃ SỬA: Bọc khối Nhập Link Livestream để thêm nhiều Link -->
                         <div class="bc-card">
                             <div class="bc-sec-title">🎥 3. Livestream</div>
                             <label class="bc-label">Link Livestream</label>
@@ -1023,9 +1019,8 @@
                         setTimeout(() => { executeDownload(imgUrl, `${prefix}_${idx+1}.jpg`); }, idx * 400); 
                     });
                 }
-            } 
-            // Sự kiện Nhân bản Thẻ Link (+)
-            else if (e.target && e.target.classList.contains('btn-add-link')) {
+            } else if (e.target && e.target.classList.contains('btn-add-link')) {
+                // Thêm dòng nhập link
                 e.preventDefault();
                 const targetId = e.target.getAttribute('data-target');
                 const isDangBai = targetId === 'wrap-dangbai-links';
@@ -1040,9 +1035,8 @@
                     <button class="bc-btn btn-danger btn-remove-link" style="width:auto; padding:0 15px; font-size:20px;" title="Xóa link">-</button>
                 `;
                 document.getElementById(targetId).appendChild(newRow);
-            } 
-            // Sự kiện Xóa Thẻ Link (-)
-            else if (e.target && e.target.classList.contains('btn-remove-link')) {
+            } else if (e.target && e.target.classList.contains('btn-remove-link')) {
+                // Xóa dòng nhập link
                 e.preventDefault();
                 e.target.parentElement.remove();
             }
@@ -1525,7 +1519,7 @@
         }
     };
 
-        // Hàm hỗ trợ bật popup báo lỗi
+        // Hàm hỗ trợ bật popup báo lỗi (Cách A)
         const showErrorScreen = (title, msg) => {
             $('err-title').innerText = title;
             $('err-msg').innerText = msg;
@@ -1536,7 +1530,7 @@
         // PHÂN NHÁNH LUỒNG XỬ LÝ
         // ==========================================
         if (IS_MANAGER) {
-            // LUỒNG QUẢN LÝ
+            // LUỒNG QUẢN LÝ (Giữ nguyên - truy cập từ web BI)
             switchSc('sc-manager');
             
             $('tab-btn-fund').onclick = () => { 
@@ -1563,6 +1557,7 @@
                         MANAGER_EMPLOYEES = data.employees && data.employees !== "[]" ? JSON.parse(data.employees) : [];
                         renderNV();
 
+                        // [THÊM MỚI TẠI ĐÂY]: KÍCH HOẠT CHECK SINH NHẬT CHO QUẢN LÝ
                         if (MANAGER_EMPLOYEES.length > 0) {
                             let mgrShops =[...new Set(MANAGER_EMPLOYEES.map(e => String(e.s).trim()))];
                             processBirthdays(MANAGER_EMPLOYEES, CURRENT_USER, mgrShops);
@@ -1660,12 +1655,14 @@
                 if(!fId || !sId) return alert("Nhập đủ ID Folder và ID Sheet!");
                 $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang lưu cấu hình...";
                 try {
+                    // ĐỔI API_URL_MAIN THÀNH API_URL_APP Ở ĐÂY 👇
                     let res = await universalFetch({ method:"POST", url: API_URL_APP, data: JSON.stringify({ action: "save_config_manager", user: CURRENT_USER, folderId: fId, sheetId: sId, employees: JSON.stringify(MANAGER_EMPLOYEES) }) });
                     let json = JSON.parse(res);
                     if(json.status === 'success') { 
                         alert("✅ Đã lưu cấu hình thành công!"); 
                         MANAGER_SHEET_ID = sId; lockConfigInputs(true); await loadStatistics(); 
                     } else {
+                        // Hiển thị lỗi nếu trùng User
                         alert("❌ LỖI: " + json.message);
                     }
                 } catch(e) { alert("❌ Lỗi mạng hoặc máy chủ không phản hồi!"); }
@@ -1853,17 +1850,8 @@
                     filteredData.forEach(r => {
                         activeDays.add(r.dateStr);
                         totalFlyers += parseInt(r.slToRoi) || 0;
-                        
-                        if (r.linkDB) { 
-                            postCount++; 
-                            r.linkDB.split('\n').filter(l=>l.trim()!=='').forEach(l => allPostLinks.push(`<li><a href="${l}" target="_blank" class="rp-link">${l}</a></li>`)); 
-                        } else if (r.imgDB) { postCount++; } 
-                        
-                        if (r.linkLive) { 
-                            liveCount++; 
-                            r.linkLive.split('\n').filter(l=>l.trim()!=='').forEach(l => allLiveLinks.push(`<li><a href="${l}" target="_blank" class="rp-link">${l}</a></li>`)); 
-                        } else if (r.imgLive) { liveCount++; }
-
+                        if (r.linkDB) { postCount++; allPostLinks.push(`<li><a href="${r.linkDB}" target="_blank" class="rp-link">${r.linkDB}</a></li>`); } else if (r.imgDB) { postCount++; } 
+                        if (r.linkLive) { liveCount++; allLiveLinks.push(`<li><a href="${r.linkLive}" target="_blank" class="rp-link">${r.linkLive}</a></li>`); } else if (r.imgLive) { liveCount++; }
                         if (r.imgToRoi) allFlyerImgs.push(r.imgToRoi);
                         if (r.imgDB) allPostImgs.push(r.imgDB);
                         if (r.imgLive) allLiveImgs.push(r.imgLive);
@@ -1897,12 +1885,8 @@
 
                     grouped[date].forEach(row => {
                         totalToRoi += parseInt(row.slToRoi) || 0;
-                        if (row.linkDB) {
-                            row.linkDB.split('\n').filter(l=>l.trim()!=='').forEach(l => allLinksDB.push(`<li><a href="${l}" target="_blank" class="rp-link">${l}</a></li>`));
-                        }
-                        if (row.linkLive) {
-                            row.linkLive.split('\n').filter(l=>l.trim()!=='').forEach(l => allLinksLive.push(`<li><a href="${l}" target="_blank" class="rp-link">${l}</a></li>`));
-                        }
+                        if (row.linkDB) allLinksDB.push(`<li>renderMultipleLinks(row.linkDB)</li>`);
+                        if (row.linkLive) allLinksLive.push(`<li>renderMultipleLinks(row.linkLive)</li>`);
                         if (row.imgToRoi) allImgToRoi.push(row.imgToRoi);
                         if (row.imgDB) allImgDB.push(row.imgDB);
                         if (row.imgLive) allImgLive.push(row.imgLive);
@@ -1939,9 +1923,9 @@
                                 <div class="rp-detail" id="${uniqueId}">
                                     <div style="margin-bottom:10px;"><b>📄 Phát Tờ Rơi:</b> ${row.slToRoi} tờ</div>
                                     ${renderImgGrid(row.imgToRoi, false, `ToRoi_${row.user}_${safeDate}`)}
-                                    <div style="margin:15px 0 10px;"><b>🌐 Đăng Bài:</b> <div style="margin-top:5px;">${renderMultipleLinks(row.linkDB)}</div></div>
+                                    <div style="margin:15px 0 10px;"><b>🌐 Đăng Bài:</b>renderMultipleLinks(row.linkDB)</div>
                                     ${renderImgGrid(row.imgDB, false, `DangBai_${row.user}_${safeDate}`)}
-                                    <div style="margin:15px 0 10px;"><b>🎥 Livestream:</b> <div style="margin-top:5px;">${renderMultipleLinks(row.linkLive)}</div></div>
+                                    <div style="margin:15px 0 10px;"><b>🎥 Livestream:</b>renderMultipleLinks(row.linkDB)</div>
                                     ${renderImgGrid(row.imgLive, false, `Livestream_${row.user}_${safeDate}`)}
                                     <div style="margin-top:15px; text-align:right;"><a href="${row.rootLink}" target="_blank" style="color:#10b981; font-size:12px; text-decoration:none;">📁 Mở Thư mục Drive ➡</a></div>
                                 </div>
@@ -1956,9 +1940,42 @@
 
         } else {
             // ==========================================
-            // LUỒNG SSO NHÂN VIÊN
+            // LUỒNG SSO NHÂN VIÊN (THAY THẾ LOGIN THỦ CÔNG)
             // ==========================================
-            
+            // --- HÀM PHỤ: HIỂN THỊ POPUP SINH NHẬT ---
+            const showBirthdayPopup = (birthdayPeople) => {
+                let existingModal = document.getElementById('hpbd-modal');
+                if (existingModal) existingModal.remove();
+
+                let listHtml = birthdayPeople.map(p => `
+                    <div class="hpbd-item">
+                        <span class="hpbd-date">🎂 ${p.date}</span>
+                        <span style="flex:1;">${p.name}</span>
+                    </div>
+                `).join('');
+
+                const modalHtml = `
+                    <div class="hpbd-overlay" id="hpbd-modal">
+                        <div class="hpbd-box">
+                            <div class="hpbd-icon">🎉</div>
+                            <div class="hpbd-title">Sắp Tới Sinh Nhật!</div>
+                            <p style="color: #cbd5e1; font-size: 13px; margin-bottom: 15px; line-height: 1.5;">Trong tuần này, siêu thị của bạn có sinh nhật của các thành viên sau. Đừng quên gửi lời chúc nhé!</p>
+                            <div class="hpbd-list">${listHtml}</div>
+                            <button class="hpbd-btn" id="btn-hpbd-close">Đã Rõ & Đóng</button>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('bc-app-wrapper').insertAdjacentHTML('beforeend', modalHtml);
+                const modalEl = document.getElementById('hpbd-modal');
+                setTimeout(() => modalEl.classList.add('show'), 50);
+
+                document.getElementById('btn-hpbd-close').onclick = () => {
+                    modalEl.classList.remove('show');
+                    setTimeout(() => modalEl.remove(), 300);
+                };
+            };
+
+            // --- HÀM CHÍNH: XÁC THỰC VÀ KIỂM TRA ---
             const checkEmployeeAuth = async () => {
                 let guestStr = localStorage.getItem('tgdd_guest_account_v2');
                 if (!guestStr) { showErrorScreen("CHƯA ĐĂNG NHẬP", "Bạn chưa đăng nhập. Vui lòng đăng nhập ở trang chủ!"); return; }
@@ -1990,7 +2007,7 @@
                                         uData.grp = myEmp.grp;
                                     }
 
-                                    // ĐÃ SỬA: Lấy chính xác Shop thực tế phòng trường hợp myEmp không có
+                                    // FIX SINH NHẬT: Ưu tiên lấy Shop thực tế phòng trường hợp myEmp bị null
                                     let actualShop = uData.shop || guestData.shop || "";
                                     let actualUser = uData.user || guestData.user || "";
                                     processBirthdays(emps, actualUser, [String(actualShop).trim()]);
@@ -2024,6 +2041,8 @@
             };
 
             app.recheckAuth = checkEmployeeAuth;
+
+            // Gọi SSO ngay khi chạy tool
             checkEmployeeAuth();
 
             const updateEmpTabs = () => {
@@ -2116,12 +2135,13 @@
                     let json = JSON.parse(res);
                     
                     if(json.status === 'success' && Array.isArray(json.data) && json.data.length > 1) {
+                        // Lọc lấy toàn bộ lịch sử của riêng User này (Không phân biệt hoa/thường)
                         let myData = json.data.slice(1).map(r => {
                             let parsed = parseDateFromSheet(r[0]);
                             return { dateStr: parsed.date, timeStr: parsed.time, user: String(r[1] || "").trim(), slToRoi: r[2], linkDB: r[3], linkLive: r[4], imgToRoi: r[5], imgDB: r[6], imgLive: r[7] };
                         }).filter(r => String(r.user).toLowerCase() === String(EMP_SESSION.user).toLowerCase());
                         
-                        myData.reverse(); 
+                        myData.reverse(); // Sắp xếp mới nhất lên đầu
                         
                         if(myData.length === 0) {
                             $('emp-history-container').innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">Bạn chưa có dữ liệu báo cáo nào.</div>`;
@@ -2153,12 +2173,14 @@
                                 return downloadAllBtn + gridHtml;
                             };
 
+                            // Gom nhóm dữ liệu theo Ngày
                             let grouped = {};
                             myData.forEach(item => {
                                 if(!grouped[item.dateStr]) grouped[item.dateStr] = [];
                                 grouped[item.dateStr].push(item);
                             });
 
+                            // Render giao diện Lịch sử
                             for(let date in grouped) {
                                 html += `<div class="date-group-wrapper" style="margin-bottom: 15px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; overflow: hidden;">
                                             <div class="date-group-title" style="background: rgba(56, 189, 248, 0.1); padding: 10px 15px; font-weight: bold; color: #38bdf8;">📅 Ngày: ${date}</div>
@@ -2176,10 +2198,10 @@
                                                 <div style="margin-bottom:10px;"><b>📄 Lượt Phát Tờ Rơi:</b> ${row.slToRoi} tờ</div>
                                                 ${renderImgGrid(row.imgToRoi, false, `ToRoi_${date.replace(/\//g,'')}_${idx+1}`)}
                                                 
-                                                <div style="margin:15px 0 10px;"><b>🌐 Lượt Đăng/Share Bài:</b> <div style="margin-top:5px;">${renderMultipleLinks(row.linkDB)}</div></div>
+                                                <div style="margin:15px 0 10px;"><b>🌐 Lượt Đăng/Share Bài:</b> renderMultipleLinks(row.linkDB)</div>
                                                 ${renderImgGrid(row.imgDB, false, `DangBai_${date.replace(/\//g,'')}_${idx+1}`)}
                                                 
-                                                <div style="margin:15px 0 10px;"><b>🎥 Livestream:</b> <div style="margin-top:5px;">${renderMultipleLinks(row.linkLive)}</div></div>
+                                                <div style="margin:15px 0 10px;"><b>🎥 Livestream:</b> renderMultipleLinks(row.linkLive)</div>
                                                 ${renderImgGrid(row.imgLive, false, `Live_${date.replace(/\//g,'')}_${idx+1}`)}
                                             </div>
                                         </div>
@@ -2201,7 +2223,12 @@
 
             $('btn-refresh-emp-history').onclick = loadEmployeeHistory;
 
-            $('btn-nv-logout').onclick = () => { app.style.display = 'none'; };
+            // XÓA HÀM btn-nv-login Ở ĐÂY (VÌ ĐÃ LÀM SSO Ở ĐẦU CHƯƠNG TRÌNH RỒI)
+
+            // NÚT ĐÓNG TOOL KHI ĐANG TRONG MÀN HÌNH BÁO CÁO (Thay thế cho nút Đăng xuất cũ)
+            $('btn-nv-logout').onclick = () => { 
+                app.style.display = 'none'; 
+            };
 
             $('btn-submit-report').onclick = async () => {
                 if(!EMP_SESSION || !EMP_SESSION.folderId || !EMP_SESSION.sheetId) return alert("❌ Quản lý chưa cài Thư mục/Sheet. Hãy báo lại QL!");
@@ -2210,7 +2237,7 @@
                     $('bc-load-text').innerText = "Đang nén hình ảnh...";
                     const[imgToRoi, imgDangBai, imgLive] = await Promise.all([ processImages($('file-toroi').files), processImages($('file-dangbai').files), processImages($('file-live').files) ]);
                     
-                    // ĐÃ SỬA: Gom tất cả các link con lại thành 1 chuỗi ngắt dòng
+                    // Gom nhiều link lại và cách nhau bởi dấu xuống dòng (\n)
                     const dangBaiLinks = Array.from(document.querySelectorAll('.inp-dangbai-link')).map(i => i.value.trim()).filter(v => v).join('\n');
                     const liveLinks = Array.from(document.querySelectorAll('.inp-live-link')).map(i => i.value.trim()).filter(v => v).join('\n');
 
@@ -2228,10 +2255,10 @@
                     if(JSON.parse(response).status === 'success') {
                         alert("✅ Gửi báo cáo thành công!"); 
                         
-                        // ĐÃ SỬA: Dọn dẹp form sau khi gửi
-                        $('inp-toroi-sl').value = '';
+                        // Dọn dẹp form sau khi gửi
+                        if($('inp-toroi-sl')) $('inp-toroi-sl').value = '';
                         ['wrap-dangbai-links', 'wrap-live-links'].forEach(id => {
-                            const wrap = $(id);
+                            const wrap = document.getElementById(id);
                             if(wrap) {
                                 const inputs = wrap.querySelectorAll('.input-wrapper');
                                 inputs.forEach((el, index) => { if (index > 0) el.remove(); else el.querySelector('input').value = ''; });
