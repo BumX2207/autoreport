@@ -94,13 +94,13 @@
 
     const processBirthdays = (empList, currentUser, targetShops) => {
         if (!empList || !Array.isArray(empList) || empList.length === 0) return;
-        
+
         let daysInWeek = [];
         let d = new Date();
         let day = d.getDay();
         let diffToMonday = d.getDate() - day + (day === 0 ? -6 : 1);
         let startOfWeek = new Date(d.getFullYear(), d.getMonth(), diffToMonday);
-        
+
         for(let i = 0; i < 7; i++) {
             let tempDate = new Date(startOfWeek);
             tempDate.setDate(startOfWeek.getDate() + i);
@@ -109,26 +109,25 @@
             daysInWeek.push(`${dd}/${mm}`);
         }
 
-        // Lấy UserID sạch (bỏ khoảng trắng và tên nếu có, vd: "12345 - Tên" -> "12345")
         let safeCurrentUser = String(currentUser).split('-')[0].trim().toLowerCase();
+        let safeTargetShops = targetShops.map(s => String(s).trim().toLowerCase());
         let bdayPeople = [];
 
         empList.forEach(e => {
-            let empShop = String(e.s).trim();
-            let empUser = String(e.u).split('-')[0].trim().toLowerCase();
-            
-            // So khớp Kho và Loại trừ chính bản thân người đang mở App
-            if (targetShops.includes(empShop) && empUser !== safeCurrentUser) {
+            let empShop = String(e.s).trim().toLowerCase();
+            // Lọc nhân viên cùng Kho (Bao gồm cả chính mình)
+            if (safeTargetShops.includes(empShop)) {
                 let shortDob = getShortDob(e.dob);
                 if (shortDob && daysInWeek.includes(shortDob)) {
-                    bdayPeople.push({ name: e.fn || e.u, date: shortDob, shop: empShop });
+                    let isMe = String(e.u).split('-')[0].trim().toLowerCase() === safeCurrentUser;
+                    let displayName = e.fn ? e.fn : String(e.u).split('-')[0].trim();
+                    bdayPeople.push({ name: isMe ? `${displayName} (Là Bạn 🎁)` : displayName, date: shortDob, shop: e.s });
                 }
             }
         });
 
         if (bdayPeople.length > 0) {
-            // Thay vì dùng localStorage lưu vĩnh viễn (gây hiểu nhầm khi test), 
-            // dùng biến window để mỗi lần bạn F5 tải lại trang web sẽ được xem popup 1 lần.
+            // Hiển thị mỗi lần load trang thay vì lưu chết vào localStorage
             if (!window['bc_bday_shown_' + safeCurrentUser]) {
                 setTimeout(() => {
                     showBirthdayPopup(bdayPeople);
@@ -196,7 +195,7 @@
     // Hàm hỗ trợ xuất nhiều link thành mã HTML an toàn (Dùng chung)
     const renderMultipleLinks = (linkStr) => {
         if (!linkStr) return 'Không có link';
-        return linkStr.split('\n').filter(l => l.trim() !== '').map(l => `<a href="${l.trim()}" target="_blank" class="rp-link" style="display:block; margin-bottom:4px; word-break: break-all;">${l.trim()}</a>`).join('');
+        return String(linkStr).split('\n').filter(l => l.trim() !== '').map(l => `<a href="${l.trim()}" target="_blank" class="rp-link" style="display:block; margin-bottom:4px; word-break: break-all;">${l.trim()}</a>`).join('');
     };
 
     // ===============================================================
@@ -1822,14 +1821,22 @@
                 if (selectedEmp === "ALL") {
                     let userStats = {};
                     filteredData.forEach(r => {
-                        let realUserKey = r.user;
-                        const emp = MANAGER_EMPLOYEES.find(x => String(x.u).toLowerCase() === String(r.user).toLowerCase());
-                        if(emp) realUserKey = emp.u;
+                        activeDays.add(r.dateStr);
+                        totalFlyers += parseInt(r.slToRoi) || 0;
+                        
+                        if (r.linkDB) { 
+                            postCount++; 
+                            String(r.linkDB).split('\n').filter(l=>l.trim()!=='').forEach(l => allPostLinks.push(`<li><a href="${l}" target="_blank" class="rp-link">${l}</a></li>`)); 
+                        } else if (r.imgDB) { postCount++; } 
+                        
+                        if (r.linkLive) { 
+                            liveCount++; 
+                            String(r.linkLive).split('\n').filter(l=>l.trim()!=='').forEach(l => allLiveLinks.push(`<li><a href="${l}" target="_blank" class="rp-link">${l}</a></li>`)); 
+                        } else if (r.imgLive) { liveCount++; }
 
-                        if(!userStats[realUserKey]) userStats[realUserKey] = { flyers: 0, posts: 0, lives: 0 };
-                        userStats[realUserKey].flyers += parseInt(r.slToRoi) || 0;
-                        if(r.linkDB || r.imgDB) userStats[realUserKey].posts += 1;
-                        if(r.linkLive || r.imgLive) userStats[realUserKey].lives += 1;
+                        if (r.imgToRoi) allFlyerImgs.push(r.imgToRoi);
+                        if (r.imgDB) allPostImgs.push(r.imgDB);
+                        if (r.imgLive) allLiveImgs.push(r.imgLive);
                     });
                     
                     let topFlyer = Object.keys(userStats).sort((a,b) => userStats[b].flyers - userStats[a].flyers)[0];
@@ -1912,10 +1919,10 @@
                     grouped[date].forEach(row => {
                         totalToRoi += parseInt(row.slToRoi) || 0;
                         if (row.linkDB) {
-                            row.linkDB.split('\n').filter(l=>l.trim()!=='').forEach(l => allLinksDB.push(`<li><a href="${l}" target="_blank" class="rp-link">${l}</a></li>`));
+                            String(row.linkDB).split('\n').filter(l=>l.trim()!=='').forEach(l => allLinksDB.push(`<li><a href="${l}" target="_blank" class="rp-link">${l}</a></li>`));
                         }
                         if (row.linkLive) {
-                            row.linkLive.split('\n').filter(l=>l.trim()!=='').forEach(l => allLinksLive.push(`<li><a href="${l}" target="_blank" class="rp-link">${l}</a></li>`));
+                            String(row.linkLive).split('\n').filter(l=>l.trim()!=='').forEach(l => allLinksLive.push(`<li><a href="${l}" target="_blank" class="rp-link">${l}</a></li>`));
                         }
                         if (row.imgToRoi) allImgToRoi.push(row.imgToRoi);
                         if (row.imgDB) allImgDB.push(row.imgDB);
@@ -2265,5 +2272,5 @@
         }
     };
 
-    return { name: "Báo Cáo 3", icon: `<svg viewBox="0 0 24 24"><path fill="white" d="M3 3v18h18V3H3zm16 16H5V5h14v14zM7 10h2v7H7v-7zm4-3h2v10h-2V7zm4 6h2v4h-2v-4z"/></svg>`, bgColor: "#0284c7", action: runTool };
+    return { name: "Báo Cáo 2", icon: `<svg viewBox="0 0 24 24"><path fill="white" d="M3 3v18h18V3H3zm16 16H5V5h14v14zM7 10h2v7H7v-7zm4-3h2v10h-2V7zm4 6h2v4h-2v-4z"/></svg>`, bgColor: "#0284c7", action: runTool };
 })
