@@ -157,13 +157,14 @@
     };
 
     const getEmpDisplayName = (u) => {
-        const renderMultipleLinks = (linkStr) => {
-        if (!linkStr) return 'Không có link';
-        return linkStr.split('\n').filter(l => l.trim() !== '').map(l => `<a href="${l.trim()}" target="_blank" class="rp-link" style="display:block; margin-bottom:4px; word-break: break-all;">${l.trim()}</a>`).join('');
-    };
         if (!u) return '---';
         const emp = MANAGER_EMPLOYEES.find(x => String(x.u).toLowerCase() === String(u).toLowerCase());
         return (emp && emp.fn) ? `${emp.fn} - ${emp.u}` : u;
+    };
+
+    const renderMultipleLinks = (linkStr) => {
+        if (!linkStr) return 'Không có link';
+        return linkStr.split('\n').filter(l => l.trim() !== '').map(l => `<a href="${l.trim()}" target="_blank" class="rp-link" style="display:block; margin-bottom:4px; word-break: break-all;">${l.trim()}</a>`).join('');
     };
     
     const formatDOB = (rawDate) => {
@@ -2278,5 +2279,5 @@
         }
     };
 
-    return { name: "Báo Cáo 2", icon: `<svg viewBox="0 0 24 24"><path fill="white" d="M3 3v18h18V3H3zm16 16H5V5h14v14zM7 10h2v7H7v-7zm4-3h2v10h-2V7zm4 6h2v4h-2v-4z"/></svg>`, bgColor: "#0284c7", action: runTool };
+    return { name: "Báo Cáo", icon: `<svg viewBox="0 0 24 24"><path fill="white" d="M3 3v18h18V3H3zm16 16H5V5h14v14zM7 10h2v7H7v-7zm4-3h2v10h-2V7zm4 6h2v4h-2v-4z"/></svg>`, bgColor: "#0284c7", action: runTool };
 })
