@@ -1,3 +1,50 @@
+function doPost(e) {
+  try {
+    var params = JSON.parse(e.postData.contents);
+    
+    // Nếu action là lấy danh sách bài test
+    if (params.action === 'get_quiz_history') {
+      // Mở Sheet chứa dữ liệu test theo ID bạn cung cấp
+      var sheet = SpreadsheetApp.openById("1PegpCNhjqXrZCGle3iKpY5lvsE6XQC5WnBQRr2BoyOY").getSheets()[0]; // Lấy sheet đầu tiên
+      var data = sheet.getDataRange().getValues();
+      
+      var result = {};
+      
+      // Lặp từ dòng 2 (bỏ dòng tiêu đề)
+      for (var i = 1; i < data.length; i++) {
+        var user = data[i][0]; // Cột A (User)
+        var historyRaw = data[i][2]; // Cột C (Lịch sử json)
+        
+        if (user && historyRaw) {
+          result[user.toString().trim()] = historyRaw;
+        }
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'success', 
+        data: result
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error', 
+      msg: err.message
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+```
+
+3. Bấm **Deploy -> New Deployment**. Chọn loại là **Web App**. Phân quyền truy cập là **Anyone (Bất kỳ ai)**.
+4. Copy lại đường link API (Web App URL) vừa được tạo.
+
+---
+
+### BƯỚC 2: CẬP NHẬT FILE JAVASCRIPT GIAO DIỆN
+
+Dưới đây là toàn bộ mã JS đã được cập nhật. Bạn lưu ý ở phần `CẤU HÌNH API` (dòng 29), hãy thay đường link `API_URL_QUIZ` bằng đường link API bạn vừa tạo ở Bước 1 nhé!
+
+```javascript
 ((context) => {
     const { UI, UTILS, CONSTANTS, DATA } = context;
     const GM_xmlhttpRequest = typeof context.GM_xmlhttpRequest !== 'undefined' ? context.GM_xmlhttpRequest : window.GM_xmlhttpRequest;
@@ -26,6 +73,7 @@
     const API_URL_REPORT = "https://script.google.com/macros/s/AKfycbz7Hv3FHg_XiA4g-ujO8bXkLSohxzB2HJvzsOuKZbkGdr-E33vwRJB4Etl-eCtKh5Xr/exec";
     const API_URL_HISTORY = "https://script.google.com/macros/s/AKfycbzL5rzzxfhSdX0WmFR3sB-BBimZgRsHT8v2RyzfZ_7RWG-bYuRTEwqmbwiImyZY5KgC/exec";
     const API_URL_APP = "https://script.google.com/macros/s/AKfycbyE_RBQ_svQjPaA6z_3EBtcxyIjmubhRyLq_eHxfdE-1pVbszxZul1Ow1n8SNfGFyvq/exec";
+    const API_URL_QUIZ = "https://script.google.com/macros/s/AKfycbyOW59XLUqZmwNpotAO1V3b8X-Yzesp88vEghVn_wyCAFmXw0KkLUO2p5NtPqLdpE6R/exec"; 
 
     let SYSTEM_USER = "---";
     if (context.AUTH_STATE && context.AUTH_STATE.isAuthorized && context.AUTH_STATE.userName && context.AUTH_STATE.userName !== "---") {
@@ -47,7 +95,6 @@
     const getShortDob = (rawDate) => {
         if (!rawDate) return null;
         let str = String(rawDate).trim();
-        // Ép các định dạng 2/4/1997 hoặc 02/04/1997 thành chuẩn 02/04
         if (str.includes('/')) {
             let parts = str.split('/');
             if (parts.length >= 2) return `${String(parts[0]).padStart(2, '0')}/${String(parts[1]).padStart(2, '0')}`;
@@ -115,7 +162,6 @@
 
         empList.forEach(e => {
             let empShop = String(e.s).trim().toLowerCase();
-            // Lọc nhân viên cùng Kho (Bao gồm cả chính mình)
             if (safeTargetShops.includes(empShop)) {
                 let shortDob = getShortDob(e.dob);
                 if (shortDob && daysInWeek.includes(shortDob)) {
@@ -127,7 +173,6 @@
         });
 
         if (bdayPeople.length > 0) {
-            // Hiển thị mỗi lần load trang thay vì lưu chết vào localStorage
             if (!window['bc_bday_shown_' + safeCurrentUser]) {
                 setTimeout(() => {
                     showBirthdayPopup(bdayPeople);
@@ -178,10 +223,7 @@
     const formatDOB = (rawDate) => {
         if (!rawDate) return '';
         let str = String(rawDate).trim();
-        // Nếu đã là chuỗi dd/mm/yyyy rồi thì giữ nguyên
         if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) return str;
-        
-        // Nếu là dạng ISO từ Google Sheet, chuyển về ngày nội địa
         let d = new Date(str);
         if (!isNaN(d.getTime())) {
             let dd = String(d.getDate()).padStart(2, '0');
@@ -192,7 +234,6 @@
         return str;
     };
 
-    // Hàm hỗ trợ xuất nhiều link thành mã HTML an toàn (Dùng chung)
     const renderMultipleLinks = (linkStr) => {
         if (!linkStr) return 'Không có link';
         return String(linkStr).split('\n').filter(l => l.trim() !== '').map(l => `<a href="${l.trim()}" target="_blank" class="rp-link" style="display:block; margin-bottom:4px; word-break: break-all;">${l.trim()}</a>`).join('');
@@ -773,7 +814,6 @@
         const appWrapper = document.getElementById('bc-app-wrapper');
         if (appWrapper) { 
             appWrapper.style.display = 'flex'; 
-            // FIX: Gọi lại hàm kiểm tra đăng nhập mỗi khi mở lại popup (nếu là nhân viên)
             if (typeof appWrapper.recheckAuth === 'function') {
                 appWrapper.recheckAuth();
             }
@@ -797,6 +837,8 @@
 
                 <div class="bc-tabs">
                     <button class="bc-tab-btn active" id="tab-btn-stat">📈 Truyền thông</button>
+                    <!-- THÊM TAB BÀI TEST -->
+                    <button class="bc-tab-btn" id="tab-btn-quiz">📝 Bài test</button>
                     <button class="bc-tab-btn" id="tab-btn-fund">💰 Quỹ Siêu Thị</button>
                     <button class="bc-tab-btn" id="tab-btn-config">⚙️ Cài Đặt</button>
                 </div>
@@ -811,6 +853,17 @@
                             <button id="btn-refresh-stat" title="Load lại dữ liệu">🔄</button>
                         </div>
                         <div id="stat-list-container"></div>
+                    </div>
+                </div>
+
+                <!-- KHỐI GIAO DIỆN TAB BÀI TEST -->
+                <div class="bc-tab-content" id="tab-quiz">
+                    <div class="bc-screen-body">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <div class="bc-sec-title" style="margin:0;">📝 LỊCH SỬ BÀI TEST TỪNG NHÂN VIÊN</div>
+                            <button id="btn-refresh-quiz" class="btn-unlock" style="position:static; margin:0;">🔄 Làm mới</button>
+                        </div>
+                        <div id="quiz-list-container"></div>
                     </div>
                 </div>
                 
@@ -898,7 +951,6 @@
                             </div>
                         </div>
 
-                        <!-- ĐÃ SỬA: Bọc khối Nhập Link Bài Đăng để thêm nhiều Link -->
                         <div class="bc-card">
                             <div class="bc-sec-title">🌐 2. Đăng Bài Truyền Thông</div>
                             <label class="bc-label">Link bài đăng</label>
@@ -915,7 +967,6 @@
                             </div>
                         </div>
 
-                        <!-- ĐÃ SỬA: Bọc khối Nhập Link Livestream để thêm nhiều Link -->
                         <div class="bc-card">
                             <div class="bc-sec-title">🎥 3. Livestream</div>
                             <label class="bc-label">Link Livestream</label>
@@ -1037,7 +1088,6 @@
                     });
                 }
             } 
-            // Sự kiện Nhân bản Thẻ Link (+)
             else if (e.target && e.target.classList.contains('btn-add-link')) {
                 e.preventDefault();
                 const targetId = e.target.getAttribute('data-target');
@@ -1054,7 +1104,6 @@
                 `;
                 document.getElementById(targetId).appendChild(newRow);
             } 
-            // Sự kiện Xóa Thẻ Link (-)
             else if (e.target && e.target.classList.contains('btn-remove-link')) {
                 e.preventDefault();
                 e.target.parentElement.remove();
@@ -1077,7 +1126,6 @@
         formatVNĐ: (num) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num),
         
         loadAndRender: async (containerId, isManager, sheetId, currentUser, forceReload = false) => {
-            // [FIX CACHE] Kiểm tra xem User đang đăng nhập có giống với User đã lưu cache không
             if (!forceReload && FUND_SYSTEM.loaded[containerId] === currentUser) return;
             
             const container = document.getElementById(containerId);
@@ -1093,22 +1141,19 @@
                 
                 FUND_SYSTEM.renderUI(containerId, isManager, currentUser, sheetId, json.keeper, json.trans);
                 
-                // [FIX CACHE] Lưu lại tên User đã load quỹ, thay vì chỉ lưu true
                 FUND_SYSTEM.loaded[containerId] = currentUser; 
             } catch (e) { container.innerHTML = `<div style="color:#ef4444; text-align:center;">Lỗi kết nối Quỹ: ${e.message}</div>`; }
         },
 
         renderUI: (containerId, isManager, currentUser, sheetId, keeper, trans) => {
-            // 1. Lọc ra các kho Boss có quản lý hoặc Kho hiện tại của Nhân viên
             let actualShops =[];
             if (isManager) {
                 actualShops =[...new Set(MANAGER_EMPLOYEES.map(e => String(e.s).trim()).filter(s => s))].slice(0, 3);
                 if (actualShops.length === 0) actualShops =['CHUNG'];
             } else {
-                actualShops =[EMP_SESSION.shop || 'CHUNG']; // Nhân viên chỉ có 1 kho duy nhất
+                actualShops =[EMP_SESSION.shop || 'CHUNG'];
             }
 
-            // 2. Xử lý Thủ quỹ an toàn
             let keeperObj = {};
             if (keeper) {
                 let kStr = String(keeper).trim();
@@ -1117,24 +1162,17 @@
                 } else { keeperObj[actualShops[0]] = kStr; }
             }
 
-            // 3. Khởi tạo quỹ cho TẤT CẢ và TỪNG KHO
             let shopTrans = { 'ALL': { balance: 0, list:[] } };
             actualShops.forEach(s => shopTrans[s] = { balance: 0, list:[] });
 
-            // 4. Rải dữ liệu thu/chi về các kho tương ứng
             trans.forEach(t => {
                 let assignedShop = t.shop ? String(t.shop).trim() : '';
 
-                // Xử lý giao dịch cũ chưa có Mã Kho (hoặc dính Tag)
                 if (!assignedShop) {
                     let match = t.reason ? String(t.reason).match(/^\[(.*?)\]\s*(.*)$/) : null;
-                    if (match) {
-                        assignedShop = match[1].trim();
-                        t.reason = match[2]; 
-                    }
+                    if (match) { assignedShop = match[1].trim(); t.reason = match[2]; }
                 }
 
-                // Bảo đảm so sánh bất chấp hoa thường
                 let matchedShop = actualShops.find(s => String(s).toLowerCase() === String(assignedShop).toLowerCase());
 
                 if (matchedShop) {
@@ -1144,21 +1182,12 @@
                         let emp = MANAGER_EMPLOYEES.find(e => String(e.u).toLowerCase() === String(t.user).toLowerCase());
                         assignedShop = (emp && actualShops.includes(String(emp.s).trim())) ? String(emp.s).trim() : actualShops[0];
                     } else {
-                        // ĐỐI VỚI NHÂN VIÊN: 
-                        if (!assignedShop) {
-                            // Nếu giao dịch cũ hoàn toàn không có mã kho -> Gắn vào kho hiện tại để NV không bị mất tiền
-                            assignedShop = actualShops[0];
-                        } else {
-                            // Giao dịch có mã kho khác -> Ẩn đi hoàn toàn
-                            return; 
-                        }
+                        if (!assignedShop) { assignedShop = actualShops[0]; } else { return; }
                     }
                 }
 
-                // Gắn lại tên Kho hiển thị cho các Giao dịch (Phục vụ Tab TỔNG QUAN)
                 t.displayShop = assignedShop;
 
-                // Cộng vào Kho cụ thể
                 if (shopTrans[assignedShop]) {
                     shopTrans[assignedShop].list.push(t);
                     if (t.status === 'Approved') {
@@ -1167,7 +1196,6 @@
                     }
                 }
 
-                // Cộng vào Quỹ Tổng (Chỉ dành cho Quản lý)
                 if (isManager) {
                     shopTrans['ALL'].list.push(t);
                     if (t.status === 'Approved') {
@@ -1177,7 +1205,6 @@
                 }
             });
 
-            // ==================== BẮT ĐẦU VẼ GIAO DIỆN ====================
             let html = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <div class="bc-sec-title" style="margin:0;">🏦 TỔNG QUAN QUỸ</div>
@@ -1185,7 +1212,6 @@
                 </div>
             `;
 
-            // Vẽ Thanh Tab (Chỉ hiện nếu là Quản lý và có > 1 Kho)
             if (isManager && actualShops.length > 1) {
                 html += `<div class="fund-sub-tabs" id="fund-sub-tabs-${containerId}">`;
                 html += `<div class="fund-sub-tab active" data-target="fund-shop-${containerId}-ALL">🌐 TỔNG QUAN</div>`;
@@ -1196,7 +1222,6 @@
                 html += `</div>`;
             }
 
-            // Hàm phụ hỗ trợ vẽ danh sách giao dịch
             const renderTransactionHTML = (tList, showShopBadge = false, isTabAll = false) => {
                 if (tList.length === 0) return `<div style="padding:20px; text-align:center; color:#94a3b8; border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px;">Chưa có phát sinh thu/chi nào.</div>`;
                 let tHtml = '';
@@ -1224,7 +1249,6 @@
                                 <div class="fund-action-wrap" style="display:flex; gap:5px; z-index:2; align-items:center;">
                                     ${isPending ? `<span class="fund-badge-pending">⏳ Chưa duyệt</span>` : ''}
                     `;
-                    // Ẩn nút hành động ở Tab Tổng quan
                     if (canAction && !isTabAll) {
                         if (isManager && isPending) tHtml += `<button class="fund-btn-action fund-act-approve" data-id="${t.id}" style="background:#10b981;">Duyệt</button>`;
                         tHtml += `<button class="fund-btn-action fund-act-delete" data-id="${t.id}" style="background:#ef4444;">Xóa</button>`;
@@ -1242,13 +1266,8 @@
                 return tHtml;
             };
 
-            // -----------------------------------------------------------
-            // VẼ TAB "TỔNG QUAN" (CHỈ DÀNH CHO QUẢN LÝ VÀ >1 KHO)
-            // -----------------------------------------------------------
             if (isManager && actualShops.length > 1) {
                 html += `<div id="fund-shop-${containerId}-ALL" class="fund-shop-content active" style="display:block;">`;
-                
-                // Dashboard Tổng kết chia theo từng kho
                 html += `
                     <div class="fund-dash">
                         <div class="fund-card-main">
@@ -1268,7 +1287,6 @@
                         </div>
                     </div>`;
 
-                // Bộ Lọc Lịch sử
                 html += `
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                         <div class="bc-sec-title" style="margin:0;">📝 LỊCH SỬ CHUNG</div>
@@ -1283,16 +1301,12 @@
                 </div>`;
             }
 
-            // -----------------------------------------------------------
-            // VẼ GIAO DIỆN CHO TỪNG KHO CỤ THỂ
-            // -----------------------------------------------------------
             actualShops.forEach((s, idx) => {
                 let safeS = String(s).replace(/[^a-zA-Z0-9]/g, '_');
                 const currentKeeper = keeperObj[s] || "";
                 const isKeeper = currentKeeper && String(currentKeeper).toLowerCase().includes(String(currentUser).toLowerCase());
                 const canAdd = isManager || isKeeper;
                 
-                // Nếu là Nhân viên -> Luôn hiện (vì chỉ có 1 kho). Nếu là QL -> Chỉ tab TỔNG QUAN hiện lúc đầu
                 const isOnlyShop = !isManager || actualShops.length === 1;
                 const isActive = isOnlyShop ? 'active' : '';
                 const displayStyle = isOnlyShop ? 'display:block;' : 'display:none;';
@@ -1342,14 +1356,10 @@
 
             document.getElementById(containerId).innerHTML = html;
 
-            // ==================== GẮN SỰ KIỆN TƯƠNG TÁC ====================
             const containerEl = document.getElementById(containerId);
-
-            // Nút Refresh
             const btnRefresh = document.getElementById(`btn-refresh-fund-${containerId}`);
             if (btnRefresh) btnRefresh.onclick = () => FUND_SYSTEM.loadAndRender(containerId, isManager, sheetId, currentUser, true);
 
-            // Sự kiện Lọc trong Tab Tổng Quan
             const filterAll = document.getElementById(`fund-filter-ALL-${containerId}`);
             if (filterAll) {
                 filterAll.onchange = (e) => {
@@ -1357,37 +1367,25 @@
                     const listContainer = document.getElementById(`fund-list-ALL-container-${containerId}`);
                     if(listContainer) {
                         listContainer.querySelectorAll('.fund-item-new').forEach(item => {
-                            if (selectedVal === 'ALL' || item.getAttribute('data-shop') === selectedVal) {
-                                item.style.display = 'flex';
-                            } else {
-                                item.style.display = 'none';
-                            }
+                            if (selectedVal === 'ALL' || item.getAttribute('data-shop') === selectedVal) { item.style.display = 'flex'; } else { item.style.display = 'none'; }
                         });
                     }
                 };
             }
 
-            // Chuyển Tab
             const tabContainer = containerEl.querySelector('.fund-sub-tabs');
             if (tabContainer) {
                 tabContainer.querySelectorAll('.fund-sub-tab').forEach(tab => {
                     tab.onclick = () => {
                         tabContainer.querySelectorAll('.fund-sub-tab').forEach(t => t.classList.remove('active'));
-                        containerEl.querySelectorAll('.fund-shop-content').forEach(c => {
-                            c.classList.remove('active');
-                            c.style.display = 'none';
-                        });
+                        containerEl.querySelectorAll('.fund-shop-content').forEach(c => { c.classList.remove('active'); c.style.display = 'none'; });
                         tab.classList.add('active');
                         const targetEl = document.getElementById(tab.getAttribute('data-target'));
-                        if (targetEl) {
-                            targetEl.classList.add('active');
-                            targetEl.style.display = 'block';
-                        }
+                        if (targetEl) { targetEl.classList.add('active'); targetEl.style.display = 'block'; }
                     };
                 });
             }
 
-            // Chọn/Lưu Thủ Quỹ
             if (isManager) {
                 containerEl.querySelectorAll('.btn-fund-setkeeper').forEach(btn => {
                     btn.onclick = () => {
@@ -1409,12 +1407,10 @@
                 });
             }
 
-            // Thu / Chi Modal
             containerEl.querySelectorAll('.btn-fund-add').forEach(btn => {
                 btn.onclick = () => FUND_SYSTEM.showTransactionModal(btn.getAttribute('data-type'), isManager, currentUser, sheetId, containerId, btn.getAttribute('data-shop'));
             });
 
-            // Duyệt / Xóa
             containerEl.querySelectorAll('.fund-action-wrap').forEach(wrap => {
                 wrap.onclick = (e) => {
                     e.stopPropagation(); 
@@ -1426,7 +1422,6 @@
                 };
             });
 
-            // Modal Chi tiết
             containerEl.querySelectorAll('.fund-item-new').forEach(item => {
                 item.onclick = (e) => {
                     const transObj = trans.find(x => x.id === item.getAttribute('data-id'));
@@ -1538,7 +1533,6 @@
         }
     };
 
-        // Hàm hỗ trợ bật popup báo lỗi
         const showErrorScreen = (title, msg) => {
             $('err-title').innerText = title;
             $('err-msg').innerText = msg;
@@ -1549,17 +1543,138 @@
         // PHÂN NHÁNH LUỒNG XỬ LÝ
         // ==========================================
         if (IS_MANAGER) {
-            // LUỒNG QUẢN LÝ
             switchSc('sc-manager');
             
+            // Hàm Helper để chuyển Tab
+            const switchManagerTab = (activeTabBtnId, activeTabId) => {
+                ['tab-btn-stat', 'tab-btn-quiz', 'tab-btn-fund', 'tab-btn-config'].forEach(id => { if($(id)) $(id).classList.remove('active'); });
+                ['tab-stat', 'tab-quiz', 'tab-fund', 'tab-config'].forEach(id => { if($(id)) $(id).classList.remove('active'); });
+                
+                $(activeTabBtnId).classList.add('active');
+                $(activeTabId).classList.add('active');
+            };
+
+            $('tab-btn-stat').onclick = () => switchManagerTab('tab-btn-stat', 'tab-stat');
+            $('tab-btn-config').onclick = () => switchManagerTab('tab-btn-config', 'tab-config');
+            
             $('tab-btn-fund').onclick = () => { 
-                $('tab-btn-stat').classList.remove('active'); $('tab-btn-config').classList.remove('active'); $('tab-btn-fund').classList.add('active');
-                $('tab-stat').classList.remove('active'); $('tab-config').classList.remove('active'); $('tab-fund').classList.add('active');
+                switchManagerTab('tab-btn-fund', 'tab-fund');
                 FUND_SYSTEM.loadAndRender('mgr-fund-container', true, MANAGER_SHEET_ID, CURRENT_USER, false);
             };
-            
-            $('tab-btn-stat').onclick = () => { $('tab-btn-stat').classList.add('active'); $('tab-btn-config').classList.remove('active'); $('tab-btn-fund').classList.remove('active'); $('tab-stat').classList.add('active'); $('tab-config').classList.remove('active'); $('tab-fund').classList.remove('active'); };
-            $('tab-btn-config').onclick = () => { $('tab-btn-config').classList.add('active'); $('tab-btn-stat').classList.remove('active'); $('tab-btn-fund').classList.remove('active'); $('tab-config').classList.add('active'); $('tab-stat').classList.remove('active'); $('tab-fund').classList.remove('active'); };
+
+            // SỰ KIỆN CLICK TAB BÀI TEST
+            $('tab-btn-quiz').onclick = () => {
+                switchManagerTab('tab-btn-quiz', 'tab-quiz');
+                loadQuizData();
+            };
+
+            $('btn-refresh-quiz').onclick = () => {
+                loadQuizData();
+            };
+
+            // HÀM TẢI DỮ LIỆU BÀI TEST TỪ GOOGLE SHEET
+            const loadQuizData = async () => {
+                const container = $('quiz-list-container');
+                container.innerHTML = `<div style="text-align:center; padding:30px;"><div class="spinner" style="margin:0 auto;"></div><br>Đang tải dữ liệu bài test...</div>`;
+                
+                try {
+                    let res = await universalFetch({ 
+                        method: "POST", 
+                        url: API_URL_QUIZ, 
+                        data: JSON.stringify({ action: "get_quiz_history" }) 
+                    });
+                    
+                    let json = JSON.parse(res);
+                    if (json.status === 'success') {
+                        renderQuizList(json.data);
+                    } else {
+                        throw new Error(json.msg || "Lỗi không xác định");
+                    }
+                } catch (e) {
+                    container.innerHTML = `<div style="color:#ef4444; text-align:center;">Lỗi tải dữ liệu bài test: ${e.message}</div>`;
+                }
+            };
+
+            // HÀM VẼ GIAO DIỆN LỊCH SỬ THI
+            const renderQuizList = (quizData) => {
+                // Lọc những nhân viên có Role là NV (hoặc chưa set Role thì mặc định coi là NV)
+                let nvList = MANAGER_EMPLOYEES.filter(e => e.role === 'NV' || !e.role);
+                
+                if (nvList.length === 0) {
+                     $('quiz-list-container').innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">Bạn chưa khai báo nhân viên nào (Role: NV).</div>`;
+                     return;
+                }
+
+                let html = '';
+                nvList.forEach((nv, idx) => {
+                    let rawHistory = quizData[nv.u];
+                    let historyArr = [];
+                    
+                    if (rawHistory) {
+                        try { historyArr = JSON.parse(rawHistory); } catch(e){}
+                    }
+
+                    let uniqueId = `quiz-det-${String(nv.u).replace(/[^a-zA-Z0-9]/g, '_')}-${idx}`;
+                    let historyHtml = '';
+
+                    if (historyArr.length === 0) {
+                        historyHtml = `<div style="color:#94a3b8; font-size:13px; text-align:center; padding:10px;">Nhân viên này chưa làm bài test nào.</div>`;
+                    } else {
+                        // Sắp xếp thời gian mới nhất lên đầu
+                        historyArr.sort((a,b) => b.time - a.time);
+
+                        historyHtml = `<table style="width:100%; border-collapse: collapse; font-size:13px; margin-top:10px;">
+                            <tr style="background:rgba(56, 189, 248, 0.1); color:#38bdf8;">
+                                <th style="padding:8px; text-align:left; border: 1px solid rgba(255,255,255,0.1);">Thời gian</th>
+                                <th style="padding:8px; text-align:left; border: 1px solid rgba(255,255,255,0.1);">Tên bài test</th>
+                                <th style="padding:8px; text-align:center; border: 1px solid rgba(255,255,255,0.1);">Điểm</th>
+                            </tr>`;
+                            
+                        historyArr.forEach(h => {
+                            let d = new Date(h.time);
+                            let timeStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+                            
+                            // Tô màu điểm (Trên 80% xanh, trên 50% vàng, dưới đỏ)
+                            let scoreParts = String(h.score).split('/');
+                            let scoreColor = '#fff';
+                            if(scoreParts.length === 2) {
+                                let pct = parseFloat(scoreParts[0]) / parseFloat(scoreParts[1]);
+                                scoreColor = pct >= 0.8 ? '#10b981' : (pct >= 0.5 ? '#f59e0b' : '#ef4444');
+                            }
+
+                            historyHtml += `<tr>
+                                <td style="padding:8px; border: 1px solid rgba(255,255,255,0.05); color:#cbd5e1;">${timeStr}</td>
+                                <td style="padding:8px; border: 1px solid rgba(255,255,255,0.05); color:#fff;">${h.quizName}</td>
+                                <td style="padding:8px; text-align:center; border: 1px solid rgba(255,255,255,0.05); font-weight:bold; color:${scoreColor};">${h.score}</td>
+                            </tr>`;
+                        });
+                        historyHtml += `</table>`;
+                    }
+
+                    // Tóm tắt thông tin trên thanh Header
+                    let totalTests = historyArr.length;
+                    let lastTestStr = "Chưa làm test";
+                    if(totalTests > 0) {
+                       let ld = new Date(historyArr[0].time);
+                       lastTestStr = `${String(ld.getDate()).padStart(2,'0')}/${String(ld.getMonth()+1).padStart(2,'0')} ${String(ld.getHours()).padStart(2,'0')}:${String(ld.getMinutes()).padStart(2,'0')}`;
+                    }
+
+                    html += `
+                    <div class="rp-card">
+                        <div class="rp-header-row" onclick="document.getElementById('${uniqueId}').style.display = document.getElementById('${uniqueId}').style.display === 'block' ? 'none' : 'block'">
+                            <div>
+                                <b style="color:#38bdf8;">👤 ${getEmpDisplayName(nv.u)}</b>
+                                <div style="font-size:12px; color:#94a3b8; margin-top:4px;">Kho: ${nv.s || 'N/A'} | Đã thi: <b style="color:#FFD700;">${totalTests} bài</b> | Gần nhất: ${lastTestStr}</div>
+                            </div>
+                            <span style="font-size:12px; color:#FFD700;">▼ Xem lịch sử</span>
+                        </div>
+                        <div class="rp-detail" id="${uniqueId}">
+                            ${historyHtml}
+                        </div>
+                    </div>`;
+                });
+                $('quiz-list-container').innerHTML = html;
+            };
             
             const loadConfig = async () => {
                 $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang tải dữ liệu...";
@@ -1702,7 +1817,6 @@
                         $('stat-list-container').innerHTML = `<div style="text-align:center; color:#94a3b8; padding:20px;">Chưa có báo cáo nào.</div>`;
                     }
                 } catch(e) { 
-                    // In thẳng tên lỗi ra màn hình để nếu có lỗi khác sẽ biết ngay
                     console.error(e);
                     $('stat-list-container').innerHTML = `<div style="color:#ef4444; text-align:center; padding:20px;">Lỗi xử lý dữ liệu!<br><span style="font-size:13px; color:#fca5a5;">(Chi tiết: ${e.message})</span></div>`; 
                 }
@@ -1790,16 +1904,9 @@
                 renderStatList(filtered, e, m, d);
             };
 
-            // Ép chuỗi an toàn cho Link
-            const renderMultipleLinks = (linkStr) => {
-                if (!linkStr) return 'Không có link';
-                return String(linkStr).split('\n').filter(l => l.trim() !== '').map(l => `<a href="${l.trim()}" target="_blank" class="rp-link" style="display:block; margin-bottom:4px; word-break: break-all;">${l.trim()}</a>`).join('');
-            };
-
-            // Ép chuỗi an toàn cho Ảnh (Chống Crash nếu dữ liệu từ Sheet trả về số)
             const renderImgGrid = (rawStr, horizontal = false, prefixName = "Anh") => {
                 if(!rawStr) return '';
-                let str = String(rawStr); // ÉP KIỂU STRING ĐỂ CHỐNG LỖI
+                let str = String(rawStr); 
                 if(str.includes('ảnh') && !str.includes('http')) return `<span style="color:#fbbf24; font-size:12px;">${str} (Cũ)</span>`;
                 let links = str.split('|||').filter(l => l.trim() !== '');
                 if(links.length === 0) return '';
@@ -2015,7 +2122,6 @@
                                         uData.grp = myEmp.grp;
                                     }
 
-                                    // Kích hoạt thông báo sinh nhật cho nhân viên
                                     let actualShop = uData.shop || guestData.shop || "";
                                     let actualUser = uData.user || guestData.user || "";
                                     processBirthdays(emps, actualUser, [String(actualShop).trim()]);
@@ -2235,7 +2341,6 @@
                     $('bc-load-text').innerText = "Đang nén hình ảnh...";
                     const[imgToRoi, imgDangBai, imgLive] = await Promise.all([ processImages($('file-toroi').files), processImages($('file-dangbai').files), processImages($('file-live').files) ]);
                     
-                    // ĐÃ SỬA: Gom tất cả các link con lại thành 1 chuỗi ngắt dòng
                     const dangBaiLinks = Array.from(document.querySelectorAll('.inp-dangbai-link')).map(i => i.value.trim()).filter(v => v).join('\n');
                     const liveLinks = Array.from(document.querySelectorAll('.inp-live-link')).map(i => i.value.trim()).filter(v => v).join('\n');
 
@@ -2253,7 +2358,6 @@
                     if(JSON.parse(response).status === 'success') {
                         alert("✅ Gửi báo cáo thành công!"); 
                         
-                        // ĐÃ SỬA: Dọn dẹp form sau khi gửi
                         $('inp-toroi-sl').value = '';
                         ['wrap-dangbai-links', 'wrap-live-links'].forEach(id => {
                             const wrap = $(id);
