@@ -47,10 +47,10 @@
     const getShortDob = (rawDate) => {
         if (!rawDate) return null;
         let str = String(rawDate).trim();
-        // Ép các định dạng 2/4/1997 thành chuẩn 02/04
+        // Ép các định dạng 2/4/1997 hoặc 02/04/1997 thành chuẩn 02/04
         if (str.includes('/')) {
             let parts = str.split('/');
-            return `${String(parts[0]).padStart(2, '0')}/${String(parts[1]).padStart(2, '0')}`;
+            if (parts.length >= 2) return `${String(parts[0]).padStart(2, '0')}/${String(parts[1]).padStart(2, '0')}`;
         }
         let d = new Date(str);
         if (!isNaN(d.getTime())) return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -73,26 +73,34 @@
                 <div class="hpbd-box">
                     <div class="hpbd-icon">🎉</div>
                     <div class="hpbd-title">Sắp Tới Sinh Nhật!</div>
-                    <p style="color: #cbd5e1; font-size: 13px; margin-bottom: 15px; line-height: 1.5;">Trong tuần này, có sinh nhật của các thành viên sau. Đừng quên gửi lời chúc nhé!</p>
+                    <p style="color: #cbd5e1; font-size: 13px; margin-bottom: 15px; line-height: 1.5;">Trong tuần này, siêu thị có sinh nhật của các thành viên sau. Đừng quên gửi lời chúc nhé!</p>
                     <div class="hpbd-list">${listHtml}</div>
                     <button class="hpbd-btn" id="btn-hpbd-close">Đã Rõ & Đóng</button>
                 </div>
             </div>
         `;
-        document.getElementById('bc-app-wrapper').insertAdjacentHTML('beforeend', modalHtml);
-        const modalEl = document.getElementById('hpbd-modal');
-        setTimeout(() => modalEl.classList.add('show'), 50);
+        let wrapper = document.getElementById('bc-app-wrapper');
+        if (wrapper) {
+            wrapper.insertAdjacentHTML('beforeend', modalHtml);
+            const modalEl = document.getElementById('hpbd-modal');
+            setTimeout(() => modalEl.classList.add('show'), 50);
 
-        document.getElementById('btn-hpbd-close').onclick = () => { modalEl.classList.remove('show'); setTimeout(() => modalEl.remove(), 300); };
+            document.getElementById('btn-hpbd-close').onclick = () => { 
+                modalEl.classList.remove('show'); 
+                setTimeout(() => modalEl.remove(), 300); 
+            };
+        }
     };
 
     const processBirthdays = (empList, currentUser, targetShops) => {
-        let daysInWeek =[];
+        if (!empList || !Array.isArray(empList) || empList.length === 0) return;
+
+        let daysInWeek = [];
         let d = new Date();
         let day = d.getDay();
         let diffToMonday = d.getDate() - day + (day === 0 ? -6 : 1);
         let startOfWeek = new Date(d.getFullYear(), d.getMonth(), diffToMonday);
-        
+
         for(let i = 0; i < 7; i++) {
             let tempDate = new Date(startOfWeek);
             tempDate.setDate(startOfWeek.getDate() + i);
@@ -101,24 +109,29 @@
             daysInWeek.push(`${dd}/${mm}`);
         }
 
-        let bdayPeople =[];
+        let safeCurrentUser = String(currentUser).split('-')[0].trim().toLowerCase();
+        let safeTargetShops = targetShops.map(s => String(s).trim().toLowerCase());
+        let bdayPeople = [];
+
         empList.forEach(e => {
-            // Lọc nhân viên nằm trong danh sách Kho cần check VÀ không phải là chính mình
-            if (targetShops.includes(String(e.s).trim()) && String(e.u).toLowerCase() !== String(currentUser).toLowerCase()) {
+            let empShop = String(e.s).trim().toLowerCase();
+            // Lọc nhân viên cùng Kho (Bao gồm cả chính mình)
+            if (safeTargetShops.includes(empShop)) {
                 let shortDob = getShortDob(e.dob);
                 if (shortDob && daysInWeek.includes(shortDob)) {
-                    bdayPeople.push({ name: e.fn || e.u, date: shortDob, shop: e.s });
+                    let isMe = String(e.u).split('-')[0].trim().toLowerCase() === safeCurrentUser;
+                    let displayName = e.fn ? e.fn : String(e.u).split('-')[0].trim();
+                    bdayPeople.push({ name: isMe ? `${displayName} (Là Bạn 🎁)` : displayName, date: shortDob, shop: e.s });
                 }
             }
         });
 
         if (bdayPeople.length > 0) {
-            let todayKey = new Date().toLocaleDateString();
-            // Nếu bạn muốn test nhiều lần, hãy chuyển 'localStorage' thành 'sessionStorage'
-            if (localStorage.getItem('bc_bday_shown_' + currentUser) !== todayKey) {
+            // Hiển thị mỗi lần load trang thay vì lưu chết vào localStorage
+            if (!window['bc_bday_shown_' + safeCurrentUser]) {
                 setTimeout(() => {
                     showBirthdayPopup(bdayPeople);
-                    localStorage.setItem('bc_bday_shown_' + currentUser, todayKey);
+                    window['bc_bday_shown_' + safeCurrentUser] = true;
                 }, 800);
             }
         }
@@ -177,6 +190,12 @@
             return `${dd}/${mm}/${yyyy}`;
         }
         return str;
+    };
+
+    // Hàm hỗ trợ xuất nhiều link thành mã HTML an toàn (Dùng chung)
+    const renderMultipleLinks = (linkStr) => {
+        if (!linkStr) return 'Không có link';
+        return String(linkStr).split('\n').filter(l => l.trim() !== '').map(l => `<a href="${l.trim()}" target="_blank" class="rp-link" style="display:block; margin-bottom:4px; word-break: break-all;">${l.trim()}</a>`).join('');
     };
 
     // ===============================================================
@@ -835,7 +854,7 @@
                 </div>
             </div>
 
-            <!-- SCREEN 2: LỖI / XÁC THỰC SSO (THAY CHO LOGIN CŨ) -->
+            <!-- SCREEN 2: LỖI / XÁC THỰC SSO -->
             <div class="bc-screen" id="sc-error" style="height:auto; max-height:none;">
                 <div class="bc-header" style="justify-content:flex-end; border:none; background:transparent;">
                     <button class="bc-close-btn btn-close-app">✕</button>
@@ -879,10 +898,16 @@
                             </div>
                         </div>
 
+                        <!-- ĐÃ SỬA: Bọc khối Nhập Link Bài Đăng để thêm nhiều Link -->
                         <div class="bc-card">
                             <div class="bc-sec-title">🌐 2. Đăng Bài Truyền Thông</div>
                             <label class="bc-label">Link bài đăng</label>
-                            <input type="text" id="inp-dangbai-link" class="bc-input" placeholder="Dán link bài đăng vào đây...">
+                            <div id="wrap-dangbai-links">
+                                <div class="input-wrapper" style="display:flex; gap:10px; margin-bottom:10px;">
+                                    <input type="text" class="bc-input inp-dangbai-link" placeholder="Dán link bài đăng vào đây..." style="margin-bottom:0;">
+                                    <button class="bc-btn btn-primary btn-add-link" data-target="wrap-dangbai-links" style="width:auto; padding:0 15px; font-size:20px;" title="Thêm link">+</button>
+                                </div>
+                            </div>
                             <div class="bc-file-upload">
                                 <label for="file-dangbai" class="bc-file-label">📸 Nhấn để chọn ảnh bài đăng</label>
                                 <input type="file" id="file-dangbai" class="bc-file-input" multiple accept="image/*">
@@ -890,10 +915,16 @@
                             </div>
                         </div>
 
+                        <!-- ĐÃ SỬA: Bọc khối Nhập Link Livestream để thêm nhiều Link -->
                         <div class="bc-card">
                             <div class="bc-sec-title">🎥 3. Livestream</div>
                             <label class="bc-label">Link Livestream</label>
-                            <input type="text" id="inp-live-link" class="bc-input" placeholder="Dán link livestream vào đây...">
+                            <div id="wrap-live-links">
+                                <div class="input-wrapper" style="display:flex; gap:10px; margin-bottom:10px;">
+                                    <input type="text" class="bc-input inp-live-link" placeholder="Dán link livestream vào đây..." style="margin-bottom:0;">
+                                    <button class="bc-btn btn-primary btn-add-link" data-target="wrap-live-links" style="width:auto; padding:0 15px; font-size:20px;" title="Thêm link">+</button>
+                                </div>
+                            </div>
                             <div class="bc-file-upload">
                                 <label for="file-live" class="bc-file-label">📸 Nhấn để chọn ảnh Livestream</label>
                                 <input type="file" id="file-live" class="bc-file-input" multiple accept="image/*">
@@ -1005,6 +1036,28 @@
                         setTimeout(() => { executeDownload(imgUrl, `${prefix}_${idx+1}.jpg`); }, idx * 400); 
                     });
                 }
+            } 
+            // Sự kiện Nhân bản Thẻ Link (+)
+            else if (e.target && e.target.classList.contains('btn-add-link')) {
+                e.preventDefault();
+                const targetId = e.target.getAttribute('data-target');
+                const isDangBai = targetId === 'wrap-dangbai-links';
+                const inputClass = isDangBai ? 'inp-dangbai-link' : 'inp-live-link';
+                const placeholder = isDangBai ? 'Dán link bài đăng vào đây...' : 'Dán link livestream vào đây...';
+                
+                const newRow = document.createElement('div');
+                newRow.className = 'input-wrapper';
+                newRow.style.cssText = 'display:flex; gap:10px; margin-bottom:10px;';
+                newRow.innerHTML = `
+                    <input type="text" class="bc-input ${inputClass}" placeholder="${placeholder}" style="margin-bottom:0;">
+                    <button class="bc-btn btn-danger btn-remove-link" style="width:auto; padding:0 15px; font-size:20px;" title="Xóa link">-</button>
+                `;
+                document.getElementById(targetId).appendChild(newRow);
+            } 
+            // Sự kiện Xóa Thẻ Link (-)
+            else if (e.target && e.target.classList.contains('btn-remove-link')) {
+                e.preventDefault();
+                e.target.parentElement.remove();
             }
         });
 
@@ -1485,7 +1538,7 @@
         }
     };
 
-        // Hàm hỗ trợ bật popup báo lỗi (Cách A)
+        // Hàm hỗ trợ bật popup báo lỗi
         const showErrorScreen = (title, msg) => {
             $('err-title').innerText = title;
             $('err-msg').innerText = msg;
@@ -1496,7 +1549,7 @@
         // PHÂN NHÁNH LUỒNG XỬ LÝ
         // ==========================================
         if (IS_MANAGER) {
-            // LUỒNG QUẢN LÝ (Giữ nguyên - truy cập từ web BI)
+            // LUỒNG QUẢN LÝ
             switchSc('sc-manager');
             
             $('tab-btn-fund').onclick = () => { 
@@ -1523,7 +1576,6 @@
                         MANAGER_EMPLOYEES = data.employees && data.employees !== "[]" ? JSON.parse(data.employees) : [];
                         renderNV();
 
-                        // [THÊM MỚI TẠI ĐÂY]: KÍCH HOẠT CHECK SINH NHẬT CHO QUẢN LÝ
                         if (MANAGER_EMPLOYEES.length > 0) {
                             let mgrShops =[...new Set(MANAGER_EMPLOYEES.map(e => String(e.s).trim()))];
                             processBirthdays(MANAGER_EMPLOYEES, CURRENT_USER, mgrShops);
@@ -1621,14 +1673,12 @@
                 if(!fId || !sId) return alert("Nhập đủ ID Folder và ID Sheet!");
                 $('bc-loading').style.display = 'flex'; $('bc-load-text').innerText = "Đang lưu cấu hình...";
                 try {
-                    // ĐỔI API_URL_MAIN THÀNH API_URL_APP Ở ĐÂY 👇
                     let res = await universalFetch({ method:"POST", url: API_URL_APP, data: JSON.stringify({ action: "save_config_manager", user: CURRENT_USER, folderId: fId, sheetId: sId, employees: JSON.stringify(MANAGER_EMPLOYEES) }) });
                     let json = JSON.parse(res);
                     if(json.status === 'success') { 
                         alert("✅ Đã lưu cấu hình thành công!"); 
                         MANAGER_SHEET_ID = sId; lockConfigInputs(true); await loadStatistics(); 
                     } else {
-                        // Hiển thị lỗi nếu trùng User
                         alert("❌ LỖI: " + json.message);
                     }
                 } catch(e) { alert("❌ Lỗi mạng hoặc máy chủ không phản hồi!"); }
@@ -1651,7 +1701,11 @@
                         renderTodaySummary(true);
                         $('stat-list-container').innerHTML = `<div style="text-align:center; color:#94a3b8; padding:20px;">Chưa có báo cáo nào.</div>`;
                     }
-                } catch(e) { $('stat-list-container').innerHTML = `<div style="color:#ef4444; text-align:center; padding:20px;">Lỗi tải thống kê! File Sheet cấu hình bị sai hoặc chưa được cấp quyền truy cập.</div>`; }
+                } catch(e) { 
+                    // In thẳng tên lỗi ra màn hình để nếu có lỗi khác sẽ biết ngay
+                    console.error(e);
+                    $('stat-list-container').innerHTML = `<div style="color:#ef4444; text-align:center; padding:20px;">Lỗi xử lý dữ liệu!<br><span style="font-size:13px; color:#fca5a5;">(Chi tiết: ${e.message})</span></div>`; 
+                }
             };
 
             const renderTodaySummary = (empty = false) => {
@@ -1736,8 +1790,16 @@
                 renderStatList(filtered, e, m, d);
             };
 
-            const renderImgGrid = (str, horizontal = false, prefixName = "Anh") => {
-                if(!str) return '';
+            // Ép chuỗi an toàn cho Link
+            const renderMultipleLinks = (linkStr) => {
+                if (!linkStr) return 'Không có link';
+                return String(linkStr).split('\n').filter(l => l.trim() !== '').map(l => `<a href="${l.trim()}" target="_blank" class="rp-link" style="display:block; margin-bottom:4px; word-break: break-all;">${l.trim()}</a>`).join('');
+            };
+
+            // Ép chuỗi an toàn cho Ảnh (Chống Crash nếu dữ liệu từ Sheet trả về số)
+            const renderImgGrid = (rawStr, horizontal = false, prefixName = "Anh") => {
+                if(!rawStr) return '';
+                let str = String(rawStr); // ÉP KIỂU STRING ĐỂ CHỐNG LỖI
                 if(str.includes('ảnh') && !str.includes('http')) return `<span style="color:#fbbf24; font-size:12px;">${str} (Cũ)</span>`;
                 let links = str.split('|||').filter(l => l.trim() !== '');
                 if(links.length === 0) return '';
@@ -1816,8 +1878,17 @@
                     filteredData.forEach(r => {
                         activeDays.add(r.dateStr);
                         totalFlyers += parseInt(r.slToRoi) || 0;
-                        if (r.linkDB) { postCount++; allPostLinks.push(`<li><a href="${r.linkDB}" target="_blank" class="rp-link">${r.linkDB}</a></li>`); } else if (r.imgDB) { postCount++; } 
-                        if (r.linkLive) { liveCount++; allLiveLinks.push(`<li><a href="${r.linkLive}" target="_blank" class="rp-link">${r.linkLive}</a></li>`); } else if (r.imgLive) { liveCount++; }
+                        
+                        if (r.linkDB) { 
+                            postCount++; 
+                            String(r.linkDB).split('\n').filter(l=>l.trim()!=='').forEach(l => allPostLinks.push(`<li><a href="${l}" target="_blank" class="rp-link">${l}</a></li>`)); 
+                        } else if (r.imgDB) { postCount++; } 
+                        
+                        if (r.linkLive) { 
+                            liveCount++; 
+                            String(r.linkLive).split('\n').filter(l=>l.trim()!=='').forEach(l => allLiveLinks.push(`<li><a href="${l}" target="_blank" class="rp-link">${l}</a></li>`)); 
+                        } else if (r.imgLive) { liveCount++; }
+
                         if (r.imgToRoi) allFlyerImgs.push(r.imgToRoi);
                         if (r.imgDB) allPostImgs.push(r.imgDB);
                         if (r.imgLive) allLiveImgs.push(r.imgLive);
@@ -1851,8 +1922,12 @@
 
                     grouped[date].forEach(row => {
                         totalToRoi += parseInt(row.slToRoi) || 0;
-                        if (row.linkDB) allLinksDB.push(`<li><a href="${row.linkDB}" target="_blank" class="rp-link">${row.linkDB}</a></li>`);
-                        if (row.linkLive) allLinksLive.push(`<li><a href="${row.linkLive}" target="_blank" class="rp-link">${row.linkLive}</a></li>`);
+                        if (row.linkDB) {
+                            String(row.linkDB).split('\n').filter(l=>l.trim()!=='').forEach(l => allLinksDB.push(`<li><a href="${l}" target="_blank" class="rp-link">${l}</a></li>`));
+                        }
+                        if (row.linkLive) {
+                            String(row.linkLive).split('\n').filter(l=>l.trim()!=='').forEach(l => allLinksLive.push(`<li><a href="${l}" target="_blank" class="rp-link">${l}</a></li>`));
+                        }
                         if (row.imgToRoi) allImgToRoi.push(row.imgToRoi);
                         if (row.imgDB) allImgDB.push(row.imgDB);
                         if (row.imgLive) allImgLive.push(row.imgLive);
@@ -1889,9 +1964,9 @@
                                 <div class="rp-detail" id="${uniqueId}">
                                     <div style="margin-bottom:10px;"><b>📄 Phát Tờ Rơi:</b> ${row.slToRoi} tờ</div>
                                     ${renderImgGrid(row.imgToRoi, false, `ToRoi_${row.user}_${safeDate}`)}
-                                    <div style="margin:15px 0 10px;"><b>🌐 Đăng Bài:</b> ${row.linkDB ? `<a href="${row.linkDB}" target="_blank" class="rp-link">${row.linkDB}</a>` : 'Không có link'}</div>
+                                    <div style="margin:15px 0 10px;"><b>🌐 Đăng Bài:</b> <div style="margin-top:5px;">${renderMultipleLinks(row.linkDB)}</div></div>
                                     ${renderImgGrid(row.imgDB, false, `DangBai_${row.user}_${safeDate}`)}
-                                    <div style="margin:15px 0 10px;"><b>🎥 Livestream:</b> ${row.linkLive ? `<a href="${row.linkLive}" target="_blank" class="rp-link">${row.linkLive}</a>` : 'Không có link'}</div>
+                                    <div style="margin:15px 0 10px;"><b>🎥 Livestream:</b> <div style="margin-top:5px;">${renderMultipleLinks(row.linkLive)}</div></div>
                                     ${renderImgGrid(row.imgLive, false, `Livestream_${row.user}_${safeDate}`)}
                                     <div style="margin-top:15px; text-align:right;"><a href="${row.rootLink}" target="_blank" style="color:#10b981; font-size:12px; text-decoration:none;">📁 Mở Thư mục Drive ➡</a></div>
                                 </div>
@@ -1906,42 +1981,9 @@
 
         } else {
             // ==========================================
-            // LUỒNG SSO NHÂN VIÊN (THAY THẾ LOGIN THỦ CÔNG)
+            // LUỒNG SSO NHÂN VIÊN
             // ==========================================
-            // --- HÀM PHỤ: HIỂN THỊ POPUP SINH NHẬT ---
-            const showBirthdayPopup = (birthdayPeople) => {
-                let existingModal = document.getElementById('hpbd-modal');
-                if (existingModal) existingModal.remove();
-
-                let listHtml = birthdayPeople.map(p => `
-                    <div class="hpbd-item">
-                        <span class="hpbd-date">🎂 ${p.date}</span>
-                        <span style="flex:1;">${p.name}</span>
-                    </div>
-                `).join('');
-
-                const modalHtml = `
-                    <div class="hpbd-overlay" id="hpbd-modal">
-                        <div class="hpbd-box">
-                            <div class="hpbd-icon">🎉</div>
-                            <div class="hpbd-title">Sắp Tới Sinh Nhật!</div>
-                            <p style="color: #cbd5e1; font-size: 13px; margin-bottom: 15px; line-height: 1.5;">Trong tuần này, siêu thị của bạn có sinh nhật của các thành viên sau. Đừng quên gửi lời chúc nhé!</p>
-                            <div class="hpbd-list">${listHtml}</div>
-                            <button class="hpbd-btn" id="btn-hpbd-close">Đã Rõ & Đóng</button>
-                        </div>
-                    </div>
-                `;
-                document.getElementById('bc-app-wrapper').insertAdjacentHTML('beforeend', modalHtml);
-                const modalEl = document.getElementById('hpbd-modal');
-                setTimeout(() => modalEl.classList.add('show'), 50);
-
-                document.getElementById('btn-hpbd-close').onclick = () => {
-                    modalEl.classList.remove('show');
-                    setTimeout(() => modalEl.remove(), 300);
-                };
-            };
-
-            // --- HÀM CHÍNH: XÁC THỰC VÀ KIỂM TRA ---
+            
             const checkEmployeeAuth = async () => {
                 let guestStr = localStorage.getItem('tgdd_guest_account_v2');
                 if (!guestStr) { showErrorScreen("CHƯA ĐĂNG NHẬP", "Bạn chưa đăng nhập. Vui lòng đăng nhập ở trang chủ!"); return; }
@@ -1973,8 +2015,10 @@
                                         uData.grp = myEmp.grp;
                                     }
 
-                                    //[THÊM MỚI TẠI ĐÂY]: KÍCH HOẠT CHECK SINH NHẬT CHO NHÂN VIÊN
-                                    processBirthdays(emps, uData.user, [String(uData.shop).trim()]);
+                                    // Kích hoạt thông báo sinh nhật cho nhân viên
+                                    let actualShop = uData.shop || guestData.shop || "";
+                                    let actualUser = uData.user || guestData.user || "";
+                                    processBirthdays(emps, actualUser, [String(actualShop).trim()]);
                                 }
                             }
                         } catch (err) { console.log("Bỏ qua đồng bộ nâng cao"); }
@@ -2005,8 +2049,6 @@
             };
 
             app.recheckAuth = checkEmployeeAuth;
-
-            // Gọi SSO ngay khi chạy tool
             checkEmployeeAuth();
 
             const updateEmpTabs = () => {
@@ -2099,13 +2141,12 @@
                     let json = JSON.parse(res);
                     
                     if(json.status === 'success' && Array.isArray(json.data) && json.data.length > 1) {
-                        // Lọc lấy toàn bộ lịch sử của riêng User này (Không phân biệt hoa/thường)
                         let myData = json.data.slice(1).map(r => {
                             let parsed = parseDateFromSheet(r[0]);
                             return { dateStr: parsed.date, timeStr: parsed.time, user: String(r[1] || "").trim(), slToRoi: r[2], linkDB: r[3], linkLive: r[4], imgToRoi: r[5], imgDB: r[6], imgLive: r[7] };
                         }).filter(r => String(r.user).toLowerCase() === String(EMP_SESSION.user).toLowerCase());
                         
-                        myData.reverse(); // Sắp xếp mới nhất lên đầu
+                        myData.reverse(); 
                         
                         if(myData.length === 0) {
                             $('emp-history-container').innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">Bạn chưa có dữ liệu báo cáo nào.</div>`;
@@ -2137,14 +2178,12 @@
                                 return downloadAllBtn + gridHtml;
                             };
 
-                            // Gom nhóm dữ liệu theo Ngày
                             let grouped = {};
                             myData.forEach(item => {
                                 if(!grouped[item.dateStr]) grouped[item.dateStr] = [];
                                 grouped[item.dateStr].push(item);
                             });
 
-                            // Render giao diện Lịch sử
                             for(let date in grouped) {
                                 html += `<div class="date-group-wrapper" style="margin-bottom: 15px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; overflow: hidden;">
                                             <div class="date-group-title" style="background: rgba(56, 189, 248, 0.1); padding: 10px 15px; font-weight: bold; color: #38bdf8;">📅 Ngày: ${date}</div>
@@ -2162,10 +2201,10 @@
                                                 <div style="margin-bottom:10px;"><b>📄 Lượt Phát Tờ Rơi:</b> ${row.slToRoi} tờ</div>
                                                 ${renderImgGrid(row.imgToRoi, false, `ToRoi_${date.replace(/\//g,'')}_${idx+1}`)}
                                                 
-                                                <div style="margin:15px 0 10px;"><b>🌐 Lượt Đăng/Share Bài:</b> ${row.linkDB ? `<a href="${row.linkDB}" target="_blank" class="rp-link">${row.linkDB}</a>` : 'Không có link'}</div>
+                                                <div style="margin:15px 0 10px;"><b>🌐 Lượt Đăng/Share Bài:</b> <div style="margin-top:5px;">${renderMultipleLinks(row.linkDB)}</div></div>
                                                 ${renderImgGrid(row.imgDB, false, `DangBai_${date.replace(/\//g,'')}_${idx+1}`)}
                                                 
-                                                <div style="margin:15px 0 10px;"><b>🎥 Livestream:</b> ${row.linkLive ? `<a href="${row.linkLive}" target="_blank" class="rp-link">${row.linkLive}</a>` : 'Không có link'}</div>
+                                                <div style="margin:15px 0 10px;"><b>🎥 Livestream:</b> <div style="margin-top:5px;">${renderMultipleLinks(row.linkLive)}</div></div>
                                                 ${renderImgGrid(row.imgLive, false, `Live_${date.replace(/\//g,'')}_${idx+1}`)}
                                             </div>
                                         </div>
@@ -2187,12 +2226,7 @@
 
             $('btn-refresh-emp-history').onclick = loadEmployeeHistory;
 
-            // XÓA HÀM btn-nv-login Ở ĐÂY (VÌ ĐÃ LÀM SSO Ở ĐẦU CHƯƠNG TRÌNH RỒI)
-
-            // NÚT ĐÓNG TOOL KHI ĐANG TRONG MÀN HÌNH BÁO CÁO (Thay thế cho nút Đăng xuất cũ)
-            $('btn-nv-logout').onclick = () => { 
-                app.style.display = 'none'; 
-            };
+            $('btn-nv-logout').onclick = () => { app.style.display = 'none'; };
 
             $('btn-submit-report').onclick = async () => {
                 if(!EMP_SESSION || !EMP_SESSION.folderId || !EMP_SESSION.sheetId) return alert("❌ Quản lý chưa cài Thư mục/Sheet. Hãy báo lại QL!");
@@ -2201,13 +2235,17 @@
                     $('bc-load-text').innerText = "Đang nén hình ảnh...";
                     const[imgToRoi, imgDangBai, imgLive] = await Promise.all([ processImages($('file-toroi').files), processImages($('file-dangbai').files), processImages($('file-live').files) ]);
                     
+                    // ĐÃ SỬA: Gom tất cả các link con lại thành 1 chuỗi ngắt dòng
+                    const dangBaiLinks = Array.from(document.querySelectorAll('.inp-dangbai-link')).map(i => i.value.trim()).filter(v => v).join('\n');
+                    const liveLinks = Array.from(document.querySelectorAll('.inp-live-link')).map(i => i.value.trim()).filter(v => v).join('\n');
+
                     $('bc-load-text').innerText = "Đang đẩy dữ liệu lên hệ thống...";
                     const payload = {
                         action: 'submit_report', user: EMP_SESSION.user, folderId: EMP_SESSION.folderId, sheetId: EMP_SESSION.sheetId,
                         data: {
                             phatToRoi: { quantity: $('inp-toroi-sl').value, images: imgToRoi },
-                            dangBai: { link: $('inp-dangbai-link').value, images: imgDangBai },
-                            livestream: { link: $('inp-live-link').value, images: imgLive }
+                            dangBai: { link: dangBaiLinks, images: imgDangBai },
+                            livestream: { link: liveLinks, images: imgLive }
                         }
                     };
                     const response = await universalFetch({ method: "POST", url: API_URL_REPORT, data: JSON.stringify(payload), headers: { "Content-Type": "application/x-www-form-urlencoded" }});
@@ -2215,10 +2253,19 @@
                     if(JSON.parse(response).status === 'success') {
                         alert("✅ Gửi báo cáo thành công!"); 
                         
-                        let textInputs =['inp-toroi-sl', 'inp-dangbai-link', 'inp-live-link', 'file-toroi', 'file-dangbai', 'file-live'];
-                        textInputs.forEach(id => { if($(id)) $(id).value = ''; });
+                        // ĐÃ SỬA: Dọn dẹp form sau khi gửi
+                        $('inp-toroi-sl').value = '';
+                        ['wrap-dangbai-links', 'wrap-live-links'].forEach(id => {
+                            const wrap = $(id);
+                            if(wrap) {
+                                const inputs = wrap.querySelectorAll('.input-wrapper');
+                                inputs.forEach((el, index) => { if (index > 0) el.remove(); else el.querySelector('input').value = ''; });
+                            }
+                        });
                         let prevBoxes =['prev-toroi', 'prev-dangbai', 'prev-live'];
                         prevBoxes.forEach(id => { if($(id)) $(id).innerHTML = ''; });
+                        let fileInputs =['file-toroi', 'file-dangbai', 'file-live'];
+                        fileInputs.forEach(id => { if($(id)) $(id).value = ''; });
 
                         $('tab-btn-emp-history').click();
 
