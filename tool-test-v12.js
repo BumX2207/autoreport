@@ -1530,23 +1530,17 @@
                 const container = $('quiz-list-container');
                 container.innerHTML = `<div style="text-align:center; padding:30px;"><div class="spinner" style="margin:0 auto;"></div><br>Đang tải dữ liệu bài test...</div>`;
                 
-                // Cảnh báo nếu quên chưa thay link API
-                if (API_URL_QUIZ.includes("AKfycbyOW59XLUqZmwNpotAO1V3b8X-Yzesp88vEghVn_wyCAFmXw0KkLUO2p5NtPqLdpE6R")) {
-                    container.innerHTML = `<div style="color:#ef4444; text-align:center; padding:20px;"><b>LỖI:</b> Bạn chưa thay link API bài test vào biến API_URL_QUIZ ở đầu file code!</div>`;
-                    return;
-                }
-
                 try {
+                    // FIX: Chuyển method thành GET thay vì POST để tránh lỗi Redirect HTML của Google
                     let res = await universalFetch({ 
-                        method: "POST", 
-                        url: API_URL_QUIZ, 
-                        data: JSON.stringify({ action: "get_quiz_history" }) 
+                        method: "GET", 
+                        url: API_URL_QUIZ 
                     });
                     
-                    // Xử lý lỗi Google trả về trang HTML thay vì JSON
+                    // FIX BẮT LỖI RÕ RÀNG: Xử lý lỗi nếu Google vẫn trả về trang HTML thay vì JSON
                     if (res && res.trim().startsWith('<')) {
                         console.error("Lỗi Raw HTML từ Google:", res);
-                        throw new Error("Link API bị sai hoặc chưa cấp quyền (Who has access: Anyone) khi Deploy Apps Script!");
+                        throw new Error("Link API bị sai hoặc chưa cấp quyền (Who has access: Anyone) khi Deploy Apps Script! Hãy chắc chắn bạn đã Deploy New Version.");
                     }
 
                     let json = JSON.parse(res);
@@ -1556,7 +1550,7 @@
                         throw new Error(json.msg || "Lỗi đọc dữ liệu từ Sheet");
                     }
                 } catch (e) {
-                    container.innerHTML = `<div style="color:#ef4444; text-align:center; padding:20px;">Lỗi tải dữ liệu bài test: <b>${e.message}</b></div>`;
+                    container.innerHTML = `<div style="color:#ef4444; text-align:center; padding:20px;">Lỗi tải dữ liệu bài test:<br><b style="color:#fca5a5;">${e.message}</b></div>`;
                 }
             };
 
