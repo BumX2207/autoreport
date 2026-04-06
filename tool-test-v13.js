@@ -1554,7 +1554,7 @@
                 }
             };
 
-            // HÀM VẼ GIAO DIỆN LỊCH SỬ THI
+            // HÀM VẼ GIAO DIỆN LỊCH SỬ THI & THỐNG KÊ
             const renderQuizList = (quizData) => {
                 // Lọc những nhân viên có Role là NV (hoặc chưa set Role thì mặc định coi là NV)
                 let nvList = MANAGER_EMPLOYEES.filter(e => e.role === 'NV' || !e.role);
@@ -1564,10 +1564,25 @@
                      return;
                 }
 
-                let html = '';
+                // --- TÍNH TOÁN CÁC MỐC THỜI GIAN ---
+                const now = new Date();
+                // Đầu ngày hôm nay
+                const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                // Đầu tuần này (Lấy Thứ 2 làm đầu tuần)
+                const dayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1; 
+                const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek).getTime();
+                // Đầu tháng này
+                const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+                let todayStats =[];
+                let weeklyCounts = {};
+                let monthlyCounts = {};
+
+                let detailHtml = '';
+
                 nvList.forEach((nv, idx) => {
                     let rawHistory = quizData[nv.u];
-                    let historyArr = [];
+                    let historyArr =[];
                     
                     if (rawHistory) {
                         try { historyArr = JSON.parse(rawHistory); } catch(e){}
@@ -1575,6 +1590,10 @@
 
                     let uniqueId = `quiz-det-${String(nv.u).replace(/[^a-zA-Z0-9]/g, '_')}-${idx}`;
                     let historyHtml = '';
+
+                    let todayTests =[];
+                    let weekCount = 0;
+                    let monthCount = 0;
 
                     if (historyArr.length === 0) {
                         historyHtml = `<div style="color:#94a3b8; font-size:13px; text-align:center; padding:10px;">Nhân viên này chưa làm bài test nào.</div>`;
@@ -1590,6 +1609,11 @@
                             </tr>`;
                             
                         historyArr.forEach(h => {
+                            // Phân loại thống kê dựa trên Timestamp
+                            if (h.time >= startOfToday) todayTests.push(h);
+                            if (h.time >= startOfWeek) weekCount++;
+                            if (h.time >= startOfMonth) monthCount++;
+
                             let d = new Date(h.time);
                             let timeStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
                             
@@ -1610,7 +1634,30 @@
                         historyHtml += `</table>`;
                     }
 
-                    // Tóm tắt thông tin trên thanh Header
+                    // Lưu dữ liệu thống kê của ngày hôm nay cho mảng Dashboard
+                    if (todayTests.length > 0) {
+                        let formattedScores = todayTests.map(t => {
+                            let scoreParts = String(t.score).split('/');
+                            let scoreColor = '#fff';
+                            if(scoreParts.length === 2) {
+                                let pct = parseFloat(scoreParts[0]) / parseFloat(scoreParts[1]);
+                                scoreColor = pct >= 0.8 ? '#10b981' : (pct >= 0.5 ? '#f59e0b' : '#ef4444');
+                            }
+                            return `<span style="color:${scoreColor}; font-weight:bold;">${t.score}</span>`;
+                        }).join(' , ');
+
+                        todayStats.push({
+                            name: getEmpDisplayName(nv.u),
+                            count: todayTests.length,
+                            scores: formattedScores
+                        });
+                    }
+
+                    // Lưu dữ liệu tuần/tháng
+                    if (weekCount > 0) weeklyCounts[nv.u] = { name: getEmpDisplayName(nv.u), count: weekCount };
+                    if (monthCount > 0) monthlyCounts[nv.u] = { name: getEmpDisplayName(nv.u), count: monthCount };
+
+                    // Tóm tắt thông tin trên thanh Header của Menu danh sách
                     let totalTests = historyArr.length;
                     let lastTestStr = "Chưa làm test";
                     if(totalTests > 0) {
@@ -1618,7 +1665,7 @@
                        lastTestStr = `${String(ld.getDate()).padStart(2,'0')}/${String(ld.getMonth()+1).padStart(2,'0')} ${String(ld.getHours()).padStart(2,'0')}:${String(ld.getMinutes()).padStart(2,'0')}`;
                     }
 
-                    html += `
+                    detailHtml += `
                     <div class="rp-card">
                         <div class="rp-header-row" onclick="document.getElementById('${uniqueId}').style.display = document.getElementById('${uniqueId}').style.display === 'block' ? 'none' : 'block'">
                             <div>
@@ -1632,7 +1679,67 @@
                         </div>
                     </div>`;
                 });
-                $('quiz-list-container').innerHTML = html;
+
+                // TÌM TOP LÀM TEST NHIỀU NHẤT TUẦN VÀ THÁNG
+                let topWeek = Object.values(weeklyCounts).sort((a, b) => b.count - a.count)[0];
+                let topMonth = Object.values(monthlyCounts).sort((a, b) => b.count - a.count)[0];
+
+                // --- BẮT ĐẦU VẼ TOÀN BỘ GIAO DIỆN TỔNG HỢP VÀO TAB BÀI TEST ---
+                let finalHtml = ``;
+
+                // 1. TOP LEADERBOARD
+                finalHtml += `
+                    <div class="bc-sec-title">🏆 TOP CHĂM CHỈ LÀM TEST</div>
+                    <div class="leaderboard" style="margin-bottom: 20px;">
+                        <div class="lb-card" style="border-color: #f59e0b; background: linear-gradient(180deg, rgba(245,158,11,0.15) 0%, rgba(0,0,0,0.2) 100%);">
+                            <div class="lb-title" style="color:#f59e0b;">🔥 Thi nhiều nhất tuần này</div>
+                            <div class="lb-name">${topWeek ? topWeek.name : '---'}</div>
+                            <div class="lb-score" style="color:#FFD700;">${topWeek ? topWeek.count + ' bài' : '0 bài'}</div>
+                        </div>
+                        <div class="lb-card" style="border-color: #10b981; background: linear-gradient(180deg, rgba(16,185,129,0.15) 0%, rgba(0,0,0,0.2) 100%);">
+                            <div class="lb-title" style="color:#10b981;">🌟 Thi nhiều nhất tháng này</div>
+                            <div class="lb-name">${topMonth ? topMonth.name : '---'}</div>
+                            <div class="lb-score" style="color:#FFD700;">${topMonth ? topMonth.count + ' bài' : '0 bài'}</div>
+                        </div>
+                    </div>
+                `;
+
+                // 2. THỐNG KÊ HÔM NAY
+                finalHtml += `
+                    <div class="bc-sec-title">📊 THỐNG KÊ HÔM NAY</div>
+                    <div class="rp-card" style="border-color: #38bdf8; background: rgba(56, 189, 248, 0.05); margin-bottom: 25px;">
+                        <div style="margin-bottom: 10px;">
+                            <b style="color:#fff;">Hôm nay có <span style="color:#FFD700; font-size:16px;">${todayStats.length}</span> nhân viên làm bài test.</b>
+                        </div>
+                `;
+                if (todayStats.length > 0) {
+                    finalHtml += `<table style="width:100%; border-collapse: collapse; font-size:13px;">
+                        <tr style="background:rgba(56, 189, 248, 0.1); color:#38bdf8;">
+                            <th style="padding:8px; text-align:left; border: 1px solid rgba(255,255,255,0.1);">Nhân viên</th>
+                            <th style="padding:8px; text-align:center; border: 1px solid rgba(255,255,255,0.1);">Lượt thi</th>
+                            <th style="padding:8px; text-align:left; border: 1px solid rgba(255,255,255,0.1);">Các mức điểm</th>
+                        </tr>`;
+                    
+                    // Sắp xếp người thi nhiều lượt nhất hôm nay lên trên cùng
+                    todayStats.sort((a,b) => b.count - a.count).forEach(ts => {
+                        finalHtml += `<tr>
+                            <td style="padding:8px; border: 1px solid rgba(255,255,255,0.05); color:#fff;">👤 ${ts.name}</td>
+                            <td style="padding:8px; text-align:center; border: 1px solid rgba(255,255,255,0.05); color:#FFD700; font-weight:bold;">${ts.count}</td>
+                            <td style="padding:8px; border: 1px solid rgba(255,255,255,0.05);">${ts.scores}</td>
+                        </tr>`;
+                    });
+                    finalHtml += `</table>`;
+                } else {
+                    finalHtml += `<div style="color:#94a3b8; font-size:13px; font-style:italic;">Chưa có ai tham gia làm bài test trong hôm nay.</div>`;
+                }
+                finalHtml += `</div>`;
+
+                // 3. DANH SÁCH LỊCH SỬ CHI TIẾT CỦA TỪNG NV
+                finalHtml += `<div class="bc-sec-title">📋 LỊCH SỬ CHI TIẾT TỪNG NHÂN VIÊN</div>`;
+                finalHtml += detailHtml;
+
+                // 4. In toàn bộ ra UI
+                $('quiz-list-container').innerHTML = finalHtml;
             };
             
             const loadConfig = async () => {
