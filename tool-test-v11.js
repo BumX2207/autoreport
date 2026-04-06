@@ -1531,7 +1531,7 @@
                 container.innerHTML = `<div style="text-align:center; padding:30px;"><div class="spinner" style="margin:0 auto;"></div><br>Đang tải dữ liệu bài test...</div>`;
                 
                 // Cảnh báo nếu quên chưa thay link API
-                if (API_URL_QUIZ.includes("https://script.google.com/macros/s/AKfycbyOW59XLUqZmwNpotAO1V3b8X-Yzesp88vEghVn_wyCAFmXw0KkLUO2p5NtPqLdpE6R/exec")) {
+                if (API_URL_QUIZ.includes("AKfycbyOW59XLUqZmwNpotAO1V3b8X-Yzesp88vEghVn_wyCAFmXw0KkLUO2p5NtPqLdpE6R")) {
                     container.innerHTML = `<div style="color:#ef4444; text-align:center; padding:20px;"><b>LỖI:</b> Bạn chưa thay link API bài test vào biến API_URL_QUIZ ở đầu file code!</div>`;
                     return;
                 }
