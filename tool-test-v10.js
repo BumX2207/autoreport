@@ -1530,6 +1530,12 @@
                 const container = $('quiz-list-container');
                 container.innerHTML = `<div style="text-align:center; padding:30px;"><div class="spinner" style="margin:0 auto;"></div><br>Đang tải dữ liệu bài test...</div>`;
                 
+                // Cảnh báo nếu quên chưa thay link API
+                if (API_URL_QUIZ.includes("https://script.google.com/macros/s/AKfycbyOW59XLUqZmwNpotAO1V3b8X-Yzesp88vEghVn_wyCAFmXw0KkLUO2p5NtPqLdpE6R/exec")) {
+                    container.innerHTML = `<div style="color:#ef4444; text-align:center; padding:20px;"><b>LỖI:</b> Bạn chưa thay link API bài test vào biến API_URL_QUIZ ở đầu file code!</div>`;
+                    return;
+                }
+
                 try {
                     let res = await universalFetch({ 
                         method: "POST", 
@@ -1537,14 +1543,20 @@
                         data: JSON.stringify({ action: "get_quiz_history" }) 
                     });
                     
+                    // Xử lý lỗi Google trả về trang HTML thay vì JSON
+                    if (res && res.trim().startsWith('<')) {
+                        console.error("Lỗi Raw HTML từ Google:", res);
+                        throw new Error("Link API bị sai hoặc chưa cấp quyền (Who has access: Anyone) khi Deploy Apps Script!");
+                    }
+
                     let json = JSON.parse(res);
                     if (json.status === 'success') {
                         renderQuizList(json.data);
                     } else {
-                        throw new Error(json.msg || "Lỗi không xác định");
+                        throw new Error(json.msg || "Lỗi đọc dữ liệu từ Sheet");
                     }
                 } catch (e) {
-                    container.innerHTML = `<div style="color:#ef4444; text-align:center;">Lỗi tải dữ liệu bài test: ${e.message}</div>`;
+                    container.innerHTML = `<div style="color:#ef4444; text-align:center; padding:20px;">Lỗi tải dữ liệu bài test: <b>${e.message}</b></div>`;
                 }
             };
 
