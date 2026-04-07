@@ -390,7 +390,7 @@
                     if(!vipSelect) return;
                     
                     // Thẻ mặc định không được phép click chọn lại
-                    let html = '<option value="" disabled selected>⬇️ Chọn Model</option>';
+                    let html = '<option value="" disabled selected>Model</option>';
                     data.forEach((p, idx) => {
                         html += `<option value="${idx}">${p.name}</option>`;
                     });
