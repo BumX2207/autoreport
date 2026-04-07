@@ -143,6 +143,7 @@
             .kq-history-item { padding: 12px; }
         }
     `;
+
     // ===============================================================
     // 3. LOGIC XỬ LÝ API VÀ TIỆN ÍCH
     // ===============================================================
@@ -150,7 +151,7 @@
     // Hàm định dạng thời gian
     const formatTime = (timestamp) => {
         const d = new Date(timestamp);
-        return \`\${String(d.getDate()).padStart(2,'0')}/\${String(d.getMonth()+1).padStart(2,'0')}/\${d.getFullYear()} \${String(d.getHours()).padStart(2,'0')}:\${String(d.getMinutes()).padStart(2,'0')}\`;
+        return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
     };
 
     const NEW_HISTORY_API_URL = 'https://script.google.com/macros/s/AKfycbwRHohTVMv-Z_ldTWFpJUIIQIXTxZ6z94UBboXQzJ0FZjTm64JKtkF9ppvXaLwQgkLP/exec';
@@ -226,23 +227,23 @@
             let rowsHTML = '';
             DENOMINATIONS.forEach(val => {
                 let label = val >= 1000 ? (val / 1000) + 'k' : val;
-                rowsHTML += \`
+                rowsHTML += `
                     <div class="kq-table-row">
-                        <div class="kq-col-label">\${label.toLocaleString('vi-VN')}</div>
+                        <div class="kq-col-label">${label.toLocaleString('vi-VN')}</div>
                         <div class="kq-col-input">
-                            <input type="text" id="kq-qty-\${val}" class="kq-input kq-calc-trigger" value="" placeholder="0" inputmode="numeric">
+                            <input type="text" id="kq-qty-${val}" class="kq-input kq-calc-trigger" value="" placeholder="0" inputmode="numeric">
                         </div>
-                        <div class="kq-col-total" id="kq-total-\${val}">0</div>
+                        <div class="kq-col-total" id="kq-total-${val}">0</div>
                     </div>
-                \`;
+                `;
             });
 
             // Giao diện VIP: Mở khóa nút lịch sử
             const historyBtnHTML = userInfo.isVip ? 
-                \`<button class="kq-btn kq-btn-history" id="kq-btn-history"><span>✦</span> Lịch sử đếm</button>\` : 
-                \`<button class="kq-btn kq-btn-history locked" title="Chỉ dành cho VIP">🔒 Lịch sử (VIP)</button>\`;
+                `<button class="kq-btn kq-btn-history" id="kq-btn-history"><span>✦</span> Lịch sử đếm</button>` : 
+                `<button class="kq-btn kq-btn-history locked" title="Chỉ dành cho VIP">🔒 Lịch sử (VIP)</button>`;
 
-            app.innerHTML = \`
+            app.innerHTML = `
                 <div class="kq-header">
                     <div class="kq-logo">
                         <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
@@ -254,7 +255,7 @@
                 <div class="kq-body">
                     <div class="kq-tools-row">
                         <button class="kq-btn kq-btn-reset" id="kq-btn-reset">Làm mới (Reset)</button>
-                        \${historyBtnHTML}
+                        ${historyBtnHTML}
                     </div>
                     <div id="kq-sync-status"></div>
 
@@ -264,7 +265,7 @@
                             <div class="kq-col-input" style="text-align:center;">SL</div>
                             <div class="kq-col-total">Thành tiền</div>
                         </div>
-                        \${rowsHTML}
+                        ${rowsHTML}
                     </div>
 
                     <div class="kq-summary-box">
@@ -287,7 +288,7 @@
                         </div>
                     </div>
                 </div>
-            \`;
+            `;
             document.body.appendChild(app);
             
             const style = document.createElement('style'); style.innerHTML = MY_CSS; document.head.appendChild(style);
@@ -336,7 +337,7 @@
                             // Điền dữ liệu
                             DENOMINATIONS.forEach(val => {
                                 const q = record.details[val];
-                                $(\`kq-qty-\${val}\`).value = q ? q.toLocaleString('vi-VN') : '';
+                                $(`kq-qty-${val}`).value = q ? q.toLocaleString('vi-VN') : '';
                             });
                             $('kq-danggiu').value = record.system ? record.system.toLocaleString('vi-VN') : '';
                             calculateAll();
@@ -379,13 +380,14 @@
             const calculateAll = () => {
                 let grandTotal = 0;
                 DENOMINATIONS.forEach(val => {
-                    const qty = parseInt($(\`kq-qty-\${val}\`).value.replace(/\\D/g, '')) || 0;
+                    const qtyEl = $(`kq-qty-${val}`);
+                    const qty = parseInt(qtyEl.value.replace(/\D/g, '')) || 0;
                     const sub = qty * val;
                     grandTotal += sub;
-                    $(\`kq-total-\${val}\`).innerText = sub > 0 ? sub.toLocaleString('vi-VN') : '0';
+                    $(`kq-total-${val}`).innerText = sub > 0 ? sub.toLocaleString('vi-VN') : '0';
                 });
                 $('kq-grand-total').innerText = grandTotal.toLocaleString('vi-VN');
-                const dangGiu = parseInt($('kq-danggiu').value.replace(/\\D/g, '')) || 0;
+                const dangGiu = parseInt($('kq-danggiu').value.replace(/\D/g, '')) || 0;
                 const diff = grandTotal - dangGiu;
                 const diffEl = $('kq-chenhlech');
                 
@@ -412,7 +414,7 @@
                         details: {}
                     };
                     DENOMINATIONS.forEach(val => {
-                        const qty = parseInt($(\`kq-qty-\${val}\`).value.replace(/\\D/g, '')) || 0;
+                        const qty = parseInt($(`kq-qty-${val}`).value.replace(/\D/g, '')) || 0;
                         if(qty > 0) record.details[val] = qty;
                     });
                     
@@ -431,7 +433,7 @@
 
             app.querySelectorAll('.kq-calc-trigger').forEach(input => {
                 input.addEventListener('input', (e) => {
-                    let val = e.target.value.replace(/\\D/g, ''); 
+                    let val = e.target.value.replace(/\D/g, ''); 
                     e.target.value = val ? Number(val).toLocaleString('vi-VN') : ''; 
                     calculateAll();
                 });
@@ -444,7 +446,7 @@
 
     return {
         name: "Kiểm Quỹ",
-        icon: \`<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.11-1.36-3.11-2.92v-1.59c0-1.79 1.4-2.69 3.27-3.09v-3.02c-.54.12-1.01.36-1.34.73-.34.35-.51.77-.51 1.25H6.55c0-1.08.41-2 1.15-2.65.71-.62 1.68-1.02 2.89-1.16V3.82h2.67v1.89c1.6.31 2.96 1.3 2.96 2.82v1.51c0 1.76-1.42 2.58-3.23 3.01v3.18c.61-.13 1.14-.4 1.5-.81.38-.43.59-.97.59-1.57h2.51c0 1.11-.42 2.06-1.18 2.74-.75.68-1.79 1.11-3.01 1.29z"/></svg>\`,
+        icon: `<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.11-1.36-3.11-2.92v-1.59c0-1.79 1.4-2.69 3.27-3.09v-3.02c-.54.12-1.01.36-1.34.73-.34.35-.51.77-.51 1.25H6.55c0-1.08.41-2 1.15-2.65.71-.62 1.68-1.02 2.89-1.16V3.82h2.67v1.89c1.6.31 2.96 1.3 2.96 2.82v1.51c0 1.76-1.42 2.58-3.23 3.01v3.18c.61-.13 1.14-.4 1.5-.81.38-.43.59-.97.59-1.57h2.51c0 1.11-.42 2.06-1.18 2.74-.75.68-1.79 1.11-3.01 1.29z"/></svg>`,
         bgColor: "#0984e3",
         action: runTool
     };
