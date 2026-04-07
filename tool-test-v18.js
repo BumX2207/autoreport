@@ -24,66 +24,66 @@
     };
 
     // ===============================================================
-    // 2. CSS GIAO DIỆN (ĐÃ FIX CHECKBOX 1 HÀNG & CHUẨN FORM NHỎ GỌN)
+    // 2. CSS GIAO DIỆN CHUẨN HÓA (GỐC + FIX CHECKBOX 1 HÀNG)
     // ===============================================================
     const MY_CSS = `
-        @keyframes slideInUp { 0% { transform: translateY(100%); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
-        
-        #bh-app { display:none; position:fixed; top:0; left:0; right:0; bottom:0; width:100%; height:100%; background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%); z-index:2147483647; font-family: 'Segoe UI', system-ui, sans-serif; flex-direction:column; overflow: hidden; box-sizing: border-box; }
+        #bh-app { display:none; position:fixed; top:0; left:0; right:0; bottom:0; width:100%; height:100%; background:#f0f2f5; z-index:2147483647; font-family: 'Segoe UI', Tahoma, sans-serif; flex-direction:column; overflow-y:auto; box-sizing: border-box; }
         #bh-app * { box-sizing: border-box; }
         
-        /* Header Gọn Nhẹ */
-        .bh-header { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(15px); padding: 8px 15px; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; z-index: 20; height: 45px; flex-shrink: 0;}
-        .bh-logo { font-size: 15px; font-weight: 900 !important; color: #00b894; text-transform: uppercase; display: flex; align-items: center; gap: 6px;}
-        .bh-btn-close { background: #fff; color: #ff4757; border: 1px solid rgba(255,71,87,0.2); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; font-weight: bold; }
-        
-        /* Body Cố định cuộn bên trong */
-        .bh-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; max-width: 500px; margin: 0 auto; width: 100%; height: 100%; overflow-y: auto; animation: slideInUp 0.3s ease-out; }
-        
-        /* Card dùng chung */
-        .bh-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); padding: 10px; border: 1px solid #fff; flex-shrink: 0;}
+        /* Header */
+        .bh-header { background:#fff; padding:15px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); display:flex; justify-content:center; align-items:center; position:sticky; top:0; z-index:20; height:60px; }
+        .bh-logo { font-size:18px; font-weight:bold; color:#0984e3; text-transform:uppercase; }
+        .bh-btn-close { position:absolute; right:20px; background:#ffeaa7; color:#d63031; border:none; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; transition:0.2s; }
+        .bh-btn-close:hover { background:#d63031; color:white; }
+
+        /* Container & Tables */
+        .bh-body { padding: 20px; display: flex; flex-direction: column; gap: 20px; max-width: 500px; margin: 0 auto; width: 100%; }
+        .bh-card { background: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 15px; border: 1px solid #e1e8ed; }
         
         /* FIX YÊU CẦU: Checkbox ép nằm trên 1 hàng duy nhất */
-        .bh-checkbox-group { display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; margin-bottom: 10px; font-size: 12px; font-weight: 700; overflow-x: auto; white-space: nowrap; gap: 4px; scrollbar-width: none; }
+        .bh-checkbox-group { display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; margin-bottom: 15px; font-size: 14px; font-weight: 600; overflow-x: auto; white-space: nowrap; gap: 8px; scrollbar-width: none; }
         .bh-checkbox-group::-webkit-scrollbar { display: none; }
-        .bh-checkbox-group label { display: flex; align-items: center; gap: 3px; cursor: pointer; color:#2d3436; }
-        .bh-checkbox-group input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; accent-color: #00b894; margin:0;}
+        .bh-checkbox-group label { display: flex; align-items: center; gap: 5px; cursor: pointer; color:#2d3436; }
+        .bh-checkbox-group input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #0984e3; margin:0;}
 
-        /* Bảng input */
-        .bh-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .bh-table td { padding: 6px 2px; border-bottom: 1px dashed #f1f2f6; vertical-align: middle; }
+        .bh-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .bh-table td { padding: 8px 10px; border-bottom: 1px solid #f1f2f6; vertical-align: middle; }
         .bh-table tr:last-child td { border-bottom: none; }
         
-        .bh-label { width: 38%; font-weight: 600; color: #636e72; }
-        .bh-input-td { width: 62%; position: relative; }
+        .bh-label { width: 40%; font-weight: 500; color: #636e72; }
+        .bh-input-td { width: 60%; position: relative; }
         
-        /* Input & Select & Text Giả */
-        .bh-table input[type="text"], .bh-table input[type="number"], .bh-table select, .bh-fake-input { 
-            width: 100%; padding: 6px 8px; border: 1px solid transparent; border-radius: 8px; font-size: 14px; font-weight: 700; outline: none; background: #f4f6f8; transition: 0.2s; box-sizing: border-box; display: block; height: 32px; color: #2d3436;
+        /* Đồng nhất Box Model cho tất cả thẻ input, select và thẻ giả lập */
+        .bh-table input[type="text"], 
+        .bh-table input[type="number"], 
+        .bh-table select, 
+        .bh-fake-input { 
+            width: 100%; padding: 6px 10px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; outline: none; background: #fff; transition: 0.2s; box-sizing: border-box; display: block;
         }
-        .bh-table select { cursor: pointer; appearance: auto; }
-        .bh-fake-input { background: transparent; text-align: right; font-weight: 900 !important; border: none; padding-right: 2px;}
+        
+        .bh-fake-input { background: #f8f9fa; border-color: transparent; text-align: right; font-weight: bold; }
 
-        .bh-table input:focus, .bh-table select:focus { background: #fff; border-color: #00b894; box-shadow: 0 0 0 2px rgba(0, 184, 148, 0.2); }
+        .bh-table input[type="text"]:focus, .bh-table select:focus { border-color: #0984e3; box-shadow: 0 0 5px rgba(9, 132, 227, 0.2); }
         .bh-table input.txt-right { text-align: right; }
         .bh-table input.txt-center { text-align: center; }
 
+        /* Wrapper để flex cho các hàng có nhiều thành phần */
         .bh-input-wrapper { display: flex; gap: 5px; width: 100%; align-items: center; }
-        .bh-input-wrapper input, .bh-input-wrapper select { flex: 1; min-width: 0; }
-        
-        /* Nút VIP chọn sản phẩm */
-        #bh-vip-select { flex: 0 0 100px; background: linear-gradient(135deg, #FFD700, #FDB931); color: #5d4037; font-weight: 900; font-size: 12px; border:none; box-shadow: 0 2px 5px rgba(255,215,0,0.4); text-align:center; padding:0 4px;}
+        .bh-input-wrapper input, .bh-input-wrapper select { flex: 1; min-width: 0; } 
 
-        /* Background tiêu đề bảng 1 */
-        .bh-group-title { font-weight: 800; text-align: center; padding: 6px !important; color: #2d3436; border-radius: 6px; margin-top: 6px; font-size:12px; text-transform:uppercase;}
-        .bg-kv { background: #ffeaa7; } .bg-rv { background: #fab1a0; } .bg-mr { background: #81ecec; } .bg-11 { background: #a29bfe; color: white !important;}
+        .bh-group-title { font-weight: bold; text-align: center; padding: 10px !important; color: #2d3436; border-radius: 6px; margin-top: 10px; }
+        .bg-kv { background: #ffeaa7; }
+        .bg-rv { background: #fab1a0; }
+        .bg-mr { background: #81ecec; }
+        .bg-11 { background: #a29bfe; color: white !important;}
         
-        .bh-note { color: #00b894; font-size: 11px; font-weight: 700; margin-top: 8px; text-align: center; display:none; background: #f0fff4; padding: 6px; border-radius: 6px;}
+        .bh-note { color: #d63031; font-size: 13px; font-style: italic; margin-top: 10px; text-align: center; line-height: 1.5; display:none; }
 
         .bh-hide { display: none !important; }
         .bh-flex-row { display: flex; align-items: center; justify-content: space-between; gap: 5px; }
-        .bh-radio-wrap { display: flex; align-items: center; gap: 2px; cursor: pointer; font-size: 12px; font-weight:600;}
-        .bh-radio-wrap input[type="radio"] { accent-color: #0984e3; cursor:pointer; margin:0;}
+        
+        .bh-radio-wrap { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+        .bh-radio-wrap input[type="radio"] { accent-color: #0984e3; cursor:pointer;}
     `;
 
     // ===============================================================
@@ -120,15 +120,13 @@
         return 3.5 / 100;
     };
 
-    // Hàm quy đổi Nhóm hàng (Chữ hoặc Số ở Cột D) ra Value của Dropdown
+    // Hàm quy đổi Cột D ra Select Value
     const mapGroupToValue = (groupStr) => {
         if(!groupStr) return "1";
         let g = groupStr.toString().trim().toLowerCase();
         
-        // Nếu file GSheet ghi sẵn số 1, 2, 3...
         if (!isNaN(g) && parseInt(g) >= 1 && parseInt(g) <= 15) return parseInt(g).toString();
 
-        // Nhận diện theo tên chữ
         if (g.includes('điện thoại') || g.includes('dtdd')) return "1";
         if (g.includes('tablet') || g.includes('bảng')) return "2";
         if (g.includes('laptop') || g.includes('máy tính xách tay')) return "3";
@@ -145,7 +143,7 @@
         if (g.includes('lọc nước')) return "14";
         if (g.includes('gia dụng')) return "15";
 
-        return "1"; // Mặc định điện thoại
+        return "1";
     };
 
     // ===============================================================
@@ -154,143 +152,69 @@
     const runTool = () => {
         let app = document.getElementById('bh-app');
         const userInfo = getUserContext();
-        let vipProducts = []; // Lưu cache list sp
+        let vipProducts = []; // Lưu danh sách SP VIP
+
+        // ĐIỀN LINK API CỦA BẠN VÀO ĐÂY:
+        const VIP_PRODUCT_API_URL = 'https://script.google.com/macros/s/AKfycbwJ4_q31vne_qbgXpKcc0mdSgysqxoVUIvTCpupYf5_XDhBsQRm2oTa_Driq2UIqMAA/exec';
 
         if (!app) {
             app = document.createElement('div');
             app.id = 'bh-app';
+            
+            // Xử lý nút VIP Dropdown tùy thuộc vào User
+            const vipSelectHTML = userInfo.isVip 
+                ? `<select id="bh-vip-select" style="flex: 0 0 110px; background: #ffeaa7; color: #d63031; font-weight: bold; cursor: pointer;">
+                        <option value="" disabled selected>⬇️ Chọn Model</option>
+                   </select>` 
+                : `<select id="bh-vip-select" disabled style="flex: 0 0 110px; background: #eee; color: #aaa; cursor: not-allowed;">
+                        <option value="">🔒 VIP SP</option>
+                   </select>`;
+
             app.innerHTML = `
                 <div class="bh-header">
-                    <div class="bh-logo">Tính Trả Góp & Bảo Hiểm</div>
-                    <button class="bh-btn-close" id="bh-btn-close">✖</button>
+                    <div class="bh-logo">Tính Toán Trả Góp & Bảo Hiểm</div>
+                    <button class="bh-btn-close" id="bh-btn-close" title="Đóng">✖</button>
                 </div>
                 
                 <div class="bh-body">
-                    <!-- Khối Tính Toán -->
-                    <div class="bh-card" style="background: linear-gradient(145deg, #1e293b, #0f172a); color: white; border:none; padding:12px;">
-                        <table class="bh-table" style="color:white; border:none;">
-                            <!-- DÒNG NHẬP SẢN PHẨM CÓ NÚT VIP -->
-                            <tr>
-                                <td colspan="2" style="border:none; padding:0 0 10px 0;">
-                                    <div class="bh-input-wrapper">
-                                        <input type="text" id="bh-tensp" placeholder="Tên sản phẩm..." style="background: rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2);">
-                                        <select id="bh-vip-select" class="bh-hide">
-                                            <option value="">✦ Kéo Data</option>
-                                        </select>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="bh-label" style="color:#cbd5e1;">Nhóm Hàng:</td>
-                                <td class="bh-input-td" style="border:none;">
-                                    <select id="bh-nhomhang" class="txt-center" style="background: rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2);">
-                                        <option value="1" style="color:#000">Điện thoại</option>
-                                        <option value="2" style="color:#000">Tablet</option>
-                                        <option value="3" style="color:#000">Laptop</option>
-                                        <option value="4" style="color:#000">Smart Watch</option>
-                                        <option value="5" style="color:#000">Tivi</option>
-                                        <option value="6" style="color:#000">Tủ lạnh</option>
-                                        <option value="7" style="color:#000">Tủ đông</option>
-                                        <option value="8" style="color:#000">Tủ mát</option>
-                                        <option value="9" style="color:#000">Máy giặt</option>
-                                        <option value="10" style="color:#000">Máy sấy</option>
-                                        <option value="11" style="color:#000">Máy rửa chén</option>
-                                        <option value="12" style="color:#000">Loa thanh/kéo</option>
-                                        <option value="13" style="color:#000">Máy lạnh</option>
-                                        <option value="14" style="color:#000">Máy lọc nước</option>
-                                        <option value="15" style="color:#000">Gia dụng</option>
-                                    </select>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="bh-label" style="color:#cbd5e1;">Giá Gốc:</td>
-                                <td class="bh-input-td" style="border:none;">
-                                    <input type="text" id="bh-giagoc" class="txt-right" placeholder="0" inputmode="numeric" style="background: rgba(255,255,255,0.9); color:#d63031;">
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="bh-label" style="color:#cbd5e1;">Giá Bán:</td>
-                                <td class="bh-input-td" style="border:none;">
-                                    <input type="text" id="bh-giaban" class="txt-right" placeholder="0" inputmode="numeric" style="background: rgba(255,255,255,0.9); color:#0984e3;">
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <!-- Khối Tùy Chọn Trả Góp & Kết Quả -->
-                    <div class="bh-card">
-                        <table class="bh-table">
-                            <tr>
-                                <td class="bh-label">Ngân hàng:</td>
-                                <td class="bh-input-td">
-                                    <select id="bh-phidongtien" class="txt-center">
-                                        <option value="11000">Home Credit (11k)</option>
-                                        <option value="12000">FE / MAFC (12k)</option>
-                                        <option value="10000">ACS / SHINHAN (10k)</option>
-                                    </select>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="bh-label">Trả trước:</td>
-                                <td class="bh-input-td">
-                                    <div class="bh-input-wrapper">
-                                        <input type="text" id="bh-tratruoc" class="txt-right" value="30" inputmode="numeric">
-                                        <select id="bh-kieutratruoc" style="flex: 0 0 55px; padding:6px 2px;">
-                                            <option value="1">%</option>
-                                            <option value="2">VND</option>
-                                        </select>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="bh-label">Lãi suất & Kỳ:</td>
-                                <td class="bh-input-td">
-                                    <div class="bh-input-wrapper">
-                                        <input type="number" id="bh-laisuat" class="txt-center" value="0" step="0.1" min="0" placeholder="%"> 
-                                        <select id="bh-kygop" class="txt-center" style="flex: 0 0 55px; padding:6px 2px;">
-                                            <option value="4">4T</option> <option value="5">5T</option>
-                                            <option value="6" selected>6T</option> <option value="7">7T</option>
-                                            <option value="8">8T</option> <option value="9">9T</option>
-                                            <option value="10">10T</option> <option value="11">11T</option>
-                                            <option value="12">12T</option>
-                                        </select>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="bh-label">Nợ lại:</td>
-                                <td class="bh-input-td"><div id="out-nolai" class="bh-fake-input">0</div></td>
-                            </tr>
-                            <tr>
-                                <td class="bh-label">Góp tháng:</td>
-                                <td class="bh-input-td"><div id="out-gopthang" class="bh-fake-input" style="color: #d63031; font-size:16px;">0</div></td>
-                            </tr>
-                            <tr>
-                                <td class="bh-label">Đưa trước (Σ):</td>
-                                <td class="bh-input-td"><div id="out-tongtratruoc" class="bh-fake-input" style="color: #00b894; font-size:16px;">0</div></td>
-                            </tr>
-                            <tr>
-                                <td class="bh-label">Chênh lệch:</td>
-                                <td class="bh-input-td"><div id="out-chenhlech" class="bh-fake-input" style="color: #0984e3; font-size:16px;">0</div></td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <!-- Khối Tùy Chọn Bảo Hiểm (Ép chung 1 dòng) -->
+                    <!-- Bảng 1: Chọn Bảo Hiểm -->
                     <div class="bh-card">
                         <div class="bh-checkbox-group">
-                            <label><input type="checkbox" id="cb-bhkv"> Vay</label>
-                            <label><input type="checkbox" id="cb-bhrv"> R.Vỡ</label>
-                            <label><input type="checkbox" id="cb-bhmr"> M.Rộng</label>
-                            <label><input type="checkbox" id="cb-bh11"> 1đổi1</label>
+                            <label><input type="checkbox" id="cb-bhkv"> BHKV</label>
+                            <label><input type="checkbox" id="cb-bhrv"> BHRV</label>
+                            <label><input type="checkbox" id="cb-bhmr"> BHMR</label>
+                            <label><input type="checkbox" id="cb-bh11"> BH1-1</label>
                         </div>
                         <table class="bh-table">
+                            <tr>
+                                <td class="bh-label" style="color:#0984e3; font-weight:bold;">Sản phẩm:</td>
+                                <td class="bh-input-td">
+                                    <select id="bh-nhomhang" class="txt-center">
+                                        <option value="1">Điện thoại</option>
+                                        <option value="2">Tablet</option>
+                                        <option value="3">Laptop</option>
+                                        <option value="4">Smart Watch</option>
+                                        <option value="5">Tivi</option>
+                                        <option value="6">Tủ lạnh</option>
+                                        <option value="7">Tủ đông</option>
+                                        <option value="8">Tủ mát</option>
+                                        <option value="9">Máy giặt</option>
+                                        <option value="10">Máy sấy</option>
+                                        <option value="11">Máy rửa chén</option>
+                                        <option value="12">Loa thanh/Loa kéo</option>
+                                        <option value="13">Máy lạnh</option>
+                                        <option value="14">Máy lọc nước</option>
+                                        <option value="15">Gia dụng</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            
                             <tr class="row-bhkv bh-hide"><td colspan="2" class="bh-group-title bg-kv">Bảo hiểm khoản vay</td></tr>
                             <tr class="row-bhkv bh-hide">
                                 <td colspan="2">
                                     <div class="bh-flex-row" style="justify-content: flex-end;">
-                                        <span id="out-kv" style="font-weight:900; color:#d63031; margin-right:10px;">0</span>
-                                        <label class="bh-radio-wrap"><input type="radio" checked> Có</label>
+                                        <span id="out-kv" style="font-weight:bold; color:#d63031; margin-right:10px;">0</span>
+                                        <label class="bh-radio-wrap"><input type="radio" checked> Chọn</label>
                                     </div>
                                 </td>
                             </tr>
@@ -301,11 +225,11 @@
                                     <div class="bh-flex-row">
                                         <div class="bh-flex-row" style="flex:1;">
                                             <label class="bh-radio-wrap"><input id="rad-rv-6t" type="radio" name="rad-bhrv" checked> 6T:</label>
-                                            <span id="out-rv-6t" style="font-weight:900; color:#d63031;">0</span>
+                                            <span id="out-rv-6t" style="font-weight:bold; color:#d63031;">0</span>
                                         </div>
                                         <div class="bh-flex-row" style="flex:1; justify-content: flex-end;">
                                             <label class="bh-radio-wrap"><input id="rad-rv-12t" type="radio" name="rad-bhrv"> 12T:</label>
-                                            <span id="out-rv-12t" style="font-weight:900; color:#d63031;">0</span>
+                                            <span id="out-rv-12t" style="font-weight:bold; color:#d63031;">0</span>
                                         </div>
                                     </div>
                                 </td>
@@ -317,11 +241,11 @@
                                     <div class="bh-flex-row">
                                         <div class="bh-flex-row" style="flex:1;">
                                             <label class="bh-radio-wrap"><input id="rad-mr-12t" type="radio" name="rad-bhmr" checked> 12T:</label>
-                                            <span id="out-mr-12t" style="font-weight:900; color:#d63031;">0</span>
+                                            <span id="out-mr-12t" style="font-weight:bold; color:#d63031;">0</span>
                                         </div>
                                         <div class="bh-flex-row" style="flex:1; justify-content: flex-end;">
                                             <label class="bh-radio-wrap"><input id="rad-mr-24t" type="radio" name="rad-bhmr"> 24T:</label>
-                                            <span id="out-mr-24t" style="font-weight:900; color:#d63031;">0</span>
+                                            <span id="out-mr-24t" style="font-weight:bold; color:#d63031;">0</span>
                                         </div>
                                     </div>
                                 </td>
@@ -331,9 +255,118 @@
                             <tr class="row-bh11 bh-hide">
                                 <td colspan="2">
                                     <div class="bh-flex-row" style="justify-content: flex-end;">
-                                        <span id="out-bh11" style="font-weight:900; color:#d63031; margin-right:10px;">0</span>
+                                        <span id="out-bh11" style="font-weight:bold; color:#d63031; margin-right:10px;">0</span>
                                         <label class="bh-radio-wrap"><input type="radio" checked> 12T</label>
                                     </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Bảng 2: Thông số tài chính -->
+                    <div class="bh-card">
+                        <table class="bh-table">
+                            <!-- NÚT VIP DROP DOWN NẰM Ở ĐÂY -->
+                            <tr>
+                                <td colspan="2">
+                                    <div class="bh-input-wrapper">
+                                        <input type="text" id="bh-tensp" class="txt-center" placeholder="Nhập tên sản phẩm (Không bắt buộc)" style="background:#f8f9fa;">
+                                        ${vipSelectHTML}
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="bh-label">Giá gốc:</td>
+                                <td class="bh-input-td">
+                                    <input type="text" id="bh-giagoc" class="txt-right" placeholder="0" inputmode="numeric">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="bh-label">Giá bán:</td>
+                                <td class="bh-input-td">
+                                    <input type="text" id="bh-giaban" class="txt-right" placeholder="0" inputmode="numeric">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="bh-label">Ngân hàng:</td>
+                                <td class="bh-input-td">
+                                    <select id="bh-phidongtien" class="txt-center">
+                                        <option value="11000">Home Credit</option>
+                                        <option value="12000">FE / MAFC</option>
+                                        <option value="10000">ACS / SHINHAN</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="bh-label">Phí thu hộ:</td>
+                                <td class="bh-input-td">
+                                    <div id="out-phithuho" class="bh-fake-input" style="color: #d63031;">11.000</div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="bh-label">Trả trước:</td>
+                                <td class="bh-input-td">
+                                    <div class="bh-input-wrapper">
+                                        <input type="text" id="bh-tratruoc" class="txt-right" value="30" inputmode="numeric">
+                                        <select id="bh-kieutratruoc" style="flex: 0 0 65px;">
+                                            <option value="1">%</option>
+                                            <option value="2">VND</option>
+                                        </select>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="bh-label">Tổng trả trước:</td>
+                                <td class="bh-input-td">
+                                    <div id="out-tongtratruoc" class="bh-fake-input" style="color: #d63031;">0</div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="bh-label">Nợ lại:</td>
+                                <td class="bh-input-td">
+                                    <div id="out-nolai" class="bh-fake-input">0</div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="bh-label">Lãi suất phẳng:</td>
+                                <td class="bh-input-td">
+                                    <div class="bh-input-wrapper">
+                                        <input type="number" id="bh-laisuat" class="txt-right" value="0" step="0.1" min="0"> 
+                                        <span style="font-weight:bold; width: 25px; text-align:center;">%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="bh-label">Số kỳ góp:</td>
+                                <td class="bh-input-td">
+                                    <div class="bh-input-wrapper">
+                                        <select id="bh-kygop" class="txt-center">
+                                            <option value="4">4</option> <option value="5">5</option>
+                                            <option value="6" selected>6</option> <option value="7">7</option>
+                                            <option value="8">8</option> <option value="9">9</option>
+                                            <option value="10">10</option> <option value="11">11</option>
+                                            <option value="12">12</option>
+                                        </select>
+                                        <span style="font-size:13px; width: 40px; text-align:center;">tháng</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="bh-label">Góp mỗi tháng:</td>
+                                <td class="bh-input-td">
+                                    <div id="out-gopthang" class="bh-fake-input" style="color: #d63031;">0</div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="bh-label">Tổng phải trả:</td>
+                                <td class="bh-input-td">
+                                    <div id="out-tongtien" class="bh-fake-input" style="color:#0984e3;">0</div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="bh-label">Chênh lệch:</td>
+                                <td class="bh-input-td">
+                                    <div id="out-chenhlech" class="bh-fake-input" style="color: #d63031;">0</div>
                                 </td>
                             </tr>
                         </table>
@@ -350,24 +383,21 @@
             const $ = (id) => app.querySelector('#' + id);
             const $$ = (sel) => app.querySelectorAll(sel);
 
-            $('bh-btn-close').onclick = () => { app.style.display = 'none'; };
-
-            // === TÍNH NĂNG VIP: LẤY DANH SÁCH SẢN PHẨM ===
-            // DÁN LINK API MỚI VÀO ĐÂY:
-            const VIP_PRODUCT_API_URL = 'https://script.google.com/macros/s/AKfycbwJ4_q31vne_qbgXpKcc0mdSgysqxoVUIvTCpupYf5_XDhBsQRm2oTa_Driq2UIqMAA/exec';
-
+            // LOGIC LOAD DATA VIP PRE-LOAD NGẦM (CHỈ GỌI KHI LÀ VIP)
             if (userInfo.isVip) {
-                const vipSelect = $('bh-vip-select');
-                vipSelect.classList.remove('bh-hide');
-
                 const loadVipDropdown = (data) => {
-                    let html = '<option value="">✦ SP Mẫu</option>';
+                    const vipSelect = $('bh-vip-select');
+                    if(!vipSelect) return;
+                    
+                    // Thẻ mặc định không được phép click chọn lại
+                    let html = '<option value="" disabled selected>⬇️ Chọn Model</option>';
                     data.forEach((p, idx) => {
                         html += `<option value="${idx}">${p.name}</option>`;
                     });
                     vipSelect.innerHTML = html;
                 };
 
+                // Lấy Cache hiển thị ngay lập tức
                 try {
                     const cached = localStorage.getItem('bh_vip_products');
                     if (cached) {
@@ -376,6 +406,7 @@
                     }
                 } catch(e){}
 
+                // Gọi API ngầm để cập nhật giá mới nhất
                 const fetchProducts = () => {
                     const payload = { action: 'get_product_list' };
                     const processRes = (text) => {
@@ -396,10 +427,10 @@
                             .then(r => r.text()).then(processRes).catch(()=>{});
                     }
                 };
-                fetchProducts();
+                fetchProducts(); // Kích hoạt chạy luôn
 
-                // Sự kiện khi VIP chọn sản phẩm trong Droplist
-                vipSelect.addEventListener('change', (e) => {
+                // Sự kiện User chọn model trong list
+                $('bh-vip-select').addEventListener('change', (e) => {
                     const val = e.target.value;
                     if (val !== "") {
                         const p = vipProducts[val];
@@ -408,14 +439,12 @@
                         $('bh-giaban').value = p.priceSale ? Number(p.priceSale).toLocaleString('vi-VN') : '';
                         $('bh-nhomhang').value = mapGroupToValue(p.group);
                         
-                        // Xóa focus khỏi ô drop list để dễ nhìn
-                        vipSelect.blur();
+                        $('bh-vip-select').blur(); // Ẩn viền focus
                         calculateAll();
                     }
                 });
             }
 
-            // Xử lý show/hide thẻ Bảo Hiểm
             const toggleRow = (chkId, rowClass) => {
                 $(chkId).addEventListener('change', (e) => {
                     $$(rowClass).forEach(el => el.classList.toggle('bh-hide', !e.target.checked));
@@ -427,7 +456,6 @@
             toggleRow('cb-bhmr', '.row-bhmr');
             toggleRow('cb-bh11', '.row-bh11');
 
-            // Định dạng input số
             const handleNumInput = (e) => {
                 let val = e.target.value.replace(/\D/g, '');
                 e.target.value = val ? Number(val).toLocaleString('vi-VN') : '';
@@ -437,8 +465,16 @@
             $('bh-giaban').addEventListener('input', handleNumInput);
             $('bh-tratruoc').addEventListener('input', handleNumInput);
 
-            const idsToWatch =[ 'bh-nhomhang', 'bh-phidongtien', 'bh-kieutratruoc', 'bh-laisuat', 'bh-kygop', 'rad-rv-6t', 'rad-rv-12t', 'rad-mr-12t', 'rad-mr-24t' ];
-            idsToWatch.forEach(id => { $(id).addEventListener('change', calculateAll); });
+            $('bh-btn-close').onclick = () => { app.style.display = 'none'; };
+
+            const idsToWatch =[
+                'bh-nhomhang', 'bh-phidongtien', 'bh-kieutratruoc', 'bh-laisuat', 'bh-kygop', 
+                'rad-rv-6t', 'rad-rv-12t', 'rad-mr-12t', 'rad-mr-24t'
+            ];
+            idsToWatch.forEach(id => {
+                $(id).addEventListener('change', calculateAll);
+            });
+
             $('bh-laisuat').addEventListener('input', calculateAll);
 
             function calculateAll() {
@@ -462,7 +498,8 @@
                         mr12t = giagoc < 1000000 ? 0 : DATA.dienthoai1[getPhiDienThoai(giagoc)];
                         mr24t = giagoc < 1000000 ? 0 : DATA.dienthoai2[getPhiDienThoai(giagoc)];
                         bh11 = roundCustom(0.0462 * giagoc); bh11 = bh11 < 200000 ? 200000 : bh11; break;
-                    case 2: case 3: 
+                    case 2: 
+                    case 3: 
                         rv6t = roundCustom((5.92 / 100) * giagoc); rv12t = roundCustom((9.87 / 100) * giagoc);
                         let arr1 = nhomhang === 2 ? DATA.dienthoai1 : DATA.laptop1;
                         let arr2 = nhomhang === 2 ? DATA.dienthoai2 : DATA.laptop2;
@@ -521,21 +558,23 @@
                 let tongTienPhaiTra = (gopMoiThang * soKy) + tongGopDau;
                 let chenhLech = roundCustom(tongTienPhaiTra - giaban);
 
+                $('out-phithuho').innerText = formatNum(phiDongTien);
                 $('out-tongtratruoc').innerText = formatNum(tongGopDau);
                 $('out-nolai').innerText = formatNum(noLaiGoc);
                 $('out-gopthang').innerText = formatNum(gopMoiThang);
+                $('out-tongtien').innerText = formatNum(tongTienPhaiTra);
                 $('out-chenhlech').innerText = formatNum(chenhLech);
 
                 let msgBox = $('bh-note-msg');
                 let arrMsg =[];
-                if (val_bhkv) arrMsg.push(`KVay: ${formatNum(val_bhkv)}`);
-                if (val_bhrv) arrMsg.push(`RV: ${formatNum(val_bhrv)}`);
-                if (val_bhmr) arrMsg.push(`MR: ${formatNum(val_bhmr)}`);
-                if (val_bh11) arrMsg.push(`1-1: ${formatNum(val_bh11)}`);
+                if (val_bhkv) arrMsg.push(`Khoản vay: ${formatNum(val_bhkv)}`);
+                if (val_bhrv) arrMsg.push(`Rơi vỡ: ${formatNum(val_bhrv)}`);
+                if (val_bhmr) arrMsg.push(`Mở rộng: ${formatNum(val_bhmr)}`);
+                if (val_bh11) arrMsg.push(`1 đổi 1: ${formatNum(val_bh11)}`);
                 
                 if (arrMsg.length > 0) {
                     msgBox.style.display = 'block';
-                    msgBox.innerText = `+ Phí Bảo hiểm: [ ${arrMsg.join(' | ')} ]`;
+                    msgBox.innerText = `* Trả trước đã bao gồm: [ ${arrMsg.join(' | ')} ]`;
                 } else {
                     msgBox.style.display = 'none';
                 }
