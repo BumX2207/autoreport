@@ -270,7 +270,7 @@
                             <tr>
                                 <td colspan="2">
                                     <div class="bh-input-wrapper">
-                                        <input type="text" id="bh-tensp" class="txt-center" placeholder="Nhập tên sản phẩm (Không bắt buộc)" style="background:#f8f9fa;">
+                                        <input type="text" id="bh-tensp" class="txt-center" placeholder="Tên sản phẩm" style="background:#f8f9fa;">
                                         ${vipSelectHTML}
                                     </div>
                                 </td>
