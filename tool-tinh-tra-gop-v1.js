@@ -187,7 +187,7 @@
                         </div>
                         <table class="bh-table">
                             <tr>
-                                <td class="bh-label" style="color:#0984e3; font-weight:bold;">Sản phẩm:</td>
+                                <td class="bh-label" style="color:#0984e3; font-weight:bold;">Nhóm hàng:</td>
                                 <td class="bh-input-td">
                                     <select id="bh-nhomhang" class="txt-center">
                                         <option value="1">Điện thoại</option>
