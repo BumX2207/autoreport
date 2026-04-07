@@ -172,7 +172,7 @@
 
             app.innerHTML = `
                 <div class="bh-header">
-                    <div class="bh-logo">Tính Toán Trả Góp & Bảo Hiểm</div>
+                    <div class="bh-logo">Tính Trả Chậm</div>
                     <button class="bh-btn-close" id="bh-btn-close" title="Đóng">✖</button>
                 </div>
                 
