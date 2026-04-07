@@ -574,7 +574,7 @@
                 
                 if (arrMsg.length > 0) {
                     msgBox.style.display = 'block';
-                    msgBox.innerText = `* Trả trước đã bao gồm: [ ${arrMsg.join(' | ')} ]`;
+                    msgBox.innerText = `* Trả trước đã bao gồm: [${arrMsg.join(' | ')}]`;
                 } else {
                     msgBox.style.display = 'none';
                 }
