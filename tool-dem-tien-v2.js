@@ -16,7 +16,7 @@
     };
 
     // ===============================================================
-    // 2. CSS GIAO DIỆN (ĐÃ ÉP GỌN LẠI VỪA KHÍT MÀN HÌNH ĐIỆN THOẠI)
+    // 2. CSS GIAO DIỆN
     // ===============================================================
     const MY_CSS = `
         @keyframes slideInUp { 0% { transform: translateY(100%); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
@@ -26,20 +26,19 @@
         #kq-app { display:none; position:fixed; top:0; left:0; right:0; bottom:0; width:100%; height:100%; background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%); z-index:2147483647; font-family: 'Segoe UI', system-ui, sans-serif; flex-direction:column; overflow: hidden; box-sizing: border-box; }
         #kq-app * { box-sizing: border-box; }
         
-        /* Header Nhỏ Gọn */
         .kq-header { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); padding: 8px 15px; border-bottom: 1px solid rgba(255,255,255,0.5); display: flex; justify-content: space-between; align-items: center; z-index: 20; height: 45px; flex-shrink: 0;}
         .kq-logo { font-size: 16px; font-weight: 900 !important; display: flex; align-items: center; gap: 6px; }
         .kq-logo-text { background: linear-gradient(135deg, #00b894, #0984e3); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .kq-logo svg { color: #00b894; width: 20px; height: 20px;}
         .kq-btn-close { background: #fff; color: #ff4757; border: 1px solid rgba(255,71,87,0.2); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; font-weight: bold; }
         
-        /* Body Ép Sát */
         .kq-body { padding: 8px 12px; display: flex; flex-direction: column; gap: 8px; max-width: 500px; margin: 0 auto; width: 100%; height: 100%; overflow-y: auto; animation: slideInUp 0.3s ease-out; }
         
-        /* Nút Công Cụ */
         .kq-tools-row { display: flex; gap: 8px; width: 100%; flex-shrink: 0;}
-        .kq-btn { flex: 1; padding: 8px; border-radius: 10px; font-size: 13px; font-weight: 800 !important; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 5px; border: none; height: 36px;}
+        .kq-btn { flex: 1; padding: 8px 4px; border-radius: 8px; font-size: 13px; font-weight: 800 !important; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 4px; border: none; height: 36px; transition: 0.2s;}
+        .kq-btn:active { transform: scale(0.95); }
         .kq-btn-reset { background: #fff; color: #ff4757; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid rgba(255,71,87,0.1); }
+        .kq-btn-save { background: #00b894; color: white; box-shadow: 0 2px 8px rgba(0, 184, 148, 0.3); }
         .kq-btn-history { background: linear-gradient(135deg, #FFD700, #FDB931); color: #5d4037; position: relative; overflow: hidden; box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3); }
         .kq-btn-history::after { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent); animation: shimmer 2.5s infinite; }
         .kq-btn-history.locked { background: #f1f3f5; color: #adb5bd; box-shadow: none; border: 1px solid #e9ecef; }
@@ -47,7 +46,6 @@
 
         #kq-sync-status { font-size: 11px; text-align: center; color: #94a3b8; font-weight: 600; min-height: 14px; margin-top:-2px;}
 
-        /* Bảng Đếm Tiền Siêu Gọn */
         .kq-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); padding: 4px; flex-shrink: 0;}
         .kq-table-row { display: flex; align-items: center; padding: 4px 6px; gap: 6px; border-bottom: 1px solid rgba(0,0,0,0.02); border-radius: 8px; }
         .kq-table-row:last-child { border-bottom: none; }
@@ -57,10 +55,9 @@
         .kq-col-input { flex: 0 0 80px; display: flex; justify-content: center; }
         .kq-col-total { flex: 1; text-align: right; font-weight: 900 !important; color: #0984e3; font-size: 14px; }
 
-        .kq-input { width: 100%; padding: 4px; background: #f4f6f8; border: 1px solid transparent; border-radius: 6px; font-size: 14px; text-align: center; color: #2d3436; font-weight: 800 !important; outline: none; height: 28px; }
-        .kq-input:focus { background: #fff; border-color: #00b894; box-shadow: 0 0 0 2px rgba(0, 184, 148, 0.2); }
+        .kq-input { width: 100%; padding: 4px; background: #f4f6f8; border: 1px solid transparent; border-radius: 6px; font-size: 14px; text-align: center; color: #2d3436; font-weight: 800 !important; outline: none; height: 28px; transition: 0.2s;}
+        .kq-input:focus { background: #fff; border-color: #00b894; box-shadow: 0 0 0 2px rgba(0, 184, 148, 0.2); transform: scale(1.05);}
 
-        /* Vùng Kết Quả Thu Nhỏ */
         .kq-summary-box { background: linear-gradient(145deg, #1e293b, #0f172a); border-radius: 12px; padding: 10px 12px; color: white; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1); }
         .kq-sum-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
         .kq-sum-label { color: #94a3b8; font-weight: 600 !important; }
@@ -79,7 +76,8 @@
         .kq-history-header { padding: 15px; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #1e293b, #0f172a); color: #fff; border-radius: 20px 20px 0 0;}
         .kq-history-title { font-weight: 900; font-size: 15px; color: #FFD700; }
         .kq-history-list { padding: 12px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px; }
-        .kq-history-item { background: #fff; border-radius: 12px; padding: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #f1f5f9; border-left: 3px solid #00b894;}
+        .kq-history-item { background: #fff; border-radius: 12px; padding: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #f1f5f9; border-left: 3px solid #00b894; cursor: pointer;}
+        .kq-history-item:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.05);}
         .kq-hist-info { display: flex; flex-direction: column; gap: 2px; }
         .kq-hist-time { font-size: 11px; color: #94a3b8; font-weight: 700; }
         .kq-hist-total { font-size: 15px; color: #1e293b; font-weight: 900; }
@@ -88,6 +86,7 @@
         .diff-tag-neg { background: rgba(255,71,87,0.1); color: #ff4757; }
         .diff-tag-zero { background: rgba(241,196,15,0.1); color: #f39c12; }
         .kq-btn-del-hist { background: transparent; color: #cbd5e1; border: none; width: 28px; height: 28px; font-size: 14px;}
+        .kq-btn-del-hist:hover { color: #ff4757;}
     `;
 
     // ===============================================================
@@ -98,7 +97,8 @@
         return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
     };
 
-    const NEW_HISTORY_API_URL = 'https://script.google.com/macros/s/AKfycbwRHohTVMv-Z_ldTWFpJUIIQIXTxZ6z94UBboXQzJ0FZjTm64JKtkF9ppvXaLwQgkLP/exec';
+    // ⚠️ ĐIỀN LINK API LỊCH SỬ KIỂM QUỸ VIP CỦA BẠN VÀO ĐÂY:
+    const NEW_HISTORY_API_URL = 'LINK_API_MOI_CUA_BAN_O_DAY';
 
     const syncCloudHistory = (user, historyData, statusEl) => {
         if(statusEl) statusEl.innerText = "⏳ Đang đồng bộ Cloud...";
@@ -129,10 +129,7 @@
             if(callback) callback();
         };
         if (context.GM_xmlhttpRequest) {
-            context.GM_xmlhttpRequest({
-                method: "POST", url: NEW_HISTORY_API_URL, data: JSON.stringify(payload),
-                onload: (res) => processRes(res.responseText)
-            });
+            context.GM_xmlhttpRequest({ method: "POST", url: NEW_HISTORY_API_URL, data: JSON.stringify(payload), onload: (res) => processRes(res.responseText) });
         } else {
             fetch(NEW_HISTORY_API_URL, { method: "POST", body: JSON.stringify(payload) })
             .then(r => r.text()).then(processRes).catch(() => {if(callback) callback();});
@@ -143,6 +140,10 @@
         let app = document.getElementById('kq-app');
         const userInfo = getUserContext();
         
+        // BIẾN QUẢN LÝ PHIÊN (SESSION)
+        let currentSessionId = null; 
+        let isDirty = false; // Cờ đánh dấu có sự thay đổi chưa lưu
+
         if (userInfo.isVip) {
             try {
                 const cached = localStorage.getItem('kq_vip_history_' + userInfo.username);
@@ -169,10 +170,11 @@
                 `;
             });
 
-            // FIX BUG LỖI ONCLICK TẠI ĐÂY (Đã thêm id="kq-btn-history" cho thẻ user thường)
+            // Nếu VIP thì hiện 3 nút: Xóa, Lưu, Lịch sử
+            const saveBtnHTML = userInfo.isVip ? `<button class="kq-btn kq-btn-save" id="kq-btn-save">💾 Lưu</button>` : ``;
             const historyBtnHTML = userInfo.isVip ? 
-                `<button class="kq-btn kq-btn-history" id="kq-btn-history"><span>✦</span> Lịch sử đếm</button>` : 
-                `<button class="kq-btn kq-btn-history locked" id="kq-btn-history" title="Chỉ dành cho VIP">🔒 Lịch sử (VIP)</button>`;
+                `<button class="kq-btn kq-btn-history" id="kq-btn-history"><span>✦</span> Lịch sử</button>` : 
+                `<button class="kq-btn kq-btn-history locked" id="kq-btn-history" title="Chỉ dành cho VIP">🔒 Lịch sử</button>`;
 
             app.innerHTML = `
                 <div class="kq-header">
@@ -185,7 +187,8 @@
                 
                 <div class="kq-body">
                     <div class="kq-tools-row">
-                        <button class="kq-btn kq-btn-reset" id="kq-btn-reset">Làm mới</button>
+                        <button class="kq-btn kq-btn-reset" id="kq-btn-reset">🗑 Xóa</button>
+                        ${saveBtnHTML}
                         ${historyBtnHTML}
                     </div>
                     <div id="kq-sync-status"></div>
@@ -206,12 +209,11 @@
                         <div class="kq-sum-row"><span class="kq-sum-label">Chênh lệch:</span><span class="kq-diff-val diff-zero" id="kq-chenhlech">0</span></div>
                     </div>
 
-                    <!-- Panel Lịch Sử -->
                     <div id="kq-history-panel">
                         <div class="kq-history-content">
                             <div class="kq-history-header">
                                 <div class="kq-history-title">✦ LỊCH SỬ ĐẾM TIỀN</div>
-                                <button class="kq-btn-close" id="kq-btn-close-hist" style="width:24px;height:24px;">▼</button>
+                                <button class="kq-btn-close" id="kq-btn-close-hist" style="width:24px;height:24px; position:static;">▼</button>
                             </div>
                             <div class="kq-history-list" id="kq-history-list"></div>
                         </div>
@@ -221,11 +223,11 @@
             document.body.appendChild(app);
             
             const style = document.createElement('style'); style.innerHTML = MY_CSS; document.head.appendChild(style);
-
             const $ = (id) => app.querySelector('#' + id);
             
             $('kq-btn-close').onclick = () => { app.style.display = 'none'; };
 
+            // Render Lịch Sự
             const renderHistory = () => {
                 const listEl = $('kq-history-list');
                 if (userHistory.length === 0) {
@@ -234,7 +236,7 @@
                 }
                 
                 let html = '';
-                [...userHistory].reverse().forEach(record => {
+                userHistory.forEach(record => {
                     let diffText = record.diff > 0 ? '+' + record.diff.toLocaleString('vi-VN') : record.diff.toLocaleString('vi-VN');
                     let tagClass = record.diff > 0 ? 'diff-tag-pos' : (record.diff < 0 ? 'diff-tag-neg' : 'diff-tag-zero');
                     if(record.diff === 0) diffText = "Khớp";
@@ -263,6 +265,11 @@
                                 $(`kq-qty-${val}`).value = q ? q.toLocaleString('vi-VN') : '';
                             });
                             $('kq-danggiu').value = record.system ? record.system.toLocaleString('vi-VN') : '';
+                            
+                            // Gán Session ID hiện tại bằng ID của lịch sử này để cho phép ghi đè
+                            currentSessionId = rId;
+                            isDirty = false; // Đã load lên thì xem như chưa có thay đổi mới
+                            
                             calculateAll();
                             $('kq-history-panel').style.display = 'none';
                         }
@@ -274,6 +281,10 @@
                         const item = e.target.closest('.kq-history-item');
                         const rId = parseInt(item.getAttribute('data-id'));
                         userHistory = userHistory.filter(r => r.id !== rId);
+                        
+                        // Nếu xóa trúng phiên đang thao tác, reset Session ID
+                        if(currentSessionId === rId) { currentSessionId = null; isDirty = true; }
+                        
                         localStorage.setItem('kq_vip_history_' + userInfo.username, JSON.stringify(userHistory));
                         item.style.display = 'none';
                         syncCloudHistory(userInfo.username, userHistory, $('kq-sync-status'));
@@ -282,13 +293,8 @@
             };
 
             if (userInfo.isVip) {
-                $('kq-btn-history').onclick = () => {
-                    renderHistory();
-                    $('kq-history-panel').style.display = 'flex';
-                };
-                $('kq-btn-close-hist').onclick = () => {
-                    $('kq-history-panel').style.display = 'none';
-                };
+                $('kq-btn-history').onclick = () => { renderHistory(); $('kq-history-panel').style.display = 'flex'; };
+                $('kq-btn-close-hist').onclick = () => { $('kq-history-panel').style.display = 'none'; };
             } else {
                 $('kq-btn-history').onclick = () => alert("Tính năng lưu lịch sử chỉ dành cho thành viên VIP.");
             }
@@ -315,40 +321,97 @@
                 return { grandTotal, dangGiu, diff };
             };
 
-            $('kq-btn-reset').onclick = () => {
+            // HÀM LƯU PHIÊN CHÍNH THỨC
+            const saveSession = () => {
+                if (!userInfo.isVip) return;
                 const currentData = calculateAll();
-                if (userInfo.isVip && currentData.grandTotal > 0) {
-                    const record = {
-                        id: Date.now(),
-                        timestamp: Date.now(),
-                        total: currentData.grandTotal,
-                        system: currentData.dangGiu,
-                        diff: currentData.diff,
-                        details: {}
-                    };
-                    DENOMINATIONS.forEach(val => {
-                        const qty = parseInt($(`kq-qty-${val}`).value.replace(/\D/g, '')) || 0;
-                        if(qty > 0) record.details[val] = qty;
-                    });
-                    
-                    userHistory.unshift(record);
-                    if(userHistory.length > 20) userHistory.pop(); 
-                    
-                    localStorage.setItem('kq_vip_history_' + userInfo.username, JSON.stringify(userHistory));
-                    syncCloudHistory(userInfo.username, userHistory, $('kq-sync-status'));
+                if (currentData.grandTotal <= 0) return; // Không lưu nếu chưa đếm gì
+
+                // Tạo ID cho phiên nếu là phiên mới
+                if (!currentSessionId) {
+                    currentSessionId = Date.now();
                 }
+
+                const record = {
+                    id: currentSessionId, // Gắn ID phiên
+                    timestamp: Date.now(), // Cập nhật thời gian lưu mới nhất
+                    total: currentData.grandTotal, system: currentData.dangGiu, diff: currentData.diff,
+                    details: {}
+                };
+                
+                DENOMINATIONS.forEach(val => {
+                    const qty = parseInt($(`kq-qty-${val}`).value.replace(/\D/g, '')) || 0;
+                    if(qty > 0) record.details[val] = qty;
+                });
+                
+                // Tìm xem phiên này đã có trong lịch sử chưa
+                const existingIndex = userHistory.findIndex(r => r.id === currentSessionId);
+                if (existingIndex !== -1) {
+                    userHistory[existingIndex] = record; // Có rồi thì ghi đè
+                } else {
+                    userHistory.unshift(record); // Chưa có thì thêm lên đầu
+                    if(userHistory.length > 20) userHistory.pop(); // Giữ tối đa 20 dòng
+                }
+                
+                localStorage.setItem('kq_vip_history_' + userInfo.username, JSON.stringify(userHistory));
+                syncCloudHistory(userInfo.username, userHistory, $('kq-sync-status'));
+                isDirty = false; // Đánh dấu là "Đã lưu"
+            };
+
+            // 1. NÚT LƯU (Cập nhật phiên hiện tại)
+            if (userInfo.isVip) {
+                $('kq-btn-save').onclick = () => {
+                    saveSession();
+                    const btn = $('kq-btn-save');
+                    btn.innerText = "✔ Đã Lưu";
+                    setTimeout(() => { btn.innerText = "💾 Lưu"; }, 1500);
+                };
+            }
+
+            // 2. NÚT XÓA TRẮNG
+            $('kq-btn-reset').onclick = () => {
+                // Nếu có thay đổi và chưa bấm Lưu -> Tự động Lưu lại giúp User
+                if (isDirty) {
+                    saveSession(); 
+                }
+                
+                // Tiến hành xóa trắng
                 app.querySelectorAll('.kq-calc-trigger').forEach(input => input.value = '');
+                
+                // Reset hoàn toàn trạng thái về phiên mới
+                currentSessionId = null; 
+                isDirty = false; 
                 calculateAll();
             };
 
-            app.querySelectorAll('.kq-calc-trigger').forEach(input => {
+            // Lấy toàn bộ input để làm chức năng Enter = Tab
+            const allInputs = Array.from(app.querySelectorAll('.kq-calc-trigger'));
+            
+            allInputs.forEach((input, index) => {
+                // Gõ phím -> Đánh dấu là có thay đổi (Dirty)
                 input.addEventListener('input', (e) => {
                     let val = e.target.value.replace(/\D/g, ''); 
                     e.target.value = val ? Number(val).toLocaleString('vi-VN') : ''; 
+                    isDirty = true; 
                     calculateAll();
                 });
+                
                 input.addEventListener('focus', function() { this.select(); });
+
+                // ENTER = TAB SANG Ô TIẾP THEO
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault(); 
+                        const nextInput = allInputs[index + 1];
+                        if (nextInput) {
+                            nextInput.focus();
+                        } else {
+                            allInputs[0].focus(); // Xuống cuối thì vòng lại ô đầu
+                        }
+                    }
+                });
             });
+            
             calculateAll();
         }
         app.style.display = 'flex';
