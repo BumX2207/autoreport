@@ -154,7 +154,7 @@
             
             const vipSelectHTML = userInfo.isVip 
                 ? `<select id="bh-vip-select" style="flex: 0 0 110px; background: #ffeaa7; color: #d63031; font-weight: bold; cursor: pointer;">
-                        <option value="" disabled selected>⬇️ Chọn Model</option>
+                        <option value="" disabled selected>Model</option>
                    </select>` 
                 : `<select id="bh-vip-select" disabled style="flex: 0 0 110px; background: #eee; color: #aaa; cursor: not-allowed;">
                         <option value="">🔒 VIP SP</option>
