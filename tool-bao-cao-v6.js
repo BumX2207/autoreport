@@ -467,15 +467,19 @@
             }
             return result;
         },
-        getNLNVReport: (dataCache, configList, userConfig, selectedStaffName, shopIdx, daysPassed, daysInMonth, latestDate = "") => {
+        getNLNVReport: (dataCache, configList, userConfig, selectedStaffName, shopIdx, daysPassed, daysInMonth, latestDate = "", isSorted = false) => {
             const staffList = userConfig.staffList ||[];
             const shopKey = `shop${shopIdx}`;
             
             const scrapedStaffData = dataCache.link6 || {};
             const crmData = dataCache.link8 || {};
+            const instData = dataCache.link7 || {}; // Lấy Data Trả chậm
             const staffRealMap = dataCache.staffReal || {};
+            
             const currentShopStaffData = scrapedStaffData[shopKey] ? (scrapedStaffData[shopKey].competition || {}) : {};
             const revData = scrapedStaffData[shopKey] ? (scrapedStaffData[shopKey].revenue || {}) : {};
+            const csDataShop = scrapedStaffData[shopKey] ? (scrapedStaffData[shopKey].crossSell || {}) : {}; // Lấy Data Bán kèm
+            const currentShopInstData = instData[shopKey] || {}; // Lấy Data Trả chậm Shop
 
             const today = new Date();
             const dateStr = `${today.getDate() < 10 ? '0'+today.getDate() : today.getDate()}/${(today.getMonth() + 1) < 10 ? '0'+(today.getMonth() + 1) : (today.getMonth() + 1)}/${today.getFullYear()}`;
@@ -487,16 +491,22 @@
             const staffWithRate = shopStaffGroup.filter(s => s.rate && parseFloat(s.rate) > 0);
             const staffNoRate = shopStaffGroup.filter(s => !s.rate || parseFloat(s.rate) <= 0);
 
+            // BỘ CHIA TARGET DOANH THU CÁ NHÂN
+            let revTargetMap = {};
             let usedTarget = 0;
             staffWithRate.forEach(s => {
                 const t = Math.round(shopRevTarget * parseFloat(s.rate) / 100);
                 if(s.name === selectedStaffName) personalRevTarget = t;
+                revTargetMap[s.name] = t;
                 usedTarget += t;
             });
             if (staffNoRate.length > 0) {
                 const remain = Math.max(0, shopRevTarget - usedTarget);
                 const perStaff = Math.round(remain / staffNoRate.length);
-                staffNoRate.forEach(s => { if(s.name === selectedStaffName) personalRevTarget = perStaff; });
+                staffNoRate.forEach(s => { 
+                    if(s.name === selectedStaffName) personalRevTarget = perStaff; 
+                    revTargetMap[s.name] = perStaff;
+                });
             }
 
             const actualRev = revData[selectedStaffName] || 0;
@@ -504,16 +514,36 @@
 
             let activeGroups = userConfig.compData ? userConfig.compData.map(c => c.group) :[];
 
+            // VÒNG LẶP TÍNH TOÁN DATA MỚI CHO RANKING VÀ HEADER
             let rankingData =[];
             shopStaffGroup.forEach(s => {
                 let s_actualRev = revData[s.name] || 0;
-                let s_revInMillions = s_actualRev > 1000000 ? Math.round(s_actualRev / 1000000) : Math.round(s_actualRev);
-                let s_diemDoanhThu = Math.floor(s_revInMillions / 20);
-
+                let s_targetRev = revTargetMap[s.name] || 0;
+                
+                // 1. Phục vụ
                 let s_crm = crmData[s.name] || { ratePct: 0, score: '-' };
+                let s_score = (s_crm.score !== undefined && s_crm.score !== '-') ? Math.round(parseFloat(s_crm.score) * 100) / 100 : '-';
+                
+                // 2. Dự kiến Doanh Thu (%)
+                let s_forecastRevPct = 0;
+                if (s_targetRev > 0) {
+                    let forecastVal = (s_actualRev / daysPassed) * daysInMonth;
+                    s_forecastRevPct = (forecastVal / s_targetRev) * 100;
+                } else if (s_actualRev > 0) {
+                    s_forecastRevPct = 100;
+                }
+                
+                // 3. Trả chậm
+                let s_traCham = currentShopInstData[s.name] !== undefined ? currentShopInstData[s.name] : 0;
+                
+                // 4. Bán kèm
+                let s_cs = csDataShop[s.name] || { pctBK: 0 };
+                let s_pctBK = s_cs.pctBK || 0;
+
+                // 5. Tính điểm để chấm Rank (Giống bản Quản lý)
+                let s_diemDoanhThu = Math.floor((s_actualRev > 1000000 ? Math.round(s_actualRev / 1000000) : Math.round(s_actualRev)) / 20);
                 let s_roundedRate = Math.round(parseFloat(s_crm.ratePct) || 0);
                 let s_diemPhucVu = s_roundedRate < 10 ? -10 : (s_roundedRate - 10) * 2;
-
                 let s_diemDat = 0, s_diemKhongDat = 0;
 
                 activeGroups.forEach(cat => {
@@ -563,20 +593,21 @@
 
                 rankingData.push({
                     name: s.name,
-                    diemDoanhThu: s_diemDoanhThu,
                     tongDiem: s_tongDiem,
-                    ratePct: s_roundedRate,
-                    scoreOriginal: s_crm.score
+                    diemPhucVu: s_score,
+                    forecastRevPct: s_forecastRevPct,
+                    traChamPct: s_traCham,
+                    pctBK: s_pctBK
                 });
             });
 
+            // Xếp hạng
             rankingData.sort((a, b) => b.tongDiem - a.tongDiem);
             rankingData.forEach((item, idx) => item.rankThiDua = idx + 1);
-            rankingData.sort((a, b) => b.ratePct - a.ratePct);
-            rankingData.forEach((item, idx) => item.rankPhucVu = idx + 1);
 
+            // Bốc Data của user hiện tại
             const selectedStaffStats = rankingData.find(item => item.name === selectedStaffName) || {
-                diemDoanhThu: 0, tongDiem: 0, rankThiDua: '-', rankPhucVu: '-', scoreOriginal: serviceInfo.score
+                tongDiem: 0, rankThiDua: '-', diemPhucVu: serviceInfo.score, forecastRevPct: 0, traChamPct: 0, pctBK: 0
             };
 
             let html = `
@@ -591,17 +622,33 @@
                         <td colspan="2" class="nlnv-label">Thực hiện</td><td class="nlnv-val-red">${LOCAL_BI_ENGINE.formatNumber(actualRev)}</td>
                     </tr>
                     <tr>
-                        <td class="nlnv-label" style="color:#008080;">Điểm Phục vụ</td><td class="nlnv-label" style="color:#008080;">Điểm doanh thu</td><td class="nlnv-label" style="color:#008080;">Điểm thi đua</td><td class="nlnv-label" style="color:#008080;">Rank phục vụ</td><td class="nlnv-label" style="color:#008080;">Rank thi đua</td>
+                        <!-- ĐÃ SỬA: Đổi tiêu đề giống bản Quản lý -->
+                        <td class="nlnv-label" style="color:#008080;">Điểm Phục vụ</td>
+                        <td class="nlnv-label" style="color:#008080;">Dự kiến DT (%)</td>
+                        <td class="nlnv-label" style="color:#008080;">Tỷ trọng trả chậm</td>
+                        <td class="nlnv-label" style="color:#008080;">Tỉ lệ bán kèm</td>
+                        <td class="nlnv-label" style="color:#008080;">Xếp hạng</td>
                     </tr>
                     <tr>
-                        <td class="nlnv-val-red">${selectedStaffStats.scoreOriginal}</td><td class="nlnv-val-red">${selectedStaffStats.diemDoanhThu}</td><td class="nlnv-val-red">${selectedStaffStats.tongDiem}</td><td class="nlnv-val-red">${selectedStaffStats.rankPhucVu}</td><td class="nlnv-val-red">${selectedStaffStats.rankThiDua}</td>
+                        <td class="nlnv-val-red">${selectedStaffStats.diemPhucVu}</td>
+                        <td class="nlnv-val-red">${Math.round(selectedStaffStats.forecastRevPct)}%</td>
+                        <td class="nlnv-val-red">${selectedStaffStats.traChamPct}%</td>
+                        <td class="nlnv-val-red">${(!isFinite(selectedStaffStats.pctBK) || Math.round(selectedStaffStats.pctBK) === 0) ? '-' : Math.round(selectedStaffStats.pctBK) + '%'}</td>
+                        <td class="nlnv-val-red">${selectedStaffStats.rankThiDua}</td>
                     </tr>
-                    <tr class="nlnv-header-cyan"><td>Nhóm hàng</td><td>Target</td><td>Thực hiện</td><td>% Hoàn thành</td><td>Dự kiến</td></tr>
+                    <tr class="nlnv-header-cyan">
+                        <td>Nhóm hàng</td>
+                        <td>Target</td>
+                        <td>Thực hiện</td>
+                        <td>% Hoàn thành</td>
+                        <td id="tgdd-sort-btn-nlnv-emp" style="cursor:pointer; white-space:nowrap; user-select:none;">Dự kiến <span class="sort-btn" style="color:#fff;">${isSorted ? '▼' : '▽'}</span></td>
+                    </tr>
             `;
 
             let passCount = 0; let failCount = 0;
 
-            activeGroups.forEach((cat, idx) => {
+            // Đưa vào mảng để thuật toán Sort xử lý
+            let rowDataArr = activeGroups.map((cat, idx) => {
                 const configItem = configList.find(c => c.short === cat) || { type: 'soluong' };
                 const isRevenue = configItem.type.toLowerCase().includes('doanhthu') || configItem.type.toLowerCase().includes('tiền');
                 const finalMult = isRevenue ? 1000 : 1;
@@ -638,13 +685,21 @@
                 pctComplete = Math.round(pctComplete); forecastPct = Math.round(forecastPct);
                 if (forecastPct >= 100) passCount++; else failCount++;
 
+                return { cat, personalTarget, actual, pctComplete, forecastPct };
+            });
+
+            if (isSorted) {
+                rowDataArr.sort((a, b) => b.forecastPct - a.forecastPct);
+            }
+
+            rowDataArr.forEach((row, idx) => {
                 const bgRow = idx % 2 !== 0 ? 'nlnv-row-bg' : '';
-                const fcClass = forecastPct >= 100 ? 'nlnv-val-green' : 'nlnv-val-red';
-                const fcBg = forecastPct >= 100 ? 'background-color:#d9ead3;' : 'background-color:#fce4d6;';
-                const fillPct = Math.min(pctComplete, 100);
+                const fcClass = row.forecastPct >= 100 ? 'nlnv-val-green' : 'nlnv-val-red';
+                const fcBg = row.forecastPct >= 100 ? 'background-color:#d9ead3;' : 'background-color:#fce4d6;';
+                const fillPct = Math.min(row.pctComplete, 100);
                 const progressStyle = `background: linear-gradient(to right, #c6efce ${fillPct}%, transparent ${fillPct}%); font-weight:bold;`;
 
-                html += `<tr class="${bgRow}"><td class="nlnv-item-name">${cat}</td><td class="bold">${LOCAL_BI_ENGINE.formatNumber(personalTarget)}</td><td class="bold">${LOCAL_BI_ENGINE.formatNumber(actual)}</td><td style="${progressStyle}">${pctComplete}%</td><td class="${fcClass}" style="${fcBg}">${forecastPct}%</td></tr>`;
+                html += `<tr class="${bgRow}"><td class="nlnv-item-name">${row.cat}</td><td class="bold">${LOCAL_BI_ENGINE.formatNumber(row.personalTarget)}</td><td class="bold">${LOCAL_BI_ENGINE.formatNumber(row.actual)}</td><td style="${progressStyle}">${row.pctComplete}%</td><td class="${fcClass}" style="${fcBg}">${row.forecastPct}%</td></tr>`;
             });
 
             html += `<tr><td colspan="2" class="nlnv-footer-blue">Số lượng môn thi đua</td><td class="nlnv-footer-blue">${activeGroups.length}</td><td class="nlnv-footer-green">Đạt: ${passCount}</td><td class="nlnv-footer-yellow">Không đạt: ${failCount}</td></tr></table></div>`;
@@ -2298,9 +2353,29 @@
                     const customEOM = parseInt(mgrConfig.eom);
                     const daysInMonth = (customEOM >= 1 && customEOM <= 31) ? customEOM : new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
 
-                    if (mode === 'overview') { container.innerHTML = LOCAL_BI_ENGINE.getNLNVReport(latestDataCache, mockConfigList, mgrConfig, staffNameInBI, shopIdx, daysPassed, daysInMonth, latestDate); } 
-                    else if (mode === 'daily') { container.innerHTML = LOCAL_BI_ENGINE.getNLNVDailyReport(historyCache, mockConfigList, mgrConfig, staffNameInBI, shopIdx, daysPassed, daysInMonth); }
-                    setupTableZoom('emp-nlnv-container');
+                    // MỚI: Tách hàm vẽ riêng để khi Sort không bắt API load lại
+                    const renderOverviewTable = () => {
+                        container.innerHTML = LOCAL_BI_ENGINE.getNLNVReport(latestDataCache, mockConfigList, mgrConfig, staffNameInBI, shopIdx, daysPassed, daysInMonth, latestDate, window.emp_nlnv_is_sorted);
+                        setupTableZoom('emp-nlnv-container');
+
+                        // Gắn sự kiện click Sort
+                        const sortBtn = document.getElementById('tgdd-sort-btn-nlnv-emp');
+                        if (sortBtn) {
+                            sortBtn.onclick = () => {
+                                window.emp_nlnv_is_sorted = !window.emp_nlnv_is_sorted; // Đảo trạng thái
+                                renderOverviewTable(); // Vẽ đè lại HTML cục bộ (cực lẹ)
+                            };
+                        }
+                    };
+
+                    if (mode === 'overview') { 
+                        window.emp_nlnv_is_sorted = false; // Reset trạng thái khi chuyển tab
+                        renderOverviewTable(); 
+                    } 
+                    else if (mode === 'daily') { 
+                        container.innerHTML = LOCAL_BI_ENGINE.getNLNVDailyReport(historyCache, mockConfigList, mgrConfig, staffNameInBI, shopIdx, daysPassed, daysInMonth); 
+                        setupTableZoom('emp-nlnv-container');
+                    }
                 } catch (e) { container.innerHTML = `<div style="color:red; text-align:center; padding: 20px;">Lỗi: ${e.message}</div>`; }
             };
 
