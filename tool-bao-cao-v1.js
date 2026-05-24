@@ -196,7 +196,7 @@
     // 2. CSS GIAO DIỆN TỔNG HỢP
     // ===============================================================
     const MY_CSS = `
-        #bc-app-wrapper { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.95); backdrop-filter:blur(10px); z-index:2147483647; font-family: 'Segoe UI', sans-serif; color: #f8fafc; display:flex; justify-content:center; align-items:flex-start; padding-top:20px; }
+        #bc-app-wrapper { position:fixed; top:0; left:0; right:0; bottom: 0; background:rgba(15,23,42,0.95); backdrop-filter:blur(10px); z-index:2147483647; font-family: 'Segoe UI', sans-serif; color: #f8fafc; display:flex; justify-content:center; align-items:flex-start; padding-top:20px; }
         #bc-app-wrapper * { box-sizing:border-box; }
         
         .bc-screen { display:none; flex-direction:column; max-width:98%; position: fixed; top: 20px; bottom: 20px; background:rgba(30, 41, 59, 0.7); border-radius:12px; border:1px solid rgba(255,255,255,0.1); overflow:hidden; animation: fadeIn 0.3s ease-out; box-shadow:0 15px 40px rgba(0,0,0,0.5);}
