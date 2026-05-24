@@ -743,7 +743,7 @@
             let activeGroups = userConfig.compData ? userConfig.compData.map(c => c.group) :[];
             const rowData =[];
 
-            rowData.push({ name: 'Doanh thu', flatKey: `link6|||${shopKey}|||revenue|||${selectedStaffName}`, target: personalRevTarget });
+            rowData.push({ name: 'Doanh thu', flatKey: `link6|||${shopKey}|||revenue|||${selectedStaffName}|||dtqd`, target: personalRevTarget });
 
             activeGroups.forEach(cat => {
                 const configItem = configList.find(c => c.short === cat) || { type: 'soluong' };
