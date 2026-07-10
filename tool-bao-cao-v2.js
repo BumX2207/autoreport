@@ -42,100 +42,6 @@
     let MANAGER_SHEET_ID = ""; 
     let EDITING_EMP_INDEX = -1; 
 
-    // ===============================================================
-    // HỆ THỐNG NHẮC NHỞ SINH NHẬT TRONG TUẦN
-    // ===============================================================
-    const getShortDob = (rawDate) => {
-        if (!rawDate) return null;
-        let str = String(rawDate).trim();
-        if (str.includes('/')) {
-            let parts = str.split('/');
-            if (parts.length >= 2) return `${String(parts[0]).padStart(2, '0')}/${String(parts[1]).padStart(2, '0')}`;
-        }
-        let d = new Date(str);
-        if (!isNaN(d.getTime())) return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
-        return null;
-    };
-
-    const showBirthdayPopup = (birthdayPeople) => {
-        let existingModal = document.getElementById('hpbd-modal');
-        if (existingModal) existingModal.remove();
-
-        let listHtml = birthdayPeople.map(p => `
-            <div class="hpbd-item">
-                <span class="hpbd-date">🎂 ${p.date}</span>
-                <span style="flex:1;">${p.name} <small style="color:#94a3b8;">(Kho ${p.shop})</small></span>
-            </div>
-        `).join('');
-
-        const modalHtml = `
-            <div class="hpbd-overlay" id="hpbd-modal">
-                <div class="hpbd-box">
-                    <div class="hpbd-icon">🎉</div>
-                    <div class="hpbd-title">Sắp Tới Sinh Nhật!</div>
-                    <p style="color: #cbd5e1; font-size: 13px; margin-bottom: 15px; line-height: 1.5;">Trong tuần này, siêu thị có sinh nhật của các thành viên sau. Đừng quên gửi lời chúc nhé!</p>
-                    <div class="hpbd-list">${listHtml}</div>
-                    <button class="hpbd-btn" id="btn-hpbd-close">Đã Rõ & Đóng</button>
-                </div>
-            </div>
-        `;
-        let wrapper = document.getElementById('bc-app-wrapper');
-        if (wrapper) {
-            wrapper.insertAdjacentHTML('beforeend', modalHtml);
-            const modalEl = document.getElementById('hpbd-modal');
-            setTimeout(() => modalEl.classList.add('show'), 50);
-
-            document.getElementById('btn-hpbd-close').onclick = () => { 
-                modalEl.classList.remove('show'); 
-                setTimeout(() => modalEl.remove(), 300); 
-            };
-        }
-    };
-
-    const processBirthdays = (empList, currentUser, targetShops) => {
-        if (!empList || !Array.isArray(empList) || empList.length === 0) return;
-
-        let daysInWeek = [];
-        let d = new Date();
-        let day = d.getDay();
-        let diffToMonday = d.getDate() - day + (day === 0 ? -6 : 1);
-        let startOfWeek = new Date(d.getFullYear(), d.getMonth(), diffToMonday);
-
-        for(let i = 0; i < 7; i++) {
-            let tempDate = new Date(startOfWeek);
-            tempDate.setDate(startOfWeek.getDate() + i);
-            let dd = String(tempDate.getDate()).padStart(2, '0');
-            let mm = String(tempDate.getMonth() + 1).padStart(2, '0');
-            daysInWeek.push(`${dd}/${mm}`);
-        }
-
-        let safeCurrentUser = String(currentUser).split('-')[0].trim().toLowerCase();
-        let safeTargetShops = targetShops.map(s => String(s).trim().toLowerCase());
-        let bdayPeople = [];
-
-        empList.forEach(e => {
-            let empShop = String(e.s).trim().toLowerCase();
-            if (safeTargetShops.includes(empShop)) {
-                let shortDob = getShortDob(e.dob);
-                if (shortDob && daysInWeek.includes(shortDob)) {
-                    let isMe = String(e.u).split('-')[0].trim().toLowerCase() === safeCurrentUser;
-                    let displayName = e.fn ? e.fn : String(e.u).split('-')[0].trim();
-                    bdayPeople.push({ name: isMe ? `${displayName} (Là Bạn 🎁)` : displayName, date: shortDob, shop: e.s });
-                }
-            }
-        });
-
-        if (bdayPeople.length > 0) {
-            if (!window['bc_bday_shown_' + safeCurrentUser]) {
-                setTimeout(() => {
-                    showBirthdayPopup(bdayPeople);
-                    window['bc_bday_shown_' + safeCurrentUser] = true;
-                }, 800);
-            }
-        }
-    };
-    // ===============================================================
-
     const parseDateFromSheet = (rawStr) => {
         if (!rawStr) return { date: "N/A", time: "N/A", month: "N/A" };
         let str = String(rawStr).trim();
@@ -377,21 +283,6 @@
         .fund-sub-tabs { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px; overflow-x: auto; }
         .fund-sub-tab { padding: 8px 15px; background: rgba(0,0,0,0.3); border-radius: 6px; cursor: pointer; color: #94a3b8; font-weight: bold; border: 1px solid transparent; transition: 0.2s; white-space: nowrap; }
         .fund-sub-tab.active { background: rgba(56,189,248,0.1); color: #38bdf8; border-color: #38bdf8; }
-
-        /* ===== CSS POPUP SINH NHẬT ===== */
-        .hpbd-overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:2147483660; display:flex; justify-content:center; align-items:center; opacity:0; pointer-events:none; transition:0.3s; backdrop-filter: blur(5px);}
-        .hpbd-overlay.show { opacity:1; pointer-events:auto; }
-        .hpbd-box { background: linear-gradient(135deg, #1e1b4b, #3b0764); border: 2px solid #f59e0b; border-radius: 20px; padding: 30px; width: 90%; max-width: 380px; text-align: center; position: relative; box-shadow: 0 15px 50px rgba(245, 158, 11, 0.3); transform: scale(0.8); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .hpbd-overlay.show .hpbd-box { transform: scale(1); }
-        .hpbd-icon { font-size: 60px; margin-bottom: 10px; animation: bounce 2s infinite; }
-        .hpbd-title { font-size: 22px; font-weight: 900; color: #fbbf24; text-transform: uppercase; margin-bottom: 10px; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
-        .hpbd-list { background: rgba(255,255,255,0.05); border-radius: 10px; padding: 15px; margin-bottom: 20px; border: 1px dashed rgba(245, 158, 11, 0.4); text-align: left; max-height: 150px; overflow-y: auto;}
-        .hpbd-item { font-size: 14px; color: #fff; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; font-weight: bold;}
-        .hpbd-item:last-child { margin-bottom: 0; }
-        .hpbd-date { background: #ef4444; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; flex-shrink: 0; }
-        .hpbd-btn { background: linear-gradient(to right, #f59e0b, #d97706); color: white; border: none; padding: 12px 30px; border-radius: 25px; font-weight: bold; font-size: 15px; cursor: pointer; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); transition: 0.2s;}
-        .hpbd-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6); }
-        @keyframes bounce { 0%, 20%, 50%, 80%, 100% {transform: translateY(0);} 40% {transform: translateY(-15px);} 60% {transform: translateY(-7px);} }
     `;
 
     const processImages = async (files) => {
@@ -473,13 +364,13 @@
             
             const scrapedStaffData = dataCache.link6 || {};
             const crmData = dataCache.link8 || {};
-            const instData = dataCache.link7 || {}; // Lấy Data Trả chậm
+            const instData = dataCache.link7 || {}; 
             const staffRealMap = dataCache.staffReal || {};
             
             const currentShopStaffData = scrapedStaffData[shopKey] ? (scrapedStaffData[shopKey].competition || {}) : {};
             const revData = scrapedStaffData[shopKey] ? (scrapedStaffData[shopKey].revenue || {}) : {};
-            const csDataShop = scrapedStaffData[shopKey] ? (scrapedStaffData[shopKey].crossSell || {}) : {}; // Lấy Data Bán kèm
-            const currentShopInstData = instData[shopKey] || {}; // Lấy Data Trả chậm Shop
+            const csDataShop = scrapedStaffData[shopKey] ? (scrapedStaffData[shopKey].crossSell || {}) : {}; 
+            const currentShopInstData = instData[shopKey] || {}; 
 
             const today = new Date();
             const dateStr = `${today.getDate() < 10 ? '0'+today.getDate() : today.getDate()}/${(today.getMonth() + 1) < 10 ? '0'+(today.getMonth() + 1) : (today.getMonth() + 1)}/${today.getFullYear()}`;
@@ -509,7 +400,8 @@
                 });
             }
 
-            const actualRev = revData[selectedStaffName] || 0;
+            const actualRevObj = revData[selectedStaffName] || 0;
+            const actualRev = typeof actualRevObj === 'object' ? (actualRevObj.dtqd || 0) : actualRevObj;
             const serviceInfo = crmData[selectedStaffName] || { score: '-' };
 
             let activeGroups = userConfig.compData ? userConfig.compData.map(c => c.group) :[];
@@ -517,7 +409,8 @@
             // VÒNG LẶP TÍNH TOÁN DATA MỚI CHO RANKING VÀ HEADER
             let rankingData =[];
             shopStaffGroup.forEach(s => {
-                let s_actualRev = revData[s.name] || 0;
+                let s_actualRevObj = revData[s.name] || 0;
+                let s_actualRev = typeof s_actualRevObj === 'object' ? (s_actualRevObj.dtqd || 0) : s_actualRevObj;
                 let s_targetRev = revTargetMap[s.name] || 0;
                 
                 // 1. Phục vụ
@@ -533,15 +426,16 @@
                     s_forecastRevPct = 100;
                 }
                 
-                // 3. Trả chậm
-                let s_traCham = currentShopInstData[s.name] !== undefined ? currentShopInstData[s.name] : 0;
+                // 3. Trả chậm (Đồng bộ cấu trúc đọc Object Trả chậm mới)
+                let s_traChamRaw = currentShopInstData[s.name] !== undefined ? currentShopInstData[s.name] : 0;
+                let s_traCham = typeof s_traChamRaw === 'object' && s_traChamRaw !== null ? (s_traChamRaw.tg || 0) : parseFloat(s_traChamRaw) || 0;
                 
                 // 4. Bán kèm
                 let s_cs = csDataShop[s.name] || { pctBK: 0 };
                 let s_pctBK = s_cs.pctBK || 0;
 
-                // 5. Tính điểm để chấm Rank (Giống bản Quản lý)
-                let s_diemDoanhThu = Math.floor((s_actualRev > 1000000 ? Math.round(s_actualRev / 1000000) : Math.round(s_actualRev)) / 20);
+                // 5. Tính điểm để chấm Rank
+                let s_diemDoanhThu = Math.floor(s_actualRev / 20);
                 let s_roundedRate = Math.round(parseFloat(s_crm.ratePct) || 0);
                 let s_diemPhucVu = s_roundedRate < 10 ? -10 : (s_roundedRate - 10) * 2;
                 let s_diemDat = 0, s_diemKhongDat = 0;
@@ -622,7 +516,6 @@
                         <td colspan="2" class="nlnv-label">Thực hiện</td><td class="nlnv-val-red">${LOCAL_BI_ENGINE.formatNumber(actualRev)}</td>
                     </tr>
                     <tr>
-                        <!-- ĐÃ SỬA: Đổi tiêu đề giống bản Quản lý -->
                         <td class="nlnv-label" style="color:#008080;">Điểm Phục vụ</td>
                         <td class="nlnv-label" style="color:#008080;">Dự kiến DT (%)</td>
                         <td class="nlnv-label" style="color:#008080;">Tỷ trọng trả chậm</td>
@@ -647,7 +540,6 @@
 
             let passCount = 0; let failCount = 0;
 
-            // Đưa vào mảng để thuật toán Sort xử lý
             let rowDataArr = activeGroups.map((cat, idx) => {
                 const configItem = configList.find(c => c.short === cat) || { type: 'soluong' };
                 const isRevenue = configItem.type.toLowerCase().includes('doanhthu') || configItem.type.toLowerCase().includes('tiền');
@@ -845,7 +737,6 @@
 
                 <div class="bc-tabs">
                     <button class="bc-tab-btn active" id="tab-btn-stat">📈 Truyền thông</button>
-                    <!-- THÊM TAB BÀI TEST -->
                     <button class="bc-tab-btn" id="tab-btn-quiz">📝 Bài test</button>
                     <button class="bc-tab-btn" id="tab-btn-fund">💰 Quỹ Siêu Thị</button>
                     <button class="bc-tab-btn" id="tab-btn-config">⚙️ Cài Đặt</button>
@@ -864,7 +755,6 @@
                     </div>
                 </div>
 
-                <!-- KHỐI GIAO DIỆN TAB BÀI TEST -->
                 <div class="bc-tab-content" id="tab-quiz">
                     <div class="bc-screen-body">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
@@ -964,7 +854,7 @@
                             <label class="bc-label">Link bài đăng</label>
                             <div id="wrap-dangbai-links">
                                 <div class="input-wrapper" style="display:flex; gap:10px; margin-bottom:10px;">
-                                    <input type="text" class="bc-input inp-dangbai-link" placeholder="Dán link bài đăng vào đây..." style="margin-bottom:0;">
+                                    <input type="text" class="bc-input" placeholder="Dán link bài đăng vào đây..." style="margin-bottom:0;">
                                     <button class="bc-btn btn-primary btn-add-link" data-target="wrap-dangbai-links" style="width:auto; padding:0 15px; font-size:20px;" title="Thêm link">+</button>
                                 </div>
                             </div>
@@ -980,7 +870,7 @@
                             <label class="bc-label">Link Livestream</label>
                             <div id="wrap-live-links">
                                 <div class="input-wrapper" style="display:flex; gap:10px; margin-bottom:10px;">
-                                    <input type="text" class="bc-input inp-live-link" placeholder="Dán link livestream vào đây..." style="margin-bottom:0;">
+                                    <input type="text" class="bc-input" placeholder="Dán link livestream vào đây..." style="margin-bottom:0;">
                                     <button class="bc-btn btn-primary btn-add-link" data-target="wrap-live-links" style="width:auto; padding:0 15px; font-size:20px;" title="Thêm link">+</button>
                                 </div>
                             </div>
@@ -1553,7 +1443,6 @@
         if (IS_MANAGER) {
             switchSc('sc-manager');
             
-            // Hàm Helper để chuyển Tab
             const switchManagerTab = (activeTabBtnId, activeTabId) => {
                 ['tab-btn-stat', 'tab-btn-quiz', 'tab-btn-fund', 'tab-btn-config'].forEach(id => { if($(id)) $(id).classList.remove('active'); });
                 ['tab-stat', 'tab-quiz', 'tab-fund', 'tab-config'].forEach(id => { if($(id)) $(id).classList.remove('active'); });
@@ -1570,7 +1459,6 @@
                 FUND_SYSTEM.loadAndRender('mgr-fund-container', true, MANAGER_SHEET_ID, CURRENT_USER, false);
             };
 
-            // SỰ KIỆN CLICK TAB BÀI TEST
             $('tab-btn-quiz').onclick = () => {
                 switchManagerTab('tab-btn-quiz', 'tab-quiz');
                 loadQuizData();
@@ -1580,19 +1468,16 @@
                 loadQuizData();
             };
 
-            // HÀM TẢI DỮ LIỆU BÀI TEST TỪ GOOGLE SHEET
             const loadQuizData = async () => {
                 const container = $('quiz-list-container');
                 container.innerHTML = `<div style="text-align:center; padding:30px;"><div class="spinner" style="margin:0 auto;"></div><br>Đang tải dữ liệu bài test...</div>`;
                 
                 try {
-                    // FIX: Chuyển method thành GET thay vì POST để tránh lỗi Redirect HTML của Google
                     let res = await universalFetch({ 
                         method: "GET", 
                         url: API_URL_QUIZ 
                     });
                     
-                    // FIX BẮT LỖI RÕ RÀNG: Xử lý lỗi nếu Google vẫn trả về trang HTML thay vì JSON
                     if (res && res.trim().startsWith('<')) {
                         console.error("Lỗi Raw HTML từ Google:", res);
                         throw new Error("Link API bị sai hoặc chưa cấp quyền (Who has access: Anyone) khi Deploy Apps Script! Hãy chắc chắn bạn đã Deploy New Version.");
@@ -1609,9 +1494,7 @@
                 }
             };
 
-            // HÀM VẼ GIAO DIỆN LỊCH SỬ THI & THỐNG KÊ
             const renderQuizList = (quizData) => {
-                // Lọc những nhân viên có Role là NV (hoặc chưa set Role thì mặc định coi là NV)
                 let nvList = MANAGER_EMPLOYEES.filter(e => e.role === 'NV' || !e.role);
                 
                 if (nvList.length === 0) {
@@ -1619,14 +1502,10 @@
                      return;
                 }
 
-                // --- TÍNH TOÁN CÁC MỐC THỜI GIAN ---
                 const now = new Date();
-                // Đầu ngày hôm nay
                 const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-                // Đầu tuần này (Lấy Thứ 2 làm đầu tuần)
                 const dayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1; 
                 const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek).getTime();
-                // Đầu tháng này
                 const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
                 let todayStats =[];
@@ -1653,7 +1532,6 @@
                     if (historyArr.length === 0) {
                         historyHtml = `<div style="color:#94a3b8; font-size:13px; text-align:center; padding:10px;">Nhân viên này chưa làm bài test nào.</div>`;
                     } else {
-                        // Sắp xếp thời gian mới nhất lên đầu
                         historyArr.sort((a,b) => b.time - a.time);
 
                         historyHtml = `<table style="width:100%; border-collapse: collapse; font-size:13px; margin-top:10px;">
@@ -1664,7 +1542,6 @@
                             </tr>`;
                             
                         historyArr.forEach(h => {
-                            // Phân loại thống kê dựa trên Timestamp
                             if (h.time >= startOfToday) todayTests.push(h);
                             if (h.time >= startOfWeek) weekCount++;
                             if (h.time >= startOfMonth) monthCount++;
@@ -1672,7 +1549,6 @@
                             let d = new Date(h.time);
                             let timeStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
                             
-                            // Tô màu điểm (Trên 80% xanh, trên 50% vàng, dưới đỏ)
                             let scoreParts = String(h.score).split('/');
                             let scoreColor = '#fff';
                             if(scoreParts.length === 2) {
@@ -1689,7 +1565,6 @@
                         historyHtml += `</table>`;
                     }
 
-                    // Lưu dữ liệu thống kê của ngày hôm nay cho mảng Dashboard
                     if (todayTests.length > 0) {
                         let formattedScores = todayTests.map(t => {
                             let scoreParts = String(t.score).split('/');
@@ -1708,11 +1583,9 @@
                         });
                     }
 
-                    // Lưu dữ liệu tuần/tháng
                     if (weekCount > 0) weeklyCounts[nv.u] = { name: getEmpDisplayName(nv.u), count: weekCount };
                     if (monthCount > 0) monthlyCounts[nv.u] = { name: getEmpDisplayName(nv.u), count: monthCount };
 
-                    // Tóm tắt thông tin trên thanh Header của Menu danh sách
                     let totalTests = historyArr.length;
                     let lastTestStr = "Chưa làm test";
                     if(totalTests > 0) {
@@ -1735,14 +1608,11 @@
                     </div>`;
                 });
 
-                // TÌM TOP LÀM TEST NHIỀU NHẤT TUẦN VÀ THÁNG
                 let topWeek = Object.values(weeklyCounts).sort((a, b) => b.count - a.count)[0];
                 let topMonth = Object.values(monthlyCounts).sort((a, b) => b.count - a.count)[0];
 
-                // --- BẮT ĐẦU VẼ TOÀN BỘ GIAO DIỆN TỔNG HỢP VÀO TAB BÀI TEST ---
                 let finalHtml = ``;
 
-                // 1. TOP LEADERBOARD
                 finalHtml += `
                     <div class="bc-sec-title">🏆 TOP CHĂM CHỈ</div>
                     <div class="leaderboard" style="margin-bottom: 20px;">
@@ -1759,7 +1629,6 @@
                     </div>
                 `;
 
-                // 2. THỐNG KÊ HÔM NAY
                 finalHtml += `
                     <div class="bc-sec-title">📊 THỐNG KÊ HÔM NAY</div>
                     <div class="rp-card" style="border-color: #38bdf8; background: rgba(56, 189, 248, 0.05); margin-bottom: 25px;">
@@ -1775,7 +1644,6 @@
                             <th style="padding:8px; text-align:left; border: 1px solid rgba(255,255,255,0.1);">Các mức điểm</th>
                         </tr>`;
                     
-                    // Sắp xếp người thi nhiều lượt nhất hôm nay lên trên cùng
                     todayStats.sort((a,b) => b.count - a.count).forEach(ts => {
                         finalHtml += `<tr>
                             <td style="padding:8px; border: 1px solid rgba(255,255,255,0.05); color:#fff;">👤 ${ts.name}</td>
@@ -1789,11 +1657,9 @@
                 }
                 finalHtml += `</div>`;
 
-                // 3. DANH SÁCH LỊCH SỬ CHI TIẾT CỦA TỪNG NV
                 finalHtml += `<div class="bc-sec-title">📋 LỊCH SỬ CHI TIẾT TỪNG NHÂN VIÊN</div>`;
                 finalHtml += detailHtml;
 
-                // 4. In toàn bộ ra UI
                 $('quiz-list-container').innerHTML = finalHtml;
             };
             
@@ -1811,11 +1677,6 @@
 
                         MANAGER_EMPLOYEES = data.employees && data.employees !== "[]" ? JSON.parse(data.employees) : [];
                         renderNV();
-
-                        if (MANAGER_EMPLOYEES.length > 0) {
-                            let mgrShops =[...new Set(MANAGER_EMPLOYEES.map(e => String(e.s).trim()))];
-                            processBirthdays(MANAGER_EMPLOYEES, CURRENT_USER, mgrShops);
-                        }
 
                         if(MANAGER_SHEET_ID) {
                             await loadStatistics(); 
@@ -2242,10 +2103,6 @@
                                         uData.role = myEmp.role;
                                         uData.grp = myEmp.grp;
                                     }
-
-                                    let actualShop = uData.shop || guestData.shop || "";
-                                    let actualUser = uData.user || guestData.user || "";
-                                    processBirthdays(emps, actualUser, [String(actualShop).trim()]);
                                 }
                             }
                         } catch (err) { console.log("Bỏ qua đồng bộ nâng cao"); }
@@ -2329,7 +2186,15 @@
                     if (historyJson.status !== 'success' || !historyJson.data) throw new Error("Không lấy được dữ liệu Lịch sử.");
                     let historyCache = historyJson.data;
 
-                    let mockConfigList = (mgrConfig.compData ||[]).map(c => ({ short: c.group, type: c.group.toLowerCase().includes('doanh thu') ? 'doanhthu' : 'soluong', channel: 'T' }));
+                    let mockConfigList = (mgrConfig.compData ||[]).map(c => {
+                        const groupNameLower = c.group.toLowerCase();
+                        const isRev = groupNameLower.includes('doanh thu') || groupNameLower.includes('doanhthu') || groupNameLower.includes('tiền') || groupNameLower.includes('đọc');
+                        return {
+                            short: c.group,
+                            type: isRev ? 'doanhthu' : 'soluong',
+                            channel: 'T'
+                        };
+                    });
 
                     let parseDateStr = (dStr) => { let parts = dStr.split('/'); return new Date(parts[2], parts[1] - 1, parts[0]); };
                     let validDates = Object.keys(historyCache);
@@ -2353,23 +2218,21 @@
                     const customEOM = parseInt(mgrConfig.eom);
                     const daysInMonth = (customEOM >= 1 && customEOM <= 31) ? customEOM : new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
 
-                    // MỚI: Tách hàm vẽ riêng để khi Sort không bắt API load lại
                     const renderOverviewTable = () => {
                         container.innerHTML = LOCAL_BI_ENGINE.getNLNVReport(latestDataCache, mockConfigList, mgrConfig, staffNameInBI, shopIdx, daysPassed, daysInMonth, latestDate, window.emp_nlnv_is_sorted);
                         setupTableZoom('emp-nlnv-container');
 
-                        // Gắn sự kiện click Sort
                         const sortBtn = document.getElementById('tgdd-sort-btn-nlnv-emp');
                         if (sortBtn) {
                             sortBtn.onclick = () => {
-                                window.emp_nlnv_is_sorted = !window.emp_nlnv_is_sorted; // Đảo trạng thái
-                                renderOverviewTable(); // Vẽ đè lại HTML cục bộ (cực lẹ)
+                                window.emp_nlnv_is_sorted = !window.emp_nlnv_is_sorted; 
+                                renderOverviewTable(); 
                             };
                         }
                     };
 
                     if (mode === 'overview') { 
-                        window.emp_nlnv_is_sorted = false; // Reset trạng thái khi chuyển tab
+                        window.emp_nlnv_is_sorted = false; 
                         renderOverviewTable(); 
                     } 
                     else if (mode === 'daily') { 
