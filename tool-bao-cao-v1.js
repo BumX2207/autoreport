@@ -358,20 +358,33 @@
             }
             return result;
         },
-        getNLNVReport: (dataCache, configList, userConfig, selectedStaffName, shopIdx, daysPassed, daysInMonth, latestDate = "", isSorted = false) => {
-            const staffList = userConfig.staffList ||[];
+
+        // THUẬT TOÁN SO KHỚP TÊN NHÂN VIÊN AN TOÀN TRÁNH SAI LỆCH DẤU/MÃ SỐ
+        matchStaffNameSafe: (nameInCache, selName) => {
+            if (!nameInCache || !selName) return false;
+            const cleanCache = nameInCache.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split('-')[0].replace(/[^a-z]/g, "");
+            const cleanSel = selName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split('-')[0].replace(/[^a-z]/g, "");
+            return cleanCache === cleanSel || cleanCache.includes(cleanSel) || cleanSel.includes(cleanCache);
+        },
+
+        // HÀM GIẢI NÉN CHUỖI DỮ LIỆU PHẲNG TRỰC TIẾP TỪ SHEET LICHSU
+        getSafeFlatVal: (flatData, prefix, suffix, sName, nameIndex) => {
+            for (let flatKey in flatData) {
+                if (flatKey.startsWith(prefix) && flatKey.endsWith(suffix)) {
+                    const nameInCache = flatKey.split('|||')[nameIndex] || "";
+                    if (LOCAL_BI_ENGINE.matchStaffNameSafe(nameInCache, sName)) {
+                        return parseFloat(flatData[flatKey]) || 0;
+                    }
+                }
+            }
+            return 0;
+        },
+
+        // BẢNG NĂNG LỰC TỔNG QUAN - ĐỒNG BỘ FLAT DATA
+        getNLNVReport: (latestFlatData, configList, userConfig, selectedStaffName, shopIdx, daysPassed, daysInMonth, latestDate = "", isSorted = false) => {
+            const staffList = userConfig.staffList || [];
             const shopKey = `shop${shopIdx}`;
             
-            const scrapedStaffData = dataCache.link6 || {};
-            const crmData = dataCache.link8 || {};
-            const instData = dataCache.link7 || {}; 
-            const staffRealMap = dataCache.staffReal || {};
-            
-            const currentShopStaffData = scrapedStaffData[shopKey] ? (scrapedStaffData[shopKey].competition || {}) : {};
-            const revData = scrapedStaffData[shopKey] ? (scrapedStaffData[shopKey].revenue || {}) : {};
-            const csDataShop = scrapedStaffData[shopKey] ? (scrapedStaffData[shopKey].crossSell || {}) : {}; 
-            const currentShopInstData = instData[shopKey] || {}; 
-
             const today = new Date();
             const dateStr = `${today.getDate() < 10 ? '0'+today.getDate() : today.getDate()}/${(today.getMonth() + 1) < 10 ? '0'+(today.getMonth() + 1) : (today.getMonth() + 1)}/${today.getFullYear()}`;
             const displayDate = latestDate ? latestDate : dateStr;
@@ -387,7 +400,7 @@
             let usedTarget = 0;
             staffWithRate.forEach(s => {
                 const t = Math.round(shopRevTarget * parseFloat(s.rate) / 100);
-                if(s.name === selectedStaffName) personalRevTarget = t;
+                if (LOCAL_BI_ENGINE.matchStaffNameSafe(s.name, selectedStaffName)) personalRevTarget = t;
                 revTargetMap[s.name] = t;
                 usedTarget += t;
             });
@@ -395,27 +408,30 @@
                 const remain = Math.max(0, shopRevTarget - usedTarget);
                 const perStaff = Math.round(remain / staffNoRate.length);
                 staffNoRate.forEach(s => { 
-                    if(s.name === selectedStaffName) personalRevTarget = perStaff; 
+                    if (LOCAL_BI_ENGINE.matchStaffNameSafe(s.name, selectedStaffName)) personalRevTarget = perStaff; 
                     revTargetMap[s.name] = perStaff;
                 });
             }
 
-            const actualRevObj = revData[selectedStaffName] || 0;
-            const actualRev = typeof actualRevObj === 'object' ? (actualRevObj.dtqd || 0) : actualRevObj;
-            const serviceInfo = crmData[selectedStaffName] || { score: '-' };
+            // Dùng Safe Flat Val bốc tách trực tiếp từ Flat Object
+            const actualRev = LOCAL_BI_ENGINE.getSafeFlatVal(latestFlatData, `link6|||${shopKey}|||revenue|||`, "|||dtqd", selectedStaffName, 3);
+            const scoreVal = LOCAL_BI_ENGINE.getSafeFlatVal(latestFlatData, "link8|||", "|||score", selectedStaffName, 1);
+            const serviceScore = scoreVal > 0 ? scoreVal : '-';
 
-            let activeGroups = userConfig.compData ? userConfig.compData.map(c => c.group) :[];
+            let activeGroups = userConfig.compData ? userConfig.compData.map(c => c.group) : [];
 
             // VÒNG LẶP TÍNH TOÁN DATA MỚI CHO RANKING VÀ HEADER
-            let rankingData =[];
+            let rankingData = [];
             shopStaffGroup.forEach(s => {
-                let s_actualRevObj = revData[s.name] || 0;
-                let s_actualRev = typeof s_actualRevObj === 'object' ? (s_actualRevObj.dtqd || 0) : s_actualRevObj;
+                let s_actualRev = LOCAL_BI_ENGINE.getSafeFlatVal(latestFlatData, `link6|||${shopKey}|||revenue|||`, "|||dtqd", s.name, 3);
                 let s_targetRev = revTargetMap[s.name] || 0;
                 
                 // 1. Phục vụ
-                let s_crm = crmData[s.name] || { ratePct: 0, score: '-' };
-                let s_score = (s_crm.score !== undefined && s_crm.score !== '-') ? Math.round(parseFloat(s_crm.score) * 100) / 100 : '-';
+                let s_scoreVal = LOCAL_BI_ENGINE.getSafeFlatVal(latestFlatData, "link8|||", "|||score", s.name, 1);
+                let s_score = s_scoreVal > 0 ? (Math.round(s_scoreVal * 100) / 100) : '-';
+                
+                // Tỷ lệ tiếp cận phục vụ
+                let s_ratePct = LOCAL_BI_ENGINE.getSafeFlatVal(latestFlatData, "link8|||", "|||ratePct", s.name, 1);
                 
                 // 2. Dự kiến Doanh Thu (%)
                 let s_forecastRevPct = 0;
@@ -426,17 +442,18 @@
                     s_forecastRevPct = 100;
                 }
                 
-                // 3. Trả chậm (Đồng bộ cấu trúc đọc Object Trả chậm mới)
-                let s_traChamRaw = currentShopInstData[s.name] !== undefined ? currentShopInstData[s.name] : 0;
-                let s_traCham = typeof s_traChamRaw === 'object' && s_traChamRaw !== null ? (s_traChamRaw.tg || 0) : parseFloat(s_traChamRaw) || 0;
+                // 3. Trả chậm
+                let s_traCham = LOCAL_BI_ENGINE.getSafeFlatVal(latestFlatData, `link7|||${shopKey}|||`, "|||tg", s.name, 2);
+                if (s_traCham === 0) {
+                    s_traCham = LOCAL_BI_ENGINE.getSafeFlatVal(latestFlatData, `link7|||${shopKey}|||`, "", s.name, 2);
+                }
                 
                 // 4. Bán kèm
-                let s_cs = csDataShop[s.name] || { pctBK: 0 };
-                let s_pctBK = s_cs.pctBK || 0;
+                let s_pctBK = LOCAL_BI_ENGINE.getSafeFlatVal(latestFlatData, `link6|||${shopKey}|||crossSell|||`, "|||pctBK", s.name, 3);
 
                 // 5. Tính điểm để chấm Rank
                 let s_diemDoanhThu = Math.floor(s_actualRev / 20);
-                let s_roundedRate = Math.round(parseFloat(s_crm.ratePct) || 0);
+                let s_roundedRate = Math.round(s_ratePct);
                 let s_diemPhucVu = s_roundedRate < 10 ? -10 : (s_roundedRate - 10) * 2;
                 let s_diemDat = 0, s_diemKhongDat = 0;
 
@@ -446,8 +463,9 @@
                     const finalMult = isRevenue ? 1000 : 1;
 
                     let shopTargetRaw = 0;
-                    if (dataCache.link4_smart && dataCache.link4_smart[cat] && dataCache.link4_smart[cat][shopKey]) {
-                        shopTargetRaw = dataCache.link4_smart[cat][shopKey].t || 0;
+                    let smartTarget = parseFloat(latestFlatData[`link4_smart|||${cat}|||${shopKey}|||t`]);
+                    if (smartTarget > 0) {
+                        shopTargetRaw = smartTarget;
                         if (isRevenue) shopTargetRaw = shopTargetRaw / 1000;
                     } else {
                         const compRow = userConfig.compData.find(c => c.group === cat);
@@ -455,14 +473,18 @@
                     }
 
                     let personalTarget = 0;
-                    if(s.rate && parseFloat(s.rate) > 0) {
+                    if (s.rate && parseFloat(s.rate) > 0) {
                         personalTarget = Math.round(shopTargetRaw * parseFloat(s.rate) / 100) * finalMult;
                     } else if (staffNoRate.length > 0) {
                         let usedT = 0; staffWithRate.forEach(sr => usedT += Math.round(shopTargetRaw * parseFloat(sr.rate) / 100));
                         personalTarget = Math.round(Math.max(0, shopTargetRaw - usedT) / staffNoRate.length) * finalMult;
                     }
 
-                    let s_actual = currentShopStaffData[s.name]?.[cat] || staffRealMap[s.name]?.[cat] || 0;
+                    let s_actual = LOCAL_BI_ENGINE.getSafeFlatVal(latestFlatData, `link6|||${shopKey}|||competition|||`, `|||${cat}`, s.name, 3);
+                    if (s_actual === 0) {
+                        s_actual = LOCAL_BI_ENGINE.getSafeFlatVal(latestFlatData, "staffReal|||", `|||${cat}`, s.name, 1);
+                    }
+
                     let forecastPct = personalTarget > 0 ? ((s_actual / daysPassed) * daysInMonth / personalTarget * 100) : (s_actual > 0 ? 100 : 0);
                     let roundedForecast = Math.round(forecastPct);
 
@@ -500,8 +522,8 @@
             rankingData.forEach((item, idx) => item.rankThiDua = idx + 1);
 
             // Bốc Data của user hiện tại
-            const selectedStaffStats = rankingData.find(item => item.name === selectedStaffName) || {
-                tongDiem: 0, rankThiDua: '-', diemPhucVu: serviceInfo.score, forecastRevPct: 0, traChamPct: 0, pctBK: 0
+            const selectedStaffStats = rankingData.find(item => LOCAL_BI_ENGINE.matchStaffNameSafe(item.name, selectedStaffName)) || {
+                tongDiem: 0, rankThiDua: '-', diemPhucVu: serviceScore, forecastRevPct: 0, traChamPct: 0, pctBK: 0
             };
 
             let html = `
@@ -546,8 +568,9 @@
                 const finalMult = isRevenue ? 1000 : 1;
 
                 let shopTargetRaw = 0;
-                if (dataCache.link4_smart && dataCache.link4_smart[cat] && dataCache.link4_smart[cat][shopKey]) {
-                    shopTargetRaw = dataCache.link4_smart[cat][shopKey].t || 0;
+                let smartTarget = parseFloat(latestFlatData[`link4_smart|||${cat}|||${shopKey}|||t`]);
+                if (smartTarget > 0) {
+                    shopTargetRaw = smartTarget;
                     if (isRevenue) shopTargetRaw = shopTargetRaw / 1000;
                 } else {
                     const compRow = userConfig.compData.find(c => c.group === cat);
@@ -557,18 +580,19 @@
                 let personalTarget = 0; let targetUsedRaw = 0;
                 staffWithRate.forEach(s => {
                     let rawShare = shopTargetRaw * parseFloat(s.rate) / 100;
-                    if (s.name === selectedStaffName) personalTarget = Math.round(rawShare) * finalMult;
+                    if (LOCAL_BI_ENGINE.matchStaffNameSafe(s.name, selectedStaffName)) personalTarget = Math.round(rawShare) * finalMult;
                     targetUsedRaw += rawShare;
                 });
                 if (staffNoRate.length > 0) {
                     let remainingRaw = Math.max(0, shopTargetRaw - targetUsedRaw);
                     let rawPerStaff = remainingRaw / staffNoRate.length;
-                    staffNoRate.forEach(s => { if(s.name === selectedStaffName) personalTarget = Math.round(rawPerStaff) * finalMult; });
+                    staffNoRate.forEach(s => { if (LOCAL_BI_ENGINE.matchStaffNameSafe(s.name, selectedStaffName)) personalTarget = Math.round(rawPerStaff) * finalMult; });
                 }
 
-                let actual = 0;
-                if (currentShopStaffData[selectedStaffName] && currentShopStaffData[selectedStaffName][cat] !== undefined) { actual = currentShopStaffData[selectedStaffName][cat]; } 
-                else if (staffRealMap[selectedStaffName] && staffRealMap[selectedStaffName][cat] !== undefined) { actual = staffRealMap[selectedStaffName][cat]; }
+                let actual = LOCAL_BI_ENGINE.getSafeFlatVal(latestFlatData, `link6|||${shopKey}|||competition|||`, `|||${cat}`, selectedStaffName, 3);
+                if (actual === 0) {
+                    actual = LOCAL_BI_ENGINE.getSafeFlatVal(latestFlatData, "staffReal|||", `|||${cat}`, selectedStaffName, 1);
+                }
 
                 let pctComplete = personalTarget > 0 ? (actual / personalTarget * 100) : (actual > 0 ? 100 : 0);
                 const forecastValue = (actual / daysPassed) * daysInMonth;
@@ -598,8 +622,9 @@
             return html;
         },
 
+        // BẢNG HÀNG NGÀY ĐỒNG BỘ FLAT DATA
         getNLNVDailyReport: (historyCache, configList, userConfig, selectedStaffName, shopIdx, daysPassed, daysInMonth) => {
-            const staffList = userConfig.staffList ||[];
+            const staffList = userConfig.staffList || [];
             const shopKey = `shop${shopIdx}`;
             const today = new Date();
             const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
@@ -608,7 +633,7 @@
             let validDates = Object.keys(historyCache).filter(d => {
                 const parts = d.split('/');
                 if (parts.length === 3) {
-                    const[dd, mm, yyyy] = parts;
+                    const [dd, mm, yyyy] = parts;
                     return mm === currentMonth && yyyy === currentYear && parseInt(dd) > 1;
                 }
                 return false;
@@ -623,19 +648,19 @@
             let usedRevTarget = 0;
             staffWithRate.forEach(s => {
                 const t = Math.round(shopRevTarget * parseFloat(s.rate) / 100);
-                if(s.name === selectedStaffName) personalRevTarget = t;
+                if (LOCAL_BI_ENGINE.matchStaffNameSafe(s.name, selectedStaffName)) personalRevTarget = t;
                 usedRevTarget += t;
             });
             if (staffNoRate.length > 0) {
                 const remain = Math.max(0, shopRevTarget - usedRevTarget);
                 const perStaff = Math.round(remain / staffNoRate.length);
-                staffNoRate.forEach(s => { if(s.name === selectedStaffName) personalRevTarget = perStaff; });
+                staffNoRate.forEach(s => { if (LOCAL_BI_ENGINE.matchStaffNameSafe(s.name, selectedStaffName)) personalRevTarget = perStaff; });
             }
 
-            let activeGroups = userConfig.compData ? userConfig.compData.map(c => c.group) :[];
-            const rowData =[];
+            let activeGroups = userConfig.compData ? userConfig.compData.map(c => c.group) : [];
+            const rowData = [];
 
-            rowData.push({ name: 'Doanh thu', flatKey: `link6|||${shopKey}|||revenue|||${selectedStaffName}|||dtqd`, target: personalRevTarget });
+            rowData.push({ name: 'Doanh thu', prefix: `link6|||${shopKey}|||revenue|||`, suffix: "|||dtqd", index: 3, target: personalRevTarget });
 
             activeGroups.forEach(cat => {
                 const configItem = configList.find(c => c.short === cat) || { type: 'soluong' };
@@ -645,9 +670,9 @@
                 let shopTargetRaw = 0;
                 if (validDates.length > 0) {
                     const latestDate = validDates[validDates.length - 1];
-                    const historyKey = `link4_smart|||${cat}|||${shopKey}|||t`;
-                    if (historyCache[latestDate] && historyCache[latestDate][historyKey] !== undefined) {
-                        shopTargetRaw = parseFloat(historyCache[latestDate][historyKey]) || 0;
+                    let smartTarget = parseFloat(historyCache[latestDate][`link4_smart|||${cat}|||${shopKey}|||t`]);
+                    if (smartTarget > 0) {
+                        shopTargetRaw = smartTarget;
                         if (isRevenue) shopTargetRaw = shopTargetRaw / 1000;
                     } else {
                         const compRow = userConfig.compData.find(c => c.group === cat);
@@ -658,16 +683,16 @@
                 let personalTarget = 0; let targetUsedRaw = 0;
                 staffWithRate.forEach(s => {
                     let rawShare = shopTargetRaw * parseFloat(s.rate) / 100;
-                    if (s.name === selectedStaffName) personalTarget = Math.round(rawShare) * finalMult;
+                    if (LOCAL_BI_ENGINE.matchStaffNameSafe(s.name, selectedStaffName)) personalTarget = Math.round(rawShare) * finalMult;
                     targetUsedRaw += rawShare;
                 });
                 if (staffNoRate.length > 0) {
                     let remainingRaw = Math.max(0, shopTargetRaw - targetUsedRaw);
                     let rawPerStaff = remainingRaw / staffNoRate.length;
-                    staffNoRate.forEach(s => { if(s.name === selectedStaffName) personalTarget = Math.round(rawPerStaff) * finalMult; });
+                    staffNoRate.forEach(s => { if (LOCAL_BI_ENGINE.matchStaffNameSafe(s.name, selectedStaffName)) personalTarget = Math.round(rawPerStaff) * finalMult; });
                 }
 
-                rowData.push({ name: cat, flatKey: `link6|||${shopKey}|||competition|||${selectedStaffName}|||${cat}`, target: personalTarget });
+                rowData.push({ name: cat, prefix: `link6|||${shopKey}|||competition|||`, suffix: `|||${cat}`, index: 3, target: personalTarget });
             });
 
             let html = `<div class="nlnv-daily-wrapper"><table class="nlnv-daily-table"><thead><tr>`;
@@ -681,11 +706,12 @@
                 const bgClass = idx % 2 !== 0 ? 'background-color: #f9f9f9;' : '';
                 const targetDisplay = row.target === 0 ? '-' : LOCAL_BI_ENGINE.formatNumber(row.target);
 
-                let previousValue = 0; let dailyValues =[]; let cumulativeCurrent = 0;
+                let previousValue = 0; let dailyValues = []; let cumulativeCurrent = 0;
                 if (validDates.length > 0) {
                     validDates.forEach(d => {
                         const dayObj = historyCache[d] || {};
-                        let currentValue = parseFloat(dayObj[row.flatKey]) || 0;
+                        let currentValue = LOCAL_BI_ENGINE.getSafeFlatVal(dayObj, row.prefix, row.suffix, selectedStaffName, row.index);
+                        
                         let delta = currentValue - previousValue;
                         if (delta < 0) delta = 0;
                         dailyValues.push(delta); previousValue = currentValue; cumulativeCurrent = currentValue;
@@ -709,7 +735,6 @@
             return html;
         }
     };
-
     const runTool = () => {
         const appWrapper = document.getElementById('bc-app-wrapper');
         if (appWrapper) { 
