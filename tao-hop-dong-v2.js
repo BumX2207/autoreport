@@ -61,7 +61,7 @@
     `;
 
     // ===============================================================
-    // BỘ BIÊN DỊCH SỐ TIỀN SANG CHỮ TIẾNG VIỆT CHUẨN VĂN PHÒNG (Sử dụng 'ngàn' đồng bộ miền Nam/Office)
+    // BỘ BIÊN DỊCH SỐ TIỀN SANG CHỮ TIẾNG VIỆT CHUẨN VĂN PHÒNG
     // ===============================================================
     const convertNumberToWords = (number) => {
         if (number === 0) return "Không";
@@ -131,7 +131,7 @@
     const padZero = (num) => String(num).padStart(2, '0');
 
     // ===============================================================
-    // TIỆN ÍCH CHÍNH (ACTION VỚI DỮ LIỆU ĐƯỢC CHUẨN HÓA THEO PDF MẪU)
+    // TIỆN ÍCH CHÍNH (ACTION HƠN 100% HIỆU SUẤT TRUY VẤN)
     // ===============================================================
     const runTool = () => {
         let app = document.getElementById('con-app');
