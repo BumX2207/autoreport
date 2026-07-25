@@ -498,9 +498,9 @@
                     printHtml += `
                         <!-- TRANG 1 HỢP ĐỒNG -->
                         <div class="page-break">
-                            <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 13.5pt; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 15px;">
-                                <div style="text-transform: uppercase;">HỢP ĐỒNG MUA BÁN</div>
-                                <div>Số./No.: ${conNo}</div>
+                            <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 15px;">
+                                <div style="font-weight: bold; font-size: 15pt; text-transform: uppercase; letter-spacing: 0.5px;">HỢP ĐỒNG MUA BÁN</div>
+                                <div style="font-weight: bold; font-size: 11.5pt; margin-top: 5px;">Số./No.: ${conNo}</div>
                             </div>
                             
                             <div style="margin-bottom: 15px;">Hôm nay, ngày ${dateHd} (“Ngày Ký”), chúng tôi gồm có:</div>
