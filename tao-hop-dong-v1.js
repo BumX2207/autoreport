@@ -906,4 +906,4 @@
         bgColor: "#6c5ce7",
         action: runTool
     };
-})(context);
+})
