@@ -170,7 +170,7 @@
                         <div class="con-row" style="gap:15px;">
                             <div class="con-col con-group" style="min-width: 180px;">
                                 <label>Số Hợp Đồng</label>
-                                <input type="text" id="con-no" value="0104-2026/KD-ĐMX/HĐMB">
+                                <input type="text" id="con-no" value="0104-2026 /KD-ĐMX/HĐMB">
                             </div>
                             <div class="con-col con-group" style="min-width: 180px;">
                                 <label>Ngày Ký Hợp Đồng</label>
@@ -498,9 +498,11 @@
                     printHtml += `
                         <!-- TRANG 1 HỢP ĐỒNG -->
                         <div class="page-break">
-                            <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 15px;">
-                                <div style="font-weight: bold; font-size: 15pt; text-transform: uppercase; letter-spacing: 0.5px;">HỢP ĐỒNG MUA BÁN</div>
-                                <div style="font-weight: bold; font-size: 11.5pt; margin-top: 5px;">Số./No.: ${conNo}</div>
+                            <div style="text-align: center; font-weight: bold; font-size: 16pt; text-transform: uppercase; margin-bottom: 3px; letter-spacing: 0.5px;">
+                                HỢP ĐỒNG MUA BÁN
+                            </div>
+                            <div style="text-align: center; font-size: 11.5pt; margin-bottom: 15px;">
+                                Số./No.: ${conNo}
                             </div>
                             
                             <div style="margin-bottom: 15px;">Hôm nay, ngày ${dateHd} (“Ngày Ký”), chúng tôi gồm có:</div>
