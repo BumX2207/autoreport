@@ -450,51 +450,15 @@
                                     background: #ffffff !important;
                                     -webkit-print-color-adjust: exact;
                                     print-color-adjust: exact;
-                                    margin: 0 !important;
-                                    padding: 0 !important;
                                 }
-                                /* Style cho Hợp Đồng Mua Bán - Hệ bảng cấu trúc ngắt trang chống tràn */
-                                .print-layout-table {
-                                    width: 100% !important;
-                                    border-collapse: collapse !important;
-                                    border: none !important;
-                                    background: #ffffff !important;
+                                body { 
+                                    margin: 0; 
+                                    padding: 0; 
+                                    width: 21cm; 
+                                    height: 29.7cm; 
+                                    font-family: "Times New Roman", Times, serif; 
+                                    color: #000; 
                                 }
-                                .print-layout-table td {
-                                    border: none !important;
-                                }
-                                .print-content {
-                                    padding: 1.2cm 1.2cm 0 1.8cm !important;
-                                    font-size: 10pt !important;
-                                    line-height: 1.3 !important;
-                                    background: #ffffff !important;
-                                    font-family: "Times New Roman", Times, serif;
-                                }
-                                .footer-spacer {
-                                    height: 1.6cm !important;
-                                }
-                                .fixed-footer-note {
-                                    position: fixed !important;
-                                    bottom: 0.6cm !important;
-                                    left: 1.8cm !important;
-                                    right: 1.2cm !important;
-                                    height: 30px !important;
-                                    border-top: 1px solid black !important;
-                                    display: flex !important;
-                                    justify-content: space-between !important;
-                                    align-items: center !important;
-                                    font-size: 9.5pt !important;
-                                    font-weight: bold !important;
-                                    background: #ffffff !important;
-                                    z-index: 9999 !important;
-                                    font-family: "Times New Roman", Times, serif;
-                                }
-                                .print-page-num::after {
-                                    counter-increment: page;
-                                    content: counter(page);
-                                }
-
-                                /* Style cho Biên Bản Nghiệm Thu & Thanh Lý */
                                 .page-container { 
                                     width: 21cm !important; 
                                     min-height: 29.5cm !important; 
@@ -503,9 +467,9 @@
                                     display: flex !important;
                                     flex-direction: column !important;
                                     justify-content: space-between !important;
-                                    padding: 1cm 1.2cm 1.8cm 1.6cm !important; 
+                                    padding: 1cm 1.2cm 1.5cm 1.6cm !important; 
                                     page-break-after: always !important; 
-                                    page-break-inside: avoid !important;
+                                    page-break-inside: auto !important;
                                     background: #ffffff !important;
                                     background-color: #ffffff !important;
                                     box-shadow: none !important;
@@ -513,7 +477,6 @@
                                     border: none !important;
                                     font-size: 10pt !important;
                                     line-height: 1.25 !important;
-                                    position: relative !important;
                                 }
                                 .info-table, .prod-table, .sig-table {
                                     page-break-inside: avoid !important;
@@ -529,7 +492,7 @@
                                     margin-top: 3px !important;
                                     margin-bottom: 3px !important;
                                 }
-                                .absolute-footer-note {
+                                .footer-note {
                                     position: absolute !important;
                                     bottom: 0.6cm !important;
                                     left: 1.6cm !important;
@@ -552,43 +515,6 @@
                                 padding: 20px; 
                                 margin: 0; 
                             }
-                            
-                            /* Screen style fallback */
-                            .print-layout-table {
-                                width: 21cm;
-                                margin: 0 auto 30px auto;
-                                background: #fff;
-                                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                                border-collapse: collapse;
-                            }
-                            .print-content {
-                                padding: 1.5cm 1.5cm 0 2cm;
-                            }
-                            .footer-spacer {
-                                height: 1.6cm;
-                            }
-                            .fixed-footer-note {
-                                display: none;
-                            }
-                            @media screen {
-                                .fixed-footer-note {
-                                    display: flex;
-                                    width: 21cm;
-                                    margin: -30px auto 30px auto;
-                                    padding-top: 5px;
-                                    border-top: 1px solid black;
-                                    justify-content: space-between;
-                                    font-size: 9.5pt;
-                                    font-weight: bold;
-                                    background: #fff;
-                                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                                    box-sizing: border-box;
-                                    padding-left: 2cm;
-                                    padding-right: 1.5cm;
-                                    height: 40px;
-                                }
-                            }
-
                             .page-container { 
                                 width: 21cm; 
                                 height: 29.7cm; 
@@ -609,9 +535,11 @@
                             .doc-subtitle { text-align: center; font-size: 11pt; margin-bottom: 15px; }
                             .section-title { font-weight: bold; margin-top: 12px; margin-bottom: 5px; text-transform: uppercase; }
                             
+                            /* Styles for main contract table info mapping */
                             .info-table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 15px; }
                             .info-table td { border: 1px solid black; padding: 5px 8px; vertical-align: top; }
                             
+                            /* Product table styling */
                             .prod-table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px; }
                             .prod-table th, .prod-table td { border: 1px solid black; padding: 6px 8px; }
                             .prod-table th { text-align: center; font-weight: bold; background-color: #f2f2f2; }
@@ -652,245 +580,241 @@
                     }
 
                     printHtml += `
-                        <table class="print-layout-table">
-                            <tbody>
-                                <tr>
-                                    <td>
-                                        <div class="print-content">
-                                            <!-- === LOGICAL PAGE 1 === -->
-                                            <div style="text-align: center; font-weight: bold; font-size: 16pt; text-transform: uppercase; margin-bottom: 3px; letter-spacing: 0.5px;">
-                                                HỢP ĐỒNG MUA BÁN
+                        <!-- TRANG 1 HỢP ĐỒNG -->
+                        <div class="page-container">
+                            <div class="page-content">
+                                <div style="text-align: center; font-weight: bold; font-size: 16pt; text-transform: uppercase; margin-bottom: 3px; letter-spacing: 0.5px;">
+                                    HỢP ĐỒNG MUA BÁN
+                                </div>
+                                <div style="text-align: center; font-size: 11.5pt; margin-bottom: 15px;">
+                                    Số./No.: ${conNo}
+                                </div>
+                                
+                                <div style="margin-bottom: 15px;">Hôm nay, ngày ${dateHd} (“Ngày Ký”), chúng tôi gồm có:</div>
+
+                                <table class="info-table">
+                                    <tr>
+                                        <td colspan="3" class="bold" style="background-color:#f2f2f2;">BÊN MUA (BÊN A): ${aName}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 25%; font-weight: bold;">Trụ sở đăng ký</td>
+                                        <td style="width: 2%; text-align: center; font-weight: bold;">:</td>
+                                        <td>${aAddress}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight: bold;">Mã số thuế</td>
+                                        <td style="text-align: center; font-weight: bold;">:</td>
+                                        <td>${aTax}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight: bold;">Điện thoại – Fax</td>
+                                        <td style="text-align: center; font-weight: bold;">:</td>
+                                        <td>${aPhone}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight: bold;">Số tài khoản</td>
+                                        <td style="text-align: center; font-weight: bold;">:</td>
+                                        <td>${aBankAcc}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight: bold;">Tại ngân hàng</td>
+                                        <td style="text-align: center; font-weight: bold;">:</td>
+                                        <td>${aBankName}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight: bold;">Đại diện bởi</td>
+                                        <td style="text-align: center; font-weight: bold;">:</td>
+                                        <td>
+                                            <div class="bold">${aRep}</div>
+                                            <div>Chức vụ : ${aRole}</div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3" class="bold" style="background-color:#f2f2f2;">BÊN BÁN (BÊN B): ${bName}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight: bold;">Trụ sở đăng ký</td>
+                                        <td style="text-align: center; font-weight: bold;">:</td>
+                                        <td>${bAddress}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight: bold;">Tên Siêu Thị</td>
+                                        <td style="text-align: center; font-weight: bold;">:</td>
+                                        <td>${bStore}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight: bold;">Mã số thuế</td>
+                                        <td style="text-align: center; font-weight: bold;">:</td>
+                                        <td>${bTax}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight: bold;">Điện thoại – Fax</td>
+                                        <td style="text-align: center; font-weight: bold;">:</td>
+                                        <td>${bPhone}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight: bold;">Số tài khoản</td>
+                                        <td style="text-align: center; font-weight: bold;">:</td>
+                                        <td>${bBankAcc}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight: bold;">Tại ngân hàng</td>
+                                        <td style="text-align: center; font-weight: bold;">:</td>
+                                        <td>${bBankName}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight: bold;">Đại diện bởi</td>
+                                        <td style="text-align: center; font-weight: bold;">:</td>
+                                        <td>
+                                            <div class="bold">Ông/Bà: ${bRepHd}</div>
+                                            <div class="bold">Chức vụ: ${bRoleHd}</div>
+                                            <div class="italic">(${bUq})</div>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <div style="margin-top: 10px; margin-bottom: 10px;">Sau khi bàn bạc, hai bên thống nhất ký kết Hợp Đồng Mua Bán này (“Hợp Đồng”) với các điều khoản sau:</div>
+
+                                <div class="bold">ĐIỀU 1: ĐỐI TƯỢNG HỢP ĐỒNG</div>
+                                <div style="text-align: justify; margin-bottom: 10px;">
+                                    1.1 Bên B đồng ý bán và Bên A đồng ý mua sản phẩm của Bên B với chủng loại, tính năng kỹ thuật và giá cả cụ thể như sau (Sau đây gọi tắt là “Sản Phẩm”):
+                                </div>
+
+                                <table class="prod-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 6%;">STT</th>
+                                            <th style="width: 50%;">Tên Sản Phẩm</th>
+                                            <th style="width: 10%;">Số Lượng</th>
+                                            <th style="width: 17%;">Đơn Giá (VND) - Đã bao gồm thuế VAT 8%</th>
+                                            <th style="width: 17%;">Thành Tiền (VND) - Đã bao gồm 8% VAT</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${productRowsHtml}
+                                        <tr class="bold" style="background:#f2f2f2;">
+                                            <td colspan="4" class="text-right">Tổng tiền (bao gồm VAT 8%)</td>
+                                            <td class="text-right">${UTILS.formatNumber(finalTotal)}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <div class="bold" style="margin-bottom: 10px;">Tổng giá bằng chữ: ${finalWords}</div>
+
+                                <div style="text-align: justify; font-size: 10.5pt;">
+                                    1.2 Tổng tiền mà Bên A phải thanh toán cho Bên B theo quy định tại Điều 1.1 (“Giá Sản Phẩm”) là chi phí cố định không thay đổi trong suốt quá trình thực hiện Hợp Đồng và chưa bao gồm phần chi phí vật tư và/hoặc các chi phí khác phát sinh khi lắp đặt (nếu có). Các chi phí phát sinh này được quy định tại website: <b>https://www.dienmayxanh.com/kinh-nghiem-hay/chinh-sach-giao-hang-lap-dat-1261528</b> vào thời điểm lắp đặt.
+                                </div>
+                            </div>
+                            <div class="footer-note">
+                                <span>Pháp Chế_111124_ĐMX_VN</span>
+                                <span>1</span>
+                            </div>
+                        </div>
+
+                        <!-- TRANG 2 HỢP ĐỒNG -->
+                        <div class="page-container">
+                            <div class="page-content">
+                                <div style="text-align: justify;">
+                                    1.3 Giá Sản Phẩm được Bên A thanh toán cho Bên B theo quy định tại Điều 3 Hợp Đồng này. Chi phí vật tư và/hoặc chi phí khác phát sinh khi lắp đặt sẽ được thanh toán bằng tiền mặt/chuyển khoản ngay khi Bên B lắp đặt cho Bên A hoàn tất.<br><br>
+                                    1.4 Trường hợp Sản Phẩm cần lắp đặt thì Bên A chịu trách nhiệm chuẩn bị các thiết bị sau và điểm chờ đấu nối cụ thể:<br>
+                                    a. Điểm lắp đặt cao trên 4m (tính từ sàn) thì Bên A tự chuẩn bị thang phù hợp hoặc dàn giáo.<br>
+                                    b. Liên quan đến thiết bị cần cấp và thoát nước, Bên A cần phải có ống âm chờ cấp vào máy và ra các thiết bị sẵn tại vị trí lắp máy (Đầu chờ nước cấp, đầu ra nóng, Bộ pha nước ra nóng lạnh, ống thoát nước, v.v.).
+                                </div>
+
+                                <div class="bold" style="margin-top: 15px;">ĐIỀU 2: THỜI GIAN VÀ ĐIỀU KIỆN GIAO HÀNG</div>
+                                <div style="text-align: justify;">
+                                    2.1 Thời gian giao hàng: Bên B thực hiện giao Hàng hóa trong vòng ba (03) ngày kể từ ngày Bên B được Ngân hàng báo có đúng, đầy đủ Giá Sản Phẩm vào tài khoản ngân hàng của Bên B. Trường hợp ngày Ngân hàng báo có rơi vào thứ bảy, chủ nhật hoặc ngày nghỉ Lễ, Tết theo quy định pháp luật thì thời hạn bắt đầu được tính từ ngày làm việc tiếp theo hoặc theo thông báo của Bên B (tùy trường hợp).<br><br>
+                                    2.2 Địa điểm giao hàng: ${aAddress}
+                                </div>
+
+                                <div class="bold" style="margin-top: 15px;">ĐIỀU 3: THANH TOÁN</div>
+                                <div style="text-align: justify;">
+                                    3.1 Bên A sẽ thanh toán 100% Giá Sản Phẩm cho Bên B bằng cách chuyển khoản vào tài khoản ngân hàng của Bên B sau khi Hợp Đồng được ký kết. Thông tin tài khoản ngân hàng của Bên B:<br>
+                                    <div style="margin-left: 20px;">
+                                        - Chủ tài khoản: <b>CÔNG TY CỔ PHẦN ĐẦU TƯ ĐIỆN MÁY XANH</b><br>
+                                        - Số tài khoản: <b>${bBankAcc}</b><br>
+                                        - Tại ngân hàng: <b>${bBankName}</b>
+                                    </div><br>
+                                    3.2 Xuất hóa đơn:<br>
+                                    a. Giao hàng khu vực Hồ Chí Minh: Bên B trực tiếp giao hàng và xuất hóa đơn cho Bên A.<br>
+                                    b. Giao hàng ở tỉnh: Bên B ủy quyền cho Chi nhánh của Bên B tại các tỉnh giao hàng và xuất hóa đơn cho Bên A.
+                                </div>
+
+                                <div class="bold" style="margin-top: 15px;">ĐIỀU 4: CHÍNH SÁCH BẢO HÀNH, ĐỔI, TRẢ SẢN PHẨM VÀ HOÀN TIỀN</div>
+                                <div style="text-align: justify; font-size: 10.5pt;">
+                                    4.1 Sản Phẩm do Bên B cung cấp sẽ được bảo hành theo tiêu chuẩn của nhà sản xuất hoặc nhà phân phối. Sản phẩm sẽ được kích hoạt bảo hành ngay tại thời điểm Bên B xuất hóa đơn VAT cho Bên A.<br>
+                                    4.2 Chính sách bảo hành của nhà sản xuất hoặc nhà phân phối được đính kèm theo sản phẩm hoặc có thể tham khảo tại website của nhà sản xuất hoặc nhà phân phối.<br>
+                                    4.3 Nếu sản phẩm có áp dụng chính sách đổi trả hoặc hoàn tiền của Bên B vui lòng xem chính sách tại website https://www.dienmayxanh.com/bao-hanh-doi-tra (hoặc https://www.thegioididong.com/chinh-sach-bao-hanh-san-pham áp dụng tùy từng loại sản phẩm). Bên B bảo lưu quyền thay đổi các chính sách này tại từng thời điểm và không cần sự chấp thuận của Bên A.<br>
+                                    4.4 Cho mục đích bảo hành hoặc khiếu nại về Sản Phẩm Bên A liên hệ số điện thoại như được công khai tại website https://www.dienmayxanh.com/ hoặc https://www.thegioididong.com/.
+                                </div>
+
+                                <div class="bold" style="margin-top: 15px;">ĐIỀU 5: NGHĨA VỤ CỦA CÁC BÊN</div>
+                                <div style="text-align: justify;">
+                                    5.1 Nghĩa vụ của Bên A:<br>
+                                    a. Cam kết không tiết lộ cho bên thứ ba bất kỳ thông tin nào có liên quan đến việc thực hiện Hợp đồng này.<br>
+                                    b. Thanh toán cho Bên B Giá Sản Phẩm và chi phí vật tư đúng và đầy đủ theo quy định Hợp Đồng này.<br>
+                                    c. Bên A đồng ý với chính sách thu thập thông tin và xử lý dữ liệu của Bên B theo các điều khoản và điều kiện đã được quy định tại website https://www.dienmayxanh.com/ hoặc https://www.thegioididong.com/.<br>
+                                    d. Thực hiện đúng các cam kết được ghi trong Hợp Đồng này.<br><br>
+                                    5.2 Nghĩa vụ của Bên B:<br>
+                                    a. Đảm bảo cung cấp Sản Phẩm mới 100%, đúng với quy cách, giá cả, thời gian giao hàng theo cam kết tại Điều 1 và Điều 2 Hợp Đồng này.<br>
+                                    b. Cam kết không tiết lộ cho bên thứ ba bất kỳ thông tin nào có liên quan đến việc thực hiện Hợp đồng này.<br>
+                                    c. Thực hiện đúng các cam kết được ghi trong Hợp Đồng này.
+                                </div>
+                            </div>
+                            <div class="footer-note">
+                                <span>Pháp Chế_111124_ĐMX_VN</span>
+                                <span>2</span>
+                            </div>
+                        </div>
+
+                        <!-- TRANG 3 HỢP ĐỒNG -->
+                        <div class="page-container">
+                            <div class="page-content">
+                                <div class="bold">ĐIỀU 6: THỜI HẠN HỢP ĐỒNG</div>
+                                <div style="text-align: justify; margin-bottom: 15px;">
+                                    Hợp Đồng này tự động chấm dứt trong trường hợp sau:<br>
+                                    6.1 Bên A không thực hiện nghĩa vụ thanh toán trong vòng 10 (mười) ngày làm việc kể từ Ngày Ký thì xem như Bên A không có nhu cầu mua hàng và Bên B không có nghĩa vụ giữ giá, hàng hóa cho Bên A. Khi đó, Hợp Đồng tự động chấm dứt. Trường hợp Bên A tiếp tục mua hàng thì Hai Bên phải ký lại Hợp Đồng mới; hoặc<br>
+                                    6.2 Bên A đã thực hiện nghĩa vụ thanh toán: Hợp đồng này tự động chấm dứt sau khi Hai Bên hoàn thành các nghĩa vụ quy định tại Hợp Đồng. Riêng các điều khoản về bảo hành vẫn có hiệu lực cho đến khi hết thời hạn bảo hành theo quy định của nhà sản xuất hoặc nhà phân phối.
+                                </div>
+
+                                <div class="bold">ĐIỀU 7: CAM KẾT CHỐNG THAM NHŨNG</div>
+                                <div style="text-align: justify; margin-bottom: 15px;">
+                                    7.1 Các bên cam kết tuân thủ luật pháp chống tham nhũng, không tham gia bất kỳ hành vi hối lộ, gian lận, tặng quà hoặc gợi ý tặng quà dưới bất kỳ hình thức nào cho nhân viên của bên kia nhằm đạt được lợi ích quá trình thực hiện hợp đồng. Nếu phát hiện vi phạm, bên bị vi phạm có quyền chấm dứt hợp đồng ngay lập tức, và bên vi phạm phải bồi thường mọi thiệt hại phát sinh.<br>
+                                    7.2 Bên Mua chỉ thanh toán số tiền đã được các bên thống nhất trong hợp đồng hoặc các văn bản thanh toán liên quan. Bên Mua chỉ thanh toán vào tài khoản của Bên Bán như trên và không được thanh toán vào bất kỳ tài khoản cá nhân/tổ chức nào khác.
+                                </div>
+
+                                <div class="bold">ĐIỀU 8: CAM KẾT CHUNG</div>
+                                <div style="text-align: justify; margin-bottom: 30px;">
+                                    8.1 Hai Bên cam kết thực hiện đúng những điều ghi trên Hợp Đồng này. Mọi sự thay đổi trong Hợp Đồng này phải lập phụ lục hợp đồng và phải có chữ ký xác nhận của cả Hai Bên. Nếu một trong Hai Bên cố ý vi phạm các điều khoản của Hợp Đồng này sẽ phải chịu trách nhiệm về các hành vi vi phạm đó.<br>
+                                    8.2 Trong trường hợp xảy ra tranh chấp, hai bên cố gắng cùng nhau bàn bạc các biện pháp giải quyết trên tinh thần hòa giải, có thiện chí và hợp tác. Nếu vẫn không thể thống nhất cách giải quyết thì hai bên sẽ đưa vụ việc ra Tòa án có thẩm quyền giải quyết, toàn bộ chi phí xét xử do bên thua chịu.<br>
+                                    8.3 Hợp đồng này được lập thành 02 (hai) bản, mỗi bên giữ 01 (một) bản có giá trị pháp lý như nhau.
+                                </div>
+
+                                <table class="sig-table" style="width:100%; border:none; margin-top:40px;">
+                                    <tr style="border:none;">
+                                        <td style="width: 50%; text-align: center; font-weight: bold; border:none; padding: 0;">
+                                            Đại Diện Bên A<br><br><br><br><br><br>
+                                            <div style="font-weight: normal; text-align: left; padding-left: 20px;">
+                                                <b>Bởi:</b> ${aName}<br>
+                                                <b>Tên:</b> ${aRep}<br>
+                                                <b>Chức vụ:</b> ${aRole}
                                             </div>
-                                            <div style="text-align: center; font-size: 11.5pt; margin-bottom: 15px;">
-                                                Số./No.: ${conNo}
+                                        </td>
+                                        <td style="width: 50%; text-align: center; font-weight: bold; border:none; padding: 0;">
+                                            Đại Diện Bên B<br><br><br><br><br><br>
+                                            <div style="font-weight: normal; text-align: left; padding-left: 20px;">
+                                                <b>Bởi:</b> ${bName}<br>
+                                                <b>Bà :</b> ${bRepHd}<br>
+                                                <b>Chức vụ:</b> ${bRoleHd.toUpperCase()}
                                             </div>
-                                            
-                                            <div style="margin-bottom: 15px;">Hôm nay, ngày ${dateHd} (“Ngày Ký”), chúng tôi gồm có:</div>
-
-                                            <table class="info-table">
-                                                <tr>
-                                                    <td colspan="3" class="bold" style="background-color:#f2f2f2;">BÊN MUA (BÊN A): ${aName}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td style="width: 25%; font-weight: bold;">Trụ sở đăng ký</td>
-                                                    <td style="width: 2%; text-align: center; font-weight: bold;">:</td>
-                                                    <td>${aAddress}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td style="font-weight: bold;">Mã số thuế</td>
-                                                    <td style="text-align: center; font-weight: bold;">:</td>
-                                                    <td>${aTax}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td style="font-weight: bold;">Điện thoại – Fax</td>
-                                                    <td style="text-align: center; font-weight: bold;">:</td>
-                                                    <td>${aPhone}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td style="font-weight: bold;">Số tài khoản</td>
-                                                    <td style="text-align: center; font-weight: bold;">:</td>
-                                                    <td>${aBankAcc}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td style="font-weight: bold;">Tại ngân hàng</td>
-                                                    <td style="text-align: center; font-weight: bold;">:</td>
-                                                    <td>${aBankName}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td style="font-weight: bold;">Đại diện bởi</td>
-                                                    <td style="text-align: center; font-weight: bold;">:</td>
-                                                    <td>
-                                                        <div class="bold">${aRep}</div>
-                                                        <div>Chức vụ : ${aRole}</div>
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td colspan="3" class="bold" style="background-color:#f2f2f2;">BÊN BÁN (BÊN B): ${bName}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td style="font-weight: bold;">Trụ sở đăng ký</td>
-                                                    <td style="text-align: center; font-weight: bold;">:</td>
-                                                    <td>${bAddress}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td style="font-weight: bold;">Tên Siêu Thị</td>
-                                                    <td style="text-align: center; font-weight: bold;">:</td>
-                                                    <td>${bStore}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td style="font-weight: bold;">Mã số thuế</td>
-                                                    <td style="text-align: center; font-weight: bold;">:</td>
-                                                    <td>${bTax}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td style="font-weight: bold;">Điện thoại – Fax</td>
-                                                    <td style="text-align: center; font-weight: bold;">:</td>
-                                                    <td>${bPhone}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td style="font-weight: bold;">Số tài khoản</td>
-                                                    <td style="text-align: center; font-weight: bold;">:</td>
-                                                    <td>${bBankAcc}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td style="font-weight: bold;">Tại ngân hàng</td>
-                                                    <td style="text-align: center; font-weight: bold;">:</td>
-                                                    <td>${bBankName}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td style="font-weight: bold;">Đại diện bởi</td>
-                                                    <td style="text-align: center; font-weight: bold;">:</td>
-                                                    <td>
-                                                        <div class="bold">Ông/Bà: ${bRepHd}</div>
-                                                        <div class="bold">Chức vụ: ${bRoleHd}</div>
-                                                        <div class="italic">(${bUq})</div>
-                                                    </td>
-                                                </tr>
-                                            </table>
-
-                                            <div style="margin-top: 10px; margin-bottom: 10px;">Sau khi bàn bạc, hai bên thống nhất ký kết Hợp Đồng Mua Bán này (“Hợp Đồng”) với các điều khoản sau:</div>
-
-                                            <div class="bold">ĐIỀU 1: ĐỐI TƯỢNG HỢP ĐỒNG</div>
-                                            <div style="text-align: justify; margin-bottom: 10px;">
-                                                1.1 Bên B đồng ý bán và Bên A đồng ý mua sản phẩm của Bên B với chủng loại, tính năng kỹ thuật và giá cả cụ thể như sau (Sau đây gọi tắt là “Sản Phẩm”):
-                                            </div>
-
-                                            <table class="prod-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th style="width: 6%;">STT</th>
-                                                        <th style="width: 50%;">Tên Sản Phẩm</th>
-                                                        <th style="width: 10%;">Số Lượng</th>
-                                                        <th style="width: 17%;">Đơn Giá (VND) - Đã bao gồm thuế VAT 8%</th>
-                                                        <th style="width: 17%;">Thành Tiền (VND) - Đã bao gồm 8% VAT</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    ${productRowsHtml}
-                                                    <tr class="bold" style="background:#f2f2f2;">
-                                                        <td colspan="4" class="text-right">Tổng tiền (bao gồm VAT 8%)</td>
-                                                        <td class="text-right">${UTILS.formatNumber(finalTotal)}</td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-
-                                            <div class="bold" style="margin-bottom: 10px;">Tổng giá bằng chữ: ${finalWords}</div>
-
-                                            <div style="text-align: justify; font-size: 10pt; margin-bottom:15px;">
-                                                1.2 Tổng tiền mà Bên A phải thanh toán cho Bên B theo quy định tại Điều 1.1 (“Giá Sản Phẩm”) là chi phí cố định không thay đổi trong suốt quá trình thực hiện Hợp Đồng và chưa bao gồm phần chi phí vật tư và/hoặc các chi phí khác phát sinh khi lắp đặt (nếu có). Các chi phí phát sinh này được quy định tại website: <b>https://www.dienmayxanh.com/kinh-nghiem-hay/chinh-sach-giao-hang-lap-dat-1261528</b> vào thời điểm lắp đặt.
-                                            </div>
-
-                                            <!-- ÉP NGẮT TRANG TỰ NHIÊN SAU ĐIỀU 1.2 -->
-                                            <div style="page-break-after: always; height: 1px; clear: both;"></div>
-
-                                            <!-- === LOGICAL PAGE 2 === -->
-                                            <div style="text-align: justify;">
-                                                1.3 Giá Sản Phẩm được Bên A thanh toán cho Bên B theo quy định tại Điều 3 Hợp Đồng này. Chi phí vật tư và/hoặc chi phí khác phát sinh khi lắp đặt sẽ được thanh toán bằng tiền mặt/chuyển khoản ngay khi Bên B lắp đặt cho Bên A hoàn tất.<br><br>
-                                                1.4 Trường hợp Sản Phẩm cần lắp đặt thì Bên A chịu trách nhiệm chuẩn bị các thiết bị sau và điểm chờ đấu nối cụ thể:<br>
-                                                a. Điểm lắp đặt cao trên 4m (tính từ sàn) thì Bên A tự chuẩn bị thang phù hợp hoặc dàn giáo.<br>
-                                                b. Liên quan đến thiết bị cần cấp và thoát nước, Bên A cần phải có ống âm chờ cấp vào máy và ra các thiết bị sẵn tại vị trí lắp máy (Đầu chờ nước cấp, đầu ra nóng, Bộ pha nước ra nóng lạnh, ống thoát nước, v.v.).
-                                            </div>
-
-                                            <div class="bold" style="margin-top: 15px;">ĐIỀU 2: THỜI GIAN VÀ ĐIỀU KIỆN GIAO HÀNG</div>
-                                            <div style="text-align: justify;">
-                                                2.1 Thời gian giao hàng: Bên B thực hiện giao Hàng hóa trong vòng ba (03) ngày kể từ ngày Bên B được Ngân hàng báo có đúng, đầy đủ Giá Sản Phẩm vào tài khoản ngân hàng của Bên B. Trường hợp ngày Ngân hàng báo có rơi vào thứ bảy, chủ nhật hoặc ngày nghỉ Lễ, Tết theo quy định pháp luật thì thời hạn bắt đầu được tính từ ngày làm việc tiếp theo hoặc theo thông báo của Bên B (tùy trường hợp).<br><br>
-                                                2.2 Địa điểm giao hàng: ${aAddress}
-                                            </div>
-
-                                            <div class="bold" style="margin-top: 15px;">ĐIỀU 3: THANH TOÁN</div>
-                                            <div style="text-align: justify;">
-                                                3.1 Bên A sẽ thanh toán 100% Giá Sản Phẩm cho Bên B bằng cách chuyển khoản vào tài khoản ngân hàng của Bên B sau khi Hợp Đồng được ký kết. Thông tin tài khoản ngân hàng của Bên B:<br>
-                                                <div style="margin-left: 20px;">
-                                                    - Chủ tài khoản: <b>CÔNG TY CỔ PHẦN ĐẦU TƯ ĐIỆN MÁY XANH</b><br>
-                                                    - Số tài khoản: <b>${bBankAcc}</b><br>
-                                                    - Tại ngân hàng: <b>${bBankName}</b>
-                                                </div><br>
-                                                3.2 Xuất hóa đơn:<br>
-                                                a. Giao hàng khu vực Hồ Chí Minh: Bên B trực tiếp giao hàng và xuất hóa đơn cho Bên A.<br>
-                                                b. Giao hàng ở tỉnh: Bên B ủy quyền cho Chi nhánh của Bên B tại các tỉnh giao hàng và xuất hóa đơn cho Bên A.
-                                            </div>
-
-                                            <div class="bold" style="margin-top: 15px;">ĐIỀU 4: CHÍNH SÁCH BẢO HÀNH, ĐỔI, TRẢ SẢN PHẨM VÀ HOÀN TIỀN</div>
-                                            <div style="text-align: justify; font-size: 10pt;">
-                                                4.1 Sản Phẩm do Bên B cung cấp sẽ được bảo hành theo tiêu chuẩn của nhà sản xuất hoặc nhà phân phối. Sản phẩm sẽ được kích hoạt bảo hành ngay tại thời điểm Bên B xuất hóa đơn VAT cho Bên A.<br>
-                                                4.2 Chính sách bảo hành của nhà sản xuất hoặc nhà phân phối được đính kèm theo sản phẩm hoặc có thể tham khảo tại website của nhà sản xuất hoặc nhà phân phối.<br>
-                                                4.3 Nếu sản phẩm có áp dụng chính sách đổi trả hoặc hoàn tiền của Bên B vui lòng xem chính sách tại website https://www.dienmayxanh.com/bao-hanh-doi-tra (hoặc https://www.thegioididong.com/chinh-sach-bao-hanh-san-pham áp dụng tùy từng loại sản phẩm). Bên B bảo lưu quyền thay đổi các chính sách này tại từng thời điểm và không cần sự chấp thuận của Bên A.<br>
-                                                4.4 Cho mục đích bảo hành hoặc khiếu nại về Sản Phẩm Bên A liên hệ số điện thoại như được công khai tại website https://www.dienmayxanh.com/ hoặc https://www.thegioididong.com/.
-                                            </div>
-
-                                            <div class="bold" style="margin-top: 15px;">ĐIỀU 5: NGHĨA VỤ CỦA CÁC BÊN</div>
-                                            <div style="text-align: justify;">
-                                                5.1 Nghĩa vụ của Bên A:<br>
-                                                a. Cam kết không tiết lộ cho bên thứ ba bất kỳ thông tin nào có liên quan đến việc thực hiện Hợp đồng này.<br>
-                                                b. Thanh toán cho Bên B Giá Sản Phẩm và chi phí vật tư đúng và đầy đủ theo quy định Hợp Đồng này.<br>
-                                                c. Bên A đồng ý với chính sách thu thập thông tin và xử lý dữ liệu của Bên B theo các điều khoản và điều kiện đã được quy định tại website https://www.dienmayxanh.com/ hoặc https://www.thegioididong.com/.<br>
-                                                d. Thực hiện đúng các cam kết được ghi trong Hợp Đồng này.<br><br>
-                                                5.2 Nghĩa vụ của Bên B:<br>
-                                                a. Đảm bảo cung cấp Sản Phẩm mới 100%, đúng với quy cách, giá cả, thời gian giao hàng theo cam kết tại Điều 1 và Điều 2 Hợp Đồng này.<br>
-                                                b. Cam kết không tiết lộ cho bên thứ ba bất kỳ thông tin nào có liên quan đến việc thực hiện Hợp đồng này.<br>
-                                                c. Thực hiện đúng các cam kết được ghi trong Hợp Đồng này.
-                                            </div>
-
-                                            <!-- ÉP NGẮT TRANG TỰ NHIÊN SAU ĐIỀU 5 -->
-                                            <div style="page-break-after: always; height: 1px; clear: both;"></div>
-
-                                            <!-- === LOGICAL PAGE 3 === -->
-                                            <div class="bold">ĐIỀU 6: THỜI HẠN HỢP ĐỒNG</div>
-                                            <div style="text-align: justify; margin-bottom: 15px;">
-                                                Hợp Đồng này tự động chấm dứt trong trường hợp sau:<br>
-                                                6.1 Bên A không thực hiện nghĩa vụ thanh toán trong vòng 10 (mười) ngày làm việc kể từ Ngày Ký thì xem như Bên A không có nhu cầu mua hàng và Bên B không có nghĩa vụ giữ giá, hàng hóa cho Bên A. Khi đó, Hợp Đồng tự động chấm dứt. Trường hợp Bên A tiếp tục mua hàng thì Hai Bên phải ký lại Hợp Đồng mới; hoặc<br>
-                                                6.2 Bên A đã thực hiện nghĩa vụ thanh toán: Hợp đồng này tự động chấm dứt sau khi Hai Bên hoàn thành các nghĩa vụ quy định tại Hợp Đồng. Riêng các điều khoản về bảo hành vẫn có hiệu lực cho đến khi hết thời hạn bảo hành theo quy định của nhà sản xuất hoặc nhà phân phối.
-                                            </div>
-
-                                            <div class="bold">ĐIỀU 7: CAM KẾT CHỐNG THAM NHŨNG</div>
-                                            <div style="text-align: justify; margin-bottom: 15px;">
-                                                7.1 Các bên cam kết tuân thủ luật pháp chống tham nhũng, không tham gia bất kỳ hành vi hối lộ, gian lận, tặng quà hoặc gợi ý tặng quà dưới bất kỳ hình thức nào cho nhân viên của bên kia nhằm đạt được lợi ích quá trình thực hiện hợp đồng. Nếu phát hiện vi phạm, bên bị vi phạm có quyền chấm dứt hợp đồng ngay lập tức, và bên vi phạm phải bồi thường mọi thiệt hại phát sinh.<br>
-                                                7.2 Bên Mua chỉ thanh toán số tiền đã được các bên thống nhất trong hợp đồng hoặc các văn bản thanh toán liên quan. Bên Mua chỉ thanh toán vào tài khoản của Bên Bán như trên và không được thanh toán vào bất kỳ tài khoản cá nhân/tổ chức nào khác.
-                                            </div>
-
-                                            <div class="bold">ĐIỀU 8: CAM KẾT CHUNG</div>
-                                            <div style="text-align: justify; margin-bottom: 30px;">
-                                                8.1 Hai Bên cam kết thực hiện đúng những điều ghi trên Hợp Đồng này. Mọi sự thay đổi trong Hợp Đồng này phải lập phụ lục hợp đồng và phải có chữ ký xác nhận của cả Hai Bên. Nếu một trong Hai Bên cố ý vi phạm các điều khoản của Hợp Đồng này sẽ phải chịu trách nhiệm về các hành vi vi phạm đó.<br>
-                                                8.2 Trong trường hợp xảy ra tranh chấp, hai bên cố gắng cùng nhau bàn bạc các biện pháp giải quyết trên tinh thần hòa giải, có thiện chí và hợp tác. Nếu vẫn không thể thống nhất cách giải quyết thì hai bên sẽ đưa vụ việc ra Tòa án có thẩm quyền giải quyết, toàn bộ chi phí xét xử do bên thua chịu.<br>
-                                                8.3 Hợp đồng này được lập thành 02 (hai) bản, mỗi bên giữ 01 (một) bản có giá trị pháp lý như nhau.
-                                            </div>
-
-                                            <table class="sig-table" style="width:100%; border:none; margin-top:40px;">
-                                                <tr style="border:none;">
-                                                    <td style="width: 50%; text-align: center; font-weight: bold; border:none; padding: 0;">
-                                                        Đại Diện Bên A<br><br><br><br><br><br>
-                                                        <div style="font-weight: normal; text-align: left; padding-left: 20px;">
-                                                            <b>Bởi:</b> ${aName}<br>
-                                                            <b>Tên:</b> ${aRep}<br>
-                                                            <b>Chức vụ:</b> ${aRole}
-                                                        </div>
-                                                    </td>
-                                                    <td style="width: 50%; text-align: center; font-weight: bold; border:none; padding: 0;">
-                                                        Đại Diện Bên B<br><br><br><br><br><br>
-                                                        <div style="font-weight: normal; text-align: left; padding-left: 20px;">
-                                                            <b>Bởi:</b> ${bName}<br>
-                                                            <b>Bà :</b> ${bRepHd}<br>
-                                                            <b>Chức vụ:</b> ${bRoleHd.toUpperCase()}
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            </table>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td>
-                                        <div class="footer-spacer"></div>
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
-
-                        <div class="fixed-footer-note">
-                            <span>Pháp Chế_111124_ĐMX_VN</span>
-                            <span class="print-page-num"></span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="footer-note">
+                                <span>Pháp Chế_111124_ĐMX_VN</span>
+                                <span>3</span>
+                            </div>
                         </div>
                     `;
                 }
@@ -972,7 +896,7 @@
                                     </tr>
                                 </table>
                             </div>
-                            <div class="absolute-footer-note">
+                            <div style="border-top: 1px solid #ccc; padding-top: 5px; display: flex; justify-content: space-between; font-size: 10pt; font-family: sans-serif;">
                                 <span style="font-weight: bold; color: #111;">dienmayxanh</span>
                                 <span>1/2</span>
                             </div>
@@ -1041,7 +965,7 @@
                                     </tr>
                                 </table>
                             </div>
-                            <div class="absolute-footer-note">
+                            <div style="border-top: 1px solid #ccc; padding-top: 5px; display: flex; justify-content: space-between; font-size: 10pt; font-family: sans-serif;">
                                 <span style="font-weight: bold; color: #111;">dienmayxanh</span>
                                 <span>2/2</span>
                             </div>
