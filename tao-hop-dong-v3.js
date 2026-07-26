@@ -158,7 +158,7 @@
                 <div class="con-header">
                     <div class="con-logo">
                         <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 15H7v-2h10v2zm0-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-                        Tạo Hợp Đồng & Thanh Lý Báo Cáo
+                        Tạo Hợp Đồng
                     </div>
                     <button class="con-btn-close" id="con-btn-close">✖</button>
                 </div>
