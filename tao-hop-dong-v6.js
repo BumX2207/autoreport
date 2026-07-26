@@ -461,14 +461,15 @@
                                 }
                                 .page-container { 
                                     width: 21cm !important; 
-                                    height: 29.6cm !important; 
+                                    min-height: 29.5cm !important; 
+                                    height: auto !important; 
                                     box-sizing: border-box !important;
                                     display: flex !important;
                                     flex-direction: column !important;
                                     justify-content: space-between !important;
-                                    padding: 1cm 1.2cm 0.8cm 1.6cm !important; 
+                                    padding: 1cm 1.2cm 1.5cm 1.6cm !important; 
                                     page-break-after: always !important; 
-                                    page-break-inside: avoid !important;
+                                    page-break-inside: auto !important;
                                     background: #ffffff !important;
                                     background-color: #ffffff !important;
                                     box-shadow: none !important;
@@ -476,6 +477,9 @@
                                     border: none !important;
                                     font-size: 10pt !important;
                                     line-height: 1.25 !important;
+                                }
+                                .info-table, .prod-table, .sig-table {
+                                    page-break-inside: avoid !important;
                                 }
                                 .info-table td, .prod-table th, .prod-table td {
                                     padding: 4px 6px !important;
@@ -487,6 +491,19 @@
                                 p, div {
                                     margin-top: 3px !important;
                                     margin-bottom: 3px !important;
+                                }
+                                .footer-note {
+                                    position: absolute !important;
+                                    bottom: 0.6cm !important;
+                                    left: 1.6cm !important;
+                                    right: 1.2cm !important;
+                                    height: 30px !important;
+                                    border-top: 1px solid black !important;
+                                    display: flex !important;
+                                    justify-content: space-between !important;
+                                    font-size: 9.5pt !important;
+                                    font-weight: bold !important;
+                                    background: #ffffff !important;
                                 }
                             }
                             body { 
@@ -509,6 +526,7 @@
                                 display: flex;
                                 flex-direction: column;
                                 justify-content: space-between;
+                                position: relative;
                             }
                             .page-content {
                                 flex-grow: 1;
@@ -772,7 +790,7 @@
                                     8.3 Hợp đồng này được lập thành 02 (hai) bản, mỗi bên giữ 01 (một) bản có giá trị pháp lý như nhau.
                                 </div>
 
-                                <table style="width:100%; border:none; margin-top:40px;">
+                                <table class="sig-table" style="width:100%; border:none; margin-top:40px;">
                                     <tr style="border:none;">
                                         <td style="width: 50%; text-align: center; font-weight: bold; border:none; padding: 0;">
                                             Đại Diện Bên A<br><br><br><br><br><br>
@@ -871,7 +889,7 @@
                                     Biên bản được làm thành 2 bản, có giá trị như nhau. Mỗi bên giữ 1 bản.
                                 </div>
 
-                                <table style="width:100%; border:none; margin-top:40px;">
+                                <table class="sig-table" style="width:100%; border:none; margin-top:40px;">
                                     <tr style="border:none;">
                                         <td style="width: 50%; text-align: center; font-weight: bold; border:none; padding: 0;">ĐẠI DIỆN BÊN A</td>
                                         <td style="width: 50%; text-align: center; font-weight: bold; border:none; padding: 0;">ĐẠI DIỆN BÊN B</td>
@@ -921,7 +939,7 @@
                                     </table>
                                 </div>
 
-                                <div style="margin-bottom: 15px;">Hai bên thống nhất thỏa thuận nội dung thanh lý hợp đồng như sau:</div>
+                                <div style="margin-bottom: 15px;">Hai bên thống nhất ký kết biên bản nghiệm thu bàn giao và thanh lý hợp đồng với các điều khoản sau:</div>
 
                                 <div class="bold">Điều 1: Nội dung giao dịch</div>
                                 <div style="margin-left: 20px; margin-bottom: 15px; line-height: 1.5;">
@@ -940,7 +958,7 @@
                                     Thanh lý hợp đồng này được làm thành 2 bản, có giá trị như nhau. Mỗi bên giữ 1 bản.
                                 </div>
 
-                                <table style="width:100%; border:none; margin-top:40px;">
+                                <table class="sig-table" style="width:100%; border:none; margin-top:40px;">
                                     <tr style="border:none;">
                                         <td style="width: 50%; text-align: center; font-weight: bold; border:none; padding: 0;">ĐẠI DIỆN BÊN A</td>
                                         <td style="width: 50%; text-align: center; font-weight: bold; border:none; padding: 0;">ĐẠI DIỆN BÊN B</td>
