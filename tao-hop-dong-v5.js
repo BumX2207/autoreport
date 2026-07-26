@@ -303,7 +303,7 @@
             // Đóng app
             app.querySelector('#con-btn-close').onclick = () => { app.style.display = 'none'; };
 
-            // Dropdown chọn siêu thị Bên B (Sửa lỗi lặp tiền tố ĐMM_)
+            // Dropdown chọn siêu thị Bên B
             app.querySelector('#con-b-select').onchange = (e) => {
                 const selVal = e.target.value;
                 if (!selVal) return;
@@ -445,32 +445,53 @@
                                 margin: 0;
                             }
                             @media print {
+                                html, body {
+                                    background-color: #ffffff !important;
+                                    background: #ffffff !important;
+                                    -webkit-print-color-adjust: exact;
+                                    print-color-adjust: exact;
+                                }
                                 body { 
                                     margin: 0; 
                                     padding: 0; 
                                     width: 21cm; 
                                     height: 29.7cm; 
                                     font-family: "Times New Roman", Times, serif; 
-                                    font-size: 11pt; 
                                     color: #000; 
-                                    background: #fff;
                                 }
                                 .page-container { 
-                                    width: 21cm; 
-                                    height: 29.7cm; 
-                                    box-sizing: border-box;
-                                    display: flex;
-                                    flex-direction: column;
-                                    justify-content: space-between;
-                                    padding: 1.2cm 1.2cm 1cm 1.8cm; 
-                                    page-break-after: always; 
-                                    page-break-inside: avoid;
-                                    background: #fff;
+                                    width: 21cm !important; 
+                                    height: 29.6cm !important; 
+                                    box-sizing: border-box !important;
+                                    display: flex !important;
+                                    flex-direction: column !important;
+                                    justify-content: space-between !important;
+                                    padding: 1cm 1.2cm 0.8cm 1.6cm !important; 
+                                    page-break-after: always !important; 
+                                    page-break-inside: avoid !important;
+                                    background: #ffffff !important;
+                                    background-color: #ffffff !important;
+                                    box-shadow: none !important;
+                                    margin: 0 !important;
+                                    border: none !important;
+                                    font-size: 10pt !important;
+                                    line-height: 1.25 !important;
+                                }
+                                .info-table td, .prod-table th, .prod-table td {
+                                    padding: 4px 6px !important;
+                                }
+                                .section-title {
+                                    margin-top: 8px !important;
+                                    margin-bottom: 3px !important;
+                                }
+                                p, div {
+                                    margin-top: 3px !important;
+                                    margin-bottom: 3px !important;
                                 }
                             }
                             body { 
                                 font-family: "Times New Roman", Times, serif; 
-                                font-size: 11.5pt; 
+                                font-size: 11pt; 
                                 line-height: 1.35; 
                                 color: #000; 
                                 background: #f0f2f5; 
