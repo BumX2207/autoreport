@@ -41,7 +41,7 @@
     let MANAGER_EMPLOYEES = [];
     let MANAGER_SHEET_ID = ""; 
     let EDITING_EMP_INDEX = -1; 
-    let EMP_NLNV_DATA_CACHE = null; // Bộ nhớ đệm dữ liệu cá nhân tránh tải lại nhiều lần
+    let EMP_NLNV_DATA_CACHE = null; // Khởi tạo bộ nhớ đệm cho dữ liệu nhân viên
 
     const parseDateFromSheet = (rawStr) => {
         if (!rawStr) return { date: "N/A", time: "N/A", month: "N/A" };
@@ -227,7 +227,6 @@
         .nlnv-label { color: #0070C0; font-weight: bold; }
         .nlnv-val-red { color: #FF0000; font-weight: bold; }
         .nlnv-val-green { color: #00B050; font-weight: bold; }
-        .nlnv-val-red { color: #FF0000; font-weight: bold; }
         .nlnv-row-bg { background-color: #f9f9f9; }
         .nlnv-item-name { color: #0070C0; font-weight: bold; text-align: left; padding-left: 8px !important; }
         .nlnv-footer-blue { background-color: #00B0F0; color: white; font-weight: bold; font-size: 14px; }
@@ -929,7 +928,7 @@
                                 <option value="overview">Bảng Tổng Quan</option>
                                 <option value="daily">Bảng Hàng Ngày</option>
                             </select>
-                            <button id="btn-refresh-emp-nlnv" class="bc-btn btn-primary" style="width: auto; padding: 10px 15px; font-size: 13px; margin: 0;">🔄 Làm mới</button>
+                            <button id="btn-refresh-emp-nlnv" class="bc-btn btn-primary" style="width: auto; padding: 6px 12px; font-size: 12px; margin: 0;">🔄 Tải lại</button>
                         </div>
                         <div id="emp-nlnv-scroll-wrapper">
                             <div id="emp-nlnv-container" style="padding:10px;"></div>
@@ -1451,7 +1450,7 @@
             if(loadText) loadText.innerText = "Đang xử lý quỹ...";
             try {
                 const payload = Object.assign({ action: action, sheetId: sheetId }, dataObj);
-                let res = await universalFetch({ method: "POST", url: API_URL_HISTORY, data: JSON.stringify(payload) });
+                let res = await universalFetch({ method: "POST", url: API_URL_MAIN, data: JSON.stringify(payload) });
                 let json = JSON.parse(res);
                 if (json.status === 'success') { if (callback) callback(); } else alert("Lỗi: " + json.msg);
             } catch (e) { alert("Lỗi kết nối Server!"); }
@@ -2195,7 +2194,7 @@
             $('emp-nlnv-view-select').onchange = (e) => { renderNLNV(e.target.value); };
             if ($('btn-refresh-emp-nlnv')) {
                 $('btn-refresh-emp-nlnv').onclick = () => {
-                    EMP_NLNV_DATA_CACHE = null; // Xóa bộ nhớ đệm để tải lại từ Cloud
+                    EMP_NLNV_DATA_CACHE = null; // Xóa cache để ép buộc tải mới
                     renderNLNV($('emp-nlnv-view-select').value);
                 };
             }
@@ -2214,7 +2213,7 @@
                 } = EMP_NLNV_DATA_CACHE;
 
                 const renderOverviewTable = () => {
-                    // FIX: Truyền dữ liệu phẳng latestFlatData thay vì latestDataCache
+                    // SỬA LỖI: Chuyển tham số sang dạng phẳng (latestFlatData) thay vì unflattened (latestDataCache)
                     container.innerHTML = LOCAL_BI_ENGINE.getNLNVReport(latestFlatData, mockConfigList, mgrConfig, staffNameInBI, shopIdx, daysPassed, daysInMonth, latestDate, window.emp_nlnv_is_sorted);
                     setupTableZoom('emp-nlnv-container');
 
@@ -2240,7 +2239,7 @@
             const renderNLNV = async (mode) => {
                 const container = $('emp-nlnv-container');
                 
-                // Nếu đã có dữ liệu trong bộ nhớ đệm, tiến hành render trực tiếp ngay lập tức
+                // Nếu dữ liệu đã có trong cache, tái sử dụng nhanh thay vì gọi API liên tục
                 if (EMP_NLNV_DATA_CACHE) {
                     renderNLNVFromCache(container, mode);
                     return;
@@ -2296,7 +2295,7 @@
                     const customEOM = parseInt(mgrConfig.eom);
                     const daysInMonth = (customEOM >= 1 && customEOM <= 31) ? customEOM : new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
 
-                    // Ghi nhận dữ liệu vào bộ nhớ đệm
+                    // Lưu trữ dữ liệu cấu hình vào Cache trong một phiên hoạt động
                     EMP_NLNV_DATA_CACHE = {
                         historyCache,
                         mockConfigList,
