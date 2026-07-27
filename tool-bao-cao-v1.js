@@ -384,12 +384,13 @@
     // HÀM LÀM TRÒN MỤC TIÊU THÔNG MINH THEO YÊU CẦU
     roundTargetSmart: (val, isRevenue) => {
         if (!val || isNaN(val)) return 0;
-        if (isRevenue) {
-            // Làm tròn ngược lên mốc 1,000 gần nhất (Ví dụ: 1,234 -> 2,000 hoặc 1,567 -> 2,000)
+        // Tự động nhận diện nhóm doanh thu nếu giá trị > 150 hoặc có cờ isRevenue
+        if (val > 150 || isRevenue) {
+            // Làm tròn ngược lên mốc 1,000 gần nhất (Ví dụ: 13,456 -> 14,000 hoặc 49,450 -> 50,000)
             return Math.ceil(val / 1000) * 1000;
         } else {
-            // Làm tròn thường đối với thi đua số lượng (Ví dụ: 1.2 -> 1 hoặc 1.5 -> 2)
-            return Math.round(val);
+            // Làm tròn ngược cho số lượng (Ví dụ: 1.2 -> 2 hoặc 1.0 -> 1)
+            return Math.ceil(val);
         }
     },
 
