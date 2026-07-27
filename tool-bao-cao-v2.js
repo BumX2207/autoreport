@@ -24,7 +24,7 @@
     // ===============================================================
     const API_URL_MAIN = "https://script.google.com/macros/s/AKfycbxDRSg1JDNTyuYf2TSQovNIWhFk3ls9hPXxtRSMu6xI0oNjql53nJo0G1H5k1b2iq_3/exec";   
     const API_URL_REPORT = "https://script.google.com/macros/s/AKfycbz7Hv3FHg_XiA4g-ujO8bXkLSohxzB2HJvzsOuKZbkGdr-E33vwRJB4Etl-eCtKh5Xr/exec";
-    const API_URL_HISTORY = "https://script.google.com/macros/s/AKfycbzL5rzzxfhSdX0WmFR3sB-BBimZgRsHT8v2RyzfZ_7RWG-bYuRTEwqmbwiImyZY5KgC/exec";
+    const API_URL_HISTORY = "https://script.google.com/macros/s/AKfycbL5rzzxfhSdX0WmFR3sB-BBimZgRsHT8v2RyzfZ_7RWG-bYuRTEwqmbwiImyZY5KgC/exec";
     const API_URL_APP = "https://script.google.com/macros/s/AKfycbyE_RBQ_svQjPaA6z_3EBtcxyIjmubhRyLq_eHxfdE-1pVbszxZul1Ow1n8SNfGFyvq/exec";
     const API_URL_QUIZ = "https://script.google.com/macros/s/AKfycbyOW59XLUqZmwNpotAO1V3b8X-Yzesp88vEghVn_wyCAFmXw0KkLUO2p5NtPqLdpE6R/exec"; 
 
@@ -38,9 +38,10 @@
     let CURRENT_USER = IS_MANAGER ? SYSTEM_USER : "";
     
     let EMP_SESSION = JSON.parse(localStorage.getItem('bc_emp_session') || "null");
-    let MANAGER_EMPLOYEES =[];
+    let MANAGER_EMPLOYEES = [];
     let MANAGER_SHEET_ID = ""; 
     let EDITING_EMP_INDEX = -1; 
+    let EMP_NLNV_DATA_CACHE = null; // Bộ nhớ đệm dữ liệu cá nhân tránh tải lại nhiều lần
 
     const parseDateFromSheet = (rawStr) => {
         if (!rawStr) return { date: "N/A", time: "N/A", month: "N/A" };
@@ -226,6 +227,7 @@
         .nlnv-label { color: #0070C0; font-weight: bold; }
         .nlnv-val-red { color: #FF0000; font-weight: bold; }
         .nlnv-val-green { color: #00B050; font-weight: bold; }
+        .nlnv-val-red { color: #FF0000; font-weight: bold; }
         .nlnv-row-bg { background-color: #f9f9f9; }
         .nlnv-item-name { color: #0070C0; font-weight: bold; text-align: left; padding-left: 8px !important; }
         .nlnv-footer-blue { background-color: #00B0F0; color: white; font-weight: bold; font-size: 14px; }
@@ -922,11 +924,12 @@
 
                 <div class="bc-tab-content" id="tab-emp-personal">
                     <div class="bc-screen-body">
-                        <div class="filter-row" style="justify-content: center; margin-bottom: 20px;">
-                            <select id="emp-nlnv-view-select" style="max-width: 250px; font-weight: bold; text-align: center; background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8;">
+                        <div class="filter-row" style="justify-content: center; margin-bottom: 20px; align-items: center; gap: 10px;">
+                            <select id="emp-nlnv-view-select" style="max-width: 200px; font-weight: bold; text-align: center; background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; margin-bottom: 0;">
                                 <option value="overview">Bảng Tổng Quan</option>
                                 <option value="daily">Bảng Hàng Ngày</option>
                             </select>
+                            <button id="btn-refresh-emp-nlnv" class="bc-btn btn-primary" style="width: auto; padding: 10px 15px; font-size: 13px; margin: 0;">🔄 Làm mới</button>
                         </div>
                         <div id="emp-nlnv-scroll-wrapper">
                             <div id="emp-nlnv-container" style="padding:10px;"></div>
@@ -2190,9 +2193,59 @@
             };
 
             $('emp-nlnv-view-select').onchange = (e) => { renderNLNV(e.target.value); };
+            if ($('btn-refresh-emp-nlnv')) {
+                $('btn-refresh-emp-nlnv').onclick = () => {
+                    EMP_NLNV_DATA_CACHE = null; // Xóa bộ nhớ đệm để tải lại từ Cloud
+                    renderNLNV($('emp-nlnv-view-select').value);
+                };
+            }
+
+            const renderNLNVFromCache = (container, mode) => {
+                const {
+                    historyCache,
+                    mockConfigList,
+                    mgrConfig,
+                    staffNameInBI,
+                    shopIdx,
+                    daysPassed,
+                    daysInMonth,
+                    latestDate,
+                    latestFlatData
+                } = EMP_NLNV_DATA_CACHE;
+
+                const renderOverviewTable = () => {
+                    // FIX: Truyền dữ liệu phẳng latestFlatData thay vì latestDataCache
+                    container.innerHTML = LOCAL_BI_ENGINE.getNLNVReport(latestFlatData, mockConfigList, mgrConfig, staffNameInBI, shopIdx, daysPassed, daysInMonth, latestDate, window.emp_nlnv_is_sorted);
+                    setupTableZoom('emp-nlnv-container');
+
+                    const sortBtn = document.getElementById('tgdd-sort-btn-nlnv-emp');
+                    if (sortBtn) {
+                        sortBtn.onclick = () => {
+                            window.emp_nlnv_is_sorted = !window.emp_nlnv_is_sorted; 
+                            renderOverviewTable(); 
+                        };
+                    }
+                };
+
+                if (mode === 'overview') { 
+                    window.emp_nlnv_is_sorted = false; 
+                    renderOverviewTable(); 
+                } 
+                else if (mode === 'daily') { 
+                    container.innerHTML = LOCAL_BI_ENGINE.getNLNVDailyReport(historyCache, mockConfigList, mgrConfig, staffNameInBI, shopIdx, daysPassed, daysInMonth); 
+                    setupTableZoom('emp-nlnv-container');
+                }
+            };
 
             const renderNLNV = async (mode) => {
                 const container = $('emp-nlnv-container');
+                
+                // Nếu đã có dữ liệu trong bộ nhớ đệm, tiến hành render trực tiếp ngay lập tức
+                if (EMP_NLNV_DATA_CACHE) {
+                    renderNLNVFromCache(container, mode);
+                    return;
+                }
+
                 container.innerHTML = `<div style="text-align:center; padding:20px; color:#000;"><div class="spinner" style="margin:0 auto; border-top-color:#0070C0;"></div><br>Đang tải dữ liệu...</div>`;
                 
                 if (!EMP_SESSION.mgrUser) { container.innerHTML = `<div style="color:red; text-align:center;">Lỗi: Không xác định được Quản lý của bạn. Vui lòng đăng nhập lại.</div>`; return; }
@@ -2243,27 +2296,22 @@
                     const customEOM = parseInt(mgrConfig.eom);
                     const daysInMonth = (customEOM >= 1 && customEOM <= 31) ? customEOM : new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
 
-                    const renderOverviewTable = () => {
-                        container.innerHTML = LOCAL_BI_ENGINE.getNLNVReport(latestDataCache, mockConfigList, mgrConfig, staffNameInBI, shopIdx, daysPassed, daysInMonth, latestDate, window.emp_nlnv_is_sorted);
-                        setupTableZoom('emp-nlnv-container');
-
-                        const sortBtn = document.getElementById('tgdd-sort-btn-nlnv-emp');
-                        if (sortBtn) {
-                            sortBtn.onclick = () => {
-                                window.emp_nlnv_is_sorted = !window.emp_nlnv_is_sorted; 
-                                renderOverviewTable(); 
-                            };
-                        }
+                    // Ghi nhận dữ liệu vào bộ nhớ đệm
+                    EMP_NLNV_DATA_CACHE = {
+                        historyCache,
+                        mockConfigList,
+                        mgrConfig,
+                        staffNameInBI,
+                        shopIdx,
+                        daysPassed,
+                        daysInMonth,
+                        latestDate,
+                        latestFlatData,
+                        latestDataCache
                     };
 
-                    if (mode === 'overview') { 
-                        window.emp_nlnv_is_sorted = false; 
-                        renderOverviewTable(); 
-                    } 
-                    else if (mode === 'daily') { 
-                        container.innerHTML = LOCAL_BI_ENGINE.getNLNVDailyReport(historyCache, mockConfigList, mgrConfig, staffNameInBI, shopIdx, daysPassed, daysInMonth); 
-                        setupTableZoom('emp-nlnv-container');
-                    }
+                    renderNLNVFromCache(container, mode);
+
                 } catch (e) { container.innerHTML = `<div style="color:red; text-align:center; padding: 20px;">Lỗi: ${e.message}</div>`; }
             };
 
