@@ -409,12 +409,12 @@
         const staffWithRate = shopStaffGroup.filter(s => s.rate && parseFloat(s.rate) > 0);
         const staffNoRate = shopStaffGroup.filter(s => !s.rate || parseFloat(s.rate) <= 0);
 
-        // BỘ CHIA TARGET DOANH THU CÁ NHÂN
+        // BỘ CHIA TARGET DOANH THU CÁ NHÂN (LÀM TRÒN THƯỜNG VỀ SỐ NGUYÊN)
         let revTargetMap = {};
         let usedTarget = 0;
         staffWithRate.forEach(s => {
             const t = Math.round(shopRevTarget * parseFloat(s.rate) / 100);
-            const roundedT = LOCAL_BI_ENGINE.roundTargetSmart(t, true); // Áp dụng làm tròn ngược lên
+            const roundedT = Math.round(t); // Làm tròn thông thường về số nguyên
             if (LOCAL_BI_ENGINE.matchStaffNameSafe(s.name, selectedStaffName)) personalRevTarget = roundedT;
             revTargetMap[s.name] = roundedT;
             usedTarget += t;
@@ -422,7 +422,7 @@
         if (staffNoRate.length > 0) {
             const remain = Math.max(0, shopRevTarget - usedTarget);
             const perStaff = Math.round(remain / staffNoRate.length);
-            const roundedPerStaff = LOCAL_BI_ENGINE.roundTargetSmart(perStaff, true); // Áp dụng làm tròn ngược lên
+            const roundedPerStaff = Math.round(perStaff); // Làm tròn thông thường về số nguyên
             staffNoRate.forEach(s => { 
                 if (LOCAL_BI_ENGINE.matchStaffNameSafe(s.name, selectedStaffName)) personalRevTarget = roundedPerStaff; 
                 revTargetMap[s.name] = roundedPerStaff;
@@ -670,14 +670,14 @@
         let usedRevTarget = 0;
         staffWithRate.forEach(s => {
             const t = Math.round(shopRevTarget * parseFloat(s.rate) / 100);
-            const roundedT = LOCAL_BI_ENGINE.roundTargetSmart(t, true); // Áp dụng làm tròn ngược lên
+            const roundedT = Math.round(t); // Làm tròn thông thường về số nguyên
             if (LOCAL_BI_ENGINE.matchStaffNameSafe(s.name, selectedStaffName)) personalRevTarget = roundedT;
             usedRevTarget += t;
         });
         if (staffNoRate.length > 0) {
             const remain = Math.max(0, shopRevTarget - usedRevTarget);
             const perStaff = Math.round(remain / staffNoRate.length);
-            const roundedPerStaff = LOCAL_BI_ENGINE.roundTargetSmart(perStaff, true); // Áp dụng làm tròn ngược lên
+            const roundedPerStaff = Math.round(perStaff); // Làm tròn thông thường về số nguyên
             staffNoRate.forEach(s => { if (LOCAL_BI_ENGINE.matchStaffNameSafe(s.name, selectedStaffName)) personalRevTarget = roundedPerStaff; });
         }
 
