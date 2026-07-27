@@ -24,7 +24,7 @@
     // ===============================================================
     const API_URL_MAIN = "https://script.google.com/macros/s/AKfycbxDRSg1JDNTyuYf2TSQovNIWhFk3ls9hPXxtRSMu6xI0oNjql53nJo0G1H5k1b2iq_3/exec";   
     const API_URL_REPORT = "https://script.google.com/macros/s/AKfycbz7Hv3FHg_XiA4g-ujO8bXkLSohxzB2HJvzsOuKZbkGdr-E33vwRJB4Etl-eCtKh5Xr/exec";
-    const API_URL_HISTORY = "https://script.google.com/macros/s/AKfycbL5rzzxfhSdX0WmFR3sB-BBimZgRsHT8v2RyzfZ_7RWG-bYuRTEwqmbwiImyZY5KgC/exec";
+    const API_URL_HISTORY = "https://script.google.com/macros/s/AKfycbzL5rzzxfhSdX0WmFR3sB-BBimZgRsHT8v2RyzfZ_7RWG-bYuRTEwqmbwiImyZY5KgC/exec";
     const API_URL_APP = "https://script.google.com/macros/s/AKfycbyE_RBQ_svQjPaA6z_3EBtcxyIjmubhRyLq_eHxfdE-1pVbszxZul1Ow1n8SNfGFyvq/exec";
     const API_URL_QUIZ = "https://script.google.com/macros/s/AKfycbyOW59XLUqZmwNpotAO1V3b8X-Yzesp88vEghVn_wyCAFmXw0KkLUO2p5NtPqLdpE6R/exec"; 
 
@@ -38,10 +38,10 @@
     let CURRENT_USER = IS_MANAGER ? SYSTEM_USER : "";
     
     let EMP_SESSION = JSON.parse(localStorage.getItem('bc_emp_session') || "null");
-    let MANAGER_EMPLOYEES = [];
+    let MANAGER_EMPLOYEES =[];
     let MANAGER_SHEET_ID = ""; 
-    let EDITING_EMP_INDEX = -1; 
-    let EMP_NLNV_DATA_CACHE = null; // Khởi tạo bộ nhớ đệm cho dữ liệu nhân viên
+    let EDITING_EMP_INDEX = -1;
+    let EMP_NLNV_DATA_CACHE = null; 
 
     const parseDateFromSheet = (rawStr) => {
         if (!rawStr) return { date: "N/A", time: "N/A", month: "N/A" };
@@ -1450,7 +1450,7 @@
             if(loadText) loadText.innerText = "Đang xử lý quỹ...";
             try {
                 const payload = Object.assign({ action: action, sheetId: sheetId }, dataObj);
-                let res = await universalFetch({ method: "POST", url: API_URL_MAIN, data: JSON.stringify(payload) });
+                let res = await universalFetch({ method: "POST", url: API_URL_HISTORY, data: JSON.stringify(payload) });
                 let json = JSON.parse(res);
                 if (json.status === 'success') { if (callback) callback(); } else alert("Lỗi: " + json.msg);
             } catch (e) { alert("Lỗi kết nối Server!"); }
@@ -2194,13 +2194,109 @@
             $('emp-nlnv-view-select').onchange = (e) => { renderNLNV(e.target.value); };
             if ($('btn-refresh-emp-nlnv')) {
                 $('btn-refresh-emp-nlnv').onclick = () => {
-                    EMP_NLNV_DATA_CACHE = null; // Xóa cache để ép buộc tải mới
-                    renderNLNV($('emp-nlnv-view-select').value);
+                    EMP_NLNV_DATA_CACHE = null; // Xóa bộ nhớ đệm
+                    renderNLNV($('emp-nlnv-view-select').value); // Tải lại trực tiếp từ Cloud
                 };
             }
 
             const renderNLNVFromCache = (container, mode) => {
-                const {
+            const {
+                historyCache,
+                mockConfigList,
+                mgrConfig,
+                staffNameInBI,
+                shopIdx,
+                daysPassed,
+                daysInMonth,
+                latestDate,
+                latestFlatData
+            } = EMP_NLNV_DATA_CACHE;
+
+            const renderOverviewTable = () => {
+                // SỬA LỖI: Truyền đúng biến phẳng latestFlatData thay vì latestDataCache
+                container.innerHTML = LOCAL_BI_ENGINE.getNLNVReport(latestFlatData, mockConfigList, mgrConfig, staffNameInBI, shopIdx, daysPassed, daysInMonth, latestDate, window.emp_nlnv_is_sorted);
+                setupTableZoom('emp-nlnv-container');
+
+                const sortBtn = document.getElementById('tgdd-sort-btn-nlnv-emp');
+                if (sortBtn) {
+                    sortBtn.onclick = () => {
+                        window.emp_nlnv_is_sorted = !window.emp_nlnv_is_sorted; 
+                        renderOverviewTable(); 
+                    };
+                }
+            };
+
+            if (mode === 'overview') { 
+                window.emp_nlnv_is_sorted = false; 
+                renderOverviewTable(); 
+            } 
+            else if (mode === 'daily') { 
+                container.innerHTML = LOCAL_BI_ENGINE.getNLNVDailyReport(historyCache, mockConfigList, mgrConfig, staffNameInBI, shopIdx, daysPassed, daysInMonth); 
+                setupTableZoom('emp-nlnv-container');
+            }
+        };
+
+        const renderNLNV = async (mode) => {
+            const container = $('emp-nlnv-container');
+            
+            // Sử dụng dữ liệu đệm nếu có sẵn để chuyển đổi mượt mà không cần tải lại từ Cloud
+            if (EMP_NLNV_DATA_CACHE) {
+                renderNLNVFromCache(container, mode);
+                return;
+            }
+
+            container.innerHTML = `<div style="text-align:center; padding:20px; color:#000;"><div class="spinner" style="margin:0 auto; border-top-color:#0070C0;"></div><br>Đang tải dữ liệu...</div>`;
+            
+            if (!EMP_SESSION.mgrUser) { container.innerHTML = `<div style="color:red; text-align:center;">Lỗi: Không xác định được Quản lý của bạn. Vui lòng đăng nhập lại.</div>`; return; }
+
+            try {
+                let configRes = await universalFetch({ method: "GET", url: `${CONSTANTS.GSHEET.CONFIG_API}?user=${encodeURIComponent(EMP_SESSION.mgrUser)}` });
+                let configJson = JSON.parse(configRes);
+                if (configJson.status !== 'success' || !configJson.data) throw new Error("Không lấy được cấu hình Quản lý");
+                let mgrConfig = JSON.parse(configJson.data);
+                
+                let historySheetId = mgrConfig.historySheetId;
+                if (!historySheetId) throw new Error("Quản lý chưa cài đặt ID file Lịch sử.");
+
+                let historyRes = await universalFetch({ method: "GET", url: `${API_URL_HISTORY}?sheetId=${historySheetId}` });
+                let historyJson = JSON.parse(historyRes);
+                if (historyJson.status !== 'success' || !historyJson.data) throw new Error("Không lấy được dữ liệu Lịch sử.");
+                let historyCache = historyJson.data;
+
+                let mockConfigList = (mgrConfig.compData ||[]).map(c => {
+                    const groupNameLower = c.group.toLowerCase();
+                    const isRev = groupNameLower.includes('doanh thu') || groupNameLower.includes('doanhthu') || groupNameLower.includes('tiền') || groupNameLower.includes('đọc');
+                    return {
+                        short: c.group,
+                        type: isRev ? 'doanhthu' : 'soluong',
+                        channel: 'T'
+                    };
+                });
+
+                let parseDateStr = (dStr) => { let parts = dStr.split('/'); return new Date(parts[2], parts[1] - 1, parts[0]); };
+                let validDates = Object.keys(historyCache);
+                if (validDates.length === 0) throw new Error("Chưa có dữ liệu lịch sử nào.");
+                validDates.sort((a, b) => parseDateStr(a) - parseDateStr(b));
+                
+                let latestDate = validDates[validDates.length - 1];
+                let latestFlatData = historyCache[latestDate];
+                let latestDataCache = LOCAL_BI_ENGINE.unflattenObject(latestFlatData);
+
+                let staffNameInBI = EMP_SESSION.user; 
+                const staffListBI = mgrConfig.staffList ||[];
+                const matchedStaff = staffListBI.find(s => (EMP_SESSION.fn && s.name.includes(EMP_SESSION.fn)) || s.name.includes(EMP_SESSION.user));
+                let shopIdx = 1;
+                if (matchedStaff) { staffNameInBI = matchedStaff.name; shopIdx = matchedStaff.shopIdx; }
+
+                const today = new Date();
+                const currentDay = today.getDate();
+                const customDP = parseInt(mgrConfig.dp);
+                const daysPassed = (customDP >= 1 && customDP <= 31) ? customDP : (currentDay > 1 ? currentDay - 1 : 1);
+                const customEOM = parseInt(mgrConfig.eom);
+                const daysInMonth = (customEOM >= 1 && customEOM <= 31) ? customEOM : new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+
+                // Ghi nhận dữ liệu mới tải về vào bộ nhớ đệm
+                EMP_NLNV_DATA_CACHE = {
                     historyCache,
                     mockConfigList,
                     mgrConfig,
@@ -2209,110 +2305,14 @@
                     daysPassed,
                     daysInMonth,
                     latestDate,
-                    latestFlatData
-                } = EMP_NLNV_DATA_CACHE;
-
-                const renderOverviewTable = () => {
-                    // SỬA LỖI: Chuyển tham số sang dạng phẳng (latestFlatData) thay vì unflattened (latestDataCache)
-                    container.innerHTML = LOCAL_BI_ENGINE.getNLNVReport(latestFlatData, mockConfigList, mgrConfig, staffNameInBI, shopIdx, daysPassed, daysInMonth, latestDate, window.emp_nlnv_is_sorted);
-                    setupTableZoom('emp-nlnv-container');
-
-                    const sortBtn = document.getElementById('tgdd-sort-btn-nlnv-emp');
-                    if (sortBtn) {
-                        sortBtn.onclick = () => {
-                            window.emp_nlnv_is_sorted = !window.emp_nlnv_is_sorted; 
-                            renderOverviewTable(); 
-                        };
-                    }
+                    latestFlatData,
+                    latestDataCache
                 };
 
-                if (mode === 'overview') { 
-                    window.emp_nlnv_is_sorted = false; 
-                    renderOverviewTable(); 
-                } 
-                else if (mode === 'daily') { 
-                    container.innerHTML = LOCAL_BI_ENGINE.getNLNVDailyReport(historyCache, mockConfigList, mgrConfig, staffNameInBI, shopIdx, daysPassed, daysInMonth); 
-                    setupTableZoom('emp-nlnv-container');
-                }
-            };
+                renderNLNVFromCache(container, mode);
 
-            const renderNLNV = async (mode) => {
-                const container = $('emp-nlnv-container');
-                
-                // Nếu dữ liệu đã có trong cache, tái sử dụng nhanh thay vì gọi API liên tục
-                if (EMP_NLNV_DATA_CACHE) {
-                    renderNLNVFromCache(container, mode);
-                    return;
-                }
-
-                container.innerHTML = `<div style="text-align:center; padding:20px; color:#000;"><div class="spinner" style="margin:0 auto; border-top-color:#0070C0;"></div><br>Đang tải dữ liệu...</div>`;
-                
-                if (!EMP_SESSION.mgrUser) { container.innerHTML = `<div style="color:red; text-align:center;">Lỗi: Không xác định được Quản lý của bạn. Vui lòng đăng nhập lại.</div>`; return; }
-
-                try {
-                    let configRes = await universalFetch({ method: "GET", url: `${CONSTANTS.GSHEET.CONFIG_API}?user=${encodeURIComponent(EMP_SESSION.mgrUser)}` });
-                    let configJson = JSON.parse(configRes);
-                    if (configJson.status !== 'success' || !configJson.data) throw new Error("Không lấy được cấu hình Quản lý");
-                    let mgrConfig = JSON.parse(configJson.data);
-                    
-                    let historySheetId = mgrConfig.historySheetId;
-                    if (!historySheetId) throw new Error("Quản lý chưa cài đặt ID file Lịch sử.");
-
-                    let historyRes = await universalFetch({ method: "GET", url: `${API_URL_HISTORY}?sheetId=${historySheetId}` });
-                    let historyJson = JSON.parse(historyRes);
-                    if (historyJson.status !== 'success' || !historyJson.data) throw new Error("Không lấy được dữ liệu Lịch sử.");
-                    let historyCache = historyJson.data;
-
-                    let mockConfigList = (mgrConfig.compData ||[]).map(c => {
-                        const groupNameLower = c.group.toLowerCase();
-                        const isRev = groupNameLower.includes('doanh thu') || groupNameLower.includes('doanhthu') || groupNameLower.includes('tiền') || groupNameLower.includes('đọc');
-                        return {
-                            short: c.group,
-                            type: isRev ? 'doanhthu' : 'soluong',
-                            channel: 'T'
-                        };
-                    });
-
-                    let parseDateStr = (dStr) => { let parts = dStr.split('/'); return new Date(parts[2], parts[1] - 1, parts[0]); };
-                    let validDates = Object.keys(historyCache);
-                    if (validDates.length === 0) throw new Error("Chưa có dữ liệu lịch sử nào.");
-                    validDates.sort((a, b) => parseDateStr(a) - parseDateStr(b));
-                    
-                    let latestDate = validDates[validDates.length - 1];
-                    let latestFlatData = historyCache[latestDate];
-                    let latestDataCache = LOCAL_BI_ENGINE.unflattenObject(latestFlatData);
-
-                    let staffNameInBI = EMP_SESSION.user; 
-                    const staffListBI = mgrConfig.staffList ||[];
-                    const matchedStaff = staffListBI.find(s => (EMP_SESSION.fn && s.name.includes(EMP_SESSION.fn)) || s.name.includes(EMP_SESSION.user));
-                    let shopIdx = 1;
-                    if (matchedStaff) { staffNameInBI = matchedStaff.name; shopIdx = matchedStaff.shopIdx; }
-
-                    const today = new Date();
-                    const currentDay = today.getDate();
-                    const customDP = parseInt(mgrConfig.dp);
-                    const daysPassed = (customDP >= 1 && customDP <= 31) ? customDP : (currentDay > 1 ? currentDay - 1 : 1);
-                    const customEOM = parseInt(mgrConfig.eom);
-                    const daysInMonth = (customEOM >= 1 && customEOM <= 31) ? customEOM : new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-
-                    // Lưu trữ dữ liệu cấu hình vào Cache trong một phiên hoạt động
-                    EMP_NLNV_DATA_CACHE = {
-                        historyCache,
-                        mockConfigList,
-                        mgrConfig,
-                        staffNameInBI,
-                        shopIdx,
-                        daysPassed,
-                        daysInMonth,
-                        latestDate,
-                        latestFlatData,
-                        latestDataCache
-                    };
-
-                    renderNLNVFromCache(container, mode);
-
-                } catch (e) { container.innerHTML = `<div style="color:red; text-align:center; padding: 20px;">Lỗi: ${e.message}</div>`; }
-            };
+            } catch (e) { container.innerHTML = `<div style="color:red; text-align:center; padding: 20px;">Lỗi: ${e.message}</div>`; }
+        };
 
             const loadEmployeeHistory = async () => {
                 if(!EMP_SESSION || !EMP_SESSION.sheetId) return;
