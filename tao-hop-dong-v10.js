@@ -1,6 +1,6 @@
 ((context) => {
     // Giải nén các công cụ bổ trợ được chuyển giao từ hệ thống chính
-    const { UI, UTILS } = context;
+    const { UI, UTILS, AUTH_STATE } = context;
 
     // ===============================================================
     // CSS GIAO DIỆN (Dựng form nhập liệu màu sắc trực quan giống hình vẽ)
@@ -137,6 +137,42 @@
         let app = document.getElementById('con-app');
         const userCfg = UTILS.getPersistentConfig();
         
+        // Trích xuất mã số user từ AUTH_STATE
+        const extractUserId = (str) => {
+            if (!str) return "";
+            const match = str.match(/\d+/);
+            return match ? match[0] : str.trim();
+        };
+        const currentUserId = extractUserId(AUTH_STATE.userName);
+        const webAppUrl = "https://script.google.com/macros/s/AKfycbysayWDDAa5-XmkLfekd4-M_k_Ua63FjISCmpwOmI5PFPQ0uRgi5riZFvRvY1ZLZWBi_g/exec";
+
+        // Đồng bộ dữ liệu ban đầu từ Local trước
+        try {
+            const localData = localStorage.getItem('con_shop_config_col_l');
+            if (localData) userCfg.shopConfigColL = JSON.parse(localData);
+        } catch (e) {}
+
+        // Gọi API tải dữ liệu từ cột L trên Cloud về đồng bộ
+        if (currentUserId) {
+            fetch(webAppUrl, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    action: "loadConfig",
+                    user: currentUserId
+                })
+            })
+            .then(res => res.json())
+            .then(resData => {
+                if (resData.status === 'success' && resData.data) {
+                    const parsed = JSON.parse(resData.data);
+                    userCfg.shopConfigColL = parsed;
+                    localStorage.setItem('con_shop_config_col_l', resData.data);
+                }
+            })
+            .catch(err => console.warn("[Auto BI] Lỗi đồng bộ dữ liệu Bên B từ Cloud:", err));
+        }
+        
         if (!app) {
             app = document.createElement('div');
             app.id = 'con-app';
@@ -158,7 +194,7 @@
                 <div class="con-header">
                     <div class="con-logo">
                         <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 15H7v-2h10v2zm0-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-                        Tạo Hợp Đồng & Thanh Lý Báo Cáo
+                        Tạo Hợp Đồng
                     </div>
                     <button class="con-btn-close" id="con-btn-close">✖</button>
                 </div>
@@ -214,9 +250,12 @@
                         <!-- BÊN BÁN (BÊN B) -->
                         <div class="con-col con-panel">
                             <div class="con-sec-title bg-sell">🏪 II/ BÊN BÁN (BÊN B)</div>
-                            <div class="con-group">
-                                <label>Chọn Siêu Thị nhanh</label>
-                                <select id="con-b-select">${shopOptionsHtml}</select>
+                            <div class="con-group" style="display: flex; gap: 10px; align-items: flex-end;">
+                                <div style="flex: 1;">
+                                    <label>Chọn Siêu Thị nhanh</label>
+                                    <select id="con-b-select">${shopOptionsHtml}</select>
+                                </div>
+                                <button id="btn-save-b-info" class="con-btn-add-row" style="height: 38px; background: #2ed573; color: white; border: none; padding: 0 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; margin-bottom: 0;">💾 Lưu thông tin</button>
                             </div>
                             <div class="con-group"><label>Tên Chi Nhánh / Công ty</label><input type="text" id="con-b-name" value="CHI NHÁNH CÔNG TY CỔ PHẦN ĐẦU TƯ ĐIỆN MÁY XANH"></div>
                             <div class="con-group"><label>Địa Chỉ Trụ Sở Đăng Ký</label><input type="text" id="con-b-address" value="Số A12 Trần Hưng Đạo, Phường Buôn Ma Thuột, Tỉnh Đắk Lắk, Việt Nam"></div>
@@ -303,12 +342,99 @@
             // Đóng app
             app.querySelector('#con-btn-close').onclick = () => { app.style.display = 'none'; };
 
+            if (!userCfg.shopConfigColL) {
+                try {
+                    // Fallback đọc từ localStorage nếu cấu hình cloud chưa tải kịp
+                    const localData = localStorage.getItem('con_shop_config_col_l');
+                    if (localData) userCfg.shopConfigColL = JSON.parse(localData);
+                } catch (e) {
+                    userCfg.shopConfigColL = {};
+                }
+            }
+
             // Dropdown chọn siêu thị Bên B
             app.querySelector('#con-b-select').onchange = (e) => {
                 const selVal = e.target.value;
                 if (!selVal) return;
+                
                 const storeName = userCfg[selVal] || "";
                 app.querySelector('#con-b-store').value = storeName.toUpperCase();
+
+                // Tự động điền thông tin bổ sung đã lưu từ Cột L
+                let savedShopsInfo = {};
+                try {
+                    savedShopsInfo = typeof userCfg.shopConfigColL === 'string' 
+                        ? JSON.parse(userCfg.shopConfigColL) 
+                        : (userCfg.shopConfigColL || {});
+                } catch(err) {
+                    savedShopsInfo = {};
+                }
+
+                if (savedShopsInfo && savedShopsInfo[selVal]) {
+                    const info = savedShopsInfo[selVal];
+                    if (info.address) app.querySelector('#con-b-address').value = info.address;
+                    if (info.tax) app.querySelector('#con-b-tax').value = info.tax;
+                    if (info.rep) app.querySelector('#con-b-rep-hd').value = info.rep;
+                    if (info.uq) app.querySelector('#con-b-uq').value = info.uq;
+                    if (info.repTl) app.querySelector('#con-b-rep-tl').value = info.repTl;
+                }
+            };
+
+            // --- SỰ KIỆN CLICK NÚT LƯU THÔNG TIN LIÊN KẾT WEB APP ---
+            app.querySelector('#btn-save-b-info').onclick = () => {
+                const selVal = app.querySelector('#con-b-select').value;
+                if (!selVal) {
+                    alert("⚠️ Vui lòng chọn một siêu thị trong danh sách trước khi thực hiện lưu!");
+                    return;
+                }
+
+                let savedShopsInfo = {};
+                try {
+                    savedShopsInfo = typeof userCfg.shopConfigColL === 'string' 
+                        ? JSON.parse(userCfg.shopConfigColL) 
+                        : (userCfg.shopConfigColL || {});
+                } catch(err) {
+                    savedShopsInfo = {};
+                }
+
+                // Thu thập thông tin từ giao diện
+                savedShopsInfo[selVal] = {
+                    address: app.querySelector('#con-b-address').value.trim(),
+                    tax: app.querySelector('#con-b-tax').value.trim(),
+                    rep: app.querySelector('#con-b-rep-hd').value.trim(),
+                    uq: app.querySelector('#con-b-uq').value.trim(),
+                    repTl: app.querySelector('#con-b-rep-tl').value.trim()
+                };
+
+                userCfg.shopConfigColL = savedShopsInfo;
+                localStorage.setItem('con_shop_config_col_l', JSON.stringify(savedShopsInfo));
+
+                if (!currentUserId) {
+                    alert("⚠️ Không tìm thấy mã số User định danh từ hệ thống!");
+                    return;
+                }
+
+                // Gửi yêu cầu lưu lên Google Web App
+                fetch(webAppUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "saveConfig",
+                        user: currentUserId,
+                        data: JSON.stringify(savedShopsInfo)
+                    })
+                })
+                .then(res => res.json())
+                .then(resData => {
+                    if (resData.status === 'success') {
+                        alert("✅ Đã lưu thông tin siêu thị lên Cloud (Cột L) thành công!");
+                    } else {
+                        alert("❌ Lỗi từ Server: " + resData.message);
+                    }
+                })
+                .catch(err => {
+                    alert("❌ Lỗi kết nối đến Apps Script: " + err.message);
+                });
             };
 
             // Hàm tính toán tổng tiền
@@ -519,7 +645,7 @@
                             
                             /* Styles for main contract table info mapping */
                             .info-table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 15px; }
-                            .info-table td { border: 1px solid black; padding: 5px 8px; vertical-align: top; }
+                            .info-table td { border: none; padding: 5px 8px; vertical-align: top; }
                             
                             /* Product table styling */
                             .prod-table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px; }
