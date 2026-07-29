@@ -146,13 +146,23 @@
         const currentUserId = extractUserId(AUTH_STATE.userName);
         const webAppUrl = "https://script.google.com/macros/s/AKfycbysayWDDAa5-XmkLfekd4-M_k_Ua63FjISCmpwOmI5PFPQ0uRgi5riZFvRvY1ZLZWBi_g/exec";
 
-        // Đồng bộ dữ liệu ban đầu từ Local trước
+        // 1. Đồng bộ và tự động điền nhanh dữ liệu từ LocalStorage trước khi API hoàn tất
         try {
             const localData = localStorage.getItem('con_shop_config_col_l');
-            if (localData) userCfg.shopConfigColL = JSON.parse(localData);
+            if (localData) {
+                const info = JSON.parse(localData);
+                userCfg.shopConfigColL = info;
+                setTimeout(() => {
+                    if (info.address) app.querySelector('#con-b-address').value = info.address;
+                    if (info.tax) app.querySelector('#con-b-tax').value = info.tax;
+                    if (info.rep) app.querySelector('#con-b-rep-hd').value = info.rep;
+                    if (info.uq) app.querySelector('#con-b-uq').value = info.uq;
+                    if (info.repTl) app.querySelector('#con-b-rep-tl').value = info.repTl;
+                }, 50); // Chờ DOM dựng xong
+            }
         } catch (e) {}
 
-        // Gọi API tải dữ liệu từ cột L trên Cloud về đồng bộ
+        // 2. Gọi API tải dữ liệu cột L từ Cloud và điền trực tiếp vào các ô nhập liệu
         if (currentUserId) {
             fetch(webAppUrl, {
                 method: "POST",
@@ -165,12 +175,19 @@
             .then(res => res.json())
             .then(resData => {
                 if (resData.status === 'success' && resData.data) {
-                    const parsed = JSON.parse(resData.data);
-                    userCfg.shopConfigColL = parsed;
+                    const info = JSON.parse(resData.data);
+                    userCfg.shopConfigColL = info;
                     localStorage.setItem('con_shop_config_col_l', resData.data);
+                    
+                    // Điền trực tiếp vào form
+                    if (info.address) app.querySelector('#con-b-address').value = info.address;
+                    if (info.tax) app.querySelector('#con-b-tax').value = info.tax;
+                    if (info.rep) app.querySelector('#con-b-rep-hd').value = info.rep;
+                    if (info.uq) app.querySelector('#con-b-uq').value = info.uq;
+                    if (info.repTl) app.querySelector('#con-b-rep-tl').value = info.repTl;
                 }
             })
-            .catch(err => console.warn("[Auto BI] Lỗi đồng bộ dữ liệu Bên B từ Cloud:", err));
+            .catch(err => console.warn("[Auto BI] Không thể đồng bộ cấu hình Bên B từ Cloud:", err));
         }
         
         if (!app) {
