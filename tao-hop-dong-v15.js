@@ -252,6 +252,7 @@
                                 <select id="con-file-type">
                                     <option value="contract">In hợp đồng mua bán</option>
                                     <option value="liquidation">Biên bản bàn giao thanh lý</option>
+                                    <option value="quotation">In bảng báo giá</option>
                                 </select>
                             </div>
                         </div>
@@ -260,7 +261,7 @@
                     <!-- THÔNG TIN HAI BÊN BÁN - MUA -->
                     <div class="con-row">
                         <!-- BÊN MUA (BÊN A) -->
-                        <div class="con-col con-panel">
+                        <div class="con-col con-panel" id="panel-side-a">
                             <div class="con-sec-title bg-buy">🏢 I/ BÊN MUA (BÊN A)</div>
                             <div class="con-group"><label>Tên Đơn Vị Mua Hàng</label><input type="text" id="con-a-name" value="Phòng Giao Dịch Ngân Hàng Chính Sách Xã Hội Lăk"></div>
                             <div class="con-group"><label>Địa Chỉ Trụ Sở Đăng Ký</label><input type="text" id="con-a-address" value="203 Nguyễn Tất Thành, Xã Liên Sơn Lắk, Tỉnh Đắk Lắk"></div>
@@ -275,6 +276,22 @@
                             <div class="con-row" style="gap:10px;">
                                 <div class="con-col con-group" style="min-width:140px;"><label>Người Đại Diện</label><input type="text" id="con-a-rep" value="Bùi Quang Tuyên"></div>
                                 <div class="con-col con-group" style="min-width:140px;"><label>Chức Vụ</label><input type="text" id="con-a-role" value="Giám đốc"></div>
+                            </div>
+                        </div>
+
+                        <!-- KHÁCH HÀNG NHẬN BÁO GIÁ (Mặc định ẩn, tự hiện khi chọn Báo Giá) -->
+                        <div class="con-col con-panel" id="panel-quotation-client" style="display:none;">
+                            <div class="con-sec-title bg-buy">🏢 I/ KÍNH GỬI QUÝ KHÁCH (BÁO GIÁ)</div>
+                            <div class="con-group"><label>Anh/ Chị (Tên khách hàng)</label><input type="text" id="con-q-client-name" value="Trịnh Thị Trang"></div>
+                            <div class="con-group"><label>Điện thoại</label><input type="text" id="con-q-client-phone" value="0941034995"></div>
+                            <div class="con-group"><label>Tên công ty</label><input type="text" id="con-q-client-company" value="Ngân hàng THương mại cổ phần bản việt - PGD Lắk"></div>
+                            <div class="con-row" style="gap:10px;">
+                                <div class="con-col con-group" style="min-width:140px;"><label>Email</label><input type="text" id="con-q-client-email" value="test@company.com"></div>
+                                <div class="con-col con-group" style="min-width:140px;"><label>Địa chỉ</label><input type="text" id="con-q-client-address" value="Số 212 Nguyễn Tất Thành, Xã Liên Sơn Lắk, Tỉnh Đắk Lắk"></div>
+                            </div>
+                            <div class="con-row" style="gap:10px;">
+                                <div class="con-col con-group" style="min-width:140px;"><label>Ngày báo giá</label><input type="text" id="con-q-date" value="29/06/2026" placeholder="dd/mm/yyyy"></div>
+                                <div class="con-col con-group" style="min-width:140px;"><label>Hiệu lực đến</label><input type="text" id="con-q-valid-until" value="06/07/2026" placeholder="dd/mm/yyyy"></div>
                             </div>
                         </div>
 
@@ -320,22 +337,37 @@
                         <table class="con-table">
                             <thead>
                                 <tr>
-                                    <th style="width:50px;">STT</th>
-                                    <th>TÊN SẢN PHẨM / DỊCH VỤ</th>
-                                    <th style="width:100px;">SỐ LƯỢNG</th>
-                                    <th style="width:140px;">ĐƠN GIÁ (VNĐ)</th>
-                                    <th style="width:180px;">THÀNH TIỀN (VNĐ)</th>
-                                    <th style="width:60px;">XÓA</th>
+                                    <th style="width:40px;">STT</th>
+                                    <th class="col-image" style="width:80px; display:none;">Hình ảnh</th>
+                                    <th>TÊN SẢN PHẨM / MÔ TẢ CHI TIẾT</th>
+                                    <th style="width:70px;">SL</th>
+                                    <th class="col-retail-price" style="width:130px; display:none;">Giá bán lẻ (gốc)</th>
+                                    <th class="col-price-header" style="width:130px;">ĐƠN GIÁ (VNĐ)</th>
+                                    <th style="width:150px;">THÀNH TIỀN (VNĐ)</th>
+                                    <th style="width:50px;">XÓA</th>
                                 </tr>
                             </thead>
                             <tbody id="tbl-con-products-body">
                                 <tr class="con-product-row">
-                                    <td class="con-stt" style="text-align:center; font-weight:bold;">1</td>
-                                    <td><input type="text" class="con-p-name" value="Máy lạnh âm trần LG Inverter 2.5 HP ZTNQ24GPLA0" style="width:100%;"></td>
-                                    <td><input type="number" class="con-p-qty" value="1" min="1" style="width:100%; text-align:center;"></td>
-                                    <td><input type="text" class="con-p-price" value="29,090,000" style="width:100%; text-align:right;"></td>
-                                    <td class="con-p-total bold" style="text-align:right; padding:6px; background:#f5f6fa;">29,090,000</td>
-                                    <td style="text-align:center;"><button class="con-btn-del-row">✖</button></td>
+                                    <td class="con-stt" style="text-align:center; font-weight:bold; vertical-align:middle;">1</td>
+                                    <td class="col-image" style="display:none; text-align:center; vertical-align:middle;">
+                                        <!-- Khung tải ảnh nội bộ -->
+                                        <div style="position:relative; width:60px; height:60px; border:1px dashed #cbd5e1; border-radius:6px; margin:0 auto; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#f8fafc;">
+                                            <span class="img-placeholder" style="font-size:16px; color:#94a3b8; font-weight:bold;">＋</span>
+                                            <img class="con-p-img-preview" style="display:none; width:100%; height:100%; object-fit:contain; position:absolute; top:0; left:0;">
+                                            <input type="file" class="con-p-img-file" accept="image/*" style="opacity:0; position:absolute; top:0; left:0; width:100%; height:100%; cursor:pointer;">
+                                        </div>
+                                    </td>
+                                    <td style="vertical-align:middle;">
+                                        <input type="text" class="con-p-name" value="Máy lạnh âm trần LG Inverter 2.5 HP ZTNQ24GPLA0" style="width:100%;">
+                                        <!-- Textarea nhập mô tả tự thêm gạch đầu dòng -->
+                                        <textarea class="con-p-desc" style="width:100%; display:none; height:65px; border:1px solid #cbd5e1; border-radius:8px; padding:6px; font-size:13px; font-weight:bold; outline:none; resize:none;" placeholder="- Nhập mô tả sản phẩm (Enter để xuống dòng...)"></textarea>
+                                    </td>
+                                    <td style="vertical-align:middle;"><input type="number" class="con-p-qty" value="1" min="1" style="width:100%; text-align:center;"></td>
+                                    <td class="col-retail-price" style="display:none; vertical-align:middle;"><input type="text" class="con-p-retail-price" value="18,990,000" style="width:100%; text-align:right;"></td>
+                                    <td style="vertical-align:middle;"><input type="text" class="con-p-price" value="18,490,000" style="width:100%; text-align:right;"></td>
+                                    <td class="con-p-total bold" style="text-align:right; padding:6px; background:#f5f6fa; vertical-align:middle;">18,490,000</td>
+                                    <td style="text-align:center; vertical-align:middle;"><button class="con-btn-del-row">✖</button></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -372,6 +404,95 @@
 
             // Đóng app
             app.querySelector('#con-btn-close').onclick = () => { app.style.display = 'none'; };
+
+            // --- LOGIC CHUYỂN ĐỔI CHẾ ĐỘ HIỂN THỊ CÁC CỘT BÁO CÁO ---
+            const toggleFileType = () => {
+                const fileType = app.querySelector('#con-file-type').value;
+                const panelA = app.querySelector('#panel-side-a');
+                const panelQuotation = app.querySelector('#panel-quotation-client');
+                const priceHeader = app.querySelector('.col-price-header');
+
+                if (fileType === 'quotation') {
+                    panelA.style.display = 'none';
+                    panelQuotation.style.display = 'block';
+
+                    // Hiện các cột hình ảnh, cột giá bán lẻ
+                    app.querySelectorAll('.col-image, .col-retail-price').forEach(el => el.style.display = 'table-cell');
+                    app.querySelectorAll('.con-p-desc').forEach(el => el.style.display = 'block');
+                    app.querySelectorAll('.con-p-name').forEach(el => el.style.display = 'none');
+                    priceHeader.innerText = "GIÁ ĐÃ GIẢM (VNĐ)";
+                } else {
+                    panelA.style.display = 'block';
+                    panelQuotation.style.display = 'none';
+
+                    // Ẩn các cột bổ trợ báo giá
+                    app.querySelectorAll('.col-image, .col-retail-price').forEach(el => el.style.display = 'none');
+                    app.querySelectorAll('.con-p-desc').forEach(el => el.style.display = 'none');
+                    app.querySelectorAll('.con-p-name').forEach(el => el.style.display = 'block');
+                    priceHeader.innerText = "ĐƠN GIÁ (VNĐ)";
+                }
+                recalculateTotals();
+            };
+            app.querySelector('#con-file-type').onchange = toggleFileType;
+
+            // --- ĐỒNG BỘ HOÁ SỰ KIỆN CHO TỪNG DÒNG SẢN PHẨM ---
+            const bindRowEvents = (row) => {
+                const qtyInp = row.querySelector('.con-p-qty');
+                const priceInp = row.querySelector('.con-p-price');
+                const retailPriceInp = row.querySelector('.con-p-retail-price');
+                const imgFileInput = row.querySelector('.con-p-img-file');
+                const imgPreview = row.querySelector('.con-p-img-preview');
+                const imgPlaceholder = row.querySelector('.img-placeholder');
+                const descTextarea = row.querySelector('.con-p-desc');
+
+                priceInp.oninput = (e) => {
+                    e.target.value = UTILS.formatInputNumber(e.target.value.replace(/[^0-9]/g, ''));
+                    recalculateTotals();
+                };
+                if (retailPriceInp) {
+                    retailPriceInp.oninput = (e) => {
+                        e.target.value = UTILS.formatInputNumber(e.target.value.replace(/[^0-9]/g, ''));
+                    };
+                }
+                qtyInp.oninput = recalculateTotals;
+
+                // Xử lý nạp hình ảnh nội bộ và lưu chuỗi Base64
+                if (imgFileInput) {
+                    imgFileInput.onchange = (e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                                imgPreview.src = event.target.result;
+                                imgPreview.style.display = 'block';
+                                imgPlaceholder.style.display = 'none';
+                                row.dataset.imageB64 = event.target.result; // Lưu Base64
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    };
+                }
+
+                // Tự động thêm gạch đầu dòng khi xuống hàng trong mô tả
+                if (descTextarea) {
+                    descTextarea.onkeydown = (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const start = descTextarea.selectionStart;
+                            const end = descTextarea.selectionEnd;
+                            const text = descTextarea.value;
+                            descTextarea.value = text.substring(0, start) + "\n- " + text.substring(end);
+                            descTextarea.selectionStart = descTextarea.selectionEnd = start + 3;
+                            descTextarea.dispatchEvent(new Event('input'));
+                        }
+                    };
+                    descTextarea.onfocus = () => {
+                        if (descTextarea.value.trim() === '') {
+                            descTextarea.value = '- ';
+                        }
+                    };
+                }
+            };
 
             if (!userCfg.shopConfigColL) {
                 try {
@@ -506,12 +627,23 @@
                 const tr = document.createElement('tr');
                 tr.className = 'con-product-row';
                 tr.innerHTML = `
-                    <td class="con-stt" style="text-align:center; font-weight:bold;">${rowsCount + 1}</td>
-                    <td><input type="text" class="con-p-name" placeholder="Nhập chi tiết sản phẩm..." style="width:100%;"></td>
-                    <td><input type="number" class="con-p-qty" value="1" min="1" style="width:100%; text-align:center;"></td>
-                    <td><input type="text" class="con-p-price" placeholder="0" style="width:100%; text-align:right;"></td>
-                    <td class="con-p-total bold" style="text-align:right; padding:6px; background:#f5f6fa;">0</td>
-                    <td style="text-align:center;"><button class="con-btn-del-row">✖</button></td>
+                    <td class="con-stt" style="text-align:center; font-weight:bold; vertical-align:middle;">${rowsCount + 1}</td>
+                    <td class="col-image" style="display:none; text-align:center; vertical-align:middle;">
+                        <div style="position:relative; width:60px; height:60px; border:1px dashed #cbd5e1; border-radius:6px; margin:0 auto; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#f8fafc;">
+                            <span class="img-placeholder" style="font-size:16px; color:#94a3b8; font-weight:bold;">＋</span>
+                            <img class="con-p-img-preview" style="display:none; width:100%; height:100%; object-fit:contain; position:absolute; top:0; left:0;">
+                            <input type="file" class="con-p-img-file" accept="image/*" style="opacity:0; position:absolute; top:0; left:0; width:100%; height:100%; cursor:pointer;">
+                        </div>
+                    </td>
+                    <td style="vertical-align:middle;">
+                        <input type="text" class="con-p-name" placeholder="Nhập chi tiết sản phẩm..." style="width:100%;">
+                        <textarea class="con-p-desc" style="width:100%; display:none; height:65px; border:1px solid #cbd5e1; border-radius:8px; padding:6px; font-size:13px; font-weight:bold; outline:none; resize:none;" placeholder="- Nhập mô tả sản phẩm (Enter để xuống dòng...)"></textarea>
+                    </td>
+                    <td style="vertical-align:middle;"><input type="number" class="con-p-qty" value="1" min="1" style="width:100%; text-align:center;"></td>
+                    <td class="col-retail-price" style="display:none; vertical-align:middle;"><input type="text" class="con-p-retail-price" value="0" style="width:100%; text-align:right;"></td>
+                    <td style="vertical-align:middle;"><input type="text" class="con-p-price" placeholder="0" style="width:100%; text-align:right;"></td>
+                    <td class="con-p-total bold" style="text-align:right; padding:6px; background:#f5f6fa; vertical-align:middle;">0</td>
+                    <td style="text-align:center; vertical-align:middle;"><button class="con-btn-del-row">✖</button></td>
                 `;
 
                 tr.querySelector('.con-btn-del-row').onclick = () => {
@@ -520,7 +652,16 @@
 
                 bindRowEvents(tr);
                 tbody.appendChild(tr);
+                
+                // Đồng bộ ẩn hiện cột cho dòng mới thêm
+                const fileType = app.querySelector('#con-file-type').value;
+                tr.querySelectorAll('.col-image, .col-retail-price').forEach(el => el.style.display = fileType === 'quotation' ? 'table-cell' : 'none');
+                tr.querySelector('.con-p-desc').style.display = fileType === 'quotation' ? 'block' : 'none';
+                tr.querySelector('.con-p-name').style.display = fileType === 'quotation' ? 'none' : 'block';
             };
+
+            // Gắn sự kiện dòng đầu
+            bindRowEvents(tbody.querySelector('.con-product-row'));
 
             app.querySelector('#con-discount-val').oninput = (e) => {
                 e.target.value = UTILS.formatInputNumber(e.target.value.replace(/[^0-9]/g, ''));
@@ -1094,6 +1235,139 @@
                             <div style="border-top: 1px solid #ccc; padding-top: 5px; display: flex; justify-content: space-between; font-size: 10pt; font-family: sans-serif;">
                                 <span style="font-weight: bold; color: #111;">dienmayxanh</span>
                                 <span>2/2</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // ==================== TRANG 3: BẢNG BÁO GIÁ ====================
+                if (docType === 'quotation') {
+                    const qClientName = app.querySelector('#con-q-client-name').value.trim();
+                    const qClientPhone = app.querySelector('#con-q-client-phone').value.trim();
+                    const qClientCompany = app.querySelector('#con-q-client-company').value.trim();
+                    const qClientEmail = app.querySelector('#con-q-client-email').value.trim();
+                    const qClientAddress = app.querySelector('#con-q-client-address').value.trim();
+                    const qDate = app.querySelector('#con-q-date').value.trim();
+                    const qValidUntil = app.querySelector('#con-q-valid-until').value.trim();
+
+                    const quoteProducts = [];
+                    tbody.querySelectorAll('.con-product-row').forEach((r, idx) => {
+                        quoteProducts.push({
+                            stt: idx + 1,
+                            img: r.dataset.imageB64 || '', // Lấy ảnh Base64
+                            desc: r.querySelector('.con-p-desc').value.trim() || '',
+                            qty: parseInt(r.querySelector('.con-p-qty').value) || 0,
+                            retailPrice: UTILS.parseFormattedNumber(r.querySelector('.con-p-retail-price').value) || 0,
+                            price: UTILS.parseFormattedNumber(r.querySelector('.con-p-price').value) || 0,
+                            total: (parseInt(r.querySelector('.con-p-qty').value) || 0) * (UTILS.parseFormattedNumber(r.querySelector('.con-p-price').value) || 0)
+                        });
+                    });
+
+                    let quoteRowsHtml = quoteProducts.map(p => {
+                        const formattedDesc = p.desc.replace(/\n/g, '<br>');
+                        const imgHtml = p.img ? `<img src="${p.img}" style="max-width: 65px; max-height: 65px; object-fit: contain;">` : '<span style="color:#ccc; font-size:9px;">Chưa chọn hình</span>';
+                        return `
+                            <tr>
+                                <td class="text-center" style="vertical-align: middle; padding: 4px;">${imgHtml}</td>
+                                <td style="text-align: left; vertical-align: top; line-height: 1.4; color: red; font-size: 10pt; font-weight: bold; padding: 6px;">${formattedDesc}</td>
+                                <td class="text-center" style="vertical-align: middle; color: red; font-weight: bold; font-size: 10.5pt; padding: 4px;">${p.qty}</td>
+                                <td class="text-right" style="vertical-align: middle; color: red; font-size: 10.5pt; padding: 4px;">${UTILS.formatNumber(p.retailPrice)}</td>
+                                <td class="text-right" style="vertical-align: middle; color: red; font-weight: bold; font-size: 10.5pt; padding: 4px;">${UTILS.formatNumber(p.price)}</td>
+                                <td class="text-right" style="vertical-align: middle; font-weight: bold; font-size: 10.5pt; padding: 4px;">${UTILS.formatNumber(p.total)}</td>
+                            </tr>
+                        `;
+                    }).join('');
+
+                    printHtml += `
+                        <div class="page-container">
+                            <div class="page-content" style="font-family: Arial, Helvetica, sans-serif;">
+                                <!-- TOP HEADER -->
+                                <table style="width: 100%; border: none; margin-bottom: 15px;">
+                                    <tr style="border: none;">
+                                        <td style="width: 60%; text-align: left; vertical-align: top; border: none; padding: 0; line-height: 1.45;">
+                                            <div style="font-weight: 900; font-size: 12.5pt; text-transform: uppercase;">CHI NHÁNH CÔNG TY CỔ PHẦN ĐẦU TƯ</div>
+                                            <div style="font-weight: 900; font-size: 12.5pt; text-transform: uppercase; margin-bottom: 5px;">ĐIỆN MÁY XANH</div>
+                                            <div style="font-size: 9.5pt; color: red; font-weight: bold;">Địa chỉ: ${bStore.split(' - ')[1] || bAddress}</div>
+                                            <div style="font-size: 9.5pt; font-weight: bold;">Điện thoại: ${bPhone}</div>
+                                            <div style="font-size: 9.5pt; color: red; font-weight: bold;">Mã số thuế: ${bTax}</div>
+                                        </td>
+                                        <td style="width: 40%; text-align: right; vertical-align: top; border: none; padding: 0;">
+                                            <!-- LOGO KÉP TGDD & DMX -->
+                                            <div style="display: flex; gap: 4px; justify-content: flex-end; align-items: center;">
+                                                <div style="background-color: #000; padding: 5px 8px; border-radius: 4px; display: flex; align-items: center; justify-content: center; height: 32px;">
+                                                    <img src="https://thegioididong.com/favicon.ico" style="height: 16px; margin-right: 4px;">
+                                                    <span style="color: #fff; font-family: Arial, sans-serif; font-weight: bold; font-size: 10pt; letter-spacing: -0.5px;">thegioididong<span style="color: #ffc107;">.com</span></span>
+                                                </div>
+                                                <div style="background-color: #0056B3; padding: 5px 8px; border-radius: 4px; display: flex; align-items: center; justify-content: center; height: 32px;">
+                                                    <span style="color: #ffc107; font-size: 14px; margin-right: 4px;">⚡</span>
+                                                    <span style="color: #fff; font-family: Arial, sans-serif; font-weight: bold; font-size: 10pt; letter-spacing: -0.5px;">Điện máy <span style="color: #ffc107;">XANH</span></span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <!-- KHÁCH HÀNG & TIÊU ĐỀ -->
+                                <table style="width: 100%; border: none; margin-bottom: 12px;">
+                                    <tr style="border: none;">
+                                        <td style="width: 58%; text-align: left; vertical-align: top; border: none; padding: 0;">
+                                            <div style="background-color: #000; color: #fff; font-weight: bold; font-size: 9.5pt; padding: 4px 10px; text-transform: uppercase; display: inline-block; margin-bottom: 8px;">Kính gửi Quý khách:</div>
+                                            <table style="width: 100%; border: none;">
+                                                <tr style="border: none;"><td style="width: 25%; font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">Anh/ Chi:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientName}</td></tr>
+                                                <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">Điện thoại:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientPhone}</td></tr>
+                                                <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">Tên công ty:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientCompany}</td></tr>
+                                                <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">Email:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientEmail}</td></tr>
+                                                <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">Địa chỉ:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientAddress}</td></tr>
+                                            </table>
+                                        </td>
+                                        <td style="width: 42%; text-align: right; vertical-align: middle; border: none; padding: 0;">
+                                            <div style="font-size: 20pt; font-weight: 900; letter-spacing: 0.5px; color: #000; margin-bottom: 10px; font-family: 'Arial Black', Gadget, sans-serif;">BẢNG BÁO GIÁ</div>
+                                            <div style="font-size: 9.5pt; font-weight: bold;">Ngày báo giá: <span style="color: red; font-weight: bold; margin-left: 5px;">${qDate}</span></div>
+                                            <div style="font-size: 9.5pt; font-weight: bold; margin-top: 4px;">Hiệu lực đến: <span style="color: red; font-weight: bold; margin-left: 5px;">${qValidUntil}</span></div>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <!-- BẢNG SẢN PHẨM BÁO GIÁ -->
+                                <table class="prod-table" style="width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 9.5pt;">
+                                    <thead>
+                                        <tr style="background-color: #000; color: #fff;">
+                                            <th style="width: 12%; color: #fff; font-weight: bold; border: 1px solid #000; padding: 5px;">Hình ảnh</th>
+                                            <th style="width: 43%; color: #fff; font-weight: bold; border: 1px solid #000; padding: 5px; text-align: left;">Mô tả hàng hoá</th>
+                                            <th style="width: 7%; color: #fff; font-weight: bold; border: 1px solid #000; padding: 5px;">SL</th>
+                                            <th style="width: 12%; color: #fff; font-weight: bold; border: 1px solid #000; padding: 5px;">Giá bán lẻ</th>
+                                            <th style="width: 13%; color: #fff; font-weight: bold; border: 1px solid #000; padding: 5px;">Giá đã giảm</th>
+                                            <th style="width: 13%; color: #fff; font-weight: bold; border: 1px solid #000; padding: 5px;">Thành tiền</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${quoteRowsHtml}
+                                        <tr style="background-color: #f2f2f2; font-weight: bold;">
+                                            <td colspan="5" class="text-right" style="padding: 5px; border: 1px solid #000;">Giảm giá</td>
+                                            <td class="text-right" style="padding: 5px; border: 1px solid #000; color: red;">${UTILS.formatNumber(discountValue)}</td>
+                                        </tr>
+                                        <tr style="background-color: #f2f2f2; font-weight: bold; font-size: 10pt;">
+                                            <td colspan="5" class="text-right" style="padding: 5px; border: 1px solid #000; text-transform: uppercase;">Tổng cộng (VND)</td>
+                                            <td class="text-right" style="padding: 5px; border: 1px solid #000; color: #000; font-size: 11pt; font-weight: 900;">${UTILS.formatNumber(finalTotal)}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <!-- CÁC ĐIỀU KHOẢN -->
+                                <div style="border: 1px solid #000; padding: 8px; margin-bottom: 15px; line-height: 1.45; font-size: 9pt;">
+                                    <div style="font-weight: bold; text-decoration: underline; margin-bottom: 4px;">Các điều khoản lưu ý:</div>
+                                    <div>1. Giá trên đã bao gồm VAT,</div>
+                                    <div>2. Thanh toán bằng chuyển khoản hoặc tiền mặt trước khi nhận hàng</div>
+                                    <div>3. Hàng hoá được bảo hành theo tiêu chuẩn nhà sản xuất và phân phối</div>
+                                    <div>4. Hàng hóa được giao tại 34 tỉnh thành</div>
+                                </div>
+
+                                <!-- LIÊN HỆ HỖ TRỢ -->
+                                <div style="text-align: center; font-size: 9.5pt; line-height: 1.4;">
+                                    <div>Nếu quý khách cần hỗ trợ thêm thông tin, vui lòng liên hệ với:</div>
+                                    <div style="font-weight: bold; color: red; margin-top: 1px;">Siêu thị : ${bStore}</div>
+                                    <div style="font-weight: bold; font-style: italic; margin-top: 10px; font-size: 10pt;">Cảm ơn Quý khách hàng!</div>
+                                </div>
                             </div>
                         </div>
                     `;
