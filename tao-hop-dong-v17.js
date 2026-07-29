@@ -143,7 +143,7 @@
             const match = str.match(/\d+/);
             return match ? match[0] : str.trim();
         };
-        const currentUserId = AUTH_STATE ? extractUserId(AUTH_STATE.userName) : "";
+        const currentUserId = extractUserId(AUTH_STATE.userName);
         const webAppUrl = "https://script.google.com/macros/s/AKfycbysayWDDAa5-XmkLfekd4-M_k_Ua63FjISCmpwOmI5PFPQ0uRgi5riZFvRvY1ZLZWBi_g/exec";
 
         // Hàm điền tự động toàn bộ 12 trường của Bên B
@@ -218,7 +218,7 @@
                 { id: 'shop5', name: userCfg.shop5 }
             ];
             shops.forEach(s => {
-                if (s.name) shopOptionsHtml += `<option value="${s.id}">${s.name}</option>';`;
+                if (s.name) shopOptionsHtml += `<option value="${s.id}">${s.name}</option>`;
             });
 
             app.innerHTML = `
@@ -597,17 +597,6 @@
 
                 app.querySelector('#con-final-total').innerText = UTILS.formatNumber(finalTotal);
                 app.querySelector('#con-final-words').value = convertNumberToWords(finalTotal) + " đồng chẵn";
-            };
-
-            const bindRowEvents = (row) => {
-                const qtyInp = row.querySelector('.con-p-qty');
-                const priceInp = row.querySelector('.con-p-price');
-
-                priceInp.oninput = (e) => {
-                    e.target.value = UTILS.formatInputNumber(e.target.value.replace(/[^0-9]/g, ''));
-                    recalculateTotals();
-                };
-                qtyInp.oninput = recalculateTotals;
             };
 
             // Gắn sự kiện cho dòng đầu
@@ -1189,7 +1178,7 @@
                                     <div class="bold" style="text-decoration: underline; margin-bottom: 5px;">BÊN MUA (BÊN A): ${aName}</div>
                                     <table style="width: 100%; border:none;">
                                         <tr style="border:none;"><td style="width:25%; border:none; padding:2px 0;"><b>Trụ sở đăng ký</b></td><td style="width:2%; border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;">${aAddress}</td></tr>
-                                        <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Mã số thuế</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;">${aAddress}</td></tr>
+                                        <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Mã số thuế</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;">${aTax}</td></tr>
                                         <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Đại diện bởi</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;"><b>${aRep}</b></td></tr>
                                         <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Chức vụ</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;">Giám đốc</td></tr>
                                     </table>
