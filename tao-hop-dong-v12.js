@@ -373,49 +373,14 @@
             app.querySelector('#con-b-select').onchange = (e) => {
                 const selVal = e.target.value;
                 if (!selVal) return;
-                
                 const storeName = userCfg[selVal] || "";
                 app.querySelector('#con-b-store').value = storeName.toUpperCase();
-
-                // Tự động điền thông tin bổ sung đã lưu từ Cột L
-                let savedShopsInfo = {};
-                try {
-                    savedShopsInfo = typeof userCfg.shopConfigColL === 'string' 
-                        ? JSON.parse(userCfg.shopConfigColL) 
-                        : (userCfg.shopConfigColL || {});
-                } catch(err) {
-                    savedShopsInfo = {};
-                }
-
-                if (savedShopsInfo && savedShopsInfo[selVal]) {
-                    const info = savedShopsInfo[selVal];
-                    if (info.address) app.querySelector('#con-b-address').value = info.address;
-                    if (info.tax) app.querySelector('#con-b-tax').value = info.tax;
-                    if (info.rep) app.querySelector('#con-b-rep-hd').value = info.rep;
-                    if (info.uq) app.querySelector('#con-b-uq').value = info.uq;
-                    if (info.repTl) app.querySelector('#con-b-rep-tl').value = info.repTl;
-                }
             };
 
             // --- SỰ KIỆN CLICK NÚT LƯU THÔNG TIN LIÊN KẾT WEB APP ---
             app.querySelector('#btn-save-b-info').onclick = () => {
-                const selVal = app.querySelector('#con-b-select').value;
-                if (!selVal) {
-                    alert("⚠️ Vui lòng chọn một siêu thị trong danh sách trước khi thực hiện lưu!");
-                    return;
-                }
-
-                let savedShopsInfo = {};
-                try {
-                    savedShopsInfo = typeof userCfg.shopConfigColL === 'string' 
-                        ? JSON.parse(userCfg.shopConfigColL) 
-                        : (userCfg.shopConfigColL || {});
-                } catch(err) {
-                    savedShopsInfo = {};
-                }
-
-                // Thu thập thông tin từ giao diện
-                savedShopsInfo[selVal] = {
+                // Thu thập trực tiếp thông tin trên form hiện tại
+                const savedShopsInfo = {
                     address: app.querySelector('#con-b-address').value.trim(),
                     tax: app.querySelector('#con-b-tax').value.trim(),
                     rep: app.querySelector('#con-b-rep-hd').value.trim(),
@@ -423,6 +388,7 @@
                     repTl: app.querySelector('#con-b-rep-tl').value.trim()
                 };
 
+                // Lưu tạm vào Local
                 userCfg.shopConfigColL = savedShopsInfo;
                 localStorage.setItem('con_shop_config_col_l', JSON.stringify(savedShopsInfo));
 
@@ -444,7 +410,7 @@
                 .then(res => res.json())
                 .then(resData => {
                     if (resData.status === 'success') {
-                        alert("✅ Đã lưu thông tin siêu thị lên Cloud (Cột L) thành công!");
+                        alert("✅ Đã lưu thông tin cấu hình Bên B thành công!");
                     } else {
                         alert("❌ Lỗi từ Server: " + resData.message);
                     }
