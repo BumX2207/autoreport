@@ -146,23 +146,43 @@
         const currentUserId = extractUserId(AUTH_STATE.userName);
         const webAppUrl = "https://script.google.com/macros/s/AKfycbysayWDDAa5-XmkLfekd4-M_k_Ua63FjISCmpwOmI5PFPQ0uRgi5riZFvRvY1ZLZWBi_g/exec";
 
-        // 1. Đồng bộ và tự động điền nhanh dữ liệu từ LocalStorage trước khi API hoàn tất
+        // Hàm điền tự động toàn bộ 12 trường của Bên B
+        const fillBFields = (info) => {
+            if (!info) return;
+            const fields = {
+                '#con-b-name': info.name,
+                '#con-b-address': info.address,
+                '#con-b-store': info.store,
+                '#con-b-tax': info.tax,
+                '#con-b-phone': info.phone,
+                '#con-b-bank-acc': info.bankAcc,
+                '#con-b-bank-name': info.bankName,
+                '#con-b-rep-hd': info.rep,
+                '#con-b-role-hd': info.role,
+                '#con-b-uq': info.uq,
+                '#con-b-rep-tl': info.repTl,
+                '#con-b-role-tl': info.roleTl
+            };
+            for (let selector in fields) {
+                const val = fields[selector];
+                if (val !== undefined) {
+                    const el = app.querySelector(selector);
+                    if (el) el.value = val;
+                }
+            }
+        };
+
+        // 1. Tải nhanh từ Local Storage (Offline Fallback)
         try {
             const localData = localStorage.getItem('con_shop_config_col_l');
             if (localData) {
                 const info = JSON.parse(localData);
                 userCfg.shopConfigColL = info;
-                setTimeout(() => {
-                    if (info.address) app.querySelector('#con-b-address').value = info.address;
-                    if (info.tax) app.querySelector('#con-b-tax').value = info.tax;
-                    if (info.rep) app.querySelector('#con-b-rep-hd').value = info.rep;
-                    if (info.uq) app.querySelector('#con-b-uq').value = info.uq;
-                    if (info.repTl) app.querySelector('#con-b-rep-tl').value = info.repTl;
-                }, 50); // Chờ DOM dựng xong
+                setTimeout(() => fillBFields(info), 50); // Đợi giao diện dựng xong
             }
         } catch (e) {}
 
-        // 2. Gọi API tải dữ liệu cột L từ Cloud và điền trực tiếp vào các ô nhập liệu
+        // 2. Đồng bộ nạp dữ liệu đầy đủ từ Cloud
         if (currentUserId) {
             fetch(webAppUrl, {
                 method: "POST",
@@ -178,16 +198,10 @@
                     const info = JSON.parse(resData.data);
                     userCfg.shopConfigColL = info;
                     localStorage.setItem('con_shop_config_col_l', resData.data);
-                    
-                    // Điền trực tiếp vào form
-                    if (info.address) app.querySelector('#con-b-address').value = info.address;
-                    if (info.tax) app.querySelector('#con-b-tax').value = info.tax;
-                    if (info.rep) app.querySelector('#con-b-rep-hd').value = info.rep;
-                    if (info.uq) app.querySelector('#con-b-uq').value = info.uq;
-                    if (info.repTl) app.querySelector('#con-b-rep-tl').value = info.repTl;
+                    fillBFields(info);
                 }
             })
-            .catch(err => console.warn("[Auto BI] Không thể đồng bộ cấu hình Bên B từ Cloud:", err));
+            .catch(err => console.warn("[Auto BI] Không thể đồng bộ dữ liệu Bên B từ Cloud:", err));
         }
         
         if (!app) {
@@ -380,16 +394,23 @@
             // --- SỰ KIỆN CLICK NÚT LƯU THÔNG TIN LIÊN KẾT WEB APP ---
             const btnSave = app.querySelector('#btn-save-b-info');
             btnSave.onclick = () => {
-                // Thu thập trực tiếp thông tin trên form hiện tại
+                // Thu thập toàn bộ 12 trường thông tin của Bên B
                 const savedShopsInfo = {
+                    name: app.querySelector('#con-b-name').value.trim(),
                     address: app.querySelector('#con-b-address').value.trim(),
+                    store: app.querySelector('#con-b-store').value.trim(),
                     tax: app.querySelector('#con-b-tax').value.trim(),
+                    phone: app.querySelector('#con-b-phone').value.trim(),
+                    bankAcc: app.querySelector('#con-b-bank-acc').value.trim(),
+                    bankName: app.querySelector('#con-b-bank-name').value.trim(),
                     rep: app.querySelector('#con-b-rep-hd').value.trim(),
+                    role: app.querySelector('#con-b-role-hd').value.trim(),
                     uq: app.querySelector('#con-b-uq').value.trim(),
-                    repTl: app.querySelector('#con-b-rep-tl').value.trim()
+                    repTl: app.querySelector('#con-b-rep-tl').value.trim(),
+                    roleTl: app.querySelector('#con-b-role-tl').value.trim()
                 };
 
-                // Lưu tạm vào Local Storage trước
+                // Lưu tạm vào bộ nhớ Local
                 userCfg.shopConfigColL = savedShopsInfo;
                 localStorage.setItem('con_shop_config_col_l', JSON.stringify(savedShopsInfo));
 
@@ -398,12 +419,12 @@
                     return;
                 }
 
-                // 1. Tạm khóa nút bấm và đổi chữ trạng thái để tránh bấm nhiều lần
+                // Tạm khóa và đổi chữ hiển thị của nút bấm
                 btnSave.disabled = true;
                 btnSave.style.opacity = "0.6";
                 btnSave.innerText = "⏳ Đang lưu...";
 
-                // 2. Gửi yêu cầu lưu lên Google Web App
+                // Gửi dữ liệu mã hóa lên Web App
                 fetch(webAppUrl, {
                     method: "POST",
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -415,27 +436,25 @@
                 })
                 .then(res => res.json())
                 .then(resData => {
-                    // Mở khóa và khôi phục lại trạng thái ban đầu của nút bấm
+                    // Phục hồi lại trạng thái nút bấm
                     btnSave.disabled = false;
                     btnSave.style.opacity = "1";
                     btnSave.innerText = "💾 Lưu thông tin";
                     
                     if (resData.status === 'success') {
-                        // Hiển thị thông báo đơn giản như yêu cầu
                         alert("Đã lưu thành công!");
                     } else {
-                        alert("❌ Lỗi từ Server: " + resData.message);
+                        alert("❌ Lỗi: " + resData.message);
                     }
                 })
                 .catch(err => {
-                    // Mở khóa và khôi phục nút nếu gặp lỗi kết nối mạng
+                    // Phục hồi lại nút nếu kết nối mạng thất bại
                     btnSave.disabled = false;
                     btnSave.style.opacity = "1";
                     btnSave.innerText = "💾 Lưu thông tin";
                     alert("❌ Lỗi kết nối đến Apps Script: " + err.message);
                 });
             };
-
             // Hàm tính toán tổng tiền
             const recalculateTotals = () => {
                 const rows = tbody.querySelectorAll('.con-product-row');
