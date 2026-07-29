@@ -378,7 +378,8 @@
             };
 
             // --- SỰ KIỆN CLICK NÚT LƯU THÔNG TIN LIÊN KẾT WEB APP ---
-            app.querySelector('#btn-save-b-info').onclick = () => {
+            const btnSave = app.querySelector('#btn-save-b-info');
+            btnSave.onclick = () => {
                 // Thu thập trực tiếp thông tin trên form hiện tại
                 const savedShopsInfo = {
                     address: app.querySelector('#con-b-address').value.trim(),
@@ -388,7 +389,7 @@
                     repTl: app.querySelector('#con-b-rep-tl').value.trim()
                 };
 
-                // Lưu tạm vào Local
+                // Lưu tạm vào Local Storage trước
                 userCfg.shopConfigColL = savedShopsInfo;
                 localStorage.setItem('con_shop_config_col_l', JSON.stringify(savedShopsInfo));
 
@@ -397,7 +398,12 @@
                     return;
                 }
 
-                // Gửi yêu cầu lưu lên Google Web App
+                // 1. Tạm khóa nút bấm và đổi chữ trạng thái để tránh bấm nhiều lần
+                btnSave.disabled = true;
+                btnSave.style.opacity = "0.6";
+                btnSave.innerText = "⏳ Đang lưu...";
+
+                // 2. Gửi yêu cầu lưu lên Google Web App
                 fetch(webAppUrl, {
                     method: "POST",
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -409,13 +415,23 @@
                 })
                 .then(res => res.json())
                 .then(resData => {
+                    // Mở khóa và khôi phục lại trạng thái ban đầu của nút bấm
+                    btnSave.disabled = false;
+                    btnSave.style.opacity = "1";
+                    btnSave.innerText = "💾 Lưu thông tin";
+                    
                     if (resData.status === 'success') {
-                        alert("✅ Đã lưu thông tin cấu hình Bên B thành công!");
+                        // Hiển thị thông báo đơn giản như yêu cầu
+                        alert("Đã lưu thành công!");
                     } else {
                         alert("❌ Lỗi từ Server: " + resData.message);
                     }
                 })
                 .catch(err => {
+                    // Mở khóa và khôi phục nút nếu gặp lỗi kết nối mạng
+                    btnSave.disabled = false;
+                    btnSave.style.opacity = "1";
+                    btnSave.innerText = "💾 Lưu thông tin";
                     alert("❌ Lỗi kết nối đến Apps Script: " + err.message);
                 });
             };
