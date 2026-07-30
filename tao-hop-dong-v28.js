@@ -236,6 +236,9 @@
                     userCfg.shopConfigColL = info;
                     localStorage.setItem('con_shop_config_col_l', resData.data);
                     
+                    // ÉP ĐỒNG BỘ XUỐNG BỘ NHỚ LƯU TRỮ CỦA HỆ THỐNG CHÍNH
+                    UTILS.savePersistentConfig(userCfg); 
+                    
                     fillBFields(info.sellerInfo);
                     renderDraftDropdown();
                 }
@@ -663,6 +666,7 @@
 
                 userCfg.shopConfigColL = cloudData;
                 localStorage.setItem('con_shop_config_col_l', JSON.stringify(cloudData));
+                UTILS.savePersistentConfig(userCfg);
 
                 if (!currentUserId) {
                     alert("⚠️ Không tìm thấy mã số User định danh từ hệ thống!");
@@ -934,14 +938,15 @@
                     drafts.unshift(draftObj);
                 }
 
-                // Giới hạn cứng tối đa 10 phiên nháp gần nhất
-                if (drafts.length > 10) {
-                    drafts = drafts.slice(0, 10);
+                // --- ĐÃ ĐỒNG BỘ: GIỚI HẠN CỨNG TỐI ĐA 5 PHIÊN NHÁP GẦN NHẤT ---
+                if (drafts.length > 5) {
+                    drafts = drafts.slice(0, 5);
                 }
                 cloudData.drafts = drafts;
 
                 userCfg.shopConfigColL = cloudData;
                 localStorage.setItem('con_shop_config_col_l', JSON.stringify(cloudData));
+                UTILS.savePersistentConfig(userCfg); // <--- Thêm dòng này để khóa đồng bộ
 
                 if (!currentUserId) {
                     alert("⚠️ Không tìm thấy mã số User định danh từ hệ thống!");
