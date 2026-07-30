@@ -157,12 +157,24 @@
             return match ? match[0] : str.trim();
         };
         const currentUserId = AUTH_STATE ? extractUserId(AUTH_STATE.userName) : "";
-        const webAppUrl = "https://script.google.com/macros/s/AKfycbw-KMUUL5rHPeSxGGbFbTs_2VMuP8OH5ehoDci_zAIACKhl0Tip9TTzJ5r-fLwu5He1GQ/exec";
+        const webAppUrl = "https://script.google.com/macros/s/AKfycbysayWDDAa5-XmkLfekd4-M_k_Ua63FjISCmpwOmI5PFPQ0uRgi5riZFvRvY1ZLZWBi_g/exec";
 
         // Khởi tạo Mã phiên làm việc hiện tại (Bản nháp mặc định)
         let currentDraftId = "draft_" + Date.now();
 
-        // Hàm điền tự động toàn bộ 14 trường của Bên B
+        // Đồng bộ chuẩn hóa cấu trúc dữ liệu cũ (Dự phòng tương thích ngược)
+        const normalizeCloudData = (info) => {
+            let data = info || {};
+            if (data.name && !data.sellerInfo) {
+                const oldSeller = { ...data };
+                data = { sellerInfo: oldSeller, drafts: [] };
+            }
+            if (!data.sellerInfo) data.sellerInfo = {};
+            if (!data.drafts) data.drafts = [];
+            return data;
+        };
+
+        // Hàm điền tự động toàn bộ trường của Bên B
         const fillBFields = (info) => {
             if (!info) return;
             const activeApp = document.getElementById('con-app') || app;
@@ -194,16 +206,20 @@
             }
         };
 
-        // Đồng bộ chuẩn hóa cấu trúc dữ liệu cũ (Dự phòng tương thích ngược)
-        const normalizeCloudData = (info) => {
-            let data = info || {};
-            if (data.name && !data.sellerInfo) {
-                const oldSeller = { ...data };
-                data = { sellerInfo: oldSeller, drafts: [] };
-            }
-            if (!data.sellerInfo) data.sellerInfo = {};
-            if (!data.drafts) data.drafts = [];
-            return data;
+        // --- ĐÃ ĐỒNG BỘ: DỜI HÀM VẼ DROPDOWN LÊN ĐẦU PHẠM VI TRUY CẬP ---
+        const renderDraftDropdown = () => {
+            const activeApp = document.getElementById('con-app') || app;
+            if (!activeApp) return;
+            const dropdown = activeApp.querySelector('#con-draft-select');
+            if (!dropdown) return;
+            const cloudData = normalizeCloudData(userCfg.shopConfigColL);
+            const drafts = cloudData.drafts || [];
+            
+            let html = '<option value="">📂 --- Xem lại bản nháp gần nhất ---</option>';
+            drafts.forEach(d => {
+                html += `<option value="${d.id}" ${d.id === currentDraftId ? 'selected' : ''}>${d.label}</option>`;
+            });
+            dropdown.innerHTML = html;
         };
 
         // 1. Tải nhanh từ Local Storage (Offline Fallback)
@@ -214,7 +230,7 @@
                 userCfg.shopConfigColL = info;
                 setTimeout(() => {
                     fillBFields(info.sellerInfo);
-                    renderDraftDropdown();
+                    renderDraftDropdown(); // <--- Đã an toàn gọi được ngay tại đây
                 }, 50);
             }
         } catch (e) {}
@@ -236,11 +252,11 @@
                     userCfg.shopConfigColL = info;
                     localStorage.setItem('con_shop_config_col_l', resData.data);
                     
-                    // ÉP ĐỒNG BỘ XUỐNG BỘ NHỚ LƯU TRỮ CỦA HỆ THỐNG CHÍNH
+                    // Ép đồng bộ hệ thống chính
                     UTILS.savePersistentConfig(userCfg); 
                     
                     fillBFields(info.sellerInfo);
-                    renderDraftDropdown();
+                    renderDraftDropdown(); // <--- Đã an toàn gọi được ngay tại đây
                 }
             })
             .catch(err => console.warn("[Auto BI] Không thể đồng bộ dữ liệu Bên B từ Cloud:", err));
@@ -704,20 +720,6 @@
                     btnSave.innerText = "💾 Lưu thông tin";
                     alert("❌ Lỗi kết nối mạng: " + err.message);
                 });
-            };
-
-            // --- VẼ DANH SÁCH DROPDOWN BẢN NHÁP GẦN NHẤT ---
-            const renderDraftDropdown = () => {
-                const dropdown = app.querySelector('#con-draft-select');
-                if (!dropdown) return;
-                const cloudData = normalizeCloudData(userCfg.shopConfigColL);
-                const drafts = cloudData.drafts || [];
-                
-                let html = '<option value="">📂 --- Xem lại bản nháp gần nhất ---</option>';
-                drafts.forEach(d => {
-                    html += `<option value="${d.id}" ${d.id === currentDraftId ? 'selected' : ''}>${d.label}</option>`;
-                });
-                dropdown.innerHTML = html;
             };
 
             // --- SỰ KIỆN THAY ĐỔI / CHỌN BẢN NHÁP TỪ DROPDOWN ---
