@@ -179,7 +179,8 @@
                 '#con-b-rep-tl': info.repTl,
                 '#con-b-role-tl': info.roleTl,
                 '#con-b-honor-hd': info.honorHd,
-                '#con-b-honor-tl': info.honorTl
+                '#con-b-honor-tl': info.honorTl,
+                '#con-q-drive-folder': info.driveFolderId // Đồng bộ ID Drive của riêng họ
             };
             for (let selector in fields) {
                 const val = fields[selector];
@@ -189,7 +190,6 @@
                 }
             }
         };
-
         // 1. Tải nhanh từ Local Storage (Offline Fallback)
         try {
             const localData = localStorage.getItem('con_shop_config_col_l');
@@ -249,19 +249,19 @@
                 </div>
                 
                 <div class="con-body">
-                    <!-- THÔNG TIN CHUNG HỢP ĐỒNG -->
+                    <!-- THÔNG TIN CHUNG VĂN BẢN -->
                     <div class="con-panel">
                         <div class="con-sec-title bg-total">📅 THÔNG TIN CHUNG VĂN BẢN</div>
                         <div class="con-row" style="gap:15px;">
-                            <div class="con-col con-group" style="min-width: 180px;">
+                            <div class="con-col con-group" style="min-width: 150px;">
                                 <label>Số Hợp Đồng</label>
                                 <input type="text" id="con-no" value="0104-2026 /KD-ĐMX/HĐMB">
                             </div>
-                            <div class="con-col con-group" style="min-width: 180px;">
+                            <div class="con-col con-group" style="min-width: 150px;">
                                 <label>Ngày Ký Hợp Đồng</label>
                                 <input type="text" id="con-date-hd" value="12/04/2026" placeholder="dd/mm/yyyy">
                             </div>
-                            <div class="con-col con-group" style="min-width: 180px;">
+                            <div class="con-col con-group" style="min-width: 150px;">
                                 <label>Ngày Nghiệm Thu/Thanh Lý</label>
                                 <input type="text" id="con-date-tl" value="14/04/2026" placeholder="dd/mm/yyyy">
                             </div>
@@ -269,7 +269,11 @@
                                 <label>📍 Địa chỉ siêu thị (Báo giá)</label>
                                 <input type="text" id="con-store-address" value="248 Nguyễn Tất Thành, Liên Sơn, Lắk, Đắk Lắk" placeholder="Nhập địa chỉ siêu thị bán hàng...">
                             </div>
-                            <div class="con-col con-group" style="min-width: 200px;">
+                            <div class="con-col con-group" style="min-width: 250px;" id="group-drive-folder">
+                                <label>📁 ID Thư mục Google Drive lưu ảnh</label>
+                                <input type="text" id="con-q-drive-folder" value="" placeholder="Dán ID hoặc Link thư mục Drive của bạn...">
+                            </div>
+                            <div class="con-col con-group" style="min-width: 180px;">
                                 <label>📄 Loại văn bản kết xuất</label>
                                 <select id="con-file-type">
                                     <option value="contract">In hợp đồng mua bán</option>
@@ -521,14 +525,15 @@
                     imgFileInput.onchange = (e) => {
                         const file = e.target.files[0];
                         if (file) {
-                            const driveFolderIdRaw = userCfg.imageFolderId || "";
+                            // Lấy trực tiếp ID từ ô nhập liệu trên form
+                            const driveFolderIdRaw = app.querySelector('#con-q-drive-folder').value.trim();
                             if (!driveFolderIdRaw) {
-                                alert("⚠️ Bạn chưa khai báo ID thư mục Google Drive lưu ảnh trong cấu hình hệ thống chính!");
+                                alert("⚠️ Vui lòng nhập ID hoặc dán đường Link thư mục Google Drive lưu ảnh vào ô khai báo ở phần chung!");
                                 return;
                             }
 
-                            // Tự động xử lý bóc tách lấy ID sạch nếu người dùng dán cả link thư mục Drive dài
-                            let driveFolderId = driveFolderIdRaw.trim();
+                            // Tự động xử lý bóc tách lấy ID sạch phòng trường hợp dán nguyên URL thư mục
+                            let driveFolderId = driveFolderIdRaw;
                             if (driveFolderId.indexOf("folders/") !== -1) {
                                 driveFolderId = driveFolderId.split("folders/")[1].split("?")[0].split("/")[0];
                             }
@@ -539,7 +544,6 @@
 
                             const reader = new FileReader();
                             reader.onload = (event) => {
-                                // Gửi Base64 lên Drive qua Web App
                                 fetch(webAppUrl, {
                                     method: "POST",
                                     headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -606,7 +610,7 @@
             // --- SỰ KIỆN CLICK NÚT LƯU THÔNG TIN LIÊN KẾT WEB APP ---
             const btnSave = app.querySelector('#btn-save-b-info');
             btnSave.onclick = () => {
-                // Thu thập toàn bộ 14 trường thông tin của Bên B
+                // Thu thập toàn bộ thông tin bao gồm cả ID Drive cấu hình riêng
                 const savedShopsInfo = {
                     name: app.querySelector('#con-b-name').value.trim(),
                     address: app.querySelector('#con-b-address').value.trim(),
@@ -621,7 +625,8 @@
                     repTl: app.querySelector('#con-b-rep-tl').value.trim(),
                     roleTl: app.querySelector('#con-b-role-tl').value.trim(),
                     honorHd: app.querySelector('#con-b-honor-hd').value,
-                    honorTl: app.querySelector('#con-b-honor-tl').value
+                    honorTl: app.querySelector('#con-b-honor-tl').value,
+                    driveFolderId: app.querySelector('#con-q-drive-folder').value.trim() // Lưu ID Drive của riêng họ
                 };
 
                 // Lưu tạm vào bộ nhớ Local
@@ -632,8 +637,8 @@
                     alert("⚠️ Không tìm thấy mã số User định danh từ hệ thống!");
                     return;
                 }
-
-                // Tạm khóa và đổi chữ hiển thị của nút bấm
+                
+                // Tạm khóa nút
                 btnSave.disabled = true;
                 btnSave.style.opacity = "0.6";
                 btnSave.innerText = "⏳ Đang lưu...";
@@ -1391,7 +1396,7 @@
                                     </tr>
                                 </table>
 
-                                <!-- KHÁCH HÀNG & TIÊU ĐỀ -->
+                                <!-- KHÁCH HÀNG & TIÊU ĐỀ (ĐÃ CĂN ĐỈNH DỜI CAO ĐỀU NHAU) -->
                                 <table style="width: 100%; border: none; margin-bottom: 12px;">
                                     <tr style="border: none;">
                                         <td style="width: 58%; text-align: left; vertical-align: top; border: none; padding: 0;">
@@ -1404,24 +1409,24 @@
                                                 <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">Địa chỉ:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientAddress}</td></tr>
                                             </table>
                                         </td>
-                                        <td style="width: 42%; text-align: right; vertical-align: middle; border: none; padding: 0;">
-                                            <div style="font-size: 20pt; font-weight: 900; letter-spacing: 0.5px; color: #000; margin-bottom: 10px; font-family: 'Arial Black', Gadget, sans-serif;">BẢNG BÁO GIÁ</div>
+                                        <td style="width: 42%; text-align: right; vertical-align: top; border: none; padding: 0;">
+                                            <div style="font-size: 20pt; font-weight: 900; letter-spacing: 0.5px; color: #000; margin-top: 0px; margin-bottom: 10px; font-family: 'Arial Black', Gadget, sans-serif; line-height: 1.1;">BẢNG BÁO GIÁ</div>
                                             <div style="font-size: 9.5pt; font-weight: bold;">Ngày báo giá: <span style="color: red; font-weight: bold; margin-left: 5px;">${qDate}</span></div>
                                             <div style="font-size: 9.5pt; font-weight: bold; margin-top: 4px;">Hiệu lực đến: <span style="color: red; font-weight: bold; margin-left: 5px;">${qValidUntil}</span></div>
                                         </td>
                                     </tr>
                                 </table>
 
-                                <!-- BẢNG SẢN PHẨM BÁO GIÁ -->
+                                <!-- BẢNG SẢN PHẨM BÁO GIÁ (ĐÃ ĐỒNG BỘ CHỮ TRẮNG NỀN ĐEN ĐỘC LẬP) -->
                                 <table class="prod-table" style="width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 9.5pt;">
                                     <thead>
-                                        <tr style="background-color: #000; color: #fff;">
-                                            <th style="width: 12%; color: #fff; font-weight: bold; border: 1px solid #000; padding: 5px;">Hình ảnh</th>
-                                            <th style="width: 43%; color: #fff; font-weight: bold; border: 1px solid #000; padding: 5px; text-align: left;">Mô tả hàng hoá</th>
-                                            <th style="width: 7%; color: #fff; font-weight: bold; border: 1px solid #000; padding: 5px;">SL</th>
-                                            <th style="width: 12%; color: #fff; font-weight: bold; border: 1px solid #000; padding: 5px;">Giá bán lẻ</th>
-                                            <th style="width: 13%; color: #fff; font-weight: bold; border: 1px solid #000; padding: 5px;">Giá đã giảm</th>
-                                            <th style="width: 13%; color: #fff; font-weight: bold; border: 1px solid #000; padding: 5px;">Thành tiền</th>
+                                        <tr style="background-color: #000000 !important; color: #ffffff !important; -webkit-print-color-adjust: exact;">
+                                            <th style="width: 12%; color: #ffffff !important; background-color: #000000 !important; font-weight: bold; border: 1px solid #000; padding: 5px; text-align: center;">Hình ảnh</th>
+                                            <th style="width: 43%; color: #ffffff !important; background-color: #000000 !important; font-weight: bold; border: 1px solid #000; padding: 5px; text-align: left;">Mô tả hàng hoá</th>
+                                            <th style="width: 7%; color: #ffffff !important; background-color: #000000 !important; font-weight: bold; border: 1px solid #000; padding: 5px; text-align: center;">SL</th>
+                                            <th style="width: 12%; color: #ffffff !important; background-color: #000000 !important; font-weight: bold; border: 1px solid #000; padding: 5px; text-align: right;">Giá bán lẻ</th>
+                                            <th style="width: 13%; color: #ffffff !important; background-color: #000000 !important; font-weight: bold; border: 1px solid #000; padding: 5px; text-align: right;">Giá đã giảm</th>
+                                            <th style="width: 13%; color: #ffffff !important; background-color: #000000 !important; font-weight: bold; border: 1px solid #000; padding: 5px; text-align: right;">Thành tiền</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1435,7 +1440,6 @@
                                             <td class="text-right" style="padding: 5px; border: 1px solid #000; color: #000; font-size: 11pt; font-weight: 900;">${UTILS.formatNumber(finalTotal)}</td>
                                         </tr>
                                     </tbody>
-                                endOfProductsHtml
                                 </table>
 
                                 <!-- CÁC ĐIỀU KHOẢN -->
@@ -1475,7 +1479,7 @@
     };
 
     return {
-        name: "Tạo Hợp Đồng",
+        name: "Tạo Hợp Đồng 1",
         icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 15H7v-2h10v2zm0-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>`,
         bgColor: "#6c5ce7",
         action: runTool
