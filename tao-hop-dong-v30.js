@@ -267,7 +267,7 @@
             app.id = 'con-app';
 
             // Sinh danh sách dropdown siêu thị tự động từ cấu hình gốc
-            let shopOptionsHtml = '<option value="">--- Chọn siêu thị nhanh ---</option>';
+            let shopOptionsHtml = '<option value="">--- Nhấp chọn siêu thị ---</option>';
             const shops = [
                 { id: 'shop1', name: userCfg.shop1 },
                 { id: 'shop2', name: userCfg.shop2 },
@@ -301,7 +301,7 @@
                 <div class="con-body">
                     <!-- THÔNG TIN CHUNG VĂN BẢN -->
                     <div class="con-panel">
-                        <div class="con-sec-title bg-total">📅 THÔNG TIN CHUNG VĂN BẢN</div>
+                        <div class="con-sec-title bg-total">📅 THÔNG TIN CHUNG</div>
                         <div class="con-row" style="gap:15px;">
                             <div class="con-col con-group" style="min-width: 150px;">
                                 <label>Số Hợp Đồng</label>
@@ -351,7 +351,7 @@
                             </div>
                             <div class="con-row" style="gap:10px;">
                                 <div class="con-col con-group" style="min-width:80px; flex:0.4;">
-                                    <label>Danh xưng (A)</label>
+                                    <label>Danh xưng</label>
                                     <select id="con-a-honor">
                                         <option value="Ông" selected>Ông</option>
                                         <option value="Bà">Bà</option>
@@ -364,7 +364,7 @@
 
                         <!-- KHÁCH HÀNG NHẬN BÁO GIÁ (Mặc định ẩn, tự hiện khi chọn Báo Giá) -->
                         <div class="con-col con-panel" id="panel-quotation-client" style="display:none;">
-                            <div class="con-sec-title bg-buy">🏢 I/ KÍNH GỬI QUÝ KHÁCH (BÁO GIÁ)</div>
+                            <div class="con-sec-title bg-buy">🏢 I/ THÔNG TIN BÁO GIÁ</div>
                             <div class="con-row" style="gap:10px;">
                                 <div class="con-col con-group" style="min-width:80px; flex:0.4;">
                                     <label>Danh xưng</label>
@@ -394,7 +394,7 @@
                             <div class="con-sec-title bg-sell">🏪 II/ BÊN BÁN (BÊN B)</div>
                             <div class="con-group" style="display: flex; gap: 10px; align-items: flex-end;">
                                 <div style="flex: 1;">
-                                    <label>Chọn Siêu Thị nhanh</label>
+                                    <label>Chọn Siêu Thị</label>
                                     <select id="con-b-select">${shopOptionsHtml}</select>
                                 </div>
                                 <button id="btn-save-b-info" class="con-btn-add-row" style="height: 38px; background: #2ed573; color: white; border: none; padding: 0 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; margin-bottom: 0;">💾 Lưu thông tin</button>
@@ -412,26 +412,26 @@
                             </div>
                             <div class="con-row" style="gap:10px;">
                                 <div class="con-col con-group" style="min-width:80px; flex:0.4;">
-                                    <label>Danh xưng (HĐ)</label>
+                                    <label>Danh xưng</label>
                                     <select id="con-b-honor-hd">
                                         <option value="Ông">Ông</option>
                                         <option value="Bà" selected>Bà</option>
                                     </select>
                                 </div>
-                                <div class="con-col con-group" style="min-width:140px; flex:1.6;"><label>Đại Diện (Hợp Đồng)</label><input type="text" id="con-b-rep-hd" value="Đỗ Thị Thái Thanh"></div>
-                                <div class="con-col con-group" style="min-width:140px;"><label>Chức Vụ (Hợp Đồng)</label><input type="text" id="con-b-role-hd" value="Giám Đốc Bán Hàng"></div>
+                                <div class="con-col con-group" style="min-width:140px; flex:1.6;"><label>Đại Diện</label><input type="text" id="con-b-rep-hd" value="Đỗ Thị Thái Thanh"></div>
+                                <div class="con-col con-group" style="min-width:140px;"><label>Chức Vụ</label><input type="text" id="con-b-role-hd" value="Giám Đốc Bán Hàng"></div>
                             </div>
-                            <div class="con-group"><label>Ủy Quyền (Hợp Đồng)</label><input type="text" id="con-b-uq" value="Theo giấy Uỷ Quyền số 12/2026/ĐMX/UQ ký ngày 24/03/2026"></div>
+                            <div class="con-group"><label>Ủy Quyền</label><input type="text" id="con-b-uq" value="Theo giấy Uỷ Quyền số 12/2026/ĐMX/UQ ký ngày 24/03/2026"></div>
                             <div class="con-row" style="gap:10px;">
                                 <div class="con-col con-group" style="min-width:80px; flex:0.4;">
-                                    <label>Danh xưng (TL)</label>
+                                    <label>Danh xưng</label>
                                     <select id="con-b-honor-tl">
                                         <option value="Ông">Ông</option>
                                         <option value="Bà" selected>Bà</option>
                                     </select>
                                 </div>
-                                <div class="con-col con-group" style="min-width:140px; flex:1.6;"><label>Đại Diện (Thanh Lý)</label><input type="text" id="con-b-rep-tl" value="ĐỖ THỊ THÁI THANH"></div>
-                                <div class="con-col con-group" style="min-width:140px;"><label>Chức Vụ (Thanh Lý)</label><input type="text" id="con-b-role-tl" value="Giám Đốc Vùng (RSM)"></div>
+                                <div class="con-col con-group" style="min-width:140px; flex:1.6;"><label>Đại Diện</label><input type="text" id="con-b-rep-tl" value="ĐỖ THỊ THÁI THANH"></div>
+                                <div class="con-col con-group" style="min-width:140px;"><label>Chức Vụ</label><input type="text" id="con-b-role-tl" value="Giám Đốc Vùng (RSM)"></div>
                             </div>
                         </div>
                     </div>
@@ -449,9 +449,9 @@
                                     <th class="col-image" style="width:80px; display:none;">Hình ảnh</th>
                                     <th>TÊN SẢN PHẨM / MÔ TẢ CHI TIẾT</th>
                                     <th style="width:70px;">SL</th>
-                                    <th class="col-retail-price" style="width:130px; display:none;">Giá bán lẻ (gốc)</th>
-                                    <th class="col-price-header" style="width:130px;">ĐƠN GIÁ (VNĐ)</th>
-                                    <th style="width:150px;">THÀNH TIỀN (VNĐ)</th>
+                                    <th class="col-retail-price" style="width:130px; display:none;">Giá gốc</th>
+                                    <th class="col-price-header" style="width:130px;">ĐƠN GIÁ</th>
+                                    <th style="width:150px;">THÀNH TIỀN</th>
                                     <th style="width:50px;">XÓA</th>
                                 </tr>
                             </thead>
@@ -491,7 +491,7 @@
                         </div>
                     </div>
                     <div class="con-panel con-group" style="margin-top:-10px;">
-                        <label>✍️ SỐ TIỀN BẰNG CHỮ TIẾNG VIỆT (Tự động dịch)</label>
+                        <label>✍️ SỐ TIỀN BẰNG CHỮ TIẾNG VIỆT</label>
                         <input type="text" id="con-final-words" style="background:#f1f5f9; color:#2e7d32;" readonly>
                     </div>
 
@@ -531,7 +531,7 @@
                     app.querySelectorAll('.col-image, .col-retail-price').forEach(el => el.style.display = 'table-cell');
                     app.querySelectorAll('.con-p-desc').forEach(el => el.style.display = 'block');
                     app.querySelectorAll('.con-p-name').forEach(el => el.style.display = 'none');
-                    priceHeader.innerText = "GIÁ ĐÃ GIẢM (VNĐ)";
+                    priceHeader.innerText = "GIÁ ĐÃ GIẢM";
                     btnGenerate.innerText = "🖨️ Tạo Báo Giá & Tải PDF"; // Đổi tên nút
                 } else {
                     panelA.style.display = 'block';
