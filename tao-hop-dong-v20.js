@@ -291,8 +291,36 @@
                                 <div class="con-col con-group" style="min-width:140px;"><label>Chức Vụ</label><input type="text" id="con-a-role" value="Giám đốc"></div>
                             </div>
                         </div>
+
+                        <!-- KHÁCH HÀNG NHẬN BÁO GIÁ (Mặc định ẩn, tự hiện khi chọn Báo Giá) -->
+                        <div class="con-col con-panel" id="panel-quotation-client" style="display:none;">
+                            <div class="con-sec-title bg-buy">🏢 I/ KÍNH GỬI QUÝ KHÁCH (BÁO GIÁ)</div>
+                            <div class="con-row" style="gap:10px;">
+                                <div class="con-col con-group" style="min-width:80px; flex:0.4;">
+                                    <label>Danh xưng</label>
+                                    <select id="con-q-client-honor">
+                                        <option value="Anh">Anh</option>
+                                        <option value="Chị" selected>Chị</option>
+                                        <option value="Ông">Ông</option>
+                                        <option value="Bà">Bà</option>
+                                    </select>
+                                </div>
+                                <div class="con-col con-group" style="min-width:180px; flex:1.6;"><label>Tên khách hàng</label><input type="text" id="con-q-client-name" value="Trịnh Thị Trang"></div>
+                            </div>
+                            <div class="con-group"><label>Điện thoại</label><input type="text" id="con-q-client-phone" value="0941034995"></div>
+                            <div class="con-group"><label>Tên công ty</label><input type="text" id="con-q-client-company" value="Ngân hàng THương mại cổ phần bản việt - PGD Lắk"></div>
+                            <div class="con-row" style="gap:10px;">
+                                <div class="con-col con-group" style="min-width:140px;"><label>Email</label><input type="text" id="con-q-client-email" value="test@company.com"></div>
+                                <div class="con-col con-group" style="min-width:140px;"><label>Địa chỉ</label><input type="text" id="con-q-client-address" value="Số 212 Nguyễn Tất Thành, Xã Liên Sơn Lắk, Tỉnh Đắk Lắk"></div>
+                            </div>
+                            <div class="con-row" style="gap:10px;">
+                                <div class="con-col con-group" style="min-width:140px;"><label>Ngày báo giá</label><input type="text" id="con-q-date" value="29/06/2026" placeholder="dd/mm/yyyy"></div>
+                                <div class="con-col con-group" style="min-width:140px;"><label>Hiệu lực đến</label><input type="text" id="con-q-valid-until" value="06/07/2026" placeholder="dd/mm/yyyy"></div>
+                            </div>
+                        </div>
+
                         <!-- BÊN BÁN (BÊN B) -->
-                        <div class="con-col con-panel">
+                        <div class="con-col con-panel" id="panel-side-b">
                             <div class="con-sec-title bg-sell">🏪 II/ BÊN BÁN (BÊN B)</div>
                             <div class="con-group" style="display: flex; gap: 10px; align-items: flex-end;">
                                 <div style="flex: 1;">
@@ -537,103 +565,6 @@
                         }
                     };
                 }
-            };
-
-            // Dropdown chọn siêu thị Bên B
-            app.querySelector('#con-b-select').onchange = (e) => {
-                const selVal = e.target.value;
-                if (!selVal) return;
-                const storeName = userCfg[selVal] || "";
-                app.querySelector('#con-b-store').value = storeName.toUpperCase();
-            };
-
-            // --- SỰ KIỆN CLICK NÚT LƯU THÔNG TIN LIÊN KẾT WEB APP ---
-            const btnSave = app.querySelector('#btn-save-b-info');
-            btnSave.onclick = () => {
-                // Thu thập toàn bộ 14 trường thông tin của Bên B
-                const savedShopsInfo = {
-                    name: app.querySelector('#con-b-name').value.trim(),
-                    address: app.querySelector('#con-b-address').value.trim(),
-                    store: app.querySelector('#con-b-store').value.trim(),
-                    tax: app.querySelector('#con-b-tax').value.trim(),
-                    phone: app.querySelector('#con-b-phone').value.trim(),
-                    bankAcc: app.querySelector('#con-b-bank-acc').value.trim(),
-                    bankName: app.querySelector('#con-b-bank-name').value.trim(),
-                    rep: app.querySelector('#con-b-rep-hd').value.trim(),
-                    role: app.querySelector('#con-b-role-hd').value.trim(),
-                    uq: app.querySelector('#con-b-uq').value.trim(),
-                    repTl: app.querySelector('#con-b-rep-tl').value.trim(),
-                    roleTl: app.querySelector('#con-b-role-tl').value.trim(),
-                    honorHd: app.querySelector('#con-b-honor-hd').value,
-                    honorTl: app.querySelector('#con-b-honor-tl').value
-                };
-
-                // Lưu tạm vào bộ nhớ Local
-                userCfg.shopConfigColL = savedShopsInfo;
-                localStorage.setItem('con_shop_config_col_l', JSON.stringify(savedShopsInfo));
-
-                if (!currentUserId) {
-                    alert("⚠️ Không tìm thấy mã số User định danh từ hệ thống!");
-                    return;
-                }
-
-                // Tạm khóa và đổi chữ hiển thị của nút bấm
-                btnSave.disabled = true;
-                btnSave.style.opacity = "0.6";
-                btnSave.innerText = "⏳ Đang lưu...";
-
-                // Gửi dữ liệu mã hóa lên Web App
-                fetch(webAppUrl, {
-                    method: "POST",
-                    headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify({
-                        action: "saveConfig",
-                        user: currentUserId,
-                        data: JSON.stringify(savedShopsInfo)
-                    })
-                })
-                .then(res => res.json())
-                .then(resData => {
-                    // Phục hồi lại trạng thái nút bấm
-                    btnSave.disabled = false;
-                    btnSave.style.opacity = "1";
-                    btnSave.innerText = "💾 Lưu thông tin";
-                    
-                    if (resData.status === 'success') {
-                        alert("Đã lưu thành công!");
-                    } else {
-                        alert("❌ Lỗi: " + resData.message);
-                    }
-                })
-                .catch(err => {
-                    // Phục hồi lại nút nếu kết nối mạng thất bại
-                    btnSave.disabled = false;
-                    btnSave.style.opacity = "1";
-                    btnSave.innerText = "💾 Lưu thông tin";
-                    alert("❌ Lỗi kết nối đến Apps Script: " + err.message);
-                });
-            };
-            // Hàm tính toán tổng tiền
-            const recalculateTotals = () => {
-                const rows = tbody.querySelectorAll('.con-product-row');
-                let grandTotal = 0;
-
-                rows.forEach((row, idx) => {
-                    row.querySelector('.con-stt').innerText = idx + 1;
-
-                    const qty = parseInt(row.querySelector('.con-p-qty').value) || 0;
-                    const price = UTILS.parseFormattedNumber(row.querySelector('.con-p-price').value) || 0;
-                    const total = qty * price;
-
-                    row.querySelector('.con-p-total').innerText = UTILS.formatNumber(total);
-                    grandTotal += total;
-                });
-
-                const discountVal = UTILS.parseFormattedNumber(app.querySelector('#con-discount-val').value) || 0;
-                const finalTotal = Math.max(0, grandTotal - discountVal);
-
-                app.querySelector('#con-final-total').innerText = UTILS.formatNumber(finalTotal);
-                app.querySelector('#con-final-words').value = convertNumberToWords(finalTotal) + " đồng chẵn";
             };
 
             // Gắn sự kiện cho dòng đầu
