@@ -1801,19 +1801,26 @@
 
                 printHtml += `</body></html>`;
 
-                const printWindow = window.open('', '_blank');
-                if (printWindow) {
-                    printWindow.document.write(printHtml);
-                    printWindow.document.close();
-                    setTimeout(() => { printWindow.print(); }, 500);
-                } else {
-                    alert("⚠️ Lỗi: Trình duyệt của bạn chặn Pop-up! Vui lòng cho phép Pop-up để tải file.");
-                }
-            };
-        };
+                    const printWindow = window.open('', '_blank');
+                    if (printWindow) {
+                        printWindow.document.write(printHtml);
+                        printWindow.document.close();
+                        setTimeout(() => { printWindow.print(); }, 500);
+                    } else {
+                        alert("⚠️ Lỗi: Trình duyệt của bạn chặn Pop-up! Vui lòng cho phép Pop-up để tải file.");
+                    }
+                }; // <--- Khóa đóng hàm proceedWithPrinting
+
+                // --- TỰ ĐỘNG KÍCH HOẠT LƯU NHÁP NGẦM TRƯỚC KHI IN ---
+                executeSaveDraft(true, () => {
+                    proceedWithPrinting();
+                });
+                
+            }; // <--- Khóa đóng sự kiện #btn-con-generate.onclick
+        }; // <--- Khóa đóng điều kiện kiểm tra if (!app)
 
         app.style.display = 'flex';
-    };
+    }; // <--- Khóa đóng hàm tiện ích runTool
 
     return {
         name: "Tạo Hợp Đồng",
