@@ -447,11 +447,14 @@
             const toggleFileType = () => {
                 const fileType = app.querySelector('#con-file-type').value;
                 const panelA = app.querySelector('#panel-side-a');
+                const panelB = app.querySelector('#panel-side-b');
                 const panelQuotation = app.querySelector('#panel-quotation-client');
                 const priceHeader = app.querySelector('.col-price-header');
+                const btnGenerate = app.querySelector('#btn-con-generate');
 
                 if (fileType === 'quotation') {
                     panelA.style.display = 'none';
+                    panelB.style.display = 'none'; // Ẩn Bên B khi báo giá
                     panelQuotation.style.display = 'block';
 
                     // Hiện các cột hình ảnh, cột giá bán lẻ
@@ -459,8 +462,10 @@
                     app.querySelectorAll('.con-p-desc').forEach(el => el.style.display = 'block');
                     app.querySelectorAll('.con-p-name').forEach(el => el.style.display = 'none');
                     priceHeader.innerText = "GIÁ ĐÃ GIẢM (VNĐ)";
+                    btnGenerate.innerText = "🖨️ Tạo Báo Giá & Tải PDF"; // Đổi tên nút
                 } else {
                     panelA.style.display = 'block';
+                    panelB.style.display = 'block'; // Hiện Bên B khi in hợp đồng
                     panelQuotation.style.display = 'none';
 
                     // Ẩn các cột bổ trợ báo giá
@@ -468,6 +473,7 @@
                     app.querySelectorAll('.con-p-desc').forEach(el => el.style.display = 'none');
                     app.querySelectorAll('.con-p-name').forEach(el => el.style.display = 'block');
                     priceHeader.innerText = "ĐƠN GIÁ (VNĐ)";
+                    btnGenerate.innerText = "🖨️ Tạo Hợp Đồng & Tải PDF"; // Trả lại tên nút
                 }
                 recalculateTotals();
             };
@@ -499,10 +505,16 @@
                     imgFileInput.onchange = (e) => {
                         const file = e.target.files[0];
                         if (file) {
-                            const driveFolderId = userCfg.imageFolderId || "";
-                            if (!driveFolderId) {
+                            const driveFolderIdRaw = userCfg.imageFolderId || "";
+                            if (!driveFolderIdRaw) {
                                 alert("⚠️ Bạn chưa khai báo ID thư mục Google Drive lưu ảnh trong cấu hình hệ thống chính!");
                                 return;
+                            }
+
+                            // Tự động xử lý bóc tách lấy ID sạch nếu người dùng dán cả link thư mục Drive dài
+                            let driveFolderId = driveFolderIdRaw.trim();
+                            if (driveFolderId.indexOf("folders/") !== -1) {
+                                driveFolderId = driveFolderId.split("folders/")[1].split("?")[0].split("/")[0];
                             }
 
                             // Hiển thị trạng thái chờ tải lên
@@ -658,6 +670,15 @@
                 const bRoleTl = app.querySelector('#con-b-role-tl').value.trim();
                 const bHonorHd = app.querySelector('#con-b-honor-hd').value;
                 const bHonorTl = app.querySelector('#con-b-honor-tl').value;
+
+                // --- SỬA ĐỔI: PHÂN CHIA ĐIỀU KIỆN KIỂM TRA THEO TỪNG LOẠI VĂN BẢN ---
+                if (docType !== 'quotation') {
+                    if (!dateHd || !dateTl) { alert("⚠️ Vui lòng nhập đầy đủ ngày tháng ký hợp đồng và nghiệm thu!"); return; }
+                    if (!aName || !bName) { alert("⚠️ Vui lòng nhập đầy đủ thông tin hai bên Mua & Bán!"); return; }
+                } else {
+                    const qClientName = app.querySelector('#con-q-client-name').value.trim();
+                    if (!qClientName) { alert("⚠️ Vui lòng nhập đầy đủ tên Khách hàng!"); return; }
+                }
 
                 if (!dateHd || !dateTl) { alert("⚠️ Vui lòng nhập đầy đủ ngày tháng ký hợp đồng và nghiệm thu!"); return; }
                 if (!aName || !bName) { alert("⚠️ Vui lòng nhập đầy đủ thông tin hai bên Mua & Bán!"); return; }
