@@ -157,7 +157,7 @@
             return match ? match[0] : str.trim();
         };
         const currentUserId = AUTH_STATE ? extractUserId(AUTH_STATE.userName) : "";
-        const webAppUrl = "https://script.google.com/macros/s/AKfycbwNlU85fc4tMzfxB2JbCb4r5AnEArfnY3HnylUCBGkrXB1ZvMlTGzdDcOlVKuL1smGqxg/exec";
+        const webAppUrl = "https://script.google.com/macros/s/AKfycbw-KMUUL5rHPeSxGGbFbTs_2VMuP8OH5ehoDci_zAIACKhl0Tip9TTzJ5r-fLwu5He1GQ/exec";
 
         // Hàm điền tự động toàn bộ trường của Bên B
         const fillBFields = (info) => {
