@@ -872,14 +872,12 @@
             };
 
             // --- SỰ KIỆN CLICK NÚT LƯU NHÁP HÀM LƯU ĐẦY ĐỦ CẤU TRÚC LÊN CLOUD ---
-            const btnSaveDraft = app.querySelector('#btn-con-save-draft');
-            btnSaveDraft.onclick = () => {
+            const executeSaveDraft = (silent = false, callback = null) => {
                 const fileType = app.querySelector('#con-file-type').value;
                 const clientName = fileType === 'quotation' 
                     ? app.querySelector('#con-q-client-name').value.trim() 
                     : app.querySelector('#con-a-name').value.trim();
 
-                // Tạo nhãn dạng: Nguyễn Văn A - 30/07 18h53
                 const now = new Date();
                 const labelStr = `${clientName || "Khách mới"} - ${padZero(now.getDate())}/${padZero(now.getMonth()+1)} ${padZero(now.getHours())}h${padZero(now.getMinutes())}`;
 
@@ -895,7 +893,6 @@
                     });
                 });
 
-                // Đóng gói toàn bộ form nháp
                 const draftObj = {
                     id: currentDraftId,
                     label: labelStr,
@@ -932,7 +929,6 @@
                 let cloudData = normalizeCloudData(userCfg.shopConfigColL);
                 let drafts = cloudData.drafts || [];
 
-                // Kiểm tra ghi đè lên phiên cũ hay chèn phiên mới
                 const existingIdx = drafts.findIndex(d => d.id === currentDraftId);
                 if (existingIdx !== -1) {
                     drafts[existingIdx] = draftObj;
@@ -940,7 +936,6 @@
                     drafts.unshift(draftObj);
                 }
 
-                // --- ĐÃ ĐỒNG BỘ: GIỚI HẠN CỨNG TỐI ĐA 5 PHIÊN NHÁP GẦN NHẤT ---
                 if (drafts.length > 5) {
                     drafts = drafts.slice(0, 5);
                 }
@@ -948,16 +943,22 @@
 
                 userCfg.shopConfigColL = cloudData;
                 localStorage.setItem('con_shop_config_col_l', JSON.stringify(cloudData));
-                UTILS.savePersistentConfig(userCfg); // <--- Thêm dòng này để khóa đồng bộ
+                UTILS.savePersistentConfig(userCfg);
 
                 if (!currentUserId) {
-                    alert("⚠️ Không tìm thấy mã số User định danh từ hệ thống!");
+                    if (!silent) alert("⚠️ Không tìm thấy mã số User định danh từ hệ thống!");
+                    if (callback) callback(false);
                     return;
                 }
 
-                btnSaveDraft.disabled = true;
-                btnSaveDraft.style.opacity = "0.6";
-                btnSaveDraft.innerText = "⏳ Đang lưu...";
+                const btnSaveDraft = app.querySelector('#btn-con-save-draft');
+                const origText = btnSaveDraft.innerText;
+
+                if (!silent) {
+                    btnSaveDraft.disabled = true;
+                    btnSaveDraft.style.opacity = "0.6";
+                    btnSaveDraft.innerText = "⏳ Đang lưu...";
+                }
 
                 fetch(webAppUrl, {
                     method: "POST",
@@ -970,23 +971,34 @@
                 })
                 .then(res => res.json())
                 .then(resData => {
-                    btnSaveDraft.disabled = false;
-                    btnSaveDraft.style.opacity = "1";
-                    btnSaveDraft.innerText = "💾 Lưu Nháp";
-                    
+                    if (!silent) {
+                        btnSaveDraft.disabled = false;
+                        btnSaveDraft.style.opacity = "1";
+                        btnSaveDraft.innerText = origText;
+                    }
                     if (resData.status === 'success') {
-                        alert("Đã lưu nháp thành công!");
+                        if (!silent) alert("Đã lưu nháp thành công!");
                         renderDraftDropdown();
+                        if (callback) callback(true);
                     } else {
-                        alert("❌ Lỗi: " + resData.message);
+                        if (!silent) alert("❌ Lỗi: " + resData.message);
+                        if (callback) callback(false);
                     }
                 })
                 .catch(err => {
-                    btnSaveDraft.disabled = false;
-                    btnSaveDraft.style.opacity = "1";
-                    btnSaveDraft.innerText = "💾 Lưu Nháp";
-                    alert("❌ Lỗi mạng: " + err.message);
+                    if (!silent) {
+                        btnSaveDraft.disabled = false;
+                        btnSaveDraft.style.opacity = "1";
+                        btnSaveDraft.innerText = origText;
+                        alert("❌ Lỗi mạng: " + err.message);
+                    }
+                    if (callback) callback(false);
                 });
+            };
+
+            // Gắn sự kiện click chuẩn cho nút Lưu Nháp ngoài giao diện
+            app.querySelector('#btn-con-save-draft').onclick = () => {
+                executeSaveDraft(false); // Lưu nháp thông thường (Có hiển thị Loader và Alert)
             };
             
             // Hàm tính toán tổng tiền
@@ -1104,7 +1116,7 @@
                 const bHonorHd = app.querySelector('#con-b-honor-hd').value;
                 const bHonorTl = app.querySelector('#con-b-honor-tl').value;
 
-                // --- SỬA ĐỒNG BỘ: PHÂN CHIA ĐIỀU KIỆN KIỂM TRA THEO TỪNG LOẠI VĂN BẢN ---
+                // 1. CHẠY BỘ LỌC KIỂM TRA ĐIỀU KIỆN (VALIDATION) TRƯỚC KHI LƯU VÀ IN
                 if (docType !== 'quotation') {
                     if (!dateHd || !dateTl) { alert("⚠️ Vui lòng nhập đầy đủ ngày tháng ký hợp đồng và nghiệm thu!"); return; }
                     if (!aName || !bName) { alert("⚠️ Vui lòng nhập đầy đủ thông tin hai bên Mua & Bán!"); return; }
@@ -1113,30 +1125,40 @@
                     if (!qClientName) { alert("⚠️ Vui lòng nhập đầy đủ tên Khách hàng!"); return; }
                 }
 
-                if (!dateHd || !dateTl) { alert("⚠️ Vui lòng nhập đầy đủ ngày tháng ký hợp đồng và nghiệm thu!"); return; }
-                if (!aName || !bName) { alert("⚠️ Vui lòng nhập đầy đủ thông tin hai bên Mua & Bán!"); return; }
+                // 2. KÍCH HOẠT TIẾN TRÌNH INẤN SAU KHI ĐÃ TỰ ĐỘNG LƯU NHÁP THÀNH CÔNG
+                const btnGenerate = app.querySelector('#btn-con-generate');
+                const origGenText = btnGenerate.innerText;
 
-                const products = [];
-                tbody.querySelectorAll('.con-product-row').forEach((r, idx) => {
-                    products.push({
-                        stt: idx + 1,
-                        name: r.querySelector('.con-p-name').value.trim() || 'Sản phẩm ' + (idx + 1),
-                        qty: parseInt(r.querySelector('.con-p-qty').value) || 0,
-                        price: UTILS.parseFormattedNumber(r.querySelector('.con-p-price').value) || 0
+                // Đổi trạng thái nút tạo file báo hiệu đang tự động lưu nháp
+                btnGenerate.disabled = true;
+                btnGenerate.innerText = "⏳ Đang tự động lưu nháp...";
+
+                // Định nghĩa hàm tiến hành xuất bản in PDF thực tế
+                const proceedWithPrinting = () => {
+                    btnGenerate.disabled = false;
+                    btnGenerate.innerText = origGenText;
+
+                    const products = [];
+                    tbody.querySelectorAll('.con-product-row').forEach((r, idx) => {
+                        products.push({
+                            stt: idx + 1,
+                            name: r.querySelector('.con-p-name').value.trim() || 'Sản phẩm ' + (idx + 1),
+                            qty: parseInt(r.querySelector('.con-p-qty').value) || 0,
+                            price: UTILS.parseFormattedNumber(r.querySelector('.con-p-price').value) || 0
+                        });
                     });
-                });
 
-                const discountName = app.querySelector('#con-discount-name').value.trim();
-                const discountValue = UTILS.parseFormattedNumber(app.querySelector('#con-discount-val').value) || 0;
-                const finalTotal = UTILS.parseFormattedNumber(app.querySelector('#con-final-total').innerText) || 0;
-                const finalWords = app.querySelector('#con-final-words').value;
+                    const discountName = app.querySelector('#con-discount-name').value.trim();
+                    const discountValue = UTILS.parseFormattedNumber(app.querySelector('#con-discount-val').value) || 0;
+                    const finalTotal = UTILS.parseFormattedNumber(app.querySelector('#con-final-total').innerText) || 0;
+                    const finalWords = app.querySelector('#con-final-words').value;
 
-                let printHtml = `
-                    <html>
-                    <head>
-                        <meta charset="utf-8">
-                        <title>Kết xuất báo cáo PDF - AutoBI</title>
-                        <style>
+                    let printHtml = `
+                        <html>
+                        <head>
+                            <meta charset="utf-8">
+                            <title>Kết xuất báo cáo PDF - AutoBI</title>
+                            <style>
                             @page {
                                 size: A4;
                                 margin: 0;
