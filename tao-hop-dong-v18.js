@@ -143,10 +143,10 @@
             const match = str.match(/\d+/);
             return match ? match[0] : str.trim();
         };
-        const currentUserId = extractUserId(AUTH_STATE.userName);
+        const currentUserId = AUTH_STATE ? extractUserId(AUTH_STATE.userName) : "";
         const webAppUrl = "https://script.google.com/macros/s/AKfycbysayWDDAa5-XmkLfekd4-M_k_Ua63FjISCmpwOmI5PFPQ0uRgi5riZFvRvY1ZLZWBi_g/exec";
 
-        // Hàm điền tự động toàn bộ 12 trường của Bên B
+        // Hàm điền tự động toàn bộ trường của Bên B
         const fillBFields = (info) => {
             if (!info) return;
             const fields = {
@@ -161,7 +161,9 @@
                 '#con-b-role-hd': info.role,
                 '#con-b-uq': info.uq,
                 '#con-b-rep-tl': info.repTl,
-                '#con-b-role-tl': info.roleTl
+                '#con-b-role-tl': info.roleTl,
+                '#con-b-honor-hd': info.honorHd,
+                '#con-b-honor-tl': info.honorTl
             };
             for (let selector in fields) {
                 const val = fields[selector];
@@ -247,6 +249,10 @@
                                 <label>Ngày Nghiệm Thu/Thanh Lý</label>
                                 <input type="text" id="con-date-tl" value="14/04/2026" placeholder="dd/mm/yyyy">
                             </div>
+                            <div class="con-col con-group" style="min-width: 250px;">
+                                <label>📍 Địa chỉ siêu thị (Báo giá)</label>
+                                <input type="text" id="con-store-address" value="248 Nguyễn Tất Thành, Liên Sơn, Lắk, Đắk Lắk" placeholder="Nhập địa chỉ siêu thị bán hàng...">
+                            </div>
                             <div class="con-col con-group" style="min-width: 200px;">
                                 <label>📄 Loại văn bản kết xuất</label>
                                 <select id="con-file-type">
@@ -282,7 +288,18 @@
                         <!-- KHÁCH HÀNG NHẬN BÁO GIÁ (Mặc định ẩn, tự hiện khi chọn Báo Giá) -->
                         <div class="con-col con-panel" id="panel-quotation-client" style="display:none;">
                             <div class="con-sec-title bg-buy">🏢 I/ KÍNH GỬI QUÝ KHÁCH (BÁO GIÁ)</div>
-                            <div class="con-group"><label>Anh/ Chị (Tên khách hàng)</label><input type="text" id="con-q-client-name" value="Trịnh Thị Trang"></div>
+                            <div class="con-row" style="gap:10px;">
+                                <div class="con-col con-group" style="min-width:80px; flex:0.4;">
+                                    <label>Danh xưng</label>
+                                    <select id="con-q-client-honor">
+                                        <option value="Anh">Anh</option>
+                                        <option value="Chị" selected>Chị</option>
+                                        <option value="Ông">Ông</option>
+                                        <option value="Bà">Bà</option>
+                                    </select>
+                                </div>
+                                <div class="con-col con-group" style="min-width:180px; flex:1.6;"><label>Tên khách hàng</label><input type="text" id="con-q-client-name" value="Trịnh Thị Trang"></div>
+                            </div>
                             <div class="con-group"><label>Điện thoại</label><input type="text" id="con-q-client-phone" value="0941034995"></div>
                             <div class="con-group"><label>Tên công ty</label><input type="text" id="con-q-client-company" value="Ngân hàng THương mại cổ phần bản việt - PGD Lắk"></div>
                             <div class="con-row" style="gap:10px;">
@@ -305,7 +322,7 @@
                                 </div>
                                 <button id="btn-save-b-info" class="con-btn-add-row" style="height: 38px; background: #2ed573; color: white; border: none; padding: 0 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; margin-bottom: 0;">💾 Lưu thông tin</button>
                             </div>
-                            <div class="con-group"><label>Tên Chi Nhánh / Công ty</label><input type="text" id="con-b-name" value="CHI NHÁNH CÔNG TY CỔ PHẦN ĐẦU TƯ ĐIỆN MÁY XANH"></div>
+                            <div class="con-group"><label>Tên Chi Nhánh / Công ty</label><input type="text" id="con-b-name" value="CHI NHÁNH CÔNG TY CỔ PHẦN ĐẦU TƯ ĐIỆY MÁY XANH"></div>
                             <div class="con-group"><label>Địa Chỉ Trụ Sở Đăng Ký</label><input type="text" id="con-b-address" value="Số A12 Trần Hưng Đạo, Phường Buôn Ma Thuột, Tỉnh Đắk Lắk, Việt Nam"></div>
                             <div class="con-group"><label>Siêu Thị Bán Hàng</label><input type="text" id="con-b-store" value="ĐMM_DLA_LAK - 248 Nguyễn Tất Thành (Liên Sơn)"></div>
                             <div class="con-row" style="gap:10px;">
@@ -317,12 +334,26 @@
                                 <div class="con-col con-group" style="min-width:140px;"><label>Ngân Hàng</label><input type="text" id="con-b-bank-name" value="Ngoại Thương Việt Nam (VCB)– CN Tân Bình TP.HCM"></div>
                             </div>
                             <div class="con-row" style="gap:10px;">
-                                <div class="con-col con-group" style="min-width:140px;"><label>Đại Diện (Hợp Đồng)</label><input type="text" id="con-b-rep-hd" value="Đỗ Thị Thái Thanh"></div>
+                                <div class="con-col con-group" style="min-width:80px; flex:0.4;">
+                                    <label>Danh xưng (HĐ)</label>
+                                    <select id="con-b-honor-hd">
+                                        <option value="Ông">Ông</option>
+                                        <option value="Bà" selected>Bà</option>
+                                    </select>
+                                </div>
+                                <div class="con-col con-group" style="min-width:140px; flex:1.6;"><label>Đại Diện (Hợp Đồng)</label><input type="text" id="con-b-rep-hd" value="Đỗ Thị Thái Thanh"></div>
                                 <div class="con-col con-group" style="min-width:140px;"><label>Chức Vụ (Hợp Đồng)</label><input type="text" id="con-b-role-hd" value="Giám Đốc Bán Hàng"></div>
                             </div>
                             <div class="con-group"><label>Ủy Quyền (Hợp Đồng)</label><input type="text" id="con-b-uq" value="Theo giấy Uỷ Quyền số 12/2026/ĐMX/UQ ký ngày 24/03/2026"></div>
                             <div class="con-row" style="gap:10px;">
-                                <div class="con-col con-group" style="min-width:140px;"><label>Đại Diện (Thanh Lý)</label><input type="text" id="con-b-rep-tl" value="ĐỖ THỊ THÁI THANH"></div>
+                                <div class="con-col con-group" style="min-width:80px; flex:0.4;">
+                                    <label>Danh xưng (TL)</label>
+                                    <select id="con-b-honor-tl">
+                                        <option value="Ông">Ông</option>
+                                        <option value="Bà" selected>Bà</option>
+                                    </select>
+                                </div>
+                                <div class="con-col con-group" style="min-width:140px; flex:1.6;"><label>Đại Diện (Thanh Lý)</label><input type="text" id="con-b-rep-tl" value="ĐỖ THỊ THÁI THANH"></div>
                                 <div class="con-col con-group" style="min-width:140px;"><label>Chức Vụ (Thanh Lý)</label><input type="text" id="con-b-role-tl" value="Giám Đốc Vùng (RSM)"></div>
                             </div>
                         </div>
@@ -456,17 +487,52 @@
                 }
                 qtyInp.oninput = recalculateTotals;
 
-                // Xử lý nạp hình ảnh nội bộ và lưu chuỗi Base64
+                // Xử lý tải ảnh trực tiếp lên Google Drive của người dùng qua Web App
                 if (imgFileInput) {
                     imgFileInput.onchange = (e) => {
                         const file = e.target.files[0];
                         if (file) {
+                            const driveFolderId = userCfg.imageFolderId || "";
+                            if (!driveFolderId) {
+                                alert("⚠️ Bạn chưa khai báo ID thư mục Google Drive lưu ảnh trong cấu hình hệ thống chính!");
+                                return;
+                            }
+
+                            // Hiển thị trạng thái chờ tải lên
+                            imgPlaceholder.innerText = "⏳";
+                            imgPlaceholder.style.fontSize = "12px";
+
                             const reader = new FileReader();
                             reader.onload = (event) => {
-                                imgPreview.src = event.target.result;
-                                imgPreview.style.display = 'block';
-                                imgPlaceholder.style.display = 'none';
-                                row.dataset.imageB64 = event.target.result; // Lưu Base64
+                                // Gửi Base64 lên Drive qua Web App
+                                fetch(webAppUrl, {
+                                    method: "POST",
+                                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                                    body: JSON.stringify({
+                                        action: "upload_file",
+                                        folderId: driveFolderId,
+                                        fileName: "con_prod_" + Date.now() + "_" + file.name,
+                                        data: event.target.result
+                                    })
+                                })
+                                .then(res => res.json())
+                                .then(resData => {
+                                    if (resData.status === 'success' && resData.url) {
+                                        imgPreview.src = resData.url;
+                                        imgPreview.style.display = 'block';
+                                        imgPlaceholder.style.display = 'none';
+                                        row.dataset.imageB64 = resData.url; // Lưu trữ link ảnh RAW từ Drive
+                                    } else {
+                                        alert("❌ Lỗi tải lên Drive: " + resData.message);
+                                        imgPlaceholder.innerText = "＋";
+                                        imgPlaceholder.style.fontSize = "16px";
+                                    }
+                                })
+                                .catch(err => {
+                                    alert("❌ Lỗi kết nối khi tải ảnh lên Drive: " + err.message);
+                                    imgPlaceholder.innerText = "＋";
+                                    imgPlaceholder.style.fontSize = "16px";
+                                });
                             };
                             reader.readAsDataURL(file);
                         }
@@ -494,16 +560,6 @@
                 }
             };
 
-            if (!userCfg.shopConfigColL) {
-                try {
-                    // Fallback đọc từ localStorage nếu cấu hình cloud chưa tải kịp
-                    const localData = localStorage.getItem('con_shop_config_col_l');
-                    if (localData) userCfg.shopConfigColL = JSON.parse(localData);
-                } catch (e) {
-                    userCfg.shopConfigColL = {};
-                }
-            }
-
             // Dropdown chọn siêu thị Bên B
             app.querySelector('#con-b-select').onchange = (e) => {
                 const selVal = e.target.value;
@@ -515,7 +571,7 @@
             // --- SỰ KIỆN CLICK NÚT LƯU THÔNG TIN LIÊN KẾT WEB APP ---
             const btnSave = app.querySelector('#btn-save-b-info');
             btnSave.onclick = () => {
-                // Thu thập toàn bộ 12 trường thông tin của Bên B
+                // Thu thập toàn bộ 14 trường thông tin của Bên B
                 const savedShopsInfo = {
                     name: app.querySelector('#con-b-name').value.trim(),
                     address: app.querySelector('#con-b-address').value.trim(),
@@ -528,7 +584,9 @@
                     role: app.querySelector('#con-b-role-hd').value.trim(),
                     uq: app.querySelector('#con-b-uq').value.trim(),
                     repTl: app.querySelector('#con-b-rep-tl').value.trim(),
-                    roleTl: app.querySelector('#con-b-role-tl').value.trim()
+                    roleTl: app.querySelector('#con-b-role-tl').value.trim(),
+                    honorHd: app.querySelector('#con-b-honor-hd').value,
+                    honorTl: app.querySelector('#con-b-honor-tl').value
                 };
 
                 // Lưu tạm vào bộ nhớ Local
@@ -649,9 +707,6 @@
                 tr.querySelector('.con-p-name').style.display = fileType === 'quotation' ? 'none' : 'block';
             };
 
-            // Gắn sự kiện dòng đầu
-            bindRowEvents(tbody.querySelector('.con-product-row'));
-
             app.querySelector('#con-discount-val').oninput = (e) => {
                 e.target.value = UTILS.formatInputNumber(e.target.value.replace(/[^0-9]/g, ''));
                 recalculateTotals();
@@ -666,6 +721,7 @@
                 const conNo = app.querySelector('#con-no').value.trim();
                 const dateHd = app.querySelector('#con-date-hd').value.trim();
                 const dateTl = app.querySelector('#con-date-tl').value.trim();
+                const storeAddress = app.querySelector('#con-store-address').value.trim();
 
                 const aName = app.querySelector('#con-a-name').value.trim();
                 const aAddress = app.querySelector('#con-a-address').value.trim();
@@ -689,6 +745,8 @@
                 const bUq = app.querySelector('#con-b-uq').value.trim();
                 const bRepTl = app.querySelector('#con-b-rep-tl').value.trim();
                 const bRoleTl = app.querySelector('#con-b-role-tl').value.trim();
+                const bHonorHd = app.querySelector('#con-b-honor-hd').value;
+                const bHonorTl = app.querySelector('#con-b-honor-tl').value;
 
                 if (!dateHd || !dateTl) { alert("⚠️ Vui lòng nhập đầy đủ ngày tháng ký hợp đồng và nghiệm thu!"); return; }
                 if (!aName || !bName) { alert("⚠️ Vui lòng nhập đầy đủ thông tin hai bên Mua & Bán!"); return; }
@@ -922,7 +980,7 @@
                                         <td style="font-weight: bold;">Đại diện bởi</td>
                                         <td style="text-align: center; font-weight: bold;">:</td>
                                         <td>
-                                            <div class="bold">Ông/Bà: ${bRepHd}</div>
+                                            <div class="bold">${bHonorHd}: ${bRepHd}</div>
                                             <div class="bold">Chức vụ: ${bRoleHd}</div>
                                             <div class="italic">(${bUq})</div>
                                         </td>
@@ -1012,7 +1070,7 @@
                                     c. Bên A đồng ý với chính sách thu thập thông tin và xử lý dữ liệu của Bên B theo các điều khoản và điều kiện đã được quy định tại website https://www.dienmayxanh.com/ hoặc https://www.thegioididong.com/.<br>
                                     d. Thực hiện đúng các cam kết được ghi trong Hợp Đồng này.<br><br>
                                     5.2 Nghĩa vụ của Bên B:<br>
-                                    a. Đảm bảo cung cấp Sản Phẩm mới 100%, đúng với quy cách, giá cả, thời gian giao hàng theo cam kết tại Điều 1 và Điều 2 Hợp Đồng này.<br>
+                                    a. Đảm bảo cung cấp Sản Phẩm mới 100%, đúng với quy cách, giá cả, thời gian giao hàng theo cam kết tại Điều 1 and Điều 2 Hợp Đồng này.<br>
                                     b. Cam kết không tiết lộ cho bên thứ ba bất kỳ thông tin nào có liên quan đến việc thực hiện Hợp đồng này.<br>
                                     c. Thực hiện đúng các cam kết được ghi trong Hợp Đồng này.
                                 </div>
@@ -1060,7 +1118,7 @@
                                             Đại Diện Bên B<br><br><br><br><br><br>
                                             <div style="font-weight: normal; text-align: left; padding-left: 20px;">
                                                 <b>Bởi:</b> ${bName}<br>
-                                                <b>Bà :</b> ${bRepHd}<br>
+                                                <b>${bHonorHd} :</b> ${bRepHd}<br>
                                                 <b>Chức vụ:</b> ${bRoleHd.toUpperCase()}
                                             </div>
                                         </td>
@@ -1118,7 +1176,7 @@
                                     <span class="bold">Bên B :</span> <span class="bold">${bName}</span><br>
                                     <div style="margin-left: 20px; line-height: 1.5;">
                                         <span class="red-text">- Địa chỉ :</span> <span class="red-text">${bStore.split(' - ')[1] || bAddress}</span><br>
-                                        <span class="red-text">- Đại diện là:</span> <span class="bold red-text">Ông /Bà: ${bRepTl}</span><br>
+                                        <span class="red-text">- Đại diện là:</span> <span class="bold red-text">${bHonorTl}: ${bRepTl}</span><br>
                                         <span class="red-text">- Chức vụ:</span> ${bRoleTl}
                                     </div>
                                 </div>
@@ -1190,7 +1248,7 @@
                                         <tr style="border:none;"><td style="width:25%; border:none; padding:2px 0; color:red;"><b>Trụ sở đăng ký</b></td><td style="width:2%; border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0; color:red;"><b>${bAddress}</b></td></tr>
                                         <tr style="border:none;"><td style="border:none; padding:2px 0; color:red;"><b>Siêu thị bán hàng</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0; color:red;"><b>${bStore}</b></td></tr>
                                         <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Mã số thuế</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;"><span style="color:red; font-weight:bold;">${bTax}</span></td></tr>
-                                        <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Đại diện bởi</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0; color:red;"><b>Ông /bà RSM ${bRepTl}</b></td></tr>
+                                        <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Đại diện bởi</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0; color:red;"><b>${bHonorTl}: ${bRepTl}</b></td></tr>
                                         <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Chức vụ</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0; color:red;"><b>Giám Đốc Vùng</b></td></tr>
                                     </table>
                                 </div>
@@ -1238,12 +1296,13 @@
                     const qClientAddress = app.querySelector('#con-q-client-address').value.trim();
                     const qDate = app.querySelector('#con-q-date').value.trim();
                     const qValidUntil = app.querySelector('#con-q-valid-until').value.trim();
+                    const qClientHonor = app.querySelector('#con-q-client-honor').value;
 
                     const quoteProducts = [];
                     tbody.querySelectorAll('.con-product-row').forEach((r, idx) => {
                         quoteProducts.push({
                             stt: idx + 1,
-                            img: r.dataset.imageB64 || '', // Lấy ảnh Base64
+                            img: r.dataset.imageB64 || '', // Lấy ảnh Base64 hoặc Link Drive
                             desc: r.querySelector('.con-p-desc').value.trim() || '',
                             qty: parseInt(r.querySelector('.con-p-qty').value) || 0,
                             retailPrice: UTILS.parseFormattedNumber(r.querySelector('.con-p-retail-price').value) || 0,
@@ -1276,22 +1335,13 @@
                                         <td style="width: 60%; text-align: left; vertical-align: top; border: none; padding: 0; line-height: 1.45;">
                                             <div style="font-weight: 900; font-size: 12.5pt; text-transform: uppercase;">CHI NHÁNH CÔNG TY CỔ PHẦN ĐẦU TƯ</div>
                                             <div style="font-weight: 900; font-size: 12.5pt; text-transform: uppercase; margin-bottom: 5px;">ĐIỆN MÁY XANH</div>
-                                            <div style="font-size: 9.5pt; color: red; font-weight: bold;">Địa chỉ: ${bStore.split(' - ')[1] || bAddress}</div>
+                                            <div style="font-size: 9.5pt; color: red; font-weight: bold;">Địa chỉ: ${storeAddress}</div>
                                             <div style="font-size: 9.5pt; font-weight: bold;">Điện thoại: ${bPhone}</div>
                                             <div style="font-size: 9.5pt; color: red; font-weight: bold;">Mã số thuế: ${bTax}</div>
                                         </td>
                                         <td style="width: 40%; text-align: right; vertical-align: top; border: none; padding: 0;">
-                                            <!-- LOGO KÉP TGDD & DMX -->
-                                            <div style="display: flex; gap: 4px; justify-content: flex-end; align-items: center;">
-                                                <div style="background-color: #000; padding: 5px 8px; border-radius: 4px; display: flex; align-items: center; justify-content: center; height: 32px;">
-                                                    <img src="https://thegioididong.com/favicon.ico" style="height: 16px; margin-right: 4px;">
-                                                    <span style="color: #fff; font-family: Arial, sans-serif; font-weight: bold; font-size: 10pt; letter-spacing: -0.5px;">thegioididong<span style="color: #ffc107;">.com</span></span>
-                                                </div>
-                                                <div style="background-color: #0056B3; padding: 5px 8px; border-radius: 4px; display: flex; align-items: center; justify-content: center; height: 32px;">
-                                                    <span style="color: #ffc107; font-size: 14px; margin-right: 4px;">⚡</span>
-                                                    <span style="color: #fff; font-family: Arial, sans-serif; font-weight: bold; font-size: 10pt; letter-spacing: -0.5px;">Điện máy <span style="color: #ffc107;">XANH</span></span>
-                                                </div>
-                                            </div>
+                                            <!-- LOGO HÌNH ẢNH TỪ GOOGLE DRIVE CHUYÊN NGHIỆP -->
+                                            <img src="https://lh3.googleusercontent.com/d/1LSP7koB6KSVG4oUn3jh42ysdTEp92NT4" style="height: 48px; object-fit: contain;">
                                         </td>
                                     </tr>
                                 </table>
@@ -1302,7 +1352,7 @@
                                         <td style="width: 58%; text-align: left; vertical-align: top; border: none; padding: 0;">
                                             <div style="background-color: #000; color: #fff; font-weight: bold; font-size: 9.5pt; padding: 4px 10px; text-transform: uppercase; display: inline-block; margin-bottom: 8px;">Kính gửi Quý khách:</div>
                                             <table style="width: 100%; border: none;">
-                                                <tr style="border: none;"><td style="width: 25%; font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">Anh/ Chi:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientName}</td></tr>
+                                                <tr style="border: none;"><td style="width: 25%; font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">${qClientHonor}:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientName}</td></tr>
                                                 <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">Điện thoại:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientPhone}</td></tr>
                                                 <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">Tên công ty:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientCompany}</td></tr>
                                                 <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">Email:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientEmail}</td></tr>
@@ -1354,7 +1404,7 @@
                                 <!-- LIÊN HỆ HỖ TRỢ -->
                                 <div style="text-align: center; font-size: 9.5pt; line-height: 1.4;">
                                     <div>Nếu quý khách cần hỗ trợ thêm thông tin, vui lòng liên hệ với:</div>
-                                    <div style="font-weight: bold; color: red; margin-top: 1px;">Siêu thị : ${bStore}</div>
+                                    <div style="font-weight: bold; color: red; margin-top: 1px;">Siêu thị : Điện máy Xanh - ${storeAddress}</div>
                                     <div style="font-weight: bold; font-style: italic; margin-top: 10px; font-size: 10pt;">Cảm ơn Quý khách hàng!</div>
                                 </div>
                             </div>
