@@ -3,6 +3,19 @@
     const { UI, UTILS, AUTH_STATE } = context;
 
     // ===============================================================
+    // BỘ TIỆN ÍCH AN TOÀN NỘI BỘ (Độc lập 100% chống lỗi lệch phiên bản)
+    // ===============================================================
+    const safeParseNumber = (str) => {
+        if (!str) return 0;
+        return parseFloat(str.toString().replace(/[^0-9.-]/g, '').replace(/,/g, '')) || 0;
+    };
+
+    const safeFormatNumber = (num) => {
+        if (!num && num !== 0) return '';
+        return new Intl.NumberFormat('en-US').format(Math.round(num || 0));
+    };
+
+    // ===============================================================
     // CSS GIAO DIỆN (Dựng form nhập liệu màu sắc trực quan giống hình vẽ)
     // ===============================================================
     const MY_CSS = `
@@ -149,6 +162,9 @@
         // Hàm điền tự động toàn bộ trường của Bên B
         const fillBFields = (info) => {
             if (!info) return;
+            const activeApp = document.getElementById('con-app') || app;
+            if (!activeApp) return;
+
             const fields = {
                 '#con-b-name': info.name,
                 '#con-b-address': info.address,
@@ -168,7 +184,7 @@
             for (let selector in fields) {
                 const val = fields[selector];
                 if (val !== undefined) {
-                    const el = app.querySelector(selector);
+                    const el = activeApp.querySelector(selector);
                     if (el) el.value = val;
                 }
             }
@@ -579,6 +595,103 @@
                 }
             };
 
+            // Dropdown chọn siêu thị Bên B
+            app.querySelector('#con-b-select').onchange = (e) => {
+                const selVal = e.target.value;
+                if (!selVal) return;
+                const storeName = userCfg[selVal] || "";
+                app.querySelector('#con-b-store').value = storeName.toUpperCase();
+            };
+
+            // --- SỰ KIỆN CLICK NÚT LƯU THÔNG TIN LIÊN KẾT WEB APP ---
+            const btnSave = app.querySelector('#btn-save-b-info');
+            btnSave.onclick = () => {
+                // Thu thập toàn bộ 14 trường thông tin của Bên B
+                const savedShopsInfo = {
+                    name: app.querySelector('#con-b-name').value.trim(),
+                    address: app.querySelector('#con-b-address').value.trim(),
+                    store: app.querySelector('#con-b-store').value.trim(),
+                    tax: app.querySelector('#con-b-tax').value.trim(),
+                    phone: app.querySelector('#con-b-phone').value.trim(),
+                    bankAcc: app.querySelector('#con-b-bank-acc').value.trim(),
+                    bankName: app.querySelector('#con-b-bank-name').value.trim(),
+                    rep: app.querySelector('#con-b-rep-hd').value.trim(),
+                    role: app.querySelector('#con-b-role-hd').value.trim(),
+                    uq: app.querySelector('#con-b-uq').value.trim(),
+                    repTl: app.querySelector('#con-b-rep-tl').value.trim(),
+                    roleTl: app.querySelector('#con-b-role-tl').value.trim(),
+                    honorHd: app.querySelector('#con-b-honor-hd').value,
+                    honorTl: app.querySelector('#con-b-honor-tl').value
+                };
+
+                // Lưu tạm vào bộ nhớ Local
+                userCfg.shopConfigColL = savedShopsInfo;
+                localStorage.setItem('con_shop_config_col_l', JSON.stringify(savedShopsInfo));
+
+                if (!currentUserId) {
+                    alert("⚠️ Không tìm thấy mã số User định danh từ hệ thống!");
+                    return;
+                }
+
+                // Tạm khóa và đổi chữ hiển thị của nút bấm
+                btnSave.disabled = true;
+                btnSave.style.opacity = "0.6";
+                btnSave.innerText = "⏳ Đang lưu...";
+
+                // Gửi dữ liệu mã hóa lên Web App
+                fetch(webAppUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "saveConfig",
+                        user: currentUserId,
+                        data: JSON.stringify(savedShopsInfo)
+                    })
+                })
+                .then(res => res.json())
+                .then(resData => {
+                    // Phục hồi lại trạng thái nút bấm
+                    btnSave.disabled = false;
+                    btnSave.style.opacity = "1";
+                    btnSave.innerText = "💾 Lưu thông tin";
+                    
+                    if (resData.status === 'success') {
+                        alert("Đã lưu thành công!");
+                    } else {
+                        alert("❌ Lỗi: " + resData.message);
+                    }
+                })
+                .catch(err => {
+                    // Phục hồi lại nút nếu kết nối mạng thất bại
+                    btnSave.disabled = false;
+                    btnSave.style.opacity = "1";
+                    btnSave.innerText = "💾 Lưu thông tin";
+                    alert("❌ Lỗi kết nối đến Apps Script: " + err.message);
+                });
+            };
+            // Hàm tính toán tổng tiền
+            const recalculateTotals = () => {
+                const rows = tbody.querySelectorAll('.con-product-row');
+                let grandTotal = 0;
+
+                rows.forEach((row, idx) => {
+                    row.querySelector('.con-stt').innerText = idx + 1;
+
+                    const qty = parseInt(row.querySelector('.con-p-qty').value) || 0;
+                    const price = UTILS.parseFormattedNumber(row.querySelector('.con-p-price').value) || 0;
+                    const total = qty * price;
+
+                    row.querySelector('.con-p-total').innerText = UTILS.formatNumber(total);
+                    grandTotal += total;
+                });
+
+                const discountVal = UTILS.parseFormattedNumber(app.querySelector('#con-discount-val').value) || 0;
+                const finalTotal = Math.max(0, grandTotal - discountVal);
+
+                app.querySelector('#con-final-total').innerText = UTILS.formatNumber(finalTotal);
+                app.querySelector('#con-final-words').value = convertNumberToWords(finalTotal) + " đồng chẵn";
+            };
+
             // Gắn sự kiện cho dòng đầu
             const firstRow = tbody.querySelector('.con-product-row');
             bindRowEvents(firstRow);
@@ -671,7 +784,7 @@
                 const bHonorHd = app.querySelector('#con-b-honor-hd').value;
                 const bHonorTl = app.querySelector('#con-b-honor-tl').value;
 
-                // --- SỬA ĐỔI: PHÂN CHIA ĐIỀU KIỆN KIỂM TRA THEO TỪNG LOẠI VĂN BẢN ---
+                // --- SỬA ĐỒNG BỘ: PHÂN CHIA ĐIỀU KIỆN KIỂM TRA THEO TỪNG LOẠI VĂN BẢN ---
                 if (docType !== 'quotation') {
                     if (!dateHd || !dateTl) { alert("⚠️ Vui lòng nhập đầy đủ ngày tháng ký hợp đồng và nghiệm thu!"); return; }
                     if (!aName || !bName) { alert("⚠️ Vui lòng nhập đầy đủ thông tin hai bên Mua & Bán!"); return; }
@@ -679,6 +792,9 @@
                     const qClientName = app.querySelector('#con-q-client-name').value.trim();
                     if (!qClientName) { alert("⚠️ Vui lòng nhập đầy đủ tên Khách hàng!"); return; }
                 }
+
+                if (!dateHd || !dateTl) { alert("⚠️ Vui lòng nhập đầy đủ ngày tháng ký hợp đồng và nghiệm thu!"); return; }
+                if (!aName || !bName) { alert("⚠️ Vui lòng nhập đầy đủ thông tin hai bên Mua & Bán!"); return; }
 
                 const products = [];
                 tbody.querySelectorAll('.con-product-row').forEach((r, idx) => {
@@ -876,7 +992,7 @@
                                         <td colspan="3" class="bold" style="background-color:#f2f2f2;">BÊN BÁN (BÊN B): ${bName}</td>
                                     </tr>
                                     <tr>
-                                        <td style="font-weight: bold;">Trụ sở đăng ký</td>
+                                        <td style="width: 25%; font-weight: bold;">Trụ sở đăng ký</td>
                                         <td style="text-align: center; font-weight: bold;">:</td>
                                         <td>${bAddress}</td>
                                     </tr>
@@ -1141,7 +1257,7 @@
                             </div>
                             <div style="border-top: 1px solid #ccc; padding-top: 5px; display: flex; justify-content: space-between; font-size: 10pt; font-family: sans-serif;">
                                 <span style="font-weight: bold; color: #111;">dienmayxanh</span>
-                                <span>1/2</span>
+                                <span>2/2</span>
                             </div>
                         </div>
 
@@ -1319,6 +1435,7 @@
                                             <td class="text-right" style="padding: 5px; border: 1px solid #000; color: #000; font-size: 11pt; font-weight: 900;">${UTILS.formatNumber(finalTotal)}</td>
                                         </tr>
                                     </tbody>
+                                endOfProductsHtml
                                 </table>
 
                                 <!-- CÁC ĐIỀU KHOẢN -->
@@ -1358,7 +1475,7 @@
     };
 
     return {
-        name: "Tạo Hợp Đồng 1",
+        name: "Tạo Hợp Đồng",
         icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 15H7v-2h10v2zm0-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>`,
         bgColor: "#6c5ce7",
         action: runTool
