@@ -680,9 +680,6 @@
                     if (!qClientName) { alert("⚠️ Vui lòng nhập đầy đủ tên Khách hàng!"); return; }
                 }
 
-                if (!dateHd || !dateTl) { alert("⚠️ Vui lòng nhập đầy đủ ngày tháng ký hợp đồng và nghiệm thu!"); return; }
-                if (!aName || !bName) { alert("⚠️ Vui lòng nhập đầy đủ thông tin hai bên Mua & Bán!"); return; }
-
                 const products = [];
                 tbody.querySelectorAll('.con-product-row').forEach((r, idx) => {
                     products.push({
