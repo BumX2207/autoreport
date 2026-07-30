@@ -287,7 +287,7 @@
                     </div>
                     
                     <!-- THANH ĐIỀU HƯỚNG TIỆN ÍCH DRAFT -->
-                    <div style="display:flex; align-items:center; gap:10px; flex:1; justify-content:flex-end; max-width:680px;">
+                    <div style="display:flex; align-items:center; gap:10px; flex:1; justify-content:start; max-width:680px;">
                         <select id="con-draft-select" style="padding:6px 12px; border:1px solid #cbd5e1; border-radius:8px; font-weight:bold; font-size:12.5px; max-width:260px; background:#f8fafc; outline:none; cursor:pointer;">
                             <option value="">📂 --- Xem lại bản nháp gần nhất ---</option>
                         </select>
