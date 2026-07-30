@@ -280,38 +280,17 @@
                                 <div class="con-col con-group" style="min-width:140px;"><label>Ngân Hàng</label><input type="text" id="con-a-bank-name" value="" placeholder="Tên ngân hàng bên A (nếu có)..."></div>
                             </div>
                             <div class="con-row" style="gap:10px;">
-                                <div class="con-col con-group" style="min-width:140px;"><label>Người Đại Diện</label><input type="text" id="con-a-rep" value="Bùi Quang Tuyên"></div>
-                                <div class="con-col con-group" style="min-width:140px;"><label>Chức Vụ</label><input type="text" id="con-a-role" value="Giám đốc"></div>
-                            </div>
-                        </div>
-
-                        <!-- KHÁCH HÀNG NHẬN BÁO GIÁ (Mặc định ẩn, tự hiện khi chọn Báo Giá) -->
-                        <div class="con-col con-panel" id="panel-quotation-client" style="display:none;">
-                            <div class="con-sec-title bg-buy">🏢 I/ KÍNH GỬI QUÝ KHÁCH (BÁO GIÁ)</div>
-                            <div class="con-row" style="gap:10px;">
                                 <div class="con-col con-group" style="min-width:80px; flex:0.4;">
-                                    <label>Danh xưng</label>
-                                    <select id="con-q-client-honor">
-                                        <option value="Anh">Anh</option>
-                                        <option value="Chị" selected>Chị</option>
-                                        <option value="Ông">Ông</option>
+                                    <label>Danh xưng (A)</label>
+                                    <select id="con-a-honor">
+                                        <option value="Ông" selected>Ông</option>
                                         <option value="Bà">Bà</option>
                                     </select>
                                 </div>
-                                <div class="con-col con-group" style="min-width:180px; flex:1.6;"><label>Tên khách hàng</label><input type="text" id="con-q-client-name" value="Trịnh Thị Trang"></div>
-                            </div>
-                            <div class="con-group"><label>Điện thoại</label><input type="text" id="con-q-client-phone" value="0941034995"></div>
-                            <div class="con-group"><label>Tên công ty</label><input type="text" id="con-q-client-company" value="Ngân hàng THương mại cổ phần bản việt - PGD Lắk"></div>
-                            <div class="con-row" style="gap:10px;">
-                                <div class="con-col con-group" style="min-width:140px;"><label>Email</label><input type="text" id="con-q-client-email" value="test@company.com"></div>
-                                <div class="con-col con-group" style="min-width:140px;"><label>Địa chỉ</label><input type="text" id="con-q-client-address" value="Số 212 Nguyễn Tất Thành, Xã Liên Sơn Lắk, Tỉnh Đắk Lắk"></div>
-                            </div>
-                            <div class="con-row" style="gap:10px;">
-                                <div class="con-col con-group" style="min-width:140px;"><label>Ngày báo giá</label><input type="text" id="con-q-date" value="29/06/2026" placeholder="dd/mm/yyyy"></div>
-                                <div class="con-col con-group" style="min-width:140px;"><label>Hiệu lực đến</label><input type="text" id="con-q-valid-until" value="06/07/2026" placeholder="dd/mm/yyyy"></div>
+                                <div class="con-col con-group" style="min-width:140px; flex:1.6;"><label>Người Đại Diện</label><input type="text" id="con-a-rep" value="Bùi Quang Tuyên"></div>
+                                <div class="con-col con-group" style="min-width:140px;"><label>Chức Vụ</label><input type="text" id="con-a-role" value="Giám đốc"></div>
                             </div>
                         </div>
-
                         <!-- BÊN BÁN (BÊN B) -->
                         <div class="con-col con-panel">
                             <div class="con-sec-title bg-sell">🏪 II/ BÊN BÁN (BÊN B)</div>
@@ -731,6 +710,7 @@
                 const aBankName = app.querySelector('#con-a-bank-name').value.trim();
                 const aRep = app.querySelector('#con-a-rep').value.trim();
                 const aRole = app.querySelector('#con-a-role').value.trim();
+                const aHonor = app.querySelector('#con-a-honor').value; 
 
                 const bName = app.querySelector('#con-b-name').value.trim();
                 const bAddress = app.querySelector('#con-b-address').value.trim();
@@ -939,7 +919,7 @@
                                         <td style="font-weight: bold;">Đại diện bởi</td>
                                         <td style="text-align: center; font-weight: bold;">:</td>
                                         <td>
-                                            <div class="bold">${aRep}</div>
+                                            <div class="bold">${aHonor}: ${aRep}</div>
                                             <div>Chức vụ : ${aRole}</div>
                                         </td>
                                     </tr>
@@ -1110,7 +1090,7 @@
                                             Đại Diện Bên A<br><br><br><br><br><br>
                                             <div style="font-weight: normal; text-align: left; padding-left: 20px;">
                                                 <b>Bởi:</b> ${aName}<br>
-                                                <b>Tên:</b> ${aRep}<br>
+                                                <b>${aHonor} :</b> ${aRep}<br>
                                                 <b>Chức vụ:</b> ${aRole}
                                             </div>
                                         </td>
