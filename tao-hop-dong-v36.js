@@ -1217,15 +1217,17 @@
                                 .print-footer {
                                     position: fixed !important;
                                     
-                                    /* ========================================================================= */
-                                    /* [TÙY CHỈNH CHUẨN] KHOẢNG CÁCH FOOTER PHÁP CHẾ SO VỚI MÉP GIẤY DƯỚI TẠI ĐÂY */
-                                    /* Bạn có thể sửa con số "0.8cm" thành "1.0cm", "1.2cm", v.v. tùy nhu cầu thẩm mỹ */
-                                    /* Khoảng cách này độc lập hoàn toàn và không bị thay đổi khi tinh chỉnh Margin */
-                                    /* ========================================================================= */
-                                    bottom: 0.5cm !important; 
+                                    /* ====================================================================================== */
+                                    /* CÔNG THỨC KHÓA CỐ ĐỊNH VỊ TRÍ FOOTER KHÔNG DI CHUYỂN KHI THAY ĐỔI MARGIN                */
+                                    /* -------------------------------------------------------------------------------------- */
+                                    /* Để thay đổi khoảng cách cố định của footer so với mép dưới của giấy in:                */
+                                    /* Bạn chỉ việc thay đổi con số "0.8cm" ở cuối công thức dưới đây (Ví dụ: 1.0cm, 1.2cm)   */
+                                    /* Trình duyệt sẽ khóa footer đứng im tại khoảng cách đó, không bị di chuyển khi đổi lề!   */
+                                    /* ====================================================================================== */
+                                    bottom: calc(-${marginBottom}cm + 0.8cm) !important;
                                     
-                                    left: 2cm !important;     /* Căn lề trái thẳng hàng nội dung trang in */
-                                    right: 1.5cm !important;  /* Căn lề phải thẳng hàng nội dung trang in */
+                                    left: 0 !important;       /* Căn lề trái thẳng hàng nội dung trang in */
+                                    right: 0 !important;      /* Căn lề phải thẳng hàng nội dung trang in */
                                     border-top: 1px solid black !important;
                                     padding-top: 5px !important;
                                     font-size: 9.5pt !important;
