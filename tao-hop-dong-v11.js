@@ -315,6 +315,15 @@
                                 <label>Ngày Nghiệm Thu/Thanh Lý</label>
                                 <input type="text" id="con-date-tl" value="14/04/2026" placeholder="dd/mm/yyyy">
                             </div>
+                            <!-- THIẾT LẬP CĂN LỀ ĐỘNG CHO TRANG IN -->
+                            <div class="con-col con-group" style="min-width: 110px;">
+                                <label>📐 Lề Trên (cm)</label>
+                                <input type="number" id="con-print-margin-top" value="1.8" step="0.1" min="0" max="10" style="text-align: center;">
+                            </div>
+                            <div class="con-col con-group" style="min-width: 110px;">
+                                <label>📐 Lề Dưới (cm)</label>
+                                <input type="number" id="con-print-margin-bottom" value="2.2" step="0.1" min="0" max="10" style="text-align: center;">
+                            </div>
                             <div class="con-col con-group" style="min-width: 250px;">
                                 <label>📍 Địa chỉ siêu thị (Báo giá)</label>
                                 <input type="text" id="con-store-address" value="248 Nguyễn Tất Thành, Liên Sơn, Lắk, Đắk Lắk" placeholder="Nhập địa chỉ siêu thị bán hàng...">
@@ -740,6 +749,8 @@
                 app.querySelector('#con-no').value = draft.conNo || '';
                 app.querySelector('#con-date-hd').value = draft.dateHd || '';
                 app.querySelector('#con-date-tl').value = draft.dateTl || '';
+                app.querySelector('#con-print-margin-top').value = draft.printMarginTop !== undefined ? draft.printMarginTop : '1.8';
+                app.querySelector('#con-print-margin-bottom').value = draft.printMarginBottom !== undefined ? draft.printMarginBottom : '2.2';
                 app.querySelector('#con-store-address').value = draft.storeAddress || '';
 
                 app.querySelector('#con-a-name').value = draft.aName || '';
@@ -827,6 +838,8 @@
                 app.querySelector('#con-a-rep').value = "";
                 app.querySelector('#con-a-role').value = "";
                 app.querySelector('#con-a-honor').value = "Ông";
+                app.querySelector('#con-print-margin-top').value = "1.8";
+                app.querySelector('#con-print-margin-bottom').value = "2.2";
 
                 app.querySelector('#con-q-client-name').value = "";
                 app.querySelector('#con-q-client-phone').value = "";
@@ -900,6 +913,8 @@
                     conNo: app.querySelector('#con-no').value.trim(),
                     dateHd: app.querySelector('#con-date-hd').value.trim(),
                     dateTl: app.querySelector('#con-date-tl').value.trim(),
+                    printMarginTop: parseFloat(app.querySelector('#con-print-margin-top').value) || 1.8,
+                    printMarginBottom: parseFloat(app.querySelector('#con-print-margin-bottom').value) || 2.2,
                     storeAddress: app.querySelector('#con-store-address').value.trim(),
 
                     aName: app.querySelector('#con-a-name').value.trim(),
@@ -1116,6 +1131,10 @@
                 const bHonorHd = app.querySelector('#con-b-honor-hd').value;
                 const bHonorTl = app.querySelector('#con-b-honor-tl').value;
 
+                // THU THẬP CẤU HÌNH LỀ IN ĐỘNG TỪ UI NGƯỜI DÙNG
+                const marginTop = parseFloat(app.querySelector('#con-print-margin-top').value) || 1.8;
+                const marginBottom = parseFloat(app.querySelector('#con-print-margin-bottom').value) || 2.2;
+
                 // 1. CHẠY BỘ LỌC KIỂM TRA ĐIỀU KIỆN (VALIDATION) TRƯỚC KHI LƯU VÀ IN
                 if (docType !== 'quotation') {
                     if (!dateHd || !dateTl) { alert("⚠️ Vui lòng nhập đầy đủ ngày tháng ký hợp đồng và nghiệm thu!"); return; }
@@ -1161,8 +1180,8 @@
                             <style>
                             @page {
                                 size: A4;
-                                margin-top: 1.8cm;
-                                margin-bottom: 2.2cm;
+                                margin-top: ${marginTop}cm; /* Lề trên cấu hình động */
+                                margin-bottom: ${marginBottom}cm; /* Lề dưới cấu hình động */
                                 margin-left: 2cm;
                                 margin-right: 1.5cm;
                             }
@@ -1190,12 +1209,12 @@
                                     position: relative !important;
                                 }
                                 .page-content {
-                                    padding-bottom: 0 !important; /* Không sử dụng padding-bottom nội bộ, dùng lề @page */
+                                    padding-bottom: 0 !important;
                                 }
-                                /* Chân trang in cố định tuyệt đối ở đáy mọi trang */
+                                /* Chân trang in cố định tuyệt đối ở đáy mỗi trang giấy in */
                                 .print-footer {
                                     position: fixed !important;
-                                    bottom: -1.2cm !important; /* Đẩy sâu vào khu vực lề dưới của trang giấy tránh đè chữ */
+                                    bottom: calc(-${marginBottom}cm + 0.8cm) !important; /* Neo cứng cách đáy giấy vật lý đúng 0.8cm */
                                     left: 0 !important;
                                     right: 0 !important;
                                     border-top: 1px solid black !important;
@@ -1206,6 +1225,7 @@
                                     display: flex !important;
                                     justify-content: space-between !important;
                                     height: auto !important;
+                                    z-index: 9999;
                                 }
                                 .print-footer .page-num::after {
                                     content: counter(page); /* Đánh số trang tự động tăng dần */
@@ -1230,13 +1250,16 @@
                                     page-break-after: auto !important;
                                 }
                                 .prod-table thead {
-                                    display: table-header-group !important; /* Tiêu đề bảng tự động lặp lại ở đầu trang sau */
+                                    display: table-row-group !important; /* Không lặp lại header ở trang sau theo yêu cầu */
                                 }
                                 .avoid-break {
                                     page-break-inside: avoid !important; /* Ngăn ngắt trang đứt quãng giữa phần chữ ký */
                                 }
                                 .page-break {
                                     page-break-before: always !important; /* Lực lượng chuyển trang sạch sẽ cho tài liệu sau */
+                                    height: 0 !important;
+                                    margin: 0 !important;
+                                    border: none !important;
                                 }
                             }
                             body { 
@@ -1275,21 +1298,9 @@
                                 content: "1";
                             }
                             .page-break {
-                                border-top: 1px dashed #ccc;
+                                border-top: 1px dashed #cbd5e1;
                                 margin: 40px 0;
-                                position: relative;
-                            }
-                            .page-break::after {
-                                content: "✂ PHÂN TÁCH BIÊN BẢN (TRANG MỚI)";
-                                position: absolute;
-                                top: -10px;
-                                left: 50%;
-                                transform: translateX(-50%);
-                                background: #fff;
-                                padding: 0 15px;
-                                font-size: 9pt;
-                                color: #94a3b8;
-                                font-weight: bold;
+                                height: 1px;
                             }
                             .doc-title { text-align: center; font-size: 15pt; font-weight: bold; text-transform: uppercase; margin-top: 15px; margin-bottom: 5px; }
                             .doc-subtitle { text-align: center; font-size: 11pt; margin-bottom: 15px; }
@@ -1392,7 +1403,7 @@
                                         </tr>
                                         <tr>
                                             <td style="width: 25%; font-weight: bold;">Trụ sở đăng ký</td>
-                                            <td style="text-align: center; font-weight: bold;">:</td>
+                                            <td style="width: 2%; text-align: center; font-weight: bold;">:</td>
                                             <td>${bAddress}</td>
                                         </tr>
                                         <tr>
@@ -1531,7 +1542,7 @@
                                         8.3 Hợp đồng này được lập thành 02 (hai) bản, mỗi bên giữ 01 (một) bản có giá trị pháp lý như nhau.
                                     </div>
 
-                                    <!-- KHỐI CHỮ KÝ TRÁNH BỊ ĐỨT GÃY NGẮT QUÃNG -->
+                                    <!-- KHỐI CHỮ KÝ TRÁNH BÌ ĐỨT GÃY NGẮT QUÃNG -->
                                     <div class="avoid-break">
                                         <table style="width:100%; border:none; margin-top:40px;">
                                             <tr style="border:none;">
@@ -1647,7 +1658,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- ĐƯỜNG PHÂN CẮT TRANG IN GIỮA 2 BIÊN BẢN (TRÁNH TRỐNG KHOẢNG TRẮNG CẬP RẬP) -->
+                                    <!-- ĐƯỜNG PHÂN CẮT TRANG IN GIỮA 2 BIÊN BẢN (TRẮNG TINH KHI IN, CHỈ THẤY NÉT ĐỨT TRÊN MÀN HÌNH) -->
                                     <div class="page-break"></div>
 
                                     <!-- KHỐI 2: BIÊN BẢN THANH LÝ -->
