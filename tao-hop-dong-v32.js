@@ -1208,7 +1208,7 @@
                                     background: transparent !important;
                                     font-size: 10pt !important;
                                     line-height: 1.3 !important;
-                                    position: relative !important;
+                                    position: static !important;
                                 }
                                 .page-content {
                                     padding-bottom: 0 !important;
@@ -1216,9 +1216,9 @@
                                 /* Chân trang in cố định tuyệt đối ở đáy mọi trang giấy in */
                                 .print-footer {
                                     position: fixed !important;
-                                    bottom: calc(-${marginBottom}cm + 0.2cm) !important; /* Luôn neo chuẩn sát đáy giấy, bất chấp thay đổi margin */
-                                    left: 0 !important;
-                                    right: 0 !important;
+                                    bottom: 0.8cm !important; /* <--- Ghi đè cứng khoảng cách cách mép dưới tờ giấy in là 0.8cm */
+                                    left: 2cm !important;     /* Căn lề trái thẳng hàng với nội dung văn bản */
+                                    right: 1.5cm !important;  /* Căn lề phải thẳng hàng với nội dung văn bản */
                                     border-top: 1px solid black !important;
                                     padding-top: 5px !important;
                                     font-size: 9.5pt !important;
