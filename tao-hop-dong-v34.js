@@ -158,7 +158,7 @@
         };
         const currentUserId = AUTH_STATE ? extractUserId(AUTH_STATE.userName) : "";
         
-        // URL WEB APP ĐỒNG BỘ ĐÃ ĐƯỢC CẬP NHẬT THEO ĐÚNG YÊU CẦU
+        // URL WEB APP ĐỒNG BỘ ĐÃ ĐƯỢC CẬP NHẬT THEO ĐÚNG YÊU CẦU CỦA BẠN
         const webAppUrl = "https://script.google.com/macros/s/AKfycbw-KMUUL5rHPeSxGGbFbTs_2VMuP8OH5ehoDci_zAIACKhl0Tip9TTzJ5r-fLwu5He1GQ/exec";
 
         // Khởi tạo Mã phiên làm việc hiện tại (Bản nháp mặc định)
@@ -1208,17 +1208,24 @@
                                     background: transparent !important;
                                     font-size: 10pt !important;
                                     line-height: 1.3 !important;
-                                    position: static !important;
+                                    position: static !important; /* Giải phóng tọa độ in để position: fixed hoạt động chuẩn */
                                 }
                                 .page-content {
                                     padding-bottom: 0 !important;
                                 }
-                                /* Chân trang in cố định tuyệt đối ở đáy mọi trang giấy in */
+                                /* Chân trang in cố định tuyệt đối ở đáy mỗi trang giấy in độc lập */
                                 .print-footer {
                                     position: fixed !important;
-                                    bottom: 0.8cm !important; /* <--- Ghi đè cứng khoảng cách cách mép dưới tờ giấy in là 0.8cm */
-                                    left: 2cm !important;     /* Căn lề trái thẳng hàng với nội dung văn bản */
-                                    right: 1.5cm !important;  /* Căn lề phải thẳng hàng với nội dung văn bản */
+                                    
+                                    /* ========================================================================= */
+                                    /* [TÙY CHỈNH CHUẨN] KHOẢNG CÁCH FOOTER PHÁP CHẾ SO VỚI MÉP GIẤY DƯỚI TẠI ĐÂY */
+                                    /* Bạn có thể sửa con số "0.8cm" thành "1.0cm", "1.2cm", v.v. tùy nhu cầu thẩm mỹ */
+                                    /* Khoảng cách này độc lập hoàn toàn và không bị thay đổi khi tinh chỉnh Margin */
+                                    /* ========================================================================= */
+                                    bottom: 0.8cm !important; 
+                                    
+                                    left: 2cm !important;     /* Căn lề trái thẳng hàng nội dung trang in */
+                                    right: 1.5cm !important;  /* Căn lề phải thẳng hàng nội dung trang in */
                                     border-top: 1px solid black !important;
                                     padding-top: 5px !important;
                                     font-size: 9.5pt !important;
@@ -1783,7 +1790,7 @@
                                         <tr style="border: none;">
                                             <td style="width: 60%; text-align: left; vertical-align: top; border: none; padding: 0; line-height: 1.45;">
                                                 <div style="font-weight: 900; font-size: 12.5pt; text-transform: uppercase;">CHI NHÁNH CÔNG TY CỔ PHẦN ĐẦU TƯ</div>
-                                                <div style="font-weight: 900; font-size: 12.5pt; text-transform: uppercase; margin-bottom: 5px;">ĐIỆN MÁX XANH</div>
+                                                <div style="font-weight: 900; font-size: 12.5pt; text-transform: uppercase; margin-bottom: 5px;">ĐIỆN MÁY XANH</div>
                                                 <div style="font-size: 9.5pt; color: red; font-weight: bold;">Địa chỉ: ${storeAddress}</div>
                                                 <div style="font-size: 9.5pt; font-weight: bold;">Điện thoại: ${bPhone}</div>
                                                 <div style="font-size: 9.5pt; color: red; font-weight: bold;">Mã số thuế: ${bTax}</div>
