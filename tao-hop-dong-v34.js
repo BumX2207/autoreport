@@ -1222,7 +1222,7 @@
                                     /* Bạn có thể sửa con số "0.8cm" thành "1.0cm", "1.2cm", v.v. tùy nhu cầu thẩm mỹ */
                                     /* Khoảng cách này độc lập hoàn toàn và không bị thay đổi khi tinh chỉnh Margin */
                                     /* ========================================================================= */
-                                    bottom: 0.8cm !important; 
+                                    bottom: 0.5cm !important; 
                                     
                                     left: 2cm !important;     /* Căn lề trái thẳng hàng nội dung trang in */
                                     right: 1.5cm !important;  /* Căn lề phải thẳng hàng nội dung trang in */
