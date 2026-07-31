@@ -157,7 +157,9 @@
             return match ? match[0] : str.trim();
         };
         const currentUserId = AUTH_STATE ? extractUserId(AUTH_STATE.userName) : "";
-        const webAppUrl = "https://script.google.com/macros/s/AKfycbysayWDDAa5-XmkLfekd4-M_k_Ua63FjISCmpwOmI5PFPQ0uRgi5riZFvRvY1ZLZWBi_g/exec";
+        
+        // URL WEB APP ĐỒNG BỘ ĐÃ ĐƯỢC CẬP NHẬT THEO ĐÚNG YÊU CẦU
+        const webAppUrl = "https://script.google.com/macros/s/AKfycbw-KMUUL5rHPeSxGGbFbTs_2VMuP8OH5ehoDci_zAIACKhl0Tip9TTzJ5r-fLwu5He1GQ/exec";
 
         // Khởi tạo Mã phiên làm việc hiện tại (Bản nháp mặc định)
         let currentDraftId = "draft_" + Date.now();
@@ -322,7 +324,7 @@
                             </div>
                             <div class="con-col con-group" style="min-width: 110px;">
                                 <label>📐 Lề Dưới (cm)</label>
-                                <input type="number" id="con-print-margin-bottom" value="2.2" step="0.1" min="0" max="10" style="text-align: center;">
+                                <input type="number" id="con-print-margin-bottom" value="1.0" step="0.1" min="0.5" max="10" style="text-align: center;">
                             </div>
                             <div class="con-col con-group" style="min-width: 250px;">
                                 <label>📍 Địa chỉ siêu thị (Báo giá)</label>
@@ -750,7 +752,7 @@
                 app.querySelector('#con-date-hd').value = draft.dateHd || '';
                 app.querySelector('#con-date-tl').value = draft.dateTl || '';
                 app.querySelector('#con-print-margin-top').value = draft.printMarginTop !== undefined ? draft.printMarginTop : '1.8';
-                app.querySelector('#con-print-margin-bottom').value = draft.printMarginBottom !== undefined ? draft.printMarginBottom : '2.2';
+                app.querySelector('#con-print-margin-bottom').value = draft.printMarginBottom !== undefined ? draft.printMarginBottom : '1.0';
                 app.querySelector('#con-store-address').value = draft.storeAddress || '';
 
                 app.querySelector('#con-a-name').value = draft.aName || '';
@@ -839,7 +841,7 @@
                 app.querySelector('#con-a-role').value = "";
                 app.querySelector('#con-a-honor').value = "Ông";
                 app.querySelector('#con-print-margin-top').value = "1.8";
-                app.querySelector('#con-print-margin-bottom').value = "2.2";
+                app.querySelector('#con-print-margin-bottom').value = "1.0";
 
                 app.querySelector('#con-q-client-name').value = "";
                 app.querySelector('#con-q-client-phone').value = "";
@@ -914,7 +916,7 @@
                     dateHd: app.querySelector('#con-date-hd').value.trim(),
                     dateTl: app.querySelector('#con-date-tl').value.trim(),
                     printMarginTop: parseFloat(app.querySelector('#con-print-margin-top').value) || 1.8,
-                    printMarginBottom: parseFloat(app.querySelector('#con-print-margin-bottom').value) || 2.2,
+                    printMarginBottom: parseFloat(app.querySelector('#con-print-margin-bottom').value) || 1.0,
                     storeAddress: app.querySelector('#con-store-address').value.trim(),
 
                     aName: app.querySelector('#con-a-name').value.trim(),
@@ -1133,7 +1135,7 @@
 
                 // THU THẬP CẤU HÌNH LỀ IN ĐỘNG TỪ UI NGƯỜI DÙNG
                 const marginTop = parseFloat(app.querySelector('#con-print-margin-top').value) || 1.8;
-                const marginBottom = parseFloat(app.querySelector('#con-print-margin-bottom').value) || 2.2;
+                const marginBottom = parseFloat(app.querySelector('#con-print-margin-bottom').value) || 1.0;
 
                 // 1. CHẠY BỘ LỌC KIỂM TRA ĐIỀU KIỆN (VALIDATION) TRƯỚC KHI LƯU VÀ IN
                 if (docType !== 'quotation') {
@@ -1211,10 +1213,10 @@
                                 .page-content {
                                     padding-bottom: 0 !important;
                                 }
-                                /* Chân trang in cố định tuyệt đối ở đáy mỗi trang giấy in */
+                                /* Chân trang in cố định tuyệt đối ở đáy mọi trang giấy in */
                                 .print-footer {
                                     position: fixed !important;
-                                    bottom: calc(-${marginBottom}cm + 0.8cm) !important; /* Neo cứng cách đáy giấy vật lý đúng 0.8cm */
+                                    bottom: calc(-${marginBottom}cm + 0.2cm) !important; /* Luôn neo chuẩn sát đáy giấy, bất chấp thay đổi margin */
                                     left: 0 !important;
                                     right: 0 !important;
                                     border-top: 1px solid black !important;
@@ -1658,7 +1660,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- ĐƯỜNG PHÂN CẮT TRANG IN GIỮA 2 BIÊN BẢN (TRẮNG TINH KHI IN, CHỈ THẤY NÉT ĐỨT TRÊN MÀN HÌNH) -->
+                                    <!-- ĐƯỜNG PHÂN CẮT TRANG IN GIỮA 2 BIÊN BẢN (TRẤNG TINH KHI IN, CHỈ THẤY NÉT ĐỨT TRÊN MÀN HÌNH) -->
                                     <div class="page-break"></div>
 
                                     <!-- KHỐI 2: BIÊN BẢN THANH LÝ -->
@@ -1781,7 +1783,7 @@
                                         <tr style="border: none;">
                                             <td style="width: 60%; text-align: left; vertical-align: top; border: none; padding: 0; line-height: 1.45;">
                                                 <div style="font-weight: 900; font-size: 12.5pt; text-transform: uppercase;">CHI NHÁNH CÔNG TY CỔ PHẦN ĐẦU TƯ</div>
-                                                <div style="font-weight: 900; font-size: 12.5pt; text-transform: uppercase; margin-bottom: 5px;">ĐIỆN MÁY XANH</div>
+                                                <div style="font-weight: 900; font-size: 12.5pt; text-transform: uppercase; margin-bottom: 5px;">ĐIỆN MÁX XANH</div>
                                                 <div style="font-size: 9.5pt; color: red; font-weight: bold;">Địa chỉ: ${storeAddress}</div>
                                                 <div style="font-size: 9.5pt; font-weight: bold;">Điện thoại: ${bPhone}</div>
                                                 <div style="font-size: 9.5pt; color: red; font-weight: bold;">Mã số thuế: ${bTax}</div>
