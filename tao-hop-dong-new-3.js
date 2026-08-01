@@ -283,8 +283,6 @@
         } else {
             renderDraftDropdown();
         }
-            .catch(err => console.warn("[Auto BI] Không thể nạp dữ liệu từ Cloud:", err.message));
-        }
         
         if (!app) {
             app = document.createElement('div');
@@ -575,7 +573,7 @@
                     panelQuotation.style.display = 'none';
 
                     // Ẩn các cột bổ trợ báo giá
-                    app.querySelectorAll('.col-image, .col-retail-price').forEach(el => el.style.none);
+                    app.querySelectorAll('.col-image, .col-retail-price').forEach(el => el.style.display = 'none');
                     app.querySelectorAll('.con-p-desc').forEach(el => el.style.display = 'none');
                     app.querySelectorAll('.con-p-name').forEach(el => el.style.display = 'block');
                     priceHeader.innerText = "ĐƠN GIÁ (VNĐ)";
@@ -646,7 +644,7 @@
                                         imgPreview.src = resData.url;
                                         imgPreview.style.display = 'block';
                                         imgPlaceholder.style.display = 'none';
-                                        row.dataset.imageB64 = row.dataset.imageB64 || resData.url; // Lưu trữ link ảnh RAW từ Drive
+                                        row.dataset.imageB64 = resData.url; // Lưu trữ link ảnh RAW từ Drive
                                     } else {
                                         alert("❌ Lỗi tải lên Drive: " + resData.message);
                                         imgPlaceholder.innerText = "＋";
@@ -1793,7 +1791,7 @@
                                                 <div style="background-color: #000; color: #fff; font-weight: bold; font-size: 9.5pt; padding: 4px 10px; text-transform: uppercase; display: inline-block; margin-bottom: 8px;">Kính gửi Quý khách:</div>
                                                 <table style="width: 100%; border: none;">
                                                     <tr style="border: none;"><td style="width: 25%; font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">${qClientHonor}:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientName}</td></tr>
-                                                    <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">Điện thoại:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientPhone}</td></tr>
+                                                    <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">Điện thoại:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientPhone}</td></tr>
                                                     <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">Tên công ty:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientCompany}</td></tr>
                                                     <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">Email:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientEmail}</td></tr>
                                                     <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">Địa chỉ:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientAddress}</td></tr>
