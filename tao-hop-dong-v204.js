@@ -164,6 +164,20 @@
         // Khởi tạo Mã phiên làm việc hiện tại (Bản nháp mặc định)
         let currentDraftId = "draft_" + Date.now();
 
+        // ĐỒNG BỘ BỘ GIẢI MÃ PHẢN HỒI AN TOÀN TRÁNH BỊ LỖI CHẰNG CHÉO HTML TỪ GOOGLE
+        const safeParseJsonResponse = (res) => {
+            return res.text().then(text => {
+                try {
+                    return JSON.parse(text);
+                } catch (err) {
+                    if (text.includes("<!DOCTYPE") || text.includes("<html")) {
+                        throw new Error("Google Apps Script đang trả về trang báo lỗi HTML hệ thống thay vì dữ liệu JSON.\\n\\nVui lòng kiểm tra:\\n1. Quyền thực thi Web App đã mở rộng cho 'Anyone' (Bất kỳ ai) chưa?\\n2. Dung lượng hồ sơ lưu nháp có vượt quá giới hạn 9KB của Google Properties Store hay không?");
+                    }
+                    throw new Error("Lỗi đọc gói tin phản hồi: " + err.message + "\\nChi tiết thô: " + text.slice(0, 200));
+                }
+            });
+        };
+
         // Đồng bộ chuẩn hóa cấu trúc dữ liệu cũ (Dự phòng tương thích ngược)
         const normalizeCloudData = (info) => {
             let data = info || {};
@@ -240,7 +254,7 @@
             }
         } catch (e) {}
 
-        // 2. Đồng bộ nạp dữ liệu đầy đủ từ Cloud
+        // 2. Đồng bộ nạp dữ liệu đầy đủ từ Cloud (Có tích hợp bộ giải mã phản hồi an toàn)
         if (currentUserId) {
             fetch(webAppUrl, {
                 method: "POST",
@@ -250,7 +264,7 @@
                     user: currentUserId
                 })
             })
-            .then(res => res.json())
+            .then(res => safeParseJsonResponse(res))
             .then(resData => {
                 if (resData.status === 'success' && resData.data) {
                     const info = normalizeCloudData(JSON.parse(resData.data));
@@ -264,7 +278,7 @@
                     renderDraftDropdown(); // <--- Đã an toàn gọi được ngay tại đây
                 }
             })
-            .catch(err => console.warn("[Auto BI] Không thể đồng bộ dữ liệu Bên B từ Cloud:", err));
+            .catch(err => console.warn("[Auto BI] Không thể nạp dữ liệu từ Cloud:", err.message));
         }
         
         if (!app) {
@@ -317,7 +331,7 @@
                                 <input type="text" id="con-date-hd" value="12/04/2026" placeholder="dd/mm/yyyy">
                             </div>
                             <div class="con-col con-group" style="min-width: 150px;">
-                                <label>Ngày Nghiệm Thu</label>
+                                <label>Ngày Nghiệm Thu/Thanh Lý</label>
                                 <input type="text" id="con-date-tl" value="14/04/2026" placeholder="dd/mm/yyyy">
                             </div>
                             <!-- THIẾT LẬP CĂN LỀ ĐỘNG CHO TRANG IN -->
@@ -337,7 +351,7 @@
                             <!-- TRƯỜNG KHAI BÁO SỐ ĐIỆN THOẠI LIÊN HỆ CHUNG -->
                             <div class="con-col con-group" style="min-width: 180px;">
                                 <label>📞 Số điện thoại liên hệ</label>
-                                <input type="text" id="con-common-phone" value="0979471767 - Hữu Thọ" placeholder="Số điện thoại - Tên người liên hệ">
+                                <input type="text" id="con-common-phone" value="0979435599 - Hữu Thọ" placeholder="Số điện thoại - Tên người liên hệ">
                             </div>
                             <div class="con-col con-group" style="min-width: 250px;">
                                 <label>📍 Địa chỉ siêu thị (Báo giá)</label>
@@ -621,7 +635,7 @@
                                         data: event.target.result
                                     })
                                 })
-                                .then(res => res.json())
+                                .then(res => safeParseJsonResponse(res))
                                 .then(resData => {
                                     if (resData.status === 'success' && resData.url) {
                                         imgPreview.src = resData.url;
@@ -951,7 +965,7 @@
                         data: JSON.stringify(cloudData)
                     })
                 })
-                .then(res => res.json())
+                .then(res => safeParseJsonResponse(res))
                 .then(resData => {
                     if (!silent) {
                         btnSaveDraft.disabled = false;
@@ -1500,7 +1514,7 @@
                                         5.1 Nghĩa vụ của Bên A:<br>
                                         a. Cam kết không tiết lộ cho bên thứ ba bất kỳ thông tin nào có liên quan đến việc thực hiện Hợp đồng này.<br>
                                         b. Thanh toán cho Bên B Giá Sản Phẩm và chi phí vật tư đúng và đầy đủ theo quy định Hợp Đồng này.<br>
-                                        c. Bên A đồng ý với chính sách thu thập thông tin và xử lý dữ liệu của Bên B theo các điều khoản và điều kiện đã được quy định tại website https://www.dienmayxanh.com/ hoặc https://www.thegioididong.com/.<br>
+                                        c. Bên A đồng ý với chính sách thu thập thông tin và xử lý dữ liệu của Bên B theo các điều khoản và điều kiện đã được quy định tại website https://www.dienmayxanh.com/ hoặc https://www.thegioididong.com/.
                                         d. Thực hiện đúng các cam kết được ghi trong Hợp Đồng này.<br><br>
                                         5.2 Nghĩa vụ của Bên B:<br>
                                         a. Đảm bảo cung cấp Sản Phẩm mới 100%, đúng với quy cách, giá cả, thời gian giao hàng theo cam kết tại Điều 1 and Điều 2 Hợp Đồng này.<br>
