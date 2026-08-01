@@ -1126,10 +1126,10 @@
                             <style>
                             @page {
                                 size: A4;
-                                margin-top: 1.5cm; /* CỐ ĐỊNH LỀ TRÊN NỘI DUNG CHUẨN 1.5CM */
+                                margin-top: 1.5cm; /* Cố định lề trên chuẩn 1.5cm */
                                 
-                                /* ĐIỂM DỪNG VĂN BẢN TỰ ĐỘNG CÁCH FOOTER ĐÚNG 0.5CM (~20PX) */
-                                margin-bottom: ${marginBottom}cm; 
+                                /* TỰ ĐỘNG CỘNG 0.6CM ĐỂ ĐIỂM DỪNG CHỮ LUÔN NẰM TRÊN FOOTER 0.6CM (~22PX) */
+                                margin-bottom: ${footerPos + 0.6}cm; 
                                 
                                 margin-left: 2cm;
                                 margin-right: 1.5cm;
@@ -1144,7 +1144,7 @@
                                     padding: 0 !important;
                                 }
 
-                                /* SỬA LỖI ĐÁNH SỐ TRANG = 0: THIẾT LẬP BỘ ĐẾM TRANG CHO BODY */
+                                /* KÍCH HOẠT BỘ ĐẾM SỐ TRANG TỰ ĐỘNG CHUẨN CHROME (SỬA LỖI TRANG = 0) */
                                 body {
                                     counter-reset: page 1;
                                 }
@@ -1169,17 +1169,21 @@
                                 }
 
                                 /* ========================================================================= */
-                                /* FOOTER TỰ ĐỘNG ĐẶT TẠI footerPos (CM) CÁCH ĐÁY GIẤY A4                    */
-                                /* Lùi lại -0.5cm so với điểm ngắt trang để giữ gap 0.5cm đẹp tuyệt đối     */
+                                /* FOOTER CHUẨN DỊCH CHUYỂN TRANSFORM: KHÔNG DÙNG BOTTOM ÂM                 */
+                                /* Đảm bảo linh hoạt dịch chuyển theo footerPos, không đứt gãy, không văng trang */
                                 /* ========================================================================= */
                                 .print-footer {
                                     position: fixed !important;
-                                    bottom: -0.5cm !important;
+                                    bottom: 0 !important;
+                                    
+                                    /* Dịch chuyển trực quan xuống đúng 0.6cm để nằm tại vị trí footerPos cách đáy */
+                                    transform: translateY(0.6cm) !important; 
+                                    
                                     left: 0 !important;
                                     right: 0 !important;
                                     width: 100% !important;
-                                    height: 20px !important;
-                                    line-height: 20px !important;
+                                    height: 22px !important;
+                                    line-height: 22px !important;
                                     border-top: 1px solid #000000 !important;
                                     padding-top: 2px !important;
                                     font-size: 9.5pt !important;
@@ -1193,7 +1197,7 @@
                                     z-index: 99999 !important;
                                 }
 
-                                /* HIỂN THỊ CHUẨN SỐ TRANG TỰ ĐỘNG CHUẨN CHÂN TRANG */
+                                /* SỐ TRANG TỰ ĐỘNG HIỂN THỊ CHUẨN (1, 2, 3...) */
                                 .print-footer .page-num::after {
                                     content: counter(page);
                                 }
