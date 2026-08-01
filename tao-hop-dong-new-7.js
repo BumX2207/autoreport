@@ -150,10 +150,8 @@
         let app = document.getElementById('con-app');
         const userCfg = UTILS.getPersistentConfig();
 
-        // KHAI BÁO BIẾN DRAFT ID PHẠM VI HÀM (KHẮC PHỤC LỖI KHÔNG XÁC ĐỊNH BIẾN)
         let currentDraftId = "draft_" + Date.now();
         
-        // Trích xuất mã số user từ AUTH_STATE
         const extractUserId = (str) => {
             if (!str) return "";
             const match = str.match(/\d+/);
@@ -161,10 +159,8 @@
         };
         const currentUserId = AUTH_STATE ? extractUserId(AUTH_STATE.userName) : "";
         
-        // URL WEB APP ĐỒNG BỘ ĐÃ ĐƯỢC CẬP NHẬT THEO ĐÚNG YÊU CẦU CỦA BẠN
         const webAppUrl = "https://script.google.com/macros/s/AKfycbw-KMUUL5rHPeSxGGbFbTs_2VMuP8OH5ehoDci_zAIACKhl0Tip9TTzJ5r-fLwu5He1GQ/exec";
 
-        // ĐỒNG BỘ BỘ GIẢI MÃ PHẢN HỒI AN TOÀN TRÁNH BÌ LỖI CHẰNG CHÉO HTML TỪ GOOGLE
         const safeParseJsonResponse = async (res) => {
             const text = await res.text();
             try {
@@ -177,7 +173,6 @@
             }
         };
 
-        // Đồng bộ chuẩn hóa cấu trúc dữ liệu cũ (Dự phòng tương thích ngược)
         const normalizeCloudData = (info) => {
             let data = info || {};
             if (data.name && !data.sellerInfo) {
@@ -189,7 +184,6 @@
             return data;
         };
 
-        // Hàm điền tự động toàn bộ trường của Bên B và thiết lập mặc định thông tin chung cố định
         const fillBFields = (info) => {
             if (!info) return;
             const activeApp = document.getElementById('con-app') || app;
@@ -224,7 +218,6 @@
             }
         };
 
-        // --- DỜI HÀM VẼ DROPDOWN LÊN ĐẦU PHẠM VI TRUY CẬP ---
         const renderDraftDropdown = () => {
             const activeApp = document.getElementById('con-app') || app;
             if (!activeApp) return;
@@ -288,7 +281,6 @@
             app = document.createElement('div');
             app.id = 'con-app';
 
-            // Sinh danh sách dropdown siêu thị tự động từ cấu hình gốc
             let shopOptionsHtml = '<option value="">--- Nhấp chọn siêu thị ---</option>';
             const shops = [
                 { id: 'shop1', name: userCfg.shop1 },
@@ -308,7 +300,6 @@
                         <span>Tạo Hợp Đồng</span>
                     </div>
                     
-                    <!-- THANH ĐIỀU HƯỚNG TIỆN ÍCH DRAFT -->
                     <div style="display:flex; align-items:center; gap:10px; flex:1; justify-content:start; max-width:680px;">
                         <select id="con-draft-select" style="padding:6px 12px; border:1px solid #cbd5e1; border-radius:8px; font-weight:bold; font-size:12.5px; max-width:260px; background:#f8fafc; outline:none; cursor:pointer;">
                             <option value="">📂 --- Xem lại bản nháp gần nhất ---</option>
@@ -333,12 +324,10 @@
                                 <label>Ngày Ký Hợp Đồng</label>
                                 <input type="text" id="con-date-hd" value="12/04/2026" placeholder="dd/mm/yyyy">
                             </div>
-                            <!-- CẬP NHẬT NHÃN: "Ngày nghiệm thu" -->
                             <div class="con-col con-group" style="min-width: 150px;">
                                 <label>Ngày nghiệm thu</label>
                                 <input type="text" id="con-date-tl" value="14/04/2026" placeholder="dd/mm/yyyy">
                             </div>
-                            <!-- THIẾT LẬP CĂN LỀ ĐỘNG CHO NỘI DUNG TRANG IN -->
                             <div class="con-col con-group" style="min-width: 110px;">
                                 <label>📐 Lề Trên Nội Dung (cm)</label>
                                 <input type="number" id="con-print-margin-top" value="1.8" step="0.1" min="0" max="10" style="text-align: center;">
@@ -1139,8 +1128,8 @@
                             <style>
                             @page {
                                 size: A4;
-                                margin-top: ${marginTop}cm; /* Lề trên của nội dung */
-                                margin-bottom: ${marginBottom}cm; /* Lề dưới của nội dung */
+                                margin-top: ${marginTop}cm; /* Lề trên của văn bản */
+                                margin-bottom: ${marginBottom}cm; /* Lề dưới của văn bản */
                                 margin-left: 2cm;
                                 margin-right: 1.5cm;
                             }
@@ -1171,14 +1160,15 @@
                                     padding-bottom: 0 !important;
                                 }
 
-                                /* ========================================================================= */
-                                /* CHÂN TRANG FOOTER PHÁP CHẾ ĐỘC LẬP TỰ ĐỘNG CỐ ĐỊNH CÁCH MÉP DƯỚI GIẤY 1CM */
-                                /* ========================================================================= */
+                                /* ================================================================================== */
+                                /* CHÂN TRANG LAYER ĐỘC LẬP TỰ ĐỘNG CỐ ĐỊNH TẠI VỊ TRÍ 28.7CM (CÁCH ĐÁY GIẤY A4 ĐÚNG 1.0CM) */
+                                /* Không chịu ảnh hưởng bởi biến Lề Dưới và không gây đẻ trang phụ/đẩy trang */
+                                /* ================================================================================== */
                                 .print-footer {
                                     position: fixed !important;
                                     
-                                    /* Công thức bù trừ tọa độ giúp footer đứng yên 1.0cm tuyệt đối cách mép giấy */
-                                    bottom: calc(1cm - ${marginBottom}cm) !important; 
+                                    /* 28.7cm = Tọa độ 1.0cm cách mép đáy A4. Trừ marginTop để triệt tiêu biến động gốc tọa độ */
+                                    top: calc(28.7cm - ${marginTop}cm) !important; 
                                     
                                     left: 2cm !important;
                                     right: 1.5cm !important;
@@ -1189,7 +1179,7 @@
                                     background: #fff !important;
                                     display: flex !important;
                                     justify-content: space-between !important;
-                                    height: auto !important;
+                                    height: 0.8cm !important;
                                     z-index: 9999;
                                 }
                                 .print-footer .page-num::after {
