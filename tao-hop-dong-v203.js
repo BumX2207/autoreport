@@ -317,7 +317,7 @@
                                 <input type="text" id="con-date-hd" value="12/04/2026" placeholder="dd/mm/yyyy">
                             </div>
                             <div class="con-col con-group" style="min-width: 150px;">
-                                <label>Ngày Nghiệm Thu/Thanh Lý</label>
+                                <label>Ngày Nghiệm Thu</label>
                                 <input type="text" id="con-date-tl" value="14/04/2026" placeholder="dd/mm/yyyy">
                             </div>
                             <!-- THIẾT LẬP CĂN LỀ ĐỘNG CHO TRANG IN -->
@@ -337,7 +337,7 @@
                             <!-- TRƯỜNG KHAI BÁO SỐ ĐIỆN THOẠI LIÊN HỆ CHUNG -->
                             <div class="con-col con-group" style="min-width: 180px;">
                                 <label>📞 Số điện thoại liên hệ</label>
-                                <input type="text" id="con-common-phone" value="0979435599 - Hữu Thọ" placeholder="Số điện thoại - Tên người liên hệ">
+                                <input type="text" id="con-common-phone" value="0979471767 - Hữu Thọ" placeholder="Số điện thoại - Tên người liên hệ">
                             </div>
                             <div class="con-col con-group" style="min-width: 250px;">
                                 <label>📍 Địa chỉ siêu thị (Báo giá)</label>
