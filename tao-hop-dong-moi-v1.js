@@ -1128,8 +1128,8 @@
                                 size: A4;
                                 margin-top: 1.5cm; /* CỐ ĐỊNH LỀ TRÊN NỘI DUNG CHUẨN 1.5CM */
                                 
-                                /* ĐIỂM DỪNG VĂN BẢN TỰ ĐỘNG CÁCH FOOTER ĐÚNG 0.6CM (~22PX) */
-                                margin-bottom: ${footerPos + 0.6}cm; 
+                                /* KHOẢNG ĐỆM AN TOÀN 1.2CM (~45PX) GIỮA BẢNG VÀ FOOTER: CHỐNG ĐÈ 100% */
+                                margin-bottom: ${footerPos + 1.2}cm; 
                                 
                                 margin-left: 2cm;
                                 margin-right: 1.5cm;
@@ -1164,11 +1164,12 @@
                                 }
 
                                 /* ========================================================================= */
-                                /* FOOTER CHUẨN AN TOÀN NẰM TRONG TRANG IN - KHÔNG ĐỨT GÃY - LINH HOẠT VỊ TRÍ */
+                                /* FOOTER CHUẨN ĐẶT TẠI footerPos (CM) - CÓ MÀNG BẢO VỆ CHỐNG ĐÈ BẢNG 100%   */
                                 /* ========================================================================= */
                                 .print-footer {
                                     position: fixed !important;
-                                    bottom: 0.6cm !important; /* Luôn nằm an toàn trong trang in, cách đáy footerPos */
+                                    bottom: 0 !important;
+                                    margin-bottom: -1.2cm !important; /* Hạ footer xuống đúng vị trí footerPos cách đáy */
                                     left: 0 !important;
                                     right: 0 !important;
                                     width: 100% !important;
@@ -1189,10 +1190,15 @@
                                     z-index: 99999 !important;
                                 }
 
-                                /* SỐ TRANG TỰ ĐỘNG TĂNG DẦN THỰC TẾ (1, 2, 3...) */
-                                .print-footer .page-num::after {
-                                    content: counter(page);
+                                /* SỬA LỖI SỐ TRANG = 0: HIỂN THỊ SỐ TRANG TỰ ĐỘNG CHUẨN 1, 2, 3... */
+                                .print-footer .page-num {
+                                    display: inline-block !important;
                                 }
+                                .print-footer .page-num::after {
+                                    content: counter(page) !important;
+                                    display: inline !important;
+                                }
+
                                 .info-table td, .prod-table th, .prod-table td {
                                     padding: 4px 6px !important;
                                 }
