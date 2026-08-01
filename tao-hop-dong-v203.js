@@ -176,7 +176,7 @@
             return data;
         };
 
-        // Hàm điền tự động toàn bộ trường của Bên B và thiết lập mặc định thông tin chung
+        // Hàm điền tự động toàn bộ trường của Bên B và thiết lập mặc định thông tin chung cố định
         const fillBFields = (info) => {
             if (!info) return;
             const activeApp = document.getElementById('con-app') || app;
@@ -197,8 +197,10 @@
                 '#con-b-role-tl': info.roleTl,
                 '#con-b-honor-hd': info.honorHd,
                 '#con-b-honor-tl': info.honorTl,
-                '#con-q-drive-folder': info.driveFolderId, // Nạp mặc định ID Google Drive chung
-                '#con-common-phone': info.commonPhone     // Nạp mặc định Số điện thoại liên hệ chung
+                '#con-q-drive-folder': info.driveFolderId, // Nạp mặc định ID Google Drive chung cố định
+                '#con-common-phone': info.commonPhone,     // Nạp mặc định Số điện thoại liên hệ chung cố định
+                '#con-store-address': info.storeAddress,   // Nạp mặc định Địa chỉ siêu thị chung cố định
+                '#con-b-select': info.bSelectVal           // Nạp mặc định Siêu thị được chọn chung cố định
             };
             for (let selector in fields) {
                 const val = fields[selector];
@@ -685,17 +687,13 @@
                 // Khôi phục mã phiên hiện tại
                 currentDraftId = draft.id;
 
-                // Đồng bộ phục hồi các trường thông tin chung
+                // Đồng bộ phục hồi các trường thông tin chung (LOẠI BỎ CÁC TRƯỜNG CỐ ĐỊNH TOÀN CỤC)
                 app.querySelector('#con-file-type').value = draft.fileType || 'contract';
                 app.querySelector('#con-no').value = draft.conNo || '';
                 app.querySelector('#con-date-hd').value = draft.dateHd || '';
                 app.querySelector('#con-date-tl').value = draft.dateTl || '';
                 app.querySelector('#con-print-margin-top').value = draft.printMarginTop !== undefined ? draft.printMarginTop : '1.8';
                 app.querySelector('#con-print-margin-bottom').value = draft.printMarginBottom !== undefined ? draft.printMarginBottom : '1.0';
-                app.querySelector('#con-b-select').value = draft.bSelectVal || '';
-                app.querySelector('#con-common-phone').value = draft.commonPhone || '';
-                app.querySelector('#con-q-drive-folder').value = draft.driveFolderId || '';
-                app.querySelector('#con-store-address').value = draft.storeAddress || '';
 
                 app.querySelector('#con-a-name').value = draft.aName || '';
                 app.querySelector('#con-a-address').value = draft.aAddress || '';
@@ -764,7 +762,7 @@
                 toggleFileType();
             };
 
-            // --- SỰ KIỆN CLICK NÚT TẠO MỚI (TẠO MÃ PHIÊN MỚI & CLEAR FORM KHÁCH VÀ LẤY LẠI THÔNG TIN BÁN HÀNG CỦA BẠN) ---
+            // --- SỰ KIỆN CLICK NÚT TẠO MỚI (TẠO MÃ PHIÊN MỚI & CLEAR FORM KHÁCH VÀ GIỮ NGUYÊN HỒ SƠ CỐ ĐỊNH CỦA BẠN) ---
             app.querySelector('#btn-con-new-draft').onclick = () => {
                 // Tạo Mã phiên thời gian thực mới
                 currentDraftId = "draft_" + Date.now();
@@ -785,11 +783,7 @@
                 app.querySelector('#con-print-margin-top').value = "1.8";
                 app.querySelector('#con-print-margin-bottom').value = "1.0";
 
-                // NẠP LẠI THÔNG TIN BÁN HÀNG TOÀN CỤC CỦA BẠN ĐỂ KHÔNG PHẢI GÕ LẠI NHIỀU LẦN
-                const cloudData = normalizeCloudData(userCfg.shopConfigColL);
-                const sellerInfo = cloudData.sellerInfo || {};
-                app.querySelector('#con-common-phone').value = sellerInfo.commonPhone || "0979435599 - Hữu Thọ";
-                app.querySelector('#con-q-drive-folder').value = sellerInfo.driveFolderId || "";
+                // GIỮ NGUYÊN CÁC THÔNG TIN CỐ ĐỊNH (Common Phone, Google Drive ID, Store Address, bSelectVal) - KHÔNG XOÁ
 
                 app.querySelector('#con-q-client-name').value = "";
                 app.querySelector('#con-q-client-phone').value = "";
@@ -865,10 +859,6 @@
                     dateTl: app.querySelector('#con-date-tl').value.trim(),
                     printMarginTop: parseFloat(app.querySelector('#con-print-margin-top').value) || 1.8,
                     printMarginBottom: parseFloat(app.querySelector('#con-print-margin-bottom').value) || 1.0,
-                    bSelectVal: app.querySelector('#con-b-select').value,
-                    commonPhone: app.querySelector('#con-common-phone').value.trim(),
-                    driveFolderId: app.querySelector('#con-q-drive-folder').value.trim(), // Lưu trữ nội bộ draft
-                    storeAddress: app.querySelector('#con-store-address').value.trim(),
 
                     aName: app.querySelector('#con-a-name').value.trim(),
                     aAddress: app.querySelector('#con-a-address').value.trim(),
@@ -896,7 +886,7 @@
 
                 let cloudData = normalizeCloudData(userCfg.shopConfigColL);
                 
-                // ĐỒNG BỘ LƯU TRỮ CẢ THÔNG TIN BÊN BÁN BÊN B KHI NHẤP NÚT GỘP (CÙNG VỚI CÁC TRƯỜNG TOÀN CỤC)
+                // ĐỒNG BỘ LƯU TRỮ TOÀN BỘ CẤU HÌNH CỐ ĐỊNH CỦA BẠN (SELLER PRESETS) - KHÔNG LƯU RIÊNG TRONG DRAFT
                 cloudData.sellerInfo = {
                     name: app.querySelector('#con-b-name').value.trim(),
                     address: app.querySelector('#con-b-address').value.trim(),
@@ -912,8 +902,12 @@
                     roleTl: app.querySelector('#con-b-role-tl').value.trim(),
                     honorHd: app.querySelector('#con-b-honor-hd').value,
                     honorTl: app.querySelector('#con-b-honor-tl').value,
-                    driveFolderId: app.querySelector('#con-q-drive-folder').value.trim(), // Lưu toàn cục trong sellerInfo
-                    commonPhone: app.querySelector('#con-common-phone').value.trim()     // Lưu toàn cục trong sellerInfo
+                    
+                    // LƯU CỐ ĐỊNH TOÀN CỤC CÁC TRƯỜNG THÔNG TIN CHUNG CỦA BẠN
+                    driveFolderId: app.querySelector('#con-q-drive-folder').value.trim(), 
+                    commonPhone: app.querySelector('#con-common-phone').value.trim(),     
+                    storeAddress: app.querySelector('#con-store-address').value.trim(),   
+                    bSelectVal: app.querySelector('#con-b-select').value                  
                 };
 
                 let drafts = cloudData.drafts || [];
@@ -1359,7 +1353,7 @@
                                         </tr>
                                         <tr>
                                             <td style="width: 25%; font-weight: bold;">Trụ sở đăng ký</td>
-                                            <td style="width: 2%; text-align: center; font-weight: bold;">:</td>
+                                            <td style="text-align: center; font-weight: bold;">:</td>
                                             <td>${aAddress}</td>
                                         </tr>
                                         <tr>
@@ -1395,7 +1389,7 @@
                                         </tr>
                                         <tr>
                                             <td style="width: 25%; font-weight: bold;">Trụ sở đăng ký</td>
-                                            <td style="width: 2%; text-align: center; font-weight: bold;">:</td>
+                                            <td style="text-align: center; font-weight: bold;">:</td>
                                             <td>${bAddress}</td>
                                         </tr>
                                         <tr>
