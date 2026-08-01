@@ -1135,8 +1135,8 @@
                                 size: A4;
                                 margin-top: 1.5cm; /* Cố định lề trên chuẩn 1.5cm */
                                 
-                                /* ĐỘC LẬP 100%: Lề đáy trang in chỉ ăn theo duy nhất vị trí Footer */
-                                margin-bottom: ${footerPos}cm; 
+                                /* ĐIỀU CHỈNH NGẮT TRANG NỘI DUNG VĂN BẢN THEO LỀ DƯỚI */
+                                margin-bottom: ${marginBottom}cm; 
                                 
                                 margin-left: 2cm;
                                 margin-right: 1.5cm;
@@ -1165,15 +1165,17 @@
                                     position: static !important;
                                 }
 
-                                /* LỀ DƯỚI NỘI DUNG ĐỘC LẬP: Chỉ đẩy chữ lên cao, HOÀN TOÀN KHÔNG CHẠM VÀO FOOTER */
                                 .page-content {
-                                    padding-bottom: ${Math.max(0, marginBottom - footerPos)}cm !important;
+                                    padding-bottom: 0 !important;
                                 }
 
-                                /* FOOTER ĐỨNG YÊN 100%: Không chứa biến marginBottom, thay đổi Lề Dưới không làm Footer di chuyển */
+                                /* ========================================================================= */
+                                /* FOOTER ĐỘC LẬP HOÀN TOÀN: Đứng yên tuyệt đối tại footerPos (cm) cách đáy  */
+                                /* Công thức: 28.2cm - footerPos (28.2cm = 29.7cm chiều cao A4 - 1.5cm lề trên) */
+                                /* ========================================================================= */
                                 .print-footer {
                                     position: fixed !important;
-                                    bottom: 0 !important; /* Luôn cố định chuẩn tại vị trí footerPos cách đáy giấy */
+                                    top: calc(28.2cm - ${footerPos}cm) !important;
                                     left: 0 !important;
                                     right: 0 !important;
                                     width: 100% !important;
