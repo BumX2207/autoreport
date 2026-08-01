@@ -210,10 +210,10 @@
                 '#con-b-role-tl': info.roleTl,
                 '#con-b-honor-hd': info.honorHd,
                 '#con-b-honor-tl': info.honorTl,
-                '#con-q-drive-folder': info.driveFolderId, // Nạp mặc định ID Google Drive chung cố định
-                '#con-common-phone': info.commonPhone,     // Nạp mặc định Số điện thoại liên hệ chung cố định
-                '#con-store-address': info.storeAddress,   // Nạp mặc định Địa chỉ siêu thị chung cố định
-                '#con-b-select': info.bSelectVal           // Nạp mặc định Siêu thị được chọn chung cố định
+                '#con-q-drive-folder': info.driveFolderId,
+                '#con-common-phone': info.commonPhone,    
+                '#con-store-address': info.storeAddress,  
+                '#con-b-select': info.bSelectVal          
             };
             for (let selector in fields) {
                 const val = fields[selector];
@@ -333,19 +333,19 @@
                                 <label>Ngày Ký Hợp Đồng</label>
                                 <input type="text" id="con-date-hd" value="12/04/2026" placeholder="dd/mm/yyyy">
                             </div>
-                            <!-- CẬP NHẬT NHÃN THEO YÊU CẦU: "Ngày nghiệm thu" -->
+                            <!-- CẬP NHẬT NHÃN: "Ngày nghiệm thu" -->
                             <div class="con-col con-group" style="min-width: 150px;">
                                 <label>Ngày nghiệm thu</label>
                                 <input type="text" id="con-date-tl" value="14/04/2026" placeholder="dd/mm/yyyy">
                             </div>
-                            <!-- THIẾT LẬP CĂN LỀ ĐỘNG CHO TRANG IN -->
+                            <!-- THIẾT LẬP CĂN LỀ ĐỘNG CHO NỘI DUNG TRANG IN -->
                             <div class="con-col con-group" style="min-width: 110px;">
-                                <label>📐 Lề Trên (cm)</label>
+                                <label>📐 Lề Trên Nội Dung (cm)</label>
                                 <input type="number" id="con-print-margin-top" value="1.8" step="0.1" min="0" max="10" style="text-align: center;">
                             </div>
                             <div class="con-col con-group" style="min-width: 110px;">
-                                <label>📐 Lề Dưới (cm)</label>
-                                <input type="number" id="con-print-margin-bottom" value="1.0" step="0.1" min="0.5" max="10" style="text-align: center;">
+                                <label>📐 Lề Dưới Nội Dung (cm)</label>
+                                <input type="number" id="con-print-margin-bottom" value="1.5" step="0.1" min="1.0" max="10" style="text-align: center;">
                             </div>
                             <div class="con-col con-group" style="min-width: 180px;">
                                 <label>🏪 Chọn Siêu Thị</label>
@@ -697,7 +697,7 @@
                 app.querySelector('#con-date-hd').value = draft.dateHd || '';
                 app.querySelector('#con-date-tl').value = draft.dateTl || '';
                 app.querySelector('#con-print-margin-top').value = draft.printMarginTop !== undefined ? draft.printMarginTop : '1.8';
-                app.querySelector('#con-print-margin-bottom').value = draft.printMarginBottom !== undefined ? draft.printMarginBottom : '1.0';
+                app.querySelector('#con-print-margin-bottom').value = draft.printMarginBottom !== undefined ? draft.printMarginBottom : '1.5';
 
                 app.querySelector('#con-a-name').value = draft.aName || '';
                 app.querySelector('#con-a-address').value = draft.aAddress || '';
@@ -783,7 +783,7 @@
                 app.querySelector('#con-a-role').value = "";
                 app.querySelector('#con-a-honor').value = "Ông";
                 app.querySelector('#con-print-margin-top').value = "1.8";
-                app.querySelector('#con-print-margin-bottom').value = "1.0";
+                app.querySelector('#con-print-margin-bottom').value = "1.5";
 
                 app.querySelector('#con-q-client-name').value = "";
                 app.querySelector('#con-q-client-phone').value = "";
@@ -866,7 +866,7 @@
                         dateHd: app.querySelector('#con-date-hd').value.trim(),
                         dateTl: app.querySelector('#con-date-tl').value.trim(),
                         printMarginTop: parseFloat(app.querySelector('#con-print-margin-top').value) || 1.8,
-                        printMarginBottom: parseFloat(app.querySelector('#con-print-margin-bottom').value) || 1.0,
+                        printMarginBottom: parseFloat(app.querySelector('#con-print-margin-bottom').value) || 1.5,
 
                         aName: app.querySelector('#con-a-name').value.trim(),
                         aAddress: app.querySelector('#con-a-address').value.trim(),
@@ -962,7 +962,6 @@
                         btnSaveDraft.style.opacity = "1";
                         btnSaveDraft.innerText = origText;
                     }
-                    // LUÔN LUÔN GỌI CALLBACK ĐỂ TIẾP TỤC IN PDF
                     if (typeof callback === 'function') {
                         callback();
                     }
@@ -1086,8 +1085,9 @@
                 const bHonorHd = app.querySelector('#con-b-honor-hd').value;
                 const bHonorTl = app.querySelector('#con-b-honor-tl').value;
 
+                // THU THẬP CẤU HÌNH LỀ IN ĐỘNG TỪ UI NGƯỜI DÙNG
                 const marginTop = parseFloat(app.querySelector('#con-print-margin-top').value) || 1.8;
-                const marginBottom = parseFloat(app.querySelector('#con-print-margin-bottom').value) || 1.0;
+                const marginBottom = parseFloat(app.querySelector('#con-print-margin-bottom').value) || 1.5;
                 const commonPhone = app.querySelector('#con-common-phone').value.trim();
 
                 if (docType !== 'quotation') {
@@ -1139,8 +1139,8 @@
                             <style>
                             @page {
                                 size: A4;
-                                margin-top: ${marginTop}cm;
-                                margin-bottom: ${marginBottom}cm;
+                                margin-top: ${marginTop}cm; /* Lề trên của nội dung */
+                                margin-bottom: ${marginBottom}cm; /* Lề dưới của nội dung */
                                 margin-left: 2cm;
                                 margin-right: 1.5cm;
                             }
@@ -1170,13 +1170,20 @@
                                 .page-content {
                                     padding-bottom: 0 !important;
                                 }
+
+                                /* ========================================================================= */
+                                /* CHÂN TRANG FOOTER PHÁP CHẾ ĐỘC LẬP TỰ ĐỘNG CỐ ĐỊNH CÁCH MÉP DƯỚI GIẤY 1CM */
+                                /* ========================================================================= */
                                 .print-footer {
                                     position: fixed !important;
-                                    bottom: 0.8cm !important; 
+                                    
+                                    /* Công thức bù trừ tọa độ giúp footer đứng yên 1.0cm tuyệt đối cách mép giấy */
+                                    bottom: calc(1cm - ${marginBottom}cm) !important; 
+                                    
                                     left: 2cm !important;
                                     right: 1.5cm !important;
                                     border-top: 1px solid black !important;
-                                    padding-top: 5px !important;
+                                    padding-top: 4px !important;
                                     font-size: 9.5pt !important;
                                     font-weight: bold !important;
                                     background: #fff !important;
@@ -1801,7 +1808,6 @@
                     }
                 };
 
-                // KÍCH HOẠT LƯU NHÁP VÀ LUÔN LUÔN TIẾP TỤC IN
                 executeSaveDraft(true, () => {
                     proceedWithPrinting();
                 });
