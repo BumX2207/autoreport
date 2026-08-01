@@ -161,9 +161,6 @@
         // URL WEB APP ĐỒNG BỘ ĐÃ ĐƯỢC CẬP NHẬT THEO ĐÚNG YÊU CẦU CỦA BẠN
         const webAppUrl = "https://script.google.com/macros/s/AKfycbw-KMUUL5rHPeSxGGbFbTs_2VMuP8OH5ehoDci_zAIACKhl0Tip9TTzJ5r-fLwu5He1GQ/exec";
 
-        // Khởi tạo Mã phiên làm việc hiện tại (Bản nháp mặc định)
-        let currentDraftId = "draft_" + Date.now();
-
         // ĐỒNG BỘ BỘ GIẢI MÃ PHẢN HỒI AN TOÀN TRÁNH BÌ LỖI CHẰNG CHÉO HTML TỪ GOOGLE
         const safeParseJsonResponse = (res) => {
             return res.text().then(text => {
@@ -331,7 +328,7 @@
                                 <input type="text" id="con-date-hd" value="12/04/2026" placeholder="dd/mm/yyyy">
                             </div>
                             <div class="con-col con-group" style="min-width: 150px;">
-                                <label>Ngày Nghiệm Thu</label>
+                                <label>Ngày Nghiệm Thu/Thanh Lý</label>
                                 <input type="text" id="con-date-tl" value="14/04/2026" placeholder="dd/mm/yyyy">
                             </div>
                             <!-- THIẾT LẬP CĂN LỀ ĐỘNG CHO TRANG IN -->
@@ -570,7 +567,7 @@
                     panelQuotation.style.display = 'none';
 
                     // Ẩn các cột bổ trợ báo giá
-                    app.querySelectorAll('.col-image, .col-retail-price').forEach(el => el.style.display = 'none');
+                    app.querySelectorAll('.col-image, .col-retail-price').forEach(el => el.style.none);
                     app.querySelectorAll('.con-p-desc').forEach(el => el.style.display = 'none');
                     app.querySelectorAll('.con-p-name').forEach(el => el.style.display = 'block');
                     priceHeader.innerText = "ĐƠN GIÁ (VNĐ)";
@@ -1206,17 +1203,15 @@
                                 .print-footer {
                                     position: fixed !important;
                                     
-                                    /* ====================================================================================== */
-                                    /* CÔNG THỨC KHÓA CỐ ĐỊNH VỊ TRÍ FOOTER KHÔNG DI CHUYỂN KHI THAY ĐỔI MARGIN                */
-                                    /* -------------------------------------------------------------------------------------- */
-                                    /* Để thay đổi khoảng cách cố định của footer so với mép dưới của giấy in:                */
-                                    /* Bạn chỉ việc thay đổi con số "0.8cm" ở cuối công thức dưới đây (Ví dụ: 1.0cm, 1.2cm)   */
-                                    /* Trình duyệt sẽ khóa footer đứng im tại khoảng cách đó, không bị di chuyển khi đổi lề!   */
-                                    /* ====================================================================================== */
-                                    bottom: calc(-${marginBottom}cm + 0.8cm) !important;
+                                    /* ========================================================================= */
+                                    /* ĐIỀU CHỈNH TỌA ĐỘ FOOTER (KHOẢNG CÁCH CỐ ĐỊNH SO VỚI MÉP DƯỚI CỦA TRANG)   */
+                                    /* Khoảng cách này độc lập 100% với margin và nằm yên ở đáy trang giấy       */
+                                    /* Bạn có thể tự do tăng giảm số "0.8cm" này để căn chỉnh vị trí chân trang  */
+                                    /* ========================================================================= */
+                                    bottom: 0.8cm !important; 
                                     
-                                    left: 0 !important;       /* Căn lề trái thẳng hàng nội dung trang in */
-                                    right: 0 !important;      /* Căn lề phải thẳng hàng nội dung trang in */
+                                    left: 2cm !important;     /* Căn lề trái thẳng hàng nội dung trang in */
+                                    right: 1.5cm !important;  /* Căn lề phải thẳng hàng nội dung trang in */
                                     border-top: 1px solid black !important;
                                     padding-top: 5px !important;
                                     font-size: 9.5pt !important;
@@ -1283,19 +1278,7 @@
                                 position: relative;
                             }
                             .print-footer { 
-                                position: absolute;
-                                bottom: 1cm;
-                                left: 2cm;
-                                right: 1.5cm;
-                                border-top: 1px solid black; 
-                                padding-top: 5px; 
-                                display: flex; 
-                                justify-content: space-between; 
-                                font-size: 9.5pt; 
-                                font-weight: bold; 
-                            }
-                            .print-footer .page-num::after {
-                                content: "1";
+                                display: none; /* Mặc định ẩn trên màn hình để giao diện sạch sẽ */
                             }
                             .page-break {
                                 border-top: 1px dashed #cbd5e1;
@@ -1566,12 +1549,12 @@
                                         </table>
                                     </div>
                                 </div>
-                                
-                                <!-- FOOTER CHẠY THEO LUỒNG IN -->
-                                <div class="print-footer">
-                                    <span>Pháp Chế_111124_ĐMX_VN</span>
-                                    <span class="page-num"></span>
-                                </div>
+                            </div>
+                            
+                            <!-- ĐƯA CHÂN TRANG RA NGOÀI KHUNG PAGE-CONTAINER HOÀN TOÀN ĐỂ TRÁNH BỊ TRÌNH DUYỆT CHIA CẮT (SLICING BUG) -->
+                            <div class="print-footer">
+                                <span>Pháp Chế_111124_ĐMX_VN</span>
+                                <span class="page-num"></span>
                             </div>
                         `;
                     }
