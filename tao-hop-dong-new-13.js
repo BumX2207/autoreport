@@ -328,14 +328,19 @@
                                 <label>Ngày nghiệm thu</label>
                                 <input type="text" id="con-date-tl" value="14/04/2026" placeholder="dd/mm/yyyy">
                             </div>
-                            <div class="con-col con-group" style="min-width: 110px;">
-                                <label>📐 Lề Trên (cm)</label>
-                                <input type="number" id="con-print-margin-top" value="1.8" step="0.1" min="0" max="10" style="text-align: center;">
+                            
+                            <!-- THAY THẾ LỀ TRÊN THÀNH Ô KHAI BÁO VỊ TRÍ FOOTER CÁCH ĐÁY -->
+                            <div class="con-col con-group" style="min-width: 130px;">
+                                <label>📐 Vị trí Footer cách đáy (cm)</label>
+                                <input type="number" id="con-footer-pos" value="1.0" step="0.1" min="0.2" max="5.0" style="text-align: center;">
                             </div>
-                            <div class="con-col con-group" style="min-width: 110px;">
-                                <label>📐 Lề Dưới (cm)</label>
-                                <input type="number" id="con-print-margin-bottom" value="1.5" step="0.1" min="1.0" max="10" style="text-align: center;">
+                            
+                            <!-- ĐIỀU CHỈNH LỀ DƯỚI CHO NỘI DUNG VĂN BẢN -->
+                            <div class="con-col con-group" style="min-width: 130px;">
+                                <label>📐 Lề Dưới Nội Dung (cm)</label>
+                                <input type="number" id="con-print-margin-bottom" value="2.0" step="0.1" min="0.5" max="10" style="text-align: center;">
                             </div>
+
                             <div class="con-col con-group" style="min-width: 180px;">
                                 <label>🏪 Chọn Siêu Thị</label>
                                 <select id="con-b-select">${shopOptionsHtml}</select>
@@ -685,8 +690,8 @@
                 app.querySelector('#con-no').value = draft.conNo || '';
                 app.querySelector('#con-date-hd').value = draft.dateHd || '';
                 app.querySelector('#con-date-tl').value = draft.dateTl || '';
-                app.querySelector('#con-print-margin-top').value = draft.printMarginTop !== undefined ? draft.printMarginTop : '1.8';
-                app.querySelector('#con-print-margin-bottom').value = draft.printMarginBottom !== undefined ? draft.printMarginBottom : '1.5';
+                app.querySelector('#con-footer-pos').value = draft.footerPos !== undefined ? draft.footerPos : '1.0';
+                app.querySelector('#con-print-margin-bottom').value = draft.printMarginBottom !== undefined ? draft.printMarginBottom : '2.0';
 
                 app.querySelector('#con-a-name').value = draft.aName || '';
                 app.querySelector('#con-a-address').value = draft.aAddress || '';
@@ -771,8 +776,8 @@
                 app.querySelector('#con-a-rep').value = "";
                 app.querySelector('#con-a-role').value = "";
                 app.querySelector('#con-a-honor').value = "Ông";
-                app.querySelector('#con-print-margin-top').value = "1.8";
-                app.querySelector('#con-print-margin-bottom').value = "1.5";
+                app.querySelector('#con-footer-pos').value = "1.0";
+                app.querySelector('#con-print-margin-bottom').value = "2.0";
 
                 app.querySelector('#con-q-client-name').value = "";
                 app.querySelector('#con-q-client-phone').value = "";
@@ -854,8 +859,8 @@
                         conNo: app.querySelector('#con-no').value.trim(),
                         dateHd: app.querySelector('#con-date-hd').value.trim(),
                         dateTl: app.querySelector('#con-date-tl').value.trim(),
-                        printMarginTop: parseFloat(app.querySelector('#con-print-margin-top').value) || 1.8,
-                        printMarginBottom: parseFloat(app.querySelector('#con-print-margin-bottom').value) || 1.5,
+                        footerPos: parseFloat(app.querySelector('#con-footer-pos').value) || 1.0,
+                        printMarginBottom: parseFloat(app.querySelector('#con-print-margin-bottom').value) || 2.0,
 
                         aName: app.querySelector('#con-a-name').value.trim(),
                         aAddress: app.querySelector('#con-a-address').value.trim(),
@@ -1074,9 +1079,9 @@
                 const bHonorHd = app.querySelector('#con-b-honor-hd').value;
                 const bHonorTl = app.querySelector('#con-b-honor-tl').value;
 
-                // THU THẬP CẤU HÌNH LỀ IN ĐỘNG TỪ UI NGƯỜI DÙNG
-                const marginTop = parseFloat(app.querySelector('#con-print-margin-top').value) || 1.8;
-                const marginBottom = parseFloat(app.querySelector('#con-print-margin-bottom').value) || 1.5;
+                // LẤY CẤU HÌNH VỊ TRÍ FOOTER VÀ LỀ DƯỚI NỘI DUNG TỪ UI
+                const footerPos = parseFloat(app.querySelector('#con-footer-pos').value) || 1.0;
+                const marginBottom = parseFloat(app.querySelector('#con-print-margin-bottom').value) || 2.0;
                 const commonPhone = app.querySelector('#con-common-phone').value.trim();
 
                 if (docType !== 'quotation') {
@@ -1128,8 +1133,8 @@
                             <style>
                             @page {
                                 size: A4;
-                                margin-top: ${marginTop}cm; 
-                                margin-bottom: ${marginBottom}cm; 
+                                margin-top: 1.5cm; /* CỐ ĐỊNH LỀ TRÊN NỘI DUNG CHUẨN 1.5CM */
+                                margin-bottom: ${marginBottom}cm; /* LỀ DƯỚI ĐIỀU CHỈNH ĐIỂM DỪNG VĂN BẢN */
                                 margin-left: 2cm;
                                 margin-right: 1.5cm;
                             }
@@ -1157,22 +1162,22 @@
                                     position: static !important;
                                 }
 
-                                /* BỨC TƯỜNG BẢO VỆ CHỐNG ĐÈ VĂN BẢN LÊN FOOTER */
                                 .page-content {
-                                    padding-bottom: 1.2cm !important; /* Luôn tạo khoảng trống an toàn cho Footer */
+                                    padding-bottom: 0 !important;
                                 }
 
                                 /* ========================================================================= */
-                                /* FOOTER CHUẨN PRINT ENGINE CHÂU ÂU - FULL WIDTH - KHÔNG VĂNG - KHÔNG ĐÈ CHỮ */
+                                /* FOOTER ĐỘC LẬP TÙY CHỈNH VỊ TRÍ - KHÔNG ĐÈ CHỮ - KHÔNG DỰ BỊ VĂNG TRANG   */
+                                /* Công thức: bottom = footerPos - marginBottom                             */
                                 /* ========================================================================= */
                                 .print-footer {
                                     position: fixed !important;
-                                    bottom: 0 !important;
+                                    bottom: calc(${footerPos}cm - ${marginBottom}cm) !important;
                                     left: 0 !important;
                                     right: 0 !important;
                                     width: 100% !important;
-                                    height: 25px !important;
-                                    line-height: 25px !important;
+                                    height: 20px !important;
+                                    line-height: 20px !important;
                                     border-top: 1px solid #000000 !important;
                                     padding-top: 2px !important;
                                     font-size: 9.5pt !important;
@@ -1182,6 +1187,7 @@
                                     justify-content: space-between !important;
                                     align-items: center !important;
                                     box-sizing: border-box !important;
+                                    overflow: hidden !important;
                                     z-index: 99999 !important;
                                 }
                                 .print-footer .page-num::after {
