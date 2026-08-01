@@ -294,7 +294,7 @@
                             <option value="">📂 --- Xem lại bản nháp gần nhất ---</option>
                         </select>
                         <button id="btn-con-new-draft" style="background:#6c5ce7; color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:bold; font-size:12.5px; cursor:pointer; transition:0.2s;">＋ Tạo Mới</button>
-                        <button id="btn-con-save-draft" style="background:#2ed573; color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:bold; font-size:12.5px; cursor:pointer; transition:0.2s;">💾 Lưu Nháp</button>
+                        <button id="btn-con-save-draft" style="background:#2ed573; color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:bold; font-size:12.5px; cursor:pointer; transition:0.2s;">💾 Lưu Thông Tin</button>
                     </div>
                     
                     <button class="con-btn-close" id="con-btn-close" style="flex-shrink:0;">✖</button>
@@ -325,6 +325,11 @@
                             <div class="con-col con-group" style="min-width: 110px;">
                                 <label>📐 Lề Dưới (cm)</label>
                                 <input type="number" id="con-print-margin-bottom" value="1.0" step="0.1" min="0.5" max="10" style="text-align: center;">
+                            </div>
+                            <!-- TRƯỜNG CHỌN SIÊU THỊ ĐÃ ĐƯỢC DI CHUYỂN LÊN ĐÂY -->
+                            <div class="con-col con-group" style="min-width: 180px;">
+                                <label>🏪 Chọn Siêu Thị</label>
+                                <select id="con-b-select">${shopOptionsHtml}</select>
                             </div>
                             <!-- TRƯỜNG KHAI BÁO SỐ ĐIỆN THOẠI LIÊN HỆ CHUNG -->
                             <div class="con-col con-group" style="min-width: 180px;">
@@ -408,13 +413,6 @@
                         <!-- BÊN BÁN (BÊN B) -->
                         <div class="con-col con-panel" id="panel-side-b">
                             <div class="con-sec-title bg-sell">🏪 II/ BÊN BÁN (BÊN B)</div>
-                            <div class="con-group" style="display: flex; gap: 10px; align-items: flex-end;">
-                                <div style="flex: 1;">
-                                    <label>Chọn Siêu Thị</label>
-                                    <select id="con-b-select">${shopOptionsHtml}</select>
-                                </div>
-                                <button id="btn-save-b-info" class="con-btn-add-row" style="height: 38px; background: #2ed573; color: white; border: none; padding: 0 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; margin-bottom: 0;">💾 Lưu thông tin</button>
-                            </div>
                             <div class="con-group"><label>Tên Chi Nhánh / Công ty</label><input type="text" id="con-b-name" value="CHI NHÁNH CÔNG TY CỔ PHẦN ĐẦU TƯ ĐIỆY MÁY XANH"></div>
                             <div class="con-group"><label>Địa Chỉ Trụ Sở Đăng Ký</label><input type="text" id="con-b-address" value="Số A12 Trần Hưng Đạo, Phường Buôn Ma Thuột, Tỉnh Đắk Lắk, Việt Nam"></div>
                             <div class="con-group"><label>Siêu Thị Bán Hàng</label><input type="text" id="con-b-store" value="ĐMM_DLA_LAK - 248 Nguyễn Tất Thành (Liên Sơn)"></div>
@@ -673,71 +671,6 @@
                 app.querySelector('#con-b-store').value = storeName.toUpperCase();
             };
 
-            // --- SỰ KIỆN CLICK NÚT LƯU THÔNG TIN LIÊN KẾT WEB APP ---
-            const btnSave = app.querySelector('#btn-save-b-info');
-            btnSave.onclick = () => {
-                let cloudData = normalizeCloudData(userCfg.shopConfigColL);
-
-                // Thu thập thông tin Bên B đưa vào thuộc tính sellerInfo chuyên dụng
-                cloudData.sellerInfo = {
-                    name: app.querySelector('#con-b-name').value.trim(),
-                    address: app.querySelector('#con-b-address').value.trim(),
-                    store: app.querySelector('#con-b-store').value.trim(),
-                    tax: app.querySelector('#con-b-tax').value.trim(),
-                    phone: app.querySelector('#con-b-phone').value.trim(),
-                    bankAcc: app.querySelector('#con-b-bank-acc').value.trim(),
-                    bankName: app.querySelector('#con-b-bank-name').value.trim(),
-                    rep: app.querySelector('#con-b-rep-hd').value.trim(),
-                    role: app.querySelector('#con-b-role-hd').value.trim(),
-                    uq: app.querySelector('#con-b-uq').value.trim(),
-                    repTl: app.querySelector('#con-b-rep-tl').value.trim(),
-                    roleTl: app.querySelector('#con-b-role-tl').value.trim(),
-                    honorHd: app.querySelector('#con-b-honor-hd').value,
-                    honorTl: app.querySelector('#con-b-honor-tl').value
-                };
-
-                userCfg.shopConfigColL = cloudData;
-                localStorage.setItem('con_shop_config_col_l', JSON.stringify(cloudData));
-                UTILS.savePersistentConfig(userCfg);
-
-                if (!currentUserId) {
-                    alert("⚠️ Không tìm thấy mã số User định danh từ hệ thống!");
-                    return;
-                }
-
-                btnSave.disabled = true;
-                btnSave.style.opacity = "0.6";
-                btnSave.innerText = "⏳ Đang lưu...";
-
-                fetch(webAppUrl, {
-                    method: "POST",
-                    headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify({
-                        action: "saveConfig",
-                        user: currentUserId,
-                        data: JSON.stringify(cloudData)
-                    })
-                })
-                .then(res => res.json())
-                .then(resData => {
-                    btnSave.disabled = false;
-                    btnSave.style.opacity = "1";
-                    btnSave.innerText = "💾 Lưu thông tin";
-                    
-                    if (resData.status === 'success') {
-                        alert("Đã lưu thành công!");
-                    } else {
-                        alert("❌ Lỗi: " + resData.message);
-                    }
-                })
-                .catch(err => {
-                    btnSave.disabled = false;
-                    btnSave.style.opacity = "1";
-                    btnSave.innerText = "💾 Lưu thông tin";
-                    alert("❌ Lỗi kết nối mạng: " + err.message);
-                });
-            };
-
             // --- SỰ KIỆN THAY ĐỔI / CHỌN BẢN NHÁP TỪ DROPDOWN ---
             app.querySelector('#con-draft-select').onchange = (e) => {
                 const selectedDraftId = e.target.value;
@@ -758,6 +691,7 @@
                 app.querySelector('#con-date-tl').value = draft.dateTl || '';
                 app.querySelector('#con-print-margin-top').value = draft.printMarginTop !== undefined ? draft.printMarginTop : '1.8';
                 app.querySelector('#con-print-margin-bottom').value = draft.printMarginBottom !== undefined ? draft.printMarginBottom : '1.0';
+                app.querySelector('#con-b-select').value = draft.bSelectVal || '';
                 app.querySelector('#con-common-phone').value = draft.commonPhone || '';
                 app.querySelector('#con-store-address').value = draft.storeAddress || '';
 
@@ -848,6 +782,7 @@
                 app.querySelector('#con-a-honor').value = "Ông";
                 app.querySelector('#con-print-margin-top').value = "1.8";
                 app.querySelector('#con-print-margin-bottom').value = "1.0";
+                app.querySelector('#con-b-select').value = "";
                 app.querySelector('#con-common-phone').value = "";
 
                 app.querySelector('#con-q-client-name').value = "";
@@ -893,7 +828,7 @@
                 alert("✨ Đã tạo phiên làm việc trống mới!");
             };
 
-            // --- SỰ KIỆN CLICK NÚT LƯU NHÁP HÀM LƯU ĐẦY ĐỦ CẤU TRÚC LÊN CLOUD ---
+            // --- SỰ KIỆN CLICK NÚT LƯU THÔNG TIN HỢP NHẤT TOÀN DIỆN LÊN CLOUD ---
             const executeSaveDraft = (silent = false, callback = null) => {
                 const fileType = app.querySelector('#con-file-type').value;
                 const clientName = fileType === 'quotation' 
@@ -924,6 +859,7 @@
                     dateTl: app.querySelector('#con-date-tl').value.trim(),
                     printMarginTop: parseFloat(app.querySelector('#con-print-margin-top').value) || 1.8,
                     printMarginBottom: parseFloat(app.querySelector('#con-print-margin-bottom').value) || 1.0,
+                    bSelectVal: app.querySelector('#con-b-select').value,
                     commonPhone: app.querySelector('#con-common-phone').value.trim(),
                     storeAddress: app.querySelector('#con-store-address').value.trim(),
 
@@ -952,8 +888,26 @@
                 };
 
                 let cloudData = normalizeCloudData(userCfg.shopConfigColL);
-                let drafts = cloudData.drafts || [];
+                
+                // ĐỒNG BỘ LƯU TRỮ CẢ THÔNG TIN BÊN BÁN BÊN B KHI NHẤP NÚT GỘP
+                cloudData.sellerInfo = {
+                    name: app.querySelector('#con-b-name').value.trim(),
+                    address: app.querySelector('#con-b-address').value.trim(),
+                    store: app.querySelector('#con-b-store').value.trim(),
+                    tax: app.querySelector('#con-b-tax').value.trim(),
+                    phone: app.querySelector('#con-b-phone').value.trim(),
+                    bankAcc: app.querySelector('#con-b-bank-acc').value.trim(),
+                    bankName: app.querySelector('#con-b-bank-name').value.trim(),
+                    rep: app.querySelector('#con-b-rep-hd').value.trim(),
+                    role: app.querySelector('#con-b-role-hd').value.trim(),
+                    uq: app.querySelector('#con-b-uq').value.trim(),
+                    repTl: app.querySelector('#con-b-rep-tl').value.trim(),
+                    roleTl: app.querySelector('#con-b-role-tl').value.trim(),
+                    honorHd: app.querySelector('#con-b-honor-hd').value,
+                    honorTl: app.querySelector('#con-b-honor-tl').value
+                };
 
+                let drafts = cloudData.drafts || [];
                 const existingIdx = drafts.findIndex(d => d.id === currentDraftId);
                 if (existingIdx !== -1) {
                     drafts[existingIdx] = draftObj;
@@ -1002,7 +956,7 @@
                         btnSaveDraft.innerText = origText;
                     }
                     if (resData.status === 'success') {
-                        if (!silent) alert("Đã lưu nháp thành công!");
+                        if (!silent) alert("Đã lưu toàn bộ thông tin thành công!");
                         renderDraftDropdown();
                         if (callback) callback(true);
                     } else {
@@ -1021,9 +975,9 @@
                 });
             };
 
-            // Gắn sự kiện click chuẩn cho nút Lưu Nháp ngoài giao diện
+            // Gắn sự kiện click chuẩn cho nút Lưu Thông Tin mới
             app.querySelector('#btn-con-save-draft').onclick = () => {
-                executeSaveDraft(false); // Lưu nháp thông thường (Có hiển thị Loader và Alert)
+                executeSaveDraft(false); // Lưu toàn bộ trường dữ liệu và tải lên Cloud
             };
             
             // Hàm tính toán tổng tiền
@@ -1755,7 +1709,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="print-footer" style="font-family: sans-serif;">
+                                <div class="print-footer" style="font-family: 'Times New Roman', serif;">
                                     <span style="font-weight: bold; color: #111;">dienmayxanh</span>
                                     <span class="page-num"></span>
                                 </div>
