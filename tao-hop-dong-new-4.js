@@ -334,7 +334,7 @@
                                 <input type="text" id="con-date-hd" value="12/04/2026" placeholder="dd/mm/yyyy">
                             </div>
                             <div class="con-col con-group" style="min-width: 150px;">
-                                <label>Ngày Nghiệm Thu/Thanh Lý</label>
+                                <label>Ngày nghiệm thu</label>
                                 <input type="text" id="con-date-tl" value="14/04/2026" placeholder="dd/mm/yyyy">
                             </div>
                             <!-- THIẾT LẬP CĂN LỀ ĐỘNG CHO TRANG IN -->
@@ -399,7 +399,7 @@
                                     </select>
                                 </div>
                                 <div class="con-col con-group" style="min-width:140px; flex:1.6;"><label>Người Đại Diện</label><input type="text" id="con-a-rep" value="Bùi Quang Tuyên"></div>
-                                <div class="con-col con-group" style="min-width:140px;"><label>Chức Vụ</label><input type="text" id="con-a-role" value="Giám đốc"></div>
+                                <div class="con-col con-group" style="min-width:140px;"><label>Chức Vụ</label><input type="text" id="con-a-role" value="Giám Đốc"></div>
                             </div>
                         </div>
 
@@ -644,7 +644,7 @@
                                         imgPreview.src = resData.url;
                                         imgPreview.style.display = 'block';
                                         imgPlaceholder.style.display = 'none';
-                                        row.dataset.imageB64 = resData.url; // Lưu trữ link ảnh RAW từ Drive
+                                        row.dataset.imageB64 = row.dataset.imageB64 || resData.url; // Lưu trữ link ảnh RAW từ Drive
                                     } else {
                                         alert("❌ Lỗi tải lên Drive: " + resData.message);
                                         imgPlaceholder.innerText = "＋";
