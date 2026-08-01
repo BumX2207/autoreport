@@ -1133,8 +1133,11 @@
                             <style>
                             @page {
                                 size: A4;
-                                margin-top: 1.5cm; /* CỐ ĐỊNH LỀ TRÊN NỘI DUNG CHUẨN 1.5CM */
-                                margin-bottom: ${marginBottom}cm; /* LỀ DƯỚI ĐIỀU CHỈNH ĐIỂM DỪNG VĂN BẢN */
+                                margin-top: 1.5cm; /* Cố định lề trên chuẩn 1.5cm */
+                                
+                                /* ĐỘC LẬP 100%: Lề đáy trang in chỉ ăn theo duy nhất vị trí Footer */
+                                margin-bottom: ${footerPos}cm; 
+                                
                                 margin-left: 2cm;
                                 margin-right: 1.5cm;
                             }
@@ -1162,17 +1165,15 @@
                                     position: static !important;
                                 }
 
+                                /* LỀ DƯỚI NỘI DUNG ĐỘC LẬP: Chỉ đẩy chữ lên cao, HOÀN TOÀN KHÔNG CHẠM VÀO FOOTER */
                                 .page-content {
-                                    padding-bottom: 0 !important;
+                                    padding-bottom: ${Math.max(0, marginBottom - footerPos)}cm !important;
                                 }
 
-                                /* ========================================================================= */
-                                /* FOOTER ĐỘC LẬP TÙY CHỈNH VỊ TRÍ - KHÔNG ĐÈ CHỮ - KHÔNG DỰ BỊ VĂNG TRANG   */
-                                /* Công thức: bottom = footerPos - marginBottom                             */
-                                /* ========================================================================= */
+                                /* FOOTER ĐỨNG YÊN 100%: Không chứa biến marginBottom, thay đổi Lề Dưới không làm Footer di chuyển */
                                 .print-footer {
                                     position: fixed !important;
-                                    bottom: calc(${footerPos}cm - ${marginBottom}cm) !important;
+                                    bottom: 0 !important; /* Luôn cố định chuẩn tại vị trí footerPos cách đáy giấy */
                                     left: 0 !important;
                                     right: 0 !important;
                                     width: 100% !important;
