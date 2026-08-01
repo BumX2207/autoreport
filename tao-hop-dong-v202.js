@@ -176,7 +176,7 @@
             return data;
         };
 
-        // Hàm điền tự động toàn bộ trường của Bên B
+        // Hàm điền tự động toàn bộ trường của Bên B và thiết lập mặc định thông tin chung
         const fillBFields = (info) => {
             if (!info) return;
             const activeApp = document.getElementById('con-app') || app;
@@ -197,7 +197,8 @@
                 '#con-b-role-tl': info.roleTl,
                 '#con-b-honor-hd': info.honorHd,
                 '#con-b-honor-tl': info.honorTl,
-                '#con-q-drive-folder': info.driveFolderId
+                '#con-q-drive-folder': info.driveFolderId, // Nạp mặc định ID Google Drive chung
+                '#con-common-phone': info.commonPhone     // Nạp mặc định Số điện thoại liên hệ chung
             };
             for (let selector in fields) {
                 const val = fields[selector];
@@ -693,6 +694,7 @@
                 app.querySelector('#con-print-margin-bottom').value = draft.printMarginBottom !== undefined ? draft.printMarginBottom : '1.0';
                 app.querySelector('#con-b-select').value = draft.bSelectVal || '';
                 app.querySelector('#con-common-phone').value = draft.commonPhone || '';
+                app.querySelector('#con-q-drive-folder').value = draft.driveFolderId || '';
                 app.querySelector('#con-store-address').value = draft.storeAddress || '';
 
                 app.querySelector('#con-a-name').value = draft.aName || '';
@@ -762,7 +764,7 @@
                 toggleFileType();
             };
 
-            // --- SỰ KIỆN CLICK NÚT TẠO MỚI (TẠO MÃ PHIÊN MỚI & CLEAR FORM KHÁCH) ---
+            // --- SỰ KIỆN CLICK NÚT TẠO MỚI (TẠO MÃ PHIÊN MỚI & CLEAR FORM KHÁCH VÀ LẤY LẠI THÔNG TIN BÁN HÀNG CỦA BẠN) ---
             app.querySelector('#btn-con-new-draft').onclick = () => {
                 // Tạo Mã phiên thời gian thực mới
                 currentDraftId = "draft_" + Date.now();
@@ -782,8 +784,12 @@
                 app.querySelector('#con-a-honor').value = "Ông";
                 app.querySelector('#con-print-margin-top').value = "1.8";
                 app.querySelector('#con-print-margin-bottom').value = "1.0";
-                app.querySelector('#con-b-select').value = "";
-                app.querySelector('#con-common-phone').value = "";
+
+                // NẠP LẠI THÔNG TIN BÁN HÀNG TOÀN CỤC CỦA BẠN ĐỂ KHÔNG PHẢI GÕ LẠI NHIỀU LẦN
+                const cloudData = normalizeCloudData(userCfg.shopConfigColL);
+                const sellerInfo = cloudData.sellerInfo || {};
+                app.querySelector('#con-common-phone').value = sellerInfo.commonPhone || "0979435599 - Hữu Thọ";
+                app.querySelector('#con-q-drive-folder').value = sellerInfo.driveFolderId || "";
 
                 app.querySelector('#con-q-client-name').value = "";
                 app.querySelector('#con-q-client-phone').value = "";
@@ -861,6 +867,7 @@
                     printMarginBottom: parseFloat(app.querySelector('#con-print-margin-bottom').value) || 1.0,
                     bSelectVal: app.querySelector('#con-b-select').value,
                     commonPhone: app.querySelector('#con-common-phone').value.trim(),
+                    driveFolderId: app.querySelector('#con-q-drive-folder').value.trim(), // Lưu trữ nội bộ draft
                     storeAddress: app.querySelector('#con-store-address').value.trim(),
 
                     aName: app.querySelector('#con-a-name').value.trim(),
@@ -889,7 +896,7 @@
 
                 let cloudData = normalizeCloudData(userCfg.shopConfigColL);
                 
-                // ĐỒNG BỘ LƯU TRỮ CẢ THÔNG TIN BÊN BÁN BÊN B KHI NHẤP NÚT GỘP
+                // ĐỒNG BỘ LƯU TRỮ CẢ THÔNG TIN BÊN BÁN BÊN B KHI NHẤP NÚT GỘP (CÙNG VỚI CÁC TRƯỜNG TOÀN CỤC)
                 cloudData.sellerInfo = {
                     name: app.querySelector('#con-b-name').value.trim(),
                     address: app.querySelector('#con-b-address').value.trim(),
@@ -904,7 +911,9 @@
                     repTl: app.querySelector('#con-b-rep-tl').value.trim(),
                     roleTl: app.querySelector('#con-b-role-tl').value.trim(),
                     honorHd: app.querySelector('#con-b-honor-hd').value,
-                    honorTl: app.querySelector('#con-b-honor-tl').value
+                    honorTl: app.querySelector('#con-b-honor-tl').value,
+                    driveFolderId: app.querySelector('#con-q-drive-folder').value.trim(), // Lưu toàn cục trong sellerInfo
+                    commonPhone: app.querySelector('#con-common-phone').value.trim()     // Lưu toàn cục trong sellerInfo
                 };
 
                 let drafts = cloudData.drafts || [];
@@ -1487,7 +1496,7 @@
                                     <div class="bold" style="margin-top: 15px;">ĐIỀU 4: CHÍNH SÁCH BẢO HÀNH, ĐỔI, TRẢ SẢN PHẨM VÀ HOÀN TIỀN</div>
                                     <div style="text-align: justify; font-size: 10.5pt; margin-bottom: 15px;">
                                         4.1 Sản Phẩm do Bên B cung cấp sẽ được bảo hành theo tiêu chuẩn của nhà sản xuất hoặc nhà phân phối. Sản phẩm sẽ được kích hoạt bảo hành ngay tại thời điểm Bên B xuất hóa đơn VAT cho Bên A.<br>
-                                        4.2 Chính sách bảo hành của nhà sản xuất hoặc nhà phân phối được đính kèm theo sản phẩm hoặc có thể tham khảo tại website của nhà sản xuất hoặc nhà phân phối.<br>
+                                        4.2 chính sách bảo hành của nhà sản xuất hoặc nhà phân phối được đính kèm theo sản phẩm hoặc có thể tham khảo tại website của nhà sản xuất hoặc nhà phân phối.<br>
                                         4.3 Nếu sản phẩm có áp dụng chính sách đổi trả hoặc hoàn tiền của Bên B vui lòng xem chính sách tại website https://www.dienmayxanh.com/bao-hanh-doi-tra (hoặc https://www.thegioididong.com/chinh-sach-bao-hanh-san-pham áp dụng tùy từng loại sản phẩm). Bên B bảo lưu quyền thay đổi các chính sách này tại từng thời điểm và không cần sự chấp thuận của Bên A.<br>
                                         4.4 Cho mục đích bảo hành hoặc khiếu nại về Sản Phẩm Bên A liên hệ số điện thoại như được công khai tại website https://www.dienmayxanh.com/ hoặc https://www.thegioididong.com/.
                                     </div>
@@ -1785,8 +1794,8 @@
                                                 <table style="width: 100%; border: none;">
                                                     <tr style="border: none;"><td style="width: 25%; font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">${qClientHonor}:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientName}</td></tr>
                                                     <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">Điện thoại:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientPhone}</td></tr>
-                                                    <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">Tên công ty:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientCompany}</td></tr>
-                                                    <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">Email:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientEmail}</td></tr>
+                                                    <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">Tên công ty:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientCompany}</td></tr>
+                                                    <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">Email:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientEmail}</td></tr>
                                                     <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">Địa chỉ:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientAddress}</td></tr>
                                                 </table>
                                             </td>
