@@ -149,6 +149,9 @@
     const runTool = () => {
         let app = document.getElementById('con-app');
         const userCfg = UTILS.getPersistentConfig();
+
+        // KHAI BÁO BIẾN DRAFT ID PHẠM VI HÀM (KHẮC PHỤC LỖI KHÔNG XÁC ĐỊNH BIẾN)
+        let currentDraftId = "draft_" + Date.now();
         
         // Trích xuất mã số user từ AUTH_STATE
         const extractUserId = (str) => {
@@ -221,7 +224,7 @@
             }
         };
 
-        // --- ĐÃ ĐỒNG BỘ: DỜI HÀM VẼ DROPDOWN LÊN ĐẦU PHẠM VI TRUY CẬP ---
+        // --- DỜI HÀM VẼ DROPDOWN LÊN ĐẦU PHẠM VI TRUY CẬP ---
         const renderDraftDropdown = () => {
             const activeApp = document.getElementById('con-app') || app;
             if (!activeApp) return;
@@ -245,12 +248,12 @@
                 userCfg.shopConfigColL = info;
                 setTimeout(() => {
                     fillBFields(info.sellerInfo);
-                    renderDraftDropdown(); // <--- Đã an toàn gọi được ngay tại đây
+                    renderDraftDropdown();
                 }, 50);
             }
         } catch (e) {}
 
-        // 2. Đồng bộ nạp dữ liệu đầy đủ từ Cloud (Có tích hợp bộ giải mã phản hồi an toàn)
+        // 2. Đồng bộ nạp dữ liệu đầy đủ từ Cloud
         if (currentUserId) {
             (async () => {
                 try {
@@ -268,15 +271,12 @@
                         userCfg.shopConfigColL = info;
                         localStorage.setItem('con_shop_config_col_l', resData.data);
                         
-                        // Ép đồng bộ hệ thống chính
                         UTILS.savePersistentConfig(userCfg); 
-                        
                         fillBFields(info.sellerInfo);
                     }
                 } catch (err) {
                     console.warn("[Auto BI] Không thể đồng bộ cấu hình từ Cloud:", err.message);
                 } finally {
-                    // ĐẢM BẢO LUÔN LUÔN VẼ DROPDOWN BẢN NHÁP (KỂ CẢ KHI OFFLINE HOẶC CLOUD LỖI)
                     renderDraftDropdown();
                 }
             })();
@@ -333,6 +333,7 @@
                                 <label>Ngày Ký Hợp Đồng</label>
                                 <input type="text" id="con-date-hd" value="12/04/2026" placeholder="dd/mm/yyyy">
                             </div>
+                            <!-- CẬP NHẬT NHÃN THEO YÊU CẦU: "Ngày nghiệm thu" -->
                             <div class="con-col con-group" style="min-width: 150px;">
                                 <label>Ngày nghiệm thu</label>
                                 <input type="text" id="con-date-tl" value="14/04/2026" placeholder="dd/mm/yyyy">
@@ -346,12 +347,10 @@
                                 <label>📐 Lề Dưới (cm)</label>
                                 <input type="number" id="con-print-margin-bottom" value="1.0" step="0.1" min="0.5" max="10" style="text-align: center;">
                             </div>
-                            <!-- TRƯỜNG CHỌN SIÊU THỊ ĐÃ ĐƯỢC DI CHUYỂN LÊN ĐÂY -->
                             <div class="con-col con-group" style="min-width: 180px;">
                                 <label>🏪 Chọn Siêu Thị</label>
                                 <select id="con-b-select">${shopOptionsHtml}</select>
                             </div>
-                            <!-- TRƯỜNG KHAI BÁO SỐ ĐIỆN THOẠI LIÊN HỆ CHUNG -->
                             <div class="con-col con-group" style="min-width: 180px;">
                                 <label>📞 Số điện thoại liên hệ</label>
                                 <input type="text" id="con-common-phone" value="0979435599 - Hữu Thọ" placeholder="Số điện thoại - Tên người liên hệ">
@@ -403,7 +402,7 @@
                             </div>
                         </div>
 
-                        <!-- KHÁCH HÀNG NHẬN BÁO GIÁ (Mặc định ẩn, tự hiện khi chọn Báo Giá) -->
+                        <!-- KHÁCH HÀNG NHẬN BÁO GIÁ -->
                         <div class="con-col con-panel" id="panel-quotation-client" style="display:none;">
                             <div class="con-sec-title bg-buy">🏢 I/ THÔNG TIN BÁO GIÁ</div>
                             <div class="con-row" style="gap:10px;">
@@ -493,7 +492,6 @@
                                 <tr class="con-product-row">
                                     <td class="con-stt" style="text-align:center; font-weight:bold; vertical-align:middle;">1</td>
                                     <td class="col-image" style="display:none; text-align:center; vertical-align:middle;">
-                                        <!-- Khung tải ảnh nội bộ -->
                                         <div style="position:relative; width:60px; height:60px; border:1px dashed #cbd5e1; border-radius:6px; margin:0 auto; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#f8fafc;">
                                             <span class="img-placeholder" style="font-size:16px; color:#94a3b8; font-weight:bold;">＋</span>
                                             <img class="con-p-img-preview" style="display:none; width:100%; height:100%; object-fit:contain; position:absolute; top:0; left:0;">
@@ -502,7 +500,6 @@
                                     </td>
                                     <td style="vertical-align:middle;">
                                         <input type="text" class="con-p-name" value="Máy lạnh âm trần LG Inverter 2.5 HP ZTNQ24GPLA0" style="width:100%;">
-                                        <!-- Textarea nhập mô tả tự thêm gạch đầu dòng -->
                                         <textarea class="con-p-desc" style="width:100%; display:none; height:65px; border:1px solid #cbd5e1; border-radius:8px; padding:6px; font-size:13px; font-weight:bold; outline:none; resize:none;" placeholder="- Nhập mô tả sản phẩm (Enter để xuống dòng...)"></textarea>
                                     </td>
                                     <td style="vertical-align:middle;"><input type="number" class="con-p-qty" value="1" min="1" style="width:100%; text-align:center;"></td>
@@ -558,26 +555,24 @@
 
                 if (fileType === 'quotation') {
                     panelA.style.display = 'none';
-                    panelB.style.display = 'none'; // Ẩn Bên B khi báo giá
+                    panelB.style.display = 'none';
                     panelQuotation.style.display = 'block';
 
-                    // Hiện các cột hình ảnh, cột giá bán lẻ
                     app.querySelectorAll('.col-image, .col-retail-price').forEach(el => el.style.display = 'table-cell');
                     app.querySelectorAll('.con-p-desc').forEach(el => el.style.display = 'block');
                     app.querySelectorAll('.con-p-name').forEach(el => el.style.display = 'none');
                     priceHeader.innerText = "GIÁ ĐÃ GIẢM";
-                    btnGenerate.innerText = "🖨️ Tạo Báo Giá & Tải PDF"; // Đổi tên nút
+                    btnGenerate.innerText = "🖨️ Tạo Báo Giá & Tải PDF";
                 } else {
                     panelA.style.display = 'block';
-                    panelB.style.display = 'block'; // Hiện Bên B khi in hợp đồng
+                    panelB.style.display = 'block';
                     panelQuotation.style.display = 'none';
 
-                    // Ẩn các cột bổ trợ báo giá
                     app.querySelectorAll('.col-image, .col-retail-price').forEach(el => el.style.display = 'none');
                     app.querySelectorAll('.con-p-desc').forEach(el => el.style.display = 'none');
                     app.querySelectorAll('.con-p-name').forEach(el => el.style.display = 'block');
                     priceHeader.innerText = "ĐƠN GIÁ (VNĐ)";
-                    btnGenerate.innerText = "🖨️ Tạo Hợp Đồng & Tải PDF"; // Trả lại tên nút
+                    btnGenerate.innerText = "🖨️ Tạo Hợp Đồng & Tải PDF";
                 }
                 recalculateTotals();
             };
@@ -604,25 +599,21 @@
                 }
                 qtyInp.oninput = recalculateTotals;
 
-                // Xử lý tải ảnh trực tiếp lên Google Drive của người dùng qua Web App
                 if (imgFileInput) {
                     imgFileInput.onchange = (e) => {
                         const file = e.target.files[0];
                         if (file) {
-                            // Lấy trực tiếp ID từ ô nhập liệu trên form
                             const driveFolderIdRaw = app.querySelector('#con-q-drive-folder').value.trim();
                             if (!driveFolderIdRaw) {
                                 alert("⚠️ Vui lòng nhập ID hoặc dán đường Link thư mục Google Drive lưu ảnh vào ô khai báo ở phần chung!");
                                 return;
                             }
 
-                            // Tự động xử lý bóc tách lấy ID sạch phòng trường hợp dán nguyên URL thư mục
                             let driveFolderId = driveFolderIdRaw;
                             if (driveFolderId.indexOf("folders/") !== -1) {
                                 driveFolderId = driveFolderId.split("folders/")[1].split("?")[0].split("/")[0];
                             }
 
-                            // Hiển thị trạng thái chờ tải lên
                             imgPlaceholder.innerText = "⏳";
                             imgPlaceholder.style.fontSize = "12px";
 
@@ -644,7 +635,7 @@
                                         imgPreview.src = resData.url;
                                         imgPreview.style.display = 'block';
                                         imgPlaceholder.style.display = 'none';
-                                        row.dataset.imageB64 = row.dataset.imageB64 || resData.url; // Lưu trữ link ảnh RAW từ Drive
+                                        row.dataset.imageB64 = resData.url;
                                     } else {
                                         alert("❌ Lỗi tải lên Drive: " + resData.message);
                                         imgPlaceholder.innerText = "＋";
@@ -662,7 +653,6 @@
                     };
                 }
 
-                // Tự động thêm gạch đầu dòng khi xuống hàng trong mô tả
                 if (descTextarea) {
                     descTextarea.onkeydown = (e) => {
                         if (e.key === 'Enter') {
@@ -683,7 +673,6 @@
                 }
             };
 
-            // Dropdown chọn siêu thị Bên B
             app.querySelector('#con-b-select').onchange = (e) => {
                 const selVal = e.target.value;
                 if (!selVal) return;
@@ -691,7 +680,7 @@
                 app.querySelector('#con-b-store').value = storeName.toUpperCase();
             };
 
-            // --- SỰ KIỆN THAY ĐỔI / CHỌN BẢN NHÁP TỪ DROPDOWN (ĐÃ LOẠI BỎ CÁC TRƯỜNG CỐ ĐỊNH) ---
+            // --- CHỌN BẢN NHÁP TỪ DROPDOWN ---
             app.querySelector('#con-draft-select').onchange = (e) => {
                 const selectedDraftId = e.target.value;
                 if (!selectedDraftId) return;
@@ -701,10 +690,8 @@
                 const draft = drafts.find(d => d.id === selectedDraftId);
                 if (!draft) return;
 
-                // Khôi phục mã phiên hiện tại
                 currentDraftId = draft.id;
 
-                // Đồng bộ phục hồi các trường thông tin chung (LOẠI BỎ HOÀN TOÀN VIỆC GHI ĐÈ 4 TRƯỜNG CỐ ĐỊNH CỦA BẠN)
                 app.querySelector('#con-file-type').value = draft.fileType || 'contract';
                 app.querySelector('#con-no').value = draft.conNo || '';
                 app.querySelector('#con-date-hd').value = draft.dateHd || '';
@@ -734,7 +721,6 @@
                 app.querySelector('#con-discount-name').value = draft.discountName || '';
                 app.querySelector('#con-discount-val').value = draft.discountVal || '0';
 
-                // Phục hồi bảng sản phẩm
                 tbody.innerHTML = '';
                 if (draft.products && draft.products.length > 0) {
                     draft.products.forEach((p, idx) => {
@@ -777,15 +763,14 @@
                 }
 
                 toggleFileType();
+                recalculateTotals();
             };
 
-            // --- SỰ KIỆN CLICK NÚT TẠO MỚI (TẠO MÃ PHIÊN MỚI & CLEAR FORM KHÁCH VÀ GIỮ NGUYÊN HỒ SƠ CỐ ĐỊNH CỦA BẠN) ---
+            // --- SỰ KIỆN NÚT TẠO MỚI ---
             app.querySelector('#btn-con-new-draft').onclick = () => {
-                // Tạo Mã phiên thời gian thực mới
                 currentDraftId = "draft_" + Date.now();
                 app.querySelector('#con-draft-select').value = "";
 
-                // Reset các thông tin khách hàng (Bên A và Báo Giá)
                 app.querySelector('#con-no').value = "0104-2026 /KD-ĐMX/HĐMB";
                 
                 app.querySelector('#con-a-name').value = "";
@@ -800,15 +785,12 @@
                 app.querySelector('#con-print-margin-top').value = "1.8";
                 app.querySelector('#con-print-margin-bottom').value = "1.0";
 
-                // GIỮ NGUYÊN HOÀN TOÀN CÁC THÔNG TIN CỐ ĐỊNH CỦA BẠN (SĐT, Google Drive Folder ID, Store Address, Siêu thị đã chọn) - KHÔNG XOÁ
-
                 app.querySelector('#con-q-client-name').value = "";
                 app.querySelector('#con-q-client-phone').value = "";
                 app.querySelector('#con-q-client-company').value = "";
                 app.querySelector('#con-q-client-email').value = "";
                 app.querySelector('#con-q-client-address').value = "";
                 
-                // Khởi tạo ngày hiện tại cho Báo giá mới
                 const t = new Date();
                 const dStr = `${padZero(t.getDate())}/${padZero(t.getMonth()+1)}/${t.getFullYear()}`;
                 app.querySelector('#con-q-date').value = dStr;
@@ -818,7 +800,6 @@
                 app.querySelector('#con-discount-name').value = "";
                 app.querySelector('#con-discount-val').value = "0";
 
-                // Reset danh sách sản phẩm về 1 dòng trắng
                 tbody.innerHTML = `
                     <tr class="con-product-row">
                         <td class="con-stt" style="text-align:center; font-weight:bold; vertical-align:middle;">1</td>
@@ -845,110 +826,8 @@
                 alert("✨ Đã tạo phiên làm việc trống mới!");
             };
 
-            // --- SỰ KIỆN CLICK NÚT LƯU THÔNG TIN HỢP NHẤT TOÀN DIỆN LÊN CLOUD ---
+            // --- SỰ KIỆN LƯU THÔNG TIN BẢN NHÁP ---
             const executeSaveDraft = async (silent = false, callback = null) => {
-                const fileType = app.querySelector('#con-file-type').value;
-                const clientName = fileType === 'quotation' 
-                    ? app.querySelector('#con-q-client-name').value.trim() 
-                    : app.querySelector('#con-a-name').value.trim();
-
-                const now = new Date();
-                const labelStr = `${clientName || "Khách mới"} - ${padZero(now.getDate())}/${padZero(now.getMonth()+1)} ${padZero(now.getHours())}h${padZero(now.getMinutes())}`;
-
-                const draftProducts = [];
-                tbody.querySelectorAll('.con-product-row').forEach((r) => {
-                    draftProducts.push({
-                        name: r.querySelector('.con-p-name').value.trim(),
-                        desc: r.querySelector('.con-p-desc').value.trim(),
-                        qty: parseInt(r.querySelector('.con-p-qty').value) || 0,
-                        retailPrice: r.querySelector('.con-p-retail-price').value.trim(),
-                        price: r.querySelector('.con-p-price').value.trim(),
-                        imageB64: r.dataset.imageB64 || ''
-                    });
-                });
-
-                const draftObj = {
-                    id: currentDraftId,
-                    label: labelStr,
-                    fileType: fileType,
-                    conNo: app.querySelector('#con-no').value.trim(),
-                    dateHd: app.querySelector('#con-date-hd').value.trim(),
-                    dateTl: app.querySelector('#con-date-tl').value.trim(),
-                    printMarginTop: parseFloat(app.querySelector('#con-print-margin-top').value) || 1.8,
-                    printMarginBottom: parseFloat(app.querySelector('#con-print-margin-bottom').value) || 1.0,
-
-                    aName: app.querySelector('#con-a-name').value.trim(),
-                    aAddress: app.querySelector('#con-a-address').value.trim(),
-                    aTax: app.querySelector('#con-a-tax').value.trim(),
-                    aPhone: app.querySelector('#con-a-phone').value.trim(),
-                    aBankAcc: app.querySelector('#con-a-bank-acc').value.trim(),
-                    aBankName: app.querySelector('#con-a-bank-name').value.trim(),
-                    aRep: app.querySelector('#con-a-rep').value.trim(),
-                    aRole: app.querySelector('#con-a-role').value.trim(),
-                    aHonor: app.querySelector('#con-a-honor').value,
-
-                    qClientName: app.querySelector('#con-q-client-name').value.trim(),
-                    qClientPhone: app.querySelector('#con-q-client-phone').value.trim(),
-                    qClientCompany: app.querySelector('#con-q-client-company').value.trim(),
-                    qClientEmail: app.querySelector('#con-q-client-email').value.trim(),
-                    qClientAddress: app.querySelector('#con-q-client-address').value.trim(),
-                    qDate: app.querySelector('#con-q-date').value.trim(),
-                    qValidUntil: app.querySelector('#con-q-valid-until').value.trim(),
-                    qClientHonor: app.querySelector('#con-q-client-honor').value,
-
-                    products: draftProducts,
-                    discountName: app.querySelector('#con-discount-name').value.trim(),
-                    discountVal: app.querySelector('#con-discount-val').value.trim()
-                };
-
-                let cloudData = normalizeCloudData(userCfg.shopConfigColL);
-                
-                // ĐỒNG BỘ LƯU TRỮ TOÀN BỘ CẤU HÌNH CỐ ĐỊNH CỦA BẠN (SELLER PRESETS)
-                cloudData.sellerInfo = {
-                    name: app.querySelector('#con-b-name').value.trim(),
-                    address: app.querySelector('#con-b-address').value.trim(),
-                    store: app.querySelector('#con-b-store').value.trim(),
-                    tax: app.querySelector('#con-b-tax').value.trim(),
-                    phone: app.querySelector('#con-b-phone').value.trim(),
-                    bankAcc: app.querySelector('#con-b-bank-acc').value.trim(),
-                    bankName: app.querySelector('#con-b-bank-name').value.trim(),
-                    rep: app.querySelector('#con-b-rep-hd').value.trim(),
-                    role: app.querySelector('#con-b-role-hd').value.trim(),
-                    uq: app.querySelector('#con-b-uq').value.trim(),
-                    repTl: app.querySelector('#con-b-rep-tl').value.trim(),
-                    roleTl: app.querySelector('#con-b-role-tl').value.trim(),
-                    honorHd: app.querySelector('#con-b-honor-hd').value,
-                    honorTl: app.querySelector('#con-b-honor-tl').value,
-                    
-                    driveFolderId: app.querySelector('#con-q-drive-folder').value.trim(), 
-                    commonPhone: app.querySelector('#con-common-phone').value.trim(),     
-                    storeAddress: app.querySelector('#con-store-address').value.trim(),   
-                    bSelectVal: app.querySelector('#con-b-select').value                  
-                };
-
-                let drafts = cloudData.drafts || [];
-                const existingIdx = drafts.findIndex(d => d.id === currentDraftId);
-                if (existingIdx !== -1) {
-                    drafts[existingIdx] = draftObj;
-                } else {
-                    drafts.unshift(draftObj);
-                }
-
-                if (drafts.length > 5) {
-                    drafts = drafts.slice(0, 5);
-                }
-                cloudData.drafts = drafts;
-
-                userCfg.shopConfigColL = cloudData;
-                localStorage.setItem('con_shop_config_col_l', JSON.stringify(cloudData));
-                UTILS.savePersistentConfig(userCfg);
-
-                if (!currentUserId) {
-                    if (!silent) alert("⚠️ Không tìm thấy mã số User định danh từ hệ thống!");
-                    if (callback) callback(false);
-                    return;
-                }
-
                 const btnSaveDraft = app.querySelector('#btn-con-save-draft');
                 const origText = btnSaveDraft ? btnSaveDraft.innerText : "💾 Lưu Thông Tin";
 
@@ -959,46 +838,139 @@
                 }
 
                 try {
-                    const res = await fetch(webAppUrl, {
-                        method: "POST",
-                        headers: { "Content-Type": "text/plain;charset=utf-8" },
-                        body: JSON.stringify({
-                            action: "saveConfig",
-                            user: currentUserId,
-                            data: JSON.stringify(cloudData)
-                        })
+                    const fileType = app.querySelector('#con-file-type').value;
+                    const clientName = fileType === 'quotation' 
+                        ? app.querySelector('#con-q-client-name').value.trim() 
+                        : app.querySelector('#con-a-name').value.trim();
+
+                    const now = new Date();
+                    const labelStr = `${clientName || "Khách mới"} - ${padZero(now.getDate())}/${padZero(now.getMonth()+1)} ${padZero(now.getHours())}h${padZero(now.getMinutes())}`;
+
+                    const draftProducts = [];
+                    tbody.querySelectorAll('.con-product-row').forEach((r) => {
+                        draftProducts.push({
+                            name: r.querySelector('.con-p-name').value.trim(),
+                            desc: r.querySelector('.con-p-desc').value.trim(),
+                            qty: parseInt(r.querySelector('.con-p-qty').value) || 0,
+                            retailPrice: r.querySelector('.con-p-retail-price').value.trim(),
+                            price: r.querySelector('.con-p-price').value.trim(),
+                            imageB64: r.dataset.imageB64 || ''
+                        });
                     });
-                    const resData = await safeParseJsonResponse(res);
+
+                    const draftObj = {
+                        id: currentDraftId,
+                        label: labelStr,
+                        fileType: fileType,
+                        conNo: app.querySelector('#con-no').value.trim(),
+                        dateHd: app.querySelector('#con-date-hd').value.trim(),
+                        dateTl: app.querySelector('#con-date-tl').value.trim(),
+                        printMarginTop: parseFloat(app.querySelector('#con-print-margin-top').value) || 1.8,
+                        printMarginBottom: parseFloat(app.querySelector('#con-print-margin-bottom').value) || 1.0,
+
+                        aName: app.querySelector('#con-a-name').value.trim(),
+                        aAddress: app.querySelector('#con-a-address').value.trim(),
+                        aTax: app.querySelector('#con-a-tax').value.trim(),
+                        aPhone: app.querySelector('#con-a-phone').value.trim(),
+                        aBankAcc: app.querySelector('#con-a-bank-acc').value.trim(),
+                        aBankName: app.querySelector('#con-a-bank-name').value.trim(),
+                        aRep: app.querySelector('#con-a-rep').value.trim(),
+                        aRole: app.querySelector('#con-a-role').value.trim(),
+                        aHonor: app.querySelector('#con-a-honor').value,
+
+                        qClientName: app.querySelector('#con-q-client-name').value.trim(),
+                        qClientPhone: app.querySelector('#con-q-client-phone').value.trim(),
+                        qClientCompany: app.querySelector('#con-q-client-company').value.trim(),
+                        qClientEmail: app.querySelector('#con-q-client-email').value.trim(),
+                        qClientAddress: app.querySelector('#con-q-client-address').value.trim(),
+                        qDate: app.querySelector('#con-q-date').value.trim(),
+                        qValidUntil: app.querySelector('#con-q-valid-until').value.trim(),
+                        qClientHonor: app.querySelector('#con-q-client-honor').value,
+
+                        products: draftProducts,
+                        discountName: app.querySelector('#con-discount-name').value.trim(),
+                        discountVal: app.querySelector('#con-discount-val').value.trim()
+                    };
+
+                    let cloudData = normalizeCloudData(userCfg.shopConfigColL);
                     
-                    if (!silent && btnSaveDraft) {
-                        btnSaveDraft.disabled = false;
-                        btnSaveDraft.style.opacity = "1";
-                        btnSaveDraft.innerText = origText;
+                    cloudData.sellerInfo = {
+                        name: app.querySelector('#con-b-name').value.trim(),
+                        address: app.querySelector('#con-b-address').value.trim(),
+                        store: app.querySelector('#con-b-store').value.trim(),
+                        tax: app.querySelector('#con-b-tax').value.trim(),
+                        phone: app.querySelector('#con-b-phone').value.trim(),
+                        bankAcc: app.querySelector('#con-b-bank-acc').value.trim(),
+                        bankName: app.querySelector('#con-b-bank-name').value.trim(),
+                        rep: app.querySelector('#con-b-rep-hd').value.trim(),
+                        role: app.querySelector('#con-b-role-hd').value.trim(),
+                        uq: app.querySelector('#con-b-uq').value.trim(),
+                        repTl: app.querySelector('#con-b-rep-tl').value.trim(),
+                        roleTl: app.querySelector('#con-b-role-tl').value.trim(),
+                        honorHd: app.querySelector('#con-b-honor-hd').value,
+                        honorTl: app.querySelector('#con-b-honor-tl').value,
+                        
+                        driveFolderId: app.querySelector('#con-q-drive-folder').value.trim(), 
+                        commonPhone: app.querySelector('#con-common-phone').value.trim(),     
+                        storeAddress: app.querySelector('#con-store-address').value.trim(),   
+                        bSelectVal: app.querySelector('#con-b-select').value                  
+                    };
+
+                    let drafts = cloudData.drafts || [];
+                    const existingIdx = drafts.findIndex(d => d.id === currentDraftId);
+                    if (existingIdx !== -1) {
+                        drafts[existingIdx] = draftObj;
+                    } else {
+                        drafts.unshift(draftObj);
                     }
 
-                    if (resData.status === 'success') {
-                        if (!silent) alert("Đã lưu toàn bộ thông tin thành công!");
-                        renderDraftDropdown();
-                        if (callback) callback(true);
-                    } else {
-                        if (!silent) alert("❌ Lỗi: " + resData.message);
-                        if (callback) callback(false);
+                    if (drafts.length > 5) {
+                        drafts = drafts.slice(0, 5);
+                    }
+                    cloudData.drafts = drafts;
+
+                    userCfg.shopConfigColL = cloudData;
+                    localStorage.setItem('con_shop_config_col_l', JSON.stringify(cloudData));
+                    UTILS.savePersistentConfig(userCfg);
+
+                    if (currentUserId) {
+                        const res = await fetch(webAppUrl, {
+                            method: "POST",
+                            headers: { "Content-Type": "text/plain;charset=utf-8" },
+                            body: JSON.stringify({
+                                action: "saveConfig",
+                                user: currentUserId,
+                                data: JSON.stringify(cloudData)
+                            })
+                        });
+                        const resData = await safeParseJsonResponse(res);
+                        if (resData.status === 'success') {
+                            if (!silent) alert("Đã lưu toàn bộ thông tin thành công!");
+                            renderDraftDropdown();
+                        } else if (!silent) {
+                            alert("❌ Lỗi Cloud: " + resData.message);
+                        }
+                    } else if (!silent) {
+                        alert("⚠️ Đã lưu offline! (Không tìm thấy mã User định danh)");
                     }
                 } catch (err) {
-                    if (!silent && btnSaveDraft) {
+                    console.warn("Lỗi lưu nháp:", err.message);
+                    if (!silent) alert("❌ Lỗi: " + err.message);
+                } finally {
+                    if (btnSaveDraft) {
                         btnSaveDraft.disabled = false;
                         btnSaveDraft.style.opacity = "1";
                         btnSaveDraft.innerText = origText;
-                        alert("❌ Lỗi mạng: " + err.message);
                     }
-                    // NẾU GẶP LỖI MẠNG HOẶC MÁY CHỦ SẬP KHI ĐANG TỰ ĐỘNG LƯU: Vẫn tiếp tục chạy callback thực hiện in hợp đồng
-                    if (callback) callback(false);
+                    // LUÔN LUÔN GỌI CALLBACK ĐỂ TIẾP TỤC IN PDF
+                    if (typeof callback === 'function') {
+                        callback();
+                    }
                 }
             };
 
-            // Gắn sự kiện click chuẩn cho nút Lưu Thông Tin mới
             app.querySelector('#btn-con-save-draft').onclick = () => {
-                executeSaveDraft(false); // Lưu toàn bộ trường dữ liệu và tải lên Cloud
+                executeSaveDraft(false);
             };
             
             // Hàm tính toán tổng tiền
@@ -1067,7 +1039,6 @@
                 bindRowEvents(tr);
                 tbody.appendChild(tr);
                 
-                // Đồng bộ ẩn hiện cột cho dòng mới thêm
                 const fileType = app.querySelector('#con-file-type').value;
                 tr.querySelectorAll('.col-image, .col-retail-price').forEach(el => el.style.display = fileType === 'quotation' ? 'table-cell' : 'none');
                 tr.querySelector('.con-p-desc').style.display = fileType === 'quotation' ? 'block' : 'none';
@@ -1079,7 +1050,6 @@
                 recalculateTotals();
             };
 
-            // Khởi tạo tính toán ban đầu
             recalculateTotals();
 
             // --- TẠO FILE IN PDF CHUYÊN NGHIỆP ---
@@ -1116,12 +1086,10 @@
                 const bHonorHd = app.querySelector('#con-b-honor-hd').value;
                 const bHonorTl = app.querySelector('#con-b-honor-tl').value;
 
-                // THU THẬP CẤU HÌNH LỀ IN ĐỘNG TỪ UI NGƯỜI DÙNG
                 const marginTop = parseFloat(app.querySelector('#con-print-margin-top').value) || 1.8;
                 const marginBottom = parseFloat(app.querySelector('#con-print-margin-bottom').value) || 1.0;
                 const commonPhone = app.querySelector('#con-common-phone').value.trim();
 
-                // 1. CHẠY BỘ LỌC KIỂM TRA ĐIỀU KIỆN (VALIDATION) TRƯỚC KHI LƯU VÀ IN
                 if (docType !== 'quotation') {
                     if (!dateHd || !dateTl) { alert("⚠️ Vui lòng nhập đầy đủ ngày tháng ký hợp đồng và nghiệm thu!"); return; }
                     if (!aName || !bName) { alert("⚠️ Vui lòng nhập đầy đủ thông tin hai bên Mua & Bán!"); return; }
@@ -1130,15 +1098,12 @@
                     if (!qClientName) { alert("⚠️ Vui lòng nhập đầy đủ tên Khách hàng!"); return; }
                 }
 
-                // 2. KÍCH HOẠT TIẾN TRÌNH INẤN SAU KHI ĐÃ TỰ ĐỘNG LƯU NHÁP THÀNH CÔNG
                 const btnGenerate = app.querySelector('#btn-con-generate');
                 const origGenText = btnGenerate.innerText;
 
-                // Đổi trạng thái nút tạo file báo hiệu đang tự động lưu nháp
                 btnGenerate.disabled = true;
                 btnGenerate.innerText = "⏳ Đang tự động lưu nháp...";
 
-                // Định nghĩa hàm tiến hành xuất bản in PDF thực tế
                 const proceedWithPrinting = () => {
                     btnGenerate.disabled = false;
                     btnGenerate.innerText = origGenText;
@@ -1158,7 +1123,6 @@
                     const finalTotal = UTILS.parseFormattedNumber(app.querySelector('#con-final-total').innerText) || 0;
                     const finalWords = app.querySelector('#con-final-words').value;
 
-                    // HÀM PHÂN TÁCH TỰ ĐỘNG THƯƠNG HIỆU SIÊU THỊ CHO BẢN IN BÁO GIÁ
                     const getBrandName = (storeName) => {
                         if (!storeName) return "Thế giới Di động";
                         const firstChar = storeName.trim().charAt(0).toUpperCase();
@@ -1175,8 +1139,8 @@
                             <style>
                             @page {
                                 size: A4;
-                                margin-top: ${marginTop}cm; /* Lề trên cấu hình động */
-                                margin-bottom: ${marginBottom}cm; /* Lề dưới cấu hình động */
+                                margin-top: ${marginTop}cm;
+                                margin-bottom: ${marginBottom}cm;
                                 margin-left: 2cm;
                                 margin-right: 1.5cm;
                             }
@@ -1193,7 +1157,7 @@
                                     width: 100% !important; 
                                     min-height: auto !important; 
                                     box-sizing: border-box !important;
-                                    display: block !important; /* Block giúp luồng văn bản nối tiếp liền mạch như Word */
+                                    display: block !important;
                                     padding: 0 !important;
                                     margin: 0 !important;
                                     border: none !important;
@@ -1201,24 +1165,16 @@
                                     background: transparent !important;
                                     font-size: 10pt !important;
                                     line-height: 1.3 !important;
-                                    position: static !important; /* Giải phóng tọa độ in để position: fixed hoạt động chuẩn */
+                                    position: static !important;
                                 }
                                 .page-content {
                                     padding-bottom: 0 !important;
                                 }
-                                /* Chân trang in cố định tuyệt đối ở đáy mỗi trang giấy in độc lập */
                                 .print-footer {
                                     position: fixed !important;
-                                    
-                                    /* ========================================================================= */
-                                    /* ĐIỀU CHỈNH TỌA ĐỘ FOOTER (KHOẢNG CÁCH CỐ ĐỊNH SO VỚI MÉP DƯỚI CỦA TRANG)   */
-                                    /* Khoảng cách này độc lập 100% với margin và nằm yên ở đáy trang giấy       */
-                                    /* Bạn có thể tự do tăng giảm số "0.8cm" này để căn chỉnh vị trí chân trang  */
-                                    /* ========================================================================= */
                                     bottom: 0.8cm !important; 
-                                    
-                                    left: 2cm !important;     /* Căn lề trái thẳng hàng nội dung trang in */
-                                    right: 1.5cm !important;  /* Căn lề phải thẳng hàng nội dung trang in */
+                                    left: 2cm !important;
+                                    right: 1.5cm !important;
                                     border-top: 1px solid black !important;
                                     padding-top: 5px !important;
                                     font-size: 9.5pt !important;
@@ -1230,7 +1186,7 @@
                                     z-index: 9999;
                                 }
                                 .print-footer .page-num::after {
-                                    content: counter(page); /* Đánh số trang tự động tăng dần */
+                                    content: counter(page);
                                 }
                                 .info-table td, .prod-table th, .prod-table td {
                                     padding: 4px 6px !important;
@@ -1243,7 +1199,6 @@
                                     margin-top: 3px !important;
                                     margin-bottom: 3px !important;
                                 }
-                                /* Cấu hình ngắt trang cho bảng hàng hóa */
                                 .prod-table {
                                     page-break-inside: auto !important;
                                 }
@@ -1252,20 +1207,20 @@
                                     page-break-after: auto !important;
                                 }
                                 .prod-table thead {
-                                    display: table-row-group !important; /* Không lặp lại header ở trang sau theo yêu cầu */
+                                    display: table-row-group !important;
                                 }
                                 .avoid-break {
-                                    page-break-inside: avoid !important; /* Ngăn ngắt trang đứt quãng giữa phần chữ ký */
+                                    page-break-inside: avoid !important;
                                 }
                                 .page-break {
-                                    page-break-before: always !important; /* Lực lượng chuyển trang sạch sẽ cho tài liệu sau */
+                                    page-break-before: always !important;
                                     height: 0 !important;
                                     margin: 0 !important;
                                     border: none !important;
                                 }
                             }
                             body { 
-                                font-family: "Times New Roman", Times, serif; /* Đồng bộ phông chữ mặc định của trang in */
+                                font-family: "Times New Roman", Times, serif;
                                 font-size: 11pt; 
                                 line-height: 1.35; 
                                 color: #000; 
@@ -1285,7 +1240,7 @@
                                 position: relative;
                             }
                             .print-footer { 
-                                display: none; /* Mặc định ẩn trên màn hình để giao diện sạch sẽ */
+                                display: none;
                             }
                             .page-break {
                                 border-top: 1px dashed #cbd5e1;
@@ -1296,11 +1251,9 @@
                             .doc-subtitle { text-align: center; font-size: 11pt; margin-bottom: 15px; }
                             .section-title { font-weight: bold; margin-top: 12px; margin-bottom: 5px; text-transform: uppercase; }
                             
-                            /* Styles for main contract table info mapping */
                             .info-table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 15px; }
                             .info-table td { border: none; padding: 5px 8px; vertical-align: top; }
                             
-                            /* Product table styling */
                             .prod-table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px; }
                             .prod-table th, .prod-table td { border: 1px solid black; padding: 6px 8px; }
                             .prod-table th { text-align: center; font-weight: bold; background-color: #f2f2f2; }
@@ -1339,7 +1292,6 @@
                         }
 
                         printHtml += `
-                            <!-- MỘT KHUNG CHỨA LIỀN MẠCH CHO TOÀN BỘ HỢP ĐỒNG -->
                             <div class="page-container">
                                 <div class="page-content">
                                     <div style="text-align: center; font-weight: bold; font-size: 16pt; text-transform: uppercase; margin-bottom: 3px; letter-spacing: 0.5px;">
@@ -1464,7 +1416,6 @@
                                         1.2 Tổng tiền mà Bên A phải thanh toán cho Bên B theo quy định tại Điều 1.1 (“Giá Sản Phẩm”) là chi phí cố định không thay đổi trong suốt quá trình thực hiện Hợp Đồng và chưa bao gồm phần chi phí vật tư và/hoặc các chi phí khác phát sinh khi lắp đặt (nếu có). Các chi phí phát sinh này được quy định tại website: <b>https://www.dienmayxanh.com/kinh-nghiem-hay/chinh-sach-giao-hang-lap-dat-1261528</b> vào thời điểm lắp đặt.
                                     </div>
 
-                                    <!-- NỘI DUNG NỐI TIẾP LIỀN MẠCH (KHÔNG BỊ CHIA KHỐI TRỐNG TRẮNG) -->
                                     <div style="text-align: justify; margin-bottom: 15px;">
                                         1.3 Giá Sản Phẩm được Bên A thanh toán cho Bên B theo quy định tại Điều 3 Hợp Đồng này. Chi phí vật tư và/hoặc chi phí khác phát sinh khi lắp đặt sẽ được thanh toán bằng tiền mặt/chuyển khoản ngay khi Bên B lắp đặt cho Bên A hoàn tất.<br><br>
                                         1.4 Trường hợp Sản Phẩm cần lắp đặt thì Bên A chịu trách nhiệm chuẩn bị các thiết bị sau và điểm chờ đấu nối cụ thể:<br>
@@ -1532,7 +1483,6 @@
                                         8.3 Hợp đồng này được lập thành 02 (hai) bản, mỗi bên giữ 01 (một) bản có giá trị pháp lý như nhau.
                                     </div>
 
-                                    <!-- KHỐI CHỮ KÝ TRÁNH BÌ ĐỨT GÃY NGẮT QUÃNG -->
                                     <div class="avoid-break">
                                         <table style="width:100%; border:none; margin-top:40px;">
                                             <tr style="border:none;">
@@ -1558,7 +1508,6 @@
                                 </div>
                             </div>
                             
-                            <!-- ĐƯA CHÂN TRANG RA NGOÀI KHUNG PAGE-CONTAINER HOÀN TOÀN ĐỂ TRÁNH BỊ TRÌNH DUYỆT CHIA CẮT (SLICING BUG) -->
                             <div class="print-footer">
                                 <span>Pháp Chế_111124_ĐMX_VN</span>
                                 <span class="page-num"></span>
@@ -1577,10 +1526,8 @@
                         `).join('');
 
                         printHtml += `
-                            <!-- Gộp BIÊN BẢN NGHIỆM THU & THANH LÝ trong cùng 1 page-container để in liền mạch -->
                             <div class="page-container" style="font-family: 'Times New Roman', serif;">
                                 <div class="page-content">
-                                    <!-- KHỐI 1: BIÊN BẢN NGHIỆM THU -->
                                     <div>
                                         <div style="text-align: center; font-size: 14pt; font-weight: bold;">
                                             BIÊN BẢN NGHIỆM THU, GIAO NHẬN HÀNG HÓA
@@ -1648,10 +1595,8 @@
                                         </div>
                                     </div>
 
-                                    <!-- ĐƯỜNG PHÂN CẮT TRANG IN GIỮA 2 BIÊN BẢN (TRẤNG TINH KHI IN, CHỈ THẤY NÉT ĐỨT TRÊN MÀN HÌNH) -->
                                     <div class="page-break"></div>
 
-                                    <!-- KHỐI 2: BIÊN BẢN THANH LÝ -->
                                     <div>
                                         <div style="text-align: center; font-size: 14pt; font-weight: bold; text-transform: uppercase;">
                                             BIÊN BẢN THANH LÝ HỢP ĐỒNG
@@ -1739,7 +1684,7 @@
                         tbody.querySelectorAll('.con-product-row').forEach((r, idx) => {
                             quoteProducts.push({
                                 stt: idx + 1,
-                                img: r.dataset.imageB64 || '', // Lấy ảnh Base64 hoặc Link Drive
+                                img: r.dataset.imageB64 || '',
                                 desc: r.querySelector('.con-p-desc').value.trim() || '',
                                 qty: parseInt(r.querySelector('.con-p-qty').value) || 0,
                                 retailPrice: UTILS.parseFormattedNumber(r.querySelector('.con-p-retail-price').value) || 0,
@@ -1765,9 +1710,7 @@
 
                         printHtml += `
                             <div class="page-container">
-                                <!-- ĐỒNG BỘ PHÔNG CHỮ TIMES NEW ROMAN CHO BÁO GIÁ -->
                                 <div class="page-content" style="font-family: 'Times New Roman', Times, serif;">
-                                    <!-- TOP HEADER -->
                                     <table style="width: 100%; border: none; margin-bottom: 15px;">
                                         <tr style="border: none;">
                                             <td style="width: 60%; text-align: left; vertical-align: top; border: none; padding: 0; line-height: 1.45;">
@@ -1778,13 +1721,11 @@
                                                 <div style="font-size: 9.5pt; color: red; font-weight: bold;">Mã số thuế: ${bTax}</div>
                                             </td>
                                             <td style="width: 40%; text-align: right; vertical-align: top; border: none; padding: 0;">
-                                                <!-- LOGO HÌNH ẢNH TỪ GOOGLE DRIVE CHUYÊN NGHIỆP -->
                                                 <img src="https://lh3.googleusercontent.com/d/1LSP7koB6KSVG4oUn3jh42ysdTEp92NT4" style="height: 48px; object-fit: contain;">
                                             </td>
                                         </tr>
                                     </table>
 
-                                    <!-- KHÁCH HÀNG & TIÊU ĐỀ -->
                                     <table style="width: 100%; border: none; margin-bottom: 12px;">
                                         <tr style="border: none;">
                                             <td style="width: 58%; text-align: left; vertical-align: top; border: none; padding: 0;">
@@ -1805,7 +1746,6 @@
                                         </tr>
                                     </table>
 
-                                    <!-- BẢNG SẢN PHẨM BÁO GIÁ (ĐÃ ĐỒNG BỘ CHỮ TRẮNG NỀN ĐEN ĐỘC LẬP) -->
                                     <table class="prod-table" style="width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 9.5pt;">
                                         <thead>
                                             <tr style="background-color: #000000 !important; color: #ffffff !important; -webkit-print-color-adjust: exact;">
@@ -1830,7 +1770,6 @@
                                         </tbody>
                                     </table>
 
-                                    <!-- CÁC ĐIỀU KHOẢN -->
                                     <div style="border: 1px solid #000; padding: 8px; margin-bottom: 15px; line-height: 1.45; font-size: 9pt;">
                                         <div style="font-weight: bold; text-decoration: underline; margin-bottom: 4px;">Các điều khoản lưu ý:</div>
                                         <div>1. Giá trên đã bao gồm VAT,</div>
@@ -1839,7 +1778,6 @@
                                         <div>4. Hàng hóa được giao tại 34 tỉnh thành</div>
                                     </div>
 
-                                    <!-- LIÊN HỆ HỖ TRỢ -->
                                     <div style="text-align: center; font-size: 9.5pt; line-height: 1.4;">
                                         <div>Nếu quý khách cần hỗ trợ thêm thông tin, vui lòng liên hệ với:</div>
                                         <div style="font-weight: bold; color: red; margin-top: 1px;">Siêu thị : ${getBrandName(bStore)} - ${storeAddress}</div>
@@ -1861,18 +1799,18 @@
                     } else {
                         alert("⚠️ Lỗi: Trình duyệt của bạn chặn Pop-up! Vui lòng cho phép Pop-up để tải file.");
                     }
-                }; // <--- Khóa đóng hàm proceedWithPrinting
+                };
 
-                // --- TỰ ĐỘNG KÍCH HOẠT LƯU NHÁP NGẦM TRƯỚC KHI IN ---
+                // KÍCH HOẠT LƯU NHÁP VÀ LUÔN LUÔN TIẾP TỤC IN
                 executeSaveDraft(true, () => {
                     proceedWithPrinting();
                 });
                 
-            }; // <--- Khóa đóng sự kiện #btn-con-generate.onclick
-        }; // <--- Khóa đóng điều kiện kiểm tra if (!app)
+            };
+        }
 
         app.style.display = 'flex';
-    }; // <--- Khóa đóng hàm tiện ích runTool
+    };
 
     return {
         name: "Tạo Hợp Đồng v1",
