@@ -1168,7 +1168,7 @@
                                     position: fixed !important;
                                     
                                     /* 28.7cm = Tọa độ 1.0cm cách mép đáy A4. Trừ marginTop để triệt tiêu biến động gốc tọa độ */
-                                    top: calc(25cm - ${marginTop}cm) !important; 
+                                    top: calc(27cm - ${marginTop}cm) !important; 
                                     
                                     left: 2cm !important;
                                     right: 1.5cm !important;
