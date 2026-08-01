@@ -162,17 +162,16 @@
         const webAppUrl = "https://script.google.com/macros/s/AKfycbw-KMUUL5rHPeSxGGbFbTs_2VMuP8OH5ehoDci_zAIACKhl0Tip9TTzJ5r-fLwu5He1GQ/exec";
 
         // ĐỒNG BỘ BỘ GIẢI MÃ PHẢN HỒI AN TOÀN TRÁNH BÌ LỖI CHẰNG CHÉO HTML TỪ GOOGLE
-        const safeParseJsonResponse = (res) => {
-            return res.text().then(text => {
-                try {
-                    return JSON.parse(text);
-                } catch (err) {
-                    if (text.includes("<!DOCTYPE") || text.includes("<html")) {
-                        throw new Error("Google Apps Script đang trả về trang báo lỗi HTML hệ thống thay vì dữ liệu JSON.\\n\\nVui lòng kiểm tra:\\n1. Quyền thực thi Web App đã mở rộng cho 'Anyone' (Bất kỳ ai) chưa?\\n2. Dung lượng hồ sơ lưu nháp có vượt quá giới hạn 9KB của Google Properties Store hay không?");
-                    }
-                    throw new Error("Lỗi đọc gói tin phản hồi: " + err.message + "\\nChi tiết thô: " + text.slice(0, 200));
+        const safeParseJsonResponse = async (res) => {
+            const text = await res.text();
+            try {
+                return JSON.parse(text);
+            } catch (err) {
+                if (text.includes("<!DOCTYPE") || text.includes("<html")) {
+                    throw new Error("Google Apps Script trả về trang báo lỗi HTML (thay vì dữ liệu JSON).\\nCó thể bạn chưa phân quyền Web App là 'Anyone' (Bất kỳ ai) hoặc bộ nhớ lưu trữ vượt quá giới hạn 9KB.");
                 }
-            });
+                throw new Error("Lỗi giải mã JSON phản hồi: " + err.message);
+            }
         };
 
         // Đồng bộ chuẩn hóa cấu trúc dữ liệu cũ (Dự phòng tương thích ngược)
@@ -253,28 +252,37 @@
 
         // 2. Đồng bộ nạp dữ liệu đầy đủ từ Cloud (Có tích hợp bộ giải mã phản hồi an toàn)
         if (currentUserId) {
-            fetch(webAppUrl, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({
-                    action: "loadConfig",
-                    user: currentUserId
-                })
-            })
-            .then(res => safeParseJsonResponse(res))
-            .then(resData => {
-                if (resData.status === 'success' && resData.data) {
-                    const info = normalizeCloudData(JSON.parse(resData.data));
-                    userCfg.shopConfigColL = info;
-                    localStorage.setItem('con_shop_config_col_l', resData.data);
-                    
-                    // Ép đồng bộ hệ thống chính
-                    UTILS.savePersistentConfig(userCfg); 
-                    
-                    fillBFields(info.sellerInfo);
-                    renderDraftDropdown(); // <--- Đã an toàn gọi được ngay tại đây
+            (async () => {
+                try {
+                    const res = await fetch(webAppUrl, {
+                        method: "POST",
+                        headers: { "Content-Type": "text/plain;charset=utf-8" },
+                        body: JSON.stringify({
+                            action: "loadConfig",
+                            user: currentUserId
+                        })
+                    });
+                    const resData = await safeParseJsonResponse(res);
+                    if (resData.status === 'success' && resData.data) {
+                        const info = normalizeCloudData(JSON.parse(resData.data));
+                        userCfg.shopConfigColL = info;
+                        localStorage.setItem('con_shop_config_col_l', resData.data);
+                        
+                        // Ép đồng bộ hệ thống chính
+                        UTILS.savePersistentConfig(userCfg); 
+                        
+                        fillBFields(info.sellerInfo);
+                    }
+                } catch (err) {
+                    console.warn("[Auto BI] Không thể đồng bộ cấu hình từ Cloud:", err.message);
+                } finally {
+                    // ĐẢM BẢO LUÔN LUÔN VẼ DROPDOWN BẢN NHÁP (KỂ CẢ KHI OFFLINE HOẶC CLOUD LỖI)
+                    renderDraftDropdown();
                 }
-            })
+            })();
+        } else {
+            renderDraftDropdown();
+        }
             .catch(err => console.warn("[Auto BI] Không thể nạp dữ liệu từ Cloud:", err.message));
         }
         
@@ -638,7 +646,7 @@
                                         imgPreview.src = resData.url;
                                         imgPreview.style.display = 'block';
                                         imgPlaceholder.style.display = 'none';
-                                        row.dataset.imageB64 = resData.url; // Lưu trữ link ảnh RAW từ Drive
+                                        row.dataset.imageB64 = row.dataset.imageB64 || resData.url; // Lưu trữ link ảnh RAW từ Drive
                                     } else {
                                         alert("❌ Lỗi tải lên Drive: " + resData.message);
                                         imgPlaceholder.innerText = "＋";
@@ -840,7 +848,7 @@
             };
 
             // --- SỰ KIỆN CLICK NÚT LƯU THÔNG TIN HỢP NHẤT TOÀN DIỆN LÊN CLOUD ---
-            const executeSaveDraft = (silent = false, callback = null) => {
+            const executeSaveDraft = async (silent = false, callback = null) => {
                 const fileType = app.querySelector('#con-file-type').value;
                 const clientName = fileType === 'quotation' 
                     ? app.querySelector('#con-q-client-name').value.trim() 
@@ -897,7 +905,7 @@
 
                 let cloudData = normalizeCloudData(userCfg.shopConfigColL);
                 
-                // ĐỒNG BỘ LƯU TRỮ TOÀN BỘ CẤU HÌNH CỐ ĐỊNH CỦA BẠN (SELLER PRESETS) - KHÔNG LƯU TRONG DRAFT RIÊNG LẺ
+                // ĐỒNG BỘ LƯU TRỮ TOÀN BỘ CẤU HÌNH CỐ ĐỊNH CỦA BẠN (SELLER PRESETS)
                 cloudData.sellerInfo = {
                     name: app.querySelector('#con-b-name').value.trim(),
                     address: app.querySelector('#con-b-address').value.trim(),
@@ -914,7 +922,6 @@
                     honorHd: app.querySelector('#con-b-honor-hd').value,
                     honorTl: app.querySelector('#con-b-honor-tl').value,
                     
-                    // LƯU TRỮ TOÀN CỤC CỐ ĐỊNH CÁC TRƯỜNG THÔNG TIN CHUNG CỦA BẠN
                     driveFolderId: app.querySelector('#con-q-drive-folder').value.trim(), 
                     commonPhone: app.querySelector('#con-common-phone').value.trim(),     
                     storeAddress: app.querySelector('#con-store-address').value.trim(),   
@@ -945,30 +952,32 @@
                 }
 
                 const btnSaveDraft = app.querySelector('#btn-con-save-draft');
-                const origText = btnSaveDraft.innerText;
+                const origText = btnSaveDraft ? btnSaveDraft.innerText : "💾 Lưu Thông Tin";
 
-                if (!silent) {
+                if (!silent && btnSaveDraft) {
                     btnSaveDraft.disabled = true;
                     btnSaveDraft.style.opacity = "0.6";
                     btnSaveDraft.innerText = "⏳ Đang lưu...";
                 }
 
-                fetch(webAppUrl, {
-                    method: "POST",
-                    headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify({
-                        action: "saveConfig",
-                        user: currentUserId,
-                        data: JSON.stringify(cloudData)
-                    })
-                })
-                .then(res => safeParseJsonResponse(res))
-                .then(resData => {
-                    if (!silent) {
+                try {
+                    const res = await fetch(webAppUrl, {
+                        method: "POST",
+                        headers: { "Content-Type": "text/plain;charset=utf-8" },
+                        body: JSON.stringify({
+                            action: "saveConfig",
+                            user: currentUserId,
+                            data: JSON.stringify(cloudData)
+                        })
+                    });
+                    const resData = await safeParseJsonResponse(res);
+                    
+                    if (!silent && btnSaveDraft) {
                         btnSaveDraft.disabled = false;
                         btnSaveDraft.style.opacity = "1";
                         btnSaveDraft.innerText = origText;
                     }
+
                     if (resData.status === 'success') {
                         if (!silent) alert("Đã lưu toàn bộ thông tin thành công!");
                         renderDraftDropdown();
@@ -977,16 +986,16 @@
                         if (!silent) alert("❌ Lỗi: " + resData.message);
                         if (callback) callback(false);
                     }
-                })
-                .catch(err => {
-                    if (!silent) {
+                } catch (err) {
+                    if (!silent && btnSaveDraft) {
                         btnSaveDraft.disabled = false;
                         btnSaveDraft.style.opacity = "1";
                         btnSaveDraft.innerText = origText;
                         alert("❌ Lỗi mạng: " + err.message);
                     }
+                    // NẾU GẶP LỖI MẠNG HOẶC MÁY CHỦ SẬP KHI ĐANG TỰ ĐỘNG LƯU: Vẫn tiếp tục chạy callback thực hiện in hợp đồng
                     if (callback) callback(false);
-                });
+                }
             };
 
             // Gắn sự kiện click chuẩn cho nút Lưu Thông Tin mới
