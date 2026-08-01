@@ -329,16 +329,10 @@
                                 <input type="text" id="con-date-tl" value="14/04/2026" placeholder="dd/mm/yyyy">
                             </div>
                             
-                            <!-- THAY THẾ LỀ TRÊN THÀNH Ô KHAI BÁO VỊ TRÍ FOOTER CÁCH ĐÁY -->
-                            <div class="con-col con-group" style="min-width: 130px;">
+                            <!-- BỘ ĐIỀU CHỈNH DUY NHẤT: VỊ TRÍ FOOTER CÁCH ĐÁY GIẤY (NỘI DUNG TỰ ĐỘNG CÁCH NÓ 0.5CM ~ 20PX) -->
+                            <div class="con-col con-group" style="min-width: 160px;">
                                 <label>📐 Vị trí Footer cách đáy (cm)</label>
                                 <input type="number" id="con-footer-pos" value="1.0" step="0.1" min="0.2" max="5.0" style="text-align: center;">
-                            </div>
-                            
-                            <!-- ĐIỀU CHỈNH LỀ DƯỚI CHO NỘI DUNG VĂN BẢN -->
-                            <div class="con-col con-group" style="min-width: 130px;">
-                                <label>📐 Lề Dưới Nội Dung (cm)</label>
-                                <input type="number" id="con-print-margin-bottom" value="2.0" step="0.1" min="0.5" max="10" style="text-align: center;">
                             </div>
 
                             <div class="con-col con-group" style="min-width: 180px;">
@@ -691,7 +685,6 @@
                 app.querySelector('#con-date-hd').value = draft.dateHd || '';
                 app.querySelector('#con-date-tl').value = draft.dateTl || '';
                 app.querySelector('#con-footer-pos').value = draft.footerPos !== undefined ? draft.footerPos : '1.0';
-                app.querySelector('#con-print-margin-bottom').value = draft.printMarginBottom !== undefined ? draft.printMarginBottom : '2.0';
 
                 app.querySelector('#con-a-name').value = draft.aName || '';
                 app.querySelector('#con-a-address').value = draft.aAddress || '';
@@ -777,7 +770,6 @@
                 app.querySelector('#con-a-role').value = "";
                 app.querySelector('#con-a-honor').value = "Ông";
                 app.querySelector('#con-footer-pos').value = "1.0";
-                app.querySelector('#con-print-margin-bottom').value = "2.0";
 
                 app.querySelector('#con-q-client-name').value = "";
                 app.querySelector('#con-q-client-phone').value = "";
@@ -860,7 +852,6 @@
                         dateHd: app.querySelector('#con-date-hd').value.trim(),
                         dateTl: app.querySelector('#con-date-tl').value.trim(),
                         footerPos: parseFloat(app.querySelector('#con-footer-pos').value) || 1.0,
-                        printMarginBottom: parseFloat(app.querySelector('#con-print-margin-bottom').value) || 2.0,
 
                         aName: app.querySelector('#con-a-name').value.trim(),
                         aAddress: app.querySelector('#con-a-address').value.trim(),
@@ -1079,9 +1070,11 @@
                 const bHonorHd = app.querySelector('#con-b-honor-hd').value;
                 const bHonorTl = app.querySelector('#con-b-honor-tl').value;
 
-                // LẤY CẤU HÌNH VỊ TRÍ FOOTER VÀ LỀ DƯỚI NỘI DUNG TỪ UI
+                // LẤY CẤU HÌNH VỊ TRÍ FOOTER TỪ UI
                 const footerPos = parseFloat(app.querySelector('#con-footer-pos').value) || 1.0;
-                const marginBottom = parseFloat(app.querySelector('#con-print-margin-bottom').value) || 2.0;
+                
+                // TỰ ĐỘNG CỘNG 0.5CM GIAO THOA ĐỂ VĂN BẢN NẮM BẮT ĐIỂM DỪNG TRƯỚC FOOTER HOÀN HẢO
+                const marginBottom = footerPos + 0.5;
                 const commonPhone = app.querySelector('#con-common-phone').value.trim();
 
                 if (docType !== 'quotation') {
@@ -1133,9 +1126,9 @@
                             <style>
                             @page {
                                 size: A4;
-                                margin-top: 1.5cm; /* Cố định lề trên chuẩn 1.5cm */
+                                margin-top: 1.5cm; /* CỐ ĐỊNH LỀ TRÊN NỘI DUNG CHUẨN 1.5CM */
                                 
-                                /* ĐIỀU CHỈNH NGẮT TRANG NỘI DUNG VĂN BẢN THEO LỀ DƯỚI */
+                                /* ĐIỂM DỪNG VĂN BẢN TỰ ĐỘNG CÁCH FOOTER ĐÚNG 0.5CM (~20PX) */
                                 margin-bottom: ${marginBottom}cm; 
                                 
                                 margin-left: 2cm;
@@ -1150,6 +1143,12 @@
                                     margin: 0 !important;
                                     padding: 0 !important;
                                 }
+
+                                /* SỬA LỖI ĐÁNH SỐ TRANG = 0: THIẾT LẬP BỘ ĐẾM TRANG CHO BODY */
+                                body {
+                                    counter-reset: page 1;
+                                }
+
                                 .page-container { 
                                     width: 100% !important; 
                                     min-height: auto !important; 
@@ -1170,12 +1169,12 @@
                                 }
 
                                 /* ========================================================================= */
-                                /* FOOTER ĐỘC LẬP HOÀN TOÀN: Đứng yên tuyệt đối tại footerPos (cm) cách đáy  */
-                                /* Công thức: 28.2cm - footerPos (28.2cm = 29.7cm chiều cao A4 - 1.5cm lề trên) */
+                                /* FOOTER TỰ ĐỘNG ĐẶT TẠI footerPos (CM) CÁCH ĐÁY GIẤY A4                    */
+                                /* Lùi lại -0.5cm so với điểm ngắt trang để giữ gap 0.5cm đẹp tuyệt đối     */
                                 /* ========================================================================= */
                                 .print-footer {
                                     position: fixed !important;
-                                    top: calc(28.2cm - ${footerPos}cm) !important;
+                                    bottom: -0.5cm !important;
                                     left: 0 !important;
                                     right: 0 !important;
                                     width: 100% !important;
@@ -1193,6 +1192,8 @@
                                     overflow: hidden !important;
                                     z-index: 99999 !important;
                                 }
+
+                                /* HIỂN THỊ CHUẨN SỐ TRANG TỰ ĐỘNG CHUẨN CHÂN TRANG */
                                 .print-footer .page-num::after {
                                     content: counter(page);
                                 }
