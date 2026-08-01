@@ -1168,7 +1168,7 @@
                                     position: fixed !important;
                                     
                                     /* 28.7cm = Tọa độ 1.0cm cách mép đáy A4. Trừ marginTop để triệt tiêu biến động gốc tọa độ */
-                                    top: calc(28.7cm - ${marginTop}cm) !important; 
+                                    top: calc(20.7cm - ${marginTop}cm) !important; 
                                     
                                     left: 2cm !important;
                                     right: 1.5cm !important;
@@ -1809,7 +1809,7 @@
     };
 
     return {
-        name: "Tạo Hợp Đồng v1",
+        name: "Tạo Hợp Đồng v2",
         icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 15H7v-2h10v2zm0-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>`,
         bgColor: "#6c5ce7",
         action: runTool
