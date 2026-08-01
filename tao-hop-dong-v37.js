@@ -164,6 +164,20 @@
         // Khởi tạo Mã phiên làm việc hiện tại (Bản nháp mặc định)
         let currentDraftId = "draft_" + Date.now();
 
+        // ĐỒNG BỘ BỘ GIẢI MÃ PHẢN HỒI AN TOÀN TRÁNH BÌ LỖI CHẰNG CHÉO HTML TỪ GOOGLE
+        const safeParseJsonResponse = (res) => {
+            return res.text().then(text => {
+                try {
+                    return JSON.parse(text);
+                } catch (err) {
+                    if (text.includes("<!DOCTYPE") || text.includes("<html")) {
+                        throw new Error("Google Apps Script đang trả về trang báo lỗi HTML hệ thống thay vì dữ liệu JSON.\\n\\nVui lòng kiểm tra:\\n1. Quyền thực thi Web App đã mở rộng cho 'Anyone' (Bất kỳ ai) chưa?\\n2. Dung lượng hồ sơ lưu nháp có vượt quá giới hạn 9KB của Google Properties Store hay không?");
+                    }
+                    throw new Error("Lỗi đọc gói tin phản hồi: " + err.message + "\\nChi tiết thô: " + text.slice(0, 200));
+                }
+            });
+        };
+
         // Đồng bộ chuẩn hóa cấu trúc dữ liệu cũ (Dự phòng tương thích ngược)
         const normalizeCloudData = (info) => {
             let data = info || {};
@@ -176,7 +190,7 @@
             return data;
         };
 
-        // Hàm điền tự động toàn bộ trường của Bên B
+        // Hàm điền tự động toàn bộ trường của Bên B và thiết lập mặc định thông tin chung cố định
         const fillBFields = (info) => {
             if (!info) return;
             const activeApp = document.getElementById('con-app') || app;
@@ -197,7 +211,10 @@
                 '#con-b-role-tl': info.roleTl,
                 '#con-b-honor-hd': info.honorHd,
                 '#con-b-honor-tl': info.honorTl,
-                '#con-q-drive-folder': info.driveFolderId
+                '#con-q-drive-folder': info.driveFolderId, // Nạp mặc định ID Google Drive chung cố định
+                '#con-common-phone': info.commonPhone,     // Nạp mặc định Số điện thoại liên hệ chung cố định
+                '#con-store-address': info.storeAddress,   // Nạp mặc định Địa chỉ siêu thị chung cố định
+                '#con-b-select': info.bSelectVal           // Nạp mặc định Siêu thị được chọn chung cố định
             };
             for (let selector in fields) {
                 const val = fields[selector];
@@ -237,7 +254,7 @@
             }
         } catch (e) {}
 
-        // 2. Đồng bộ nạp dữ liệu đầy đủ từ Cloud
+        // 2. Đồng bộ nạp dữ liệu đầy đủ từ Cloud (Có tích hợp bộ giải mã phản hồi an toàn)
         if (currentUserId) {
             fetch(webAppUrl, {
                 method: "POST",
@@ -247,7 +264,7 @@
                     user: currentUserId
                 })
             })
-            .then(res => res.json())
+            .then(res => safeParseJsonResponse(res))
             .then(resData => {
                 if (resData.status === 'success' && resData.data) {
                     const info = normalizeCloudData(JSON.parse(resData.data));
@@ -261,7 +278,7 @@
                     renderDraftDropdown(); // <--- Đã an toàn gọi được ngay tại đây
                 }
             })
-            .catch(err => console.warn("[Auto BI] Không thể đồng bộ dữ liệu Bên B từ Cloud:", err));
+            .catch(err => console.warn("[Auto BI] Không thể nạp dữ liệu từ Cloud:", err.message));
         }
         
         if (!app) {
@@ -294,7 +311,7 @@
                             <option value="">📂 --- Xem lại bản nháp gần nhất ---</option>
                         </select>
                         <button id="btn-con-new-draft" style="background:#6c5ce7; color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:bold; font-size:12.5px; cursor:pointer; transition:0.2s;">＋ Tạo Mới</button>
-                        <button id="btn-con-save-draft" style="background:#2ed573; color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:bold; font-size:12.5px; cursor:pointer; transition:0.2s;">💾 Lưu Nháp</button>
+                        <button id="btn-con-save-draft" style="background:#2ed573; color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:bold; font-size:12.5px; cursor:pointer; transition:0.2s;">💾 Lưu Thông Tin</button>
                     </div>
                     
                     <button class="con-btn-close" id="con-btn-close" style="flex-shrink:0;">✖</button>
@@ -314,7 +331,7 @@
                                 <input type="text" id="con-date-hd" value="12/04/2026" placeholder="dd/mm/yyyy">
                             </div>
                             <div class="con-col con-group" style="min-width: 150px;">
-                                <label>Ngày Nghiệm Thu/Thanh Lý</label>
+                                <label>Ngày Nghiệm Thu</label>
                                 <input type="text" id="con-date-tl" value="14/04/2026" placeholder="dd/mm/yyyy">
                             </div>
                             <!-- THIẾT LẬP CĂN LỀ ĐỘNG CHO TRANG IN -->
@@ -325,6 +342,16 @@
                             <div class="con-col con-group" style="min-width: 110px;">
                                 <label>📐 Lề Dưới (cm)</label>
                                 <input type="number" id="con-print-margin-bottom" value="1.0" step="0.1" min="0.5" max="10" style="text-align: center;">
+                            </div>
+                            <!-- TRƯỜNG CHỌN SIÊU THỊ ĐÃ ĐƯỢC DI CHUYỂN LÊN ĐÂY -->
+                            <div class="con-col con-group" style="min-width: 180px;">
+                                <label>🏪 Chọn Siêu Thị</label>
+                                <select id="con-b-select">${shopOptionsHtml}</select>
+                            </div>
+                            <!-- TRƯỜNG KHAI BÁO SỐ ĐIỆN THOẠI LIÊN HỆ CHUNG -->
+                            <div class="con-col con-group" style="min-width: 180px;">
+                                <label>📞 Số điện thoại liên hệ</label>
+                                <input type="text" id="con-common-phone" value="0979435599 - Hữu Thọ" placeholder="Số điện thoại - Tên người liên hệ">
                             </div>
                             <div class="con-col con-group" style="min-width: 250px;">
                                 <label>📍 Địa chỉ siêu thị (Báo giá)</label>
@@ -403,13 +430,6 @@
                         <!-- BÊN BÁN (BÊN B) -->
                         <div class="con-col con-panel" id="panel-side-b">
                             <div class="con-sec-title bg-sell">🏪 II/ BÊN BÁN (BÊN B)</div>
-                            <div class="con-group" style="display: flex; gap: 10px; align-items: flex-end;">
-                                <div style="flex: 1;">
-                                    <label>Chọn Siêu Thị</label>
-                                    <select id="con-b-select">${shopOptionsHtml}</select>
-                                </div>
-                                <button id="btn-save-b-info" class="con-btn-add-row" style="height: 38px; background: #2ed573; color: white; border: none; padding: 0 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; margin-bottom: 0;">💾 Lưu thông tin</button>
-                            </div>
                             <div class="con-group"><label>Tên Chi Nhánh / Công ty</label><input type="text" id="con-b-name" value="CHI NHÁNH CÔNG TY CỔ PHẦN ĐẦU TƯ ĐIỆY MÁY XANH"></div>
                             <div class="con-group"><label>Địa Chỉ Trụ Sở Đăng Ký</label><input type="text" id="con-b-address" value="Số A12 Trần Hưng Đạo, Phường Buôn Ma Thuột, Tỉnh Đắk Lắk, Việt Nam"></div>
                             <div class="con-group"><label>Siêu Thị Bán Hàng</label><input type="text" id="con-b-store" value="ĐMM_DLA_LAK - 248 Nguyễn Tất Thành (Liên Sơn)"></div>
@@ -615,7 +635,7 @@
                                         data: event.target.result
                                     })
                                 })
-                                .then(res => res.json())
+                                .then(res => safeParseJsonResponse(res))
                                 .then(resData => {
                                     if (resData.status === 'success' && resData.url) {
                                         imgPreview.src = resData.url;
@@ -668,72 +688,7 @@
                 app.querySelector('#con-b-store').value = storeName.toUpperCase();
             };
 
-            // --- SỰ KIỆN CLICK NÚT LƯU THÔNG TIN LIÊN KẾT WEB APP ---
-            const btnSave = app.querySelector('#btn-save-b-info');
-            btnSave.onclick = () => {
-                let cloudData = normalizeCloudData(userCfg.shopConfigColL);
-
-                // Thu thập thông tin Bên B đưa vào thuộc tính sellerInfo chuyên dụng
-                cloudData.sellerInfo = {
-                    name: app.querySelector('#con-b-name').value.trim(),
-                    address: app.querySelector('#con-b-address').value.trim(),
-                    store: app.querySelector('#con-b-store').value.trim(),
-                    tax: app.querySelector('#con-b-tax').value.trim(),
-                    phone: app.querySelector('#con-b-phone').value.trim(),
-                    bankAcc: app.querySelector('#con-b-bank-acc').value.trim(),
-                    bankName: app.querySelector('#con-b-bank-name').value.trim(),
-                    rep: app.querySelector('#con-b-rep-hd').value.trim(),
-                    role: app.querySelector('#con-b-role-hd').value.trim(),
-                    uq: app.querySelector('#con-b-uq').value.trim(),
-                    repTl: app.querySelector('#con-b-rep-tl').value.trim(),
-                    roleTl: app.querySelector('#con-b-role-tl').value.trim(),
-                    honorHd: app.querySelector('#con-b-honor-hd').value,
-                    honorTl: app.querySelector('#con-b-honor-tl').value
-                };
-
-                userCfg.shopConfigColL = cloudData;
-                localStorage.setItem('con_shop_config_col_l', JSON.stringify(cloudData));
-                UTILS.savePersistentConfig(userCfg);
-
-                if (!currentUserId) {
-                    alert("⚠️ Không tìm thấy mã số User định danh từ hệ thống!");
-                    return;
-                }
-
-                btnSave.disabled = true;
-                btnSave.style.opacity = "0.6";
-                btnSave.innerText = "⏳ Đang lưu...";
-
-                fetch(webAppUrl, {
-                    method: "POST",
-                    headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify({
-                        action: "saveConfig",
-                        user: currentUserId,
-                        data: JSON.stringify(cloudData)
-                    })
-                })
-                .then(res => res.json())
-                .then(resData => {
-                    btnSave.disabled = false;
-                    btnSave.style.opacity = "1";
-                    btnSave.innerText = "💾 Lưu thông tin";
-                    
-                    if (resData.status === 'success') {
-                        alert("Đã lưu thành công!");
-                    } else {
-                        alert("❌ Lỗi: " + resData.message);
-                    }
-                })
-                .catch(err => {
-                    btnSave.disabled = false;
-                    btnSave.style.opacity = "1";
-                    btnSave.innerText = "💾 Lưu thông tin";
-                    alert("❌ Lỗi kết nối mạng: " + err.message);
-                });
-            };
-
-            // --- SỰ KIỆN THAY ĐỔI / CHỌN BẢN NHÁP TỪ DROPDOWN ---
+            // --- SỰ KIỆN THAY ĐỔI / CHỌN BẢN NHÁP TỪ DROPDOWN (ĐÃ LOẠI BỎ CÁC TRƯỜNG CỐ ĐỊNH) ---
             app.querySelector('#con-draft-select').onchange = (e) => {
                 const selectedDraftId = e.target.value;
                 if (!selectedDraftId) return;
@@ -746,14 +701,13 @@
                 // Khôi phục mã phiên hiện tại
                 currentDraftId = draft.id;
 
-                // Đồng bộ phục hồi các trường thông tin chung
+                // Đồng bộ phục hồi các trường thông tin chung (LOẠI BỎ HOÀN TOÀN VIỆC GHI ĐÈ 4 TRƯỜNG CỐ ĐỊNH CỦA BẠN)
                 app.querySelector('#con-file-type').value = draft.fileType || 'contract';
                 app.querySelector('#con-no').value = draft.conNo || '';
                 app.querySelector('#con-date-hd').value = draft.dateHd || '';
                 app.querySelector('#con-date-tl').value = draft.dateTl || '';
                 app.querySelector('#con-print-margin-top').value = draft.printMarginTop !== undefined ? draft.printMarginTop : '1.8';
                 app.querySelector('#con-print-margin-bottom').value = draft.printMarginBottom !== undefined ? draft.printMarginBottom : '1.0';
-                app.querySelector('#con-store-address').value = draft.storeAddress || '';
 
                 app.querySelector('#con-a-name').value = draft.aName || '';
                 app.querySelector('#con-a-address').value = draft.aAddress || '';
@@ -822,7 +776,7 @@
                 toggleFileType();
             };
 
-            // --- SỰ KIỆN CLICK NÚT TẠO MỚI (TẠO MÃ PHIÊN MỚI & CLEAR FORM KHÁCH) ---
+            // --- SỰ KIỆN CLICK NÚT TẠO MỚI (TẠO MÃ PHIÊN MỚI & CLEAR FORM KHÁCH VÀ GIỮ NGUYÊN HỒ SƠ CỐ ĐỊNH CỦA BẠN) ---
             app.querySelector('#btn-con-new-draft').onclick = () => {
                 // Tạo Mã phiên thời gian thực mới
                 currentDraftId = "draft_" + Date.now();
@@ -842,6 +796,8 @@
                 app.querySelector('#con-a-honor').value = "Ông";
                 app.querySelector('#con-print-margin-top').value = "1.8";
                 app.querySelector('#con-print-margin-bottom').value = "1.0";
+
+                // GIỮ NGUYÊN HOÀN TOÀN CÁC THÔNG TIN CỐ ĐỊNH CỦA BẠN (SĐT, Google Drive Folder ID, Store Address, Siêu thị đã chọn) - KHÔNG XOÁ
 
                 app.querySelector('#con-q-client-name').value = "";
                 app.querySelector('#con-q-client-phone').value = "";
@@ -886,7 +842,7 @@
                 alert("✨ Đã tạo phiên làm việc trống mới!");
             };
 
-            // --- SỰ KIỆN CLICK NÚT LƯU NHÁP HÀM LƯU ĐẦY ĐỦ CẤU TRÚC LÊN CLOUD ---
+            // --- SỰ KIỆN CLICK NÚT LƯU THÔNG TIN HỢP NHẤT TOÀN DIỆN LÊN CLOUD ---
             const executeSaveDraft = (silent = false, callback = null) => {
                 const fileType = app.querySelector('#con-file-type').value;
                 const clientName = fileType === 'quotation' 
@@ -917,7 +873,6 @@
                     dateTl: app.querySelector('#con-date-tl').value.trim(),
                     printMarginTop: parseFloat(app.querySelector('#con-print-margin-top').value) || 1.8,
                     printMarginBottom: parseFloat(app.querySelector('#con-print-margin-bottom').value) || 1.0,
-                    storeAddress: app.querySelector('#con-store-address').value.trim(),
 
                     aName: app.querySelector('#con-a-name').value.trim(),
                     aAddress: app.querySelector('#con-a-address').value.trim(),
@@ -944,8 +899,32 @@
                 };
 
                 let cloudData = normalizeCloudData(userCfg.shopConfigColL);
-                let drafts = cloudData.drafts || [];
+                
+                // ĐỒNG BỘ LƯU TRỮ TOÀN BỘ CẤU HÌNH CỐ ĐỊNH CỦA BẠN (SELLER PRESETS) - KHÔNG LƯU TRONG DRAFT RIÊNG LẺ
+                cloudData.sellerInfo = {
+                    name: app.querySelector('#con-b-name').value.trim(),
+                    address: app.querySelector('#con-b-address').value.trim(),
+                    store: app.querySelector('#con-b-store').value.trim(),
+                    tax: app.querySelector('#con-b-tax').value.trim(),
+                    phone: app.querySelector('#con-b-phone').value.trim(),
+                    bankAcc: app.querySelector('#con-b-bank-acc').value.trim(),
+                    bankName: app.querySelector('#con-b-bank-name').value.trim(),
+                    rep: app.querySelector('#con-b-rep-hd').value.trim(),
+                    role: app.querySelector('#con-b-role-hd').value.trim(),
+                    uq: app.querySelector('#con-b-uq').value.trim(),
+                    repTl: app.querySelector('#con-b-rep-tl').value.trim(),
+                    roleTl: app.querySelector('#con-b-role-tl').value.trim(),
+                    honorHd: app.querySelector('#con-b-honor-hd').value,
+                    honorTl: app.querySelector('#con-b-honor-tl').value,
+                    
+                    // LƯU TRỮ TOÀN CỤC CỐ ĐỊNH CÁC TRƯỜNG THÔNG TIN CHUNG CỦA BẠN
+                    driveFolderId: app.querySelector('#con-q-drive-folder').value.trim(), 
+                    commonPhone: app.querySelector('#con-common-phone').value.trim(),     
+                    storeAddress: app.querySelector('#con-store-address').value.trim(),   
+                    bSelectVal: app.querySelector('#con-b-select').value                  
+                };
 
+                let drafts = cloudData.drafts || [];
                 const existingIdx = drafts.findIndex(d => d.id === currentDraftId);
                 if (existingIdx !== -1) {
                     drafts[existingIdx] = draftObj;
@@ -986,7 +965,7 @@
                         data: JSON.stringify(cloudData)
                     })
                 })
-                .then(res => res.json())
+                .then(res => safeParseJsonResponse(res))
                 .then(resData => {
                     if (!silent) {
                         btnSaveDraft.disabled = false;
@@ -994,7 +973,7 @@
                         btnSaveDraft.innerText = origText;
                     }
                     if (resData.status === 'success') {
-                        if (!silent) alert("Đã lưu nháp thành công!");
+                        if (!silent) alert("Đã lưu toàn bộ thông tin thành công!");
                         renderDraftDropdown();
                         if (callback) callback(true);
                     } else {
@@ -1013,9 +992,9 @@
                 });
             };
 
-            // Gắn sự kiện click chuẩn cho nút Lưu Nháp ngoài giao diện
+            // Gắn sự kiện click chuẩn cho nút Lưu Thông Tin mới
             app.querySelector('#btn-con-save-draft').onclick = () => {
-                executeSaveDraft(false); // Lưu nháp thông thường (Có hiển thị Loader và Alert)
+                executeSaveDraft(false); // Lưu toàn bộ trường dữ liệu và tải lên Cloud
             };
             
             // Hàm tính toán tổng tiền
@@ -1136,6 +1115,7 @@
                 // THU THẬP CẤU HÌNH LỀ IN ĐỘNG TỪ UI NGƯỜI DÙNG
                 const marginTop = parseFloat(app.querySelector('#con-print-margin-top').value) || 1.8;
                 const marginBottom = parseFloat(app.querySelector('#con-print-margin-bottom').value) || 1.0;
+                const commonPhone = app.querySelector('#con-common-phone').value.trim();
 
                 // 1. CHẠY BỘ LỌC KIỂM TRA ĐIỀU KIỆN (VALIDATION) TRƯỚC KHI LƯU VÀ IN
                 if (docType !== 'quotation') {
@@ -1173,6 +1153,15 @@
                     const discountValue = UTILS.parseFormattedNumber(app.querySelector('#con-discount-val').value) || 0;
                     const finalTotal = UTILS.parseFormattedNumber(app.querySelector('#con-final-total').innerText) || 0;
                     const finalWords = app.querySelector('#con-final-words').value;
+
+                    // HÀM PHÂN TÁCH TỰ ĐỘNG THƯƠNG HIỆU SIÊU THỊ CHO BẢN IN BÁO GIÁ
+                    const getBrandName = (storeName) => {
+                        if (!storeName) return "Thế giới Di động";
+                        const firstChar = storeName.trim().charAt(0).toUpperCase();
+                        if (firstChar === 'Đ') return "Điện máy Xanh";
+                        if (firstChar === 'A') return "Topzone";
+                        return "Thế giới Di động";
+                    };
 
                     let printHtml = `
                         <html>
@@ -1274,7 +1263,7 @@
                                 }
                             }
                             body { 
-                                font-family: "Times New Roman", Times, serif; 
+                                font-family: "Times New Roman", Times, serif; /* Đồng bộ phông chữ mặc định của trang in */
                                 font-size: 11pt; 
                                 line-height: 1.35; 
                                 color: #000; 
@@ -1378,7 +1367,7 @@
                                         </tr>
                                         <tr>
                                             <td style="width: 25%; font-weight: bold;">Trụ sở đăng ký</td>
-                                            <td style="width: 2%; text-align: center; font-weight: bold;">:</td>
+                                            <td style="text-align: center; font-weight: bold;">:</td>
                                             <td>${aAddress}</td>
                                         </tr>
                                         <tr>
@@ -1414,7 +1403,7 @@
                                         </tr>
                                         <tr>
                                             <td style="width: 25%; font-weight: bold;">Trụ sở đăng ký</td>
-                                            <td style="width: 2%; text-align: center; font-weight: bold;">:</td>
+                                            <td style="text-align: center; font-weight: bold;">:</td>
                                             <td>${bAddress}</td>
                                         </tr>
                                         <tr>
@@ -1515,7 +1504,7 @@
                                     <div class="bold" style="margin-top: 15px;">ĐIỀU 4: CHÍNH SÁCH BẢO HÀNH, ĐỔI, TRẢ SẢN PHẨM VÀ HOÀN TIỀN</div>
                                     <div style="text-align: justify; font-size: 10.5pt; margin-bottom: 15px;">
                                         4.1 Sản Phẩm do Bên B cung cấp sẽ được bảo hành theo tiêu chuẩn của nhà sản xuất hoặc nhà phân phối. Sản phẩm sẽ được kích hoạt bảo hành ngay tại thời điểm Bên B xuất hóa đơn VAT cho Bên A.<br>
-                                        4.2 Chính sách bảo hành của nhà sản xuất hoặc nhà phân phối được đính kèm theo sản phẩm hoặc có thể tham khảo tại website của nhà sản xuất hoặc nhà phân phối.<br>
+                                        4.2 chính sách bảo hành của nhà sản xuất hoặc nhà phân phối được đính kèm theo sản phẩm hoặc có thể tham khảo tại website của nhà sản xuất hoặc nhà phân phối.<br>
                                         4.3 Nếu sản phẩm có áp dụng chính sách đổi trả hoặc hoàn tiền của Bên B vui lòng xem chính sách tại website https://www.dienmayxanh.com/bao-hanh-doi-tra (hoặc https://www.thegioididong.com/chinh-sach-bao-hanh-san-pham áp dụng tùy từng loại sản phẩm). Bên B bảo lưu quyền thay đổi các chính sách này tại từng thời điểm và không cần sự chấp thuận của Bên A.<br>
                                         4.4 Cho mục đích bảo hành hoặc khiếu nại về Sản Phẩm Bên A liên hệ số điện thoại như được công khai tại website https://www.dienmayxanh.com/ hoặc https://www.thegioididong.com/.
                                     </div>
@@ -1525,7 +1514,7 @@
                                         5.1 Nghĩa vụ của Bên A:<br>
                                         a. Cam kết không tiết lộ cho bên thứ ba bất kỳ thông tin nào có liên quan đến việc thực hiện Hợp đồng này.<br>
                                         b. Thanh toán cho Bên B Giá Sản Phẩm và chi phí vật tư đúng và đầy đủ theo quy định Hợp Đồng này.<br>
-                                        c. Bên A đồng ý với chính sách thu thập thông tin và xử lý dữ liệu của Bên B theo các điều khoản và điều kiện đã được quy định tại website https://www.dienmayxanh.com/ hoặc https://www.thegioididong.com/.<br>
+                                        c. Bên A đồng ý với chính sách thu thập thông tin và xử lý dữ liệu của Bên B theo các điều khoản và điều kiện đã được quy định tại website https://www.dienmayxanh.com/ hoặc https://www.thegioididong.com/.
                                         d. Thực hiện đúng các cam kết được ghi trong Hợp Đồng này.<br><br>
                                         5.2 Nghĩa vụ của Bên B:<br>
                                         a. Đảm bảo cung cấp Sản Phẩm mới 100%, đúng với quy cách, giá cả, thời gian giao hàng theo cam kết tại Điều 1 and Điều 2 Hợp Đồng này.<br>
@@ -1737,7 +1726,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="print-footer" style="font-family: sans-serif;">
+                                <div class="print-footer" style="font-family: 'Times New Roman', serif;">
                                     <span style="font-weight: bold; color: #111;">dienmayxanh</span>
                                     <span class="page-num"></span>
                                 </div>
@@ -1786,7 +1775,8 @@
 
                         printHtml += `
                             <div class="page-container">
-                                <div class="page-content" style="font-family: Arial, Helvetica, sans-serif;">
+                                <!-- ĐỒNG BỘ PHÔNG CHỮ TIMES NEW ROMAN CHO BÁO GIÁ -->
+                                <div class="page-content" style="font-family: 'Times New Roman', Times, serif;">
                                     <!-- TOP HEADER -->
                                     <table style="width: 100%; border: none; margin-bottom: 15px;">
                                         <tr style="border: none;">
@@ -1804,7 +1794,7 @@
                                         </tr>
                                     </table>
 
-                                    <!-- KHÁCH HÀNG & TIÊU ĐỀ (ĐÃ CĂN ĐỈNH DỜI CAO ĐỀU NHAU) -->
+                                    <!-- KHÁCH HÀNG & TIÊU ĐỀ -->
                                     <table style="width: 100%; border: none; margin-bottom: 12px;">
                                         <tr style="border: none;">
                                             <td style="width: 58%; text-align: left; vertical-align: top; border: none; padding: 0;">
@@ -1812,13 +1802,13 @@
                                                 <table style="width: 100%; border: none;">
                                                     <tr style="border: none;"><td style="width: 25%; font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">${qClientHonor}:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientName}</td></tr>
                                                     <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">Điện thoại:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientPhone}</td></tr>
-                                                    <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">Tên công ty:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientCompany}</td></tr>
-                                                    <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">Email:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientEmail}</td></tr>
+                                                    <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">Tên công ty:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientCompany}</td></tr>
+                                                    <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">Email:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientEmail}</td></tr>
                                                     <tr style="border: none;"><td style="font-weight: bold; border: none; padding: 2px 0; font-size: 9.5pt;">Địa chỉ:</td><td style="border: none; padding: 2px 0; color: red; font-weight: bold; font-size: 10pt;">${qClientAddress}</td></tr>
                                                 </table>
                                             </td>
                                             <td style="width: 42%; text-align: right; vertical-align: top; border: none; padding: 0;">
-                                                <div style="font-size: 20pt; font-weight: 900; letter-spacing: 0.5px; color: #000; margin-top: 0px; margin-bottom: 10px; font-family: 'Arial Black', Gadget, sans-serif; line-height: 1.1;">BẢNG BÁO GIÁ</div>
+                                                <div style="font-size: 20pt; font-weight: 900; letter-spacing: 0.5px; color: #000; margin-top: 0px; margin-bottom: 10px; font-family: 'Times New Roman', Times, serif; line-height: 1.1;">BẢNG BÁO GIÁ</div>
                                                 <div style="font-size: 9.5pt; font-weight: bold;">Ngày báo giá: <span style="color: red; font-weight: bold; margin-left: 5px;">${qDate}</span></div>
                                                 <div style="font-size: 9.5pt; font-weight: bold; margin-top: 4px;">Hiệu lực đến: <span style="color: red; font-weight: bold; margin-left: 5px;">${qValidUntil}</span></div>
                                             </td>
@@ -1862,7 +1852,8 @@
                                     <!-- LIÊN HỆ HỖ TRỢ -->
                                     <div style="text-align: center; font-size: 9.5pt; line-height: 1.4;">
                                         <div>Nếu quý khách cần hỗ trợ thêm thông tin, vui lòng liên hệ với:</div>
-                                        <div style="font-weight: bold; color: red; margin-top: 1px;">Siêu thị : Điện máy Xanh - ${storeAddress}</div>
+                                        <div style="font-weight: bold; color: red; margin-top: 1px;">Siêu thị : ${getBrandName(bStore)} - ${storeAddress}</div>
+                                        <div style="font-weight: bold; margin-top: 1px;">Điện thoại: ${commonPhone}</div>
                                         <div style="font-weight: bold; font-style: italic; margin-top: 10px; font-size: 10pt;">Cảm ơn Quý khách hàng!</div>
                                     </div>
                                 </div>
