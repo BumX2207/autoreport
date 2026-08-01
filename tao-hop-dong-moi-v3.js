@@ -329,7 +329,7 @@
                                 <input type="text" id="con-date-tl" value="14/04/2026" placeholder="dd/mm/yyyy">
                             </div>
                             
-                            <!-- BỘ ĐIỀU CHỈNH DUY NHẤT: VỊ TRÍ FOOTER CÁCH ĐÁY GIẤY (NỘI DUNG TỰ ĐỘNG CÁCH NÓ 1.2CM ~ 45PX) -->
+                            <!-- BỘ ĐIỀU CHỈNH DUY NHẤT: VỊ TRÍ FOOTER CÁCH ĐÁY GIẤY A4 -->
                             <div class="con-col con-group" style="min-width: 160px;">
                                 <label>📐 Vị trí Footer cách đáy (cm)</label>
                                 <input type="number" id="con-footer-pos" value="1.0" step="0.1" min="0.2" max="5.0" style="text-align: center;">
@@ -1070,7 +1070,7 @@
                 const bHonorHd = app.querySelector('#con-b-honor-hd').value;
                 const bHonorTl = app.querySelector('#con-b-honor-tl').value;
 
-                // LẤY CẤU HÌNH VỊ TRÍ FOOTER TỪ UI
+                // LẤY CẤU HÌNH VỊ TRÍ FOOTER TỪ UI (MẶC ĐỊNH 1.0CM CÁCH ĐÁY GIẤY)
                 const footerPos = parseFloat(app.querySelector('#con-footer-pos').value) || 1.0;
                 const commonPhone = app.querySelector('#con-common-phone').value.trim();
 
@@ -1125,8 +1125,8 @@
                                 size: A4;
                                 margin-top: 1.5cm; /* CỐ ĐỊNH LỀ TRÊN NỘI DUNG CHUẨN 1.5CM */
                                 
-                                /* TẠO MÀNG BẢO VỆ CHỐNG ĐÈ 1.2CM (~45PX) PHÍA TRÊN FOOTER */
-                                margin-bottom: ${footerPos + 1.2}cm; 
+                                /* TẠO MÀNG BẢO VỆ CHỐNG ĐÈ 0.8CM (~30PX) PHÍA TRÊN FOOTER */
+                                margin-bottom: ${footerPos + 0.8}cm; 
                                 
                                 margin-left: 2cm;
                                 margin-right: 1.5cm;
@@ -1141,7 +1141,7 @@
                                     padding: 0 !important;
                                 }
 
-                               .page-container { 
+                                .page-container { 
                                     width: 100% !important; 
                                     min-height: auto !important; 
                                     box-sizing: border-box !important;
@@ -1156,16 +1156,17 @@
                                     position: static !important;
                                 }
 
+                                /* DỪNG NỘI DUNG TUYỆT ĐỐI TRƯỚC FOOTER 0.8CM */
                                 .page-content {
-                                    padding-bottom: 0 !important;
+                                    padding-bottom: 0.8cm !important;
                                 }
 
                                 /* ========================================================================= */
-                                /* FOOTER CHUẨN IN NẠP TỪ ĐẦU BODY - CHỐNG NHẢY TRANG 2 - CHỐNG ĐÈ CHỮ 100%   */
+                                /* FOOTER ĐẶT ĐẦU BODY + BOTTOM = 0 => DÍNH CHẶT CHUẨN TẠI FOOTERPOS CÁCH ĐÁY GIẤY */
                                 /* ========================================================================= */
                                 .print-footer {
                                     position: fixed !important;
-                                    bottom: -1.2cm !important; /* Đặt footer lùi về đúng vị trí footerPos cách đáy giấy */
+                                    bottom: 0 !important;
                                     left: 0 !important;
                                     right: 0 !important;
                                     width: 100% !important;
@@ -1186,9 +1187,9 @@
                                     z-index: 99999 !important;
                                 }
 
-                                /* HIỂN THỊ CHUẨN SỐ TRANG ĐẾM TỰ ĐỘNG (1, 2, 3...) */
+                                /* TỰ ĐỘNG ĐẾM SỐ TRANG TỰ NHIÊN (1, 2, 3...) */
                                 .print-footer .page-num::after {
-                                    content: counter(page) !important;
+                                    content: counter(page);
                                 }
 
                                 .info-table td, .prod-table th, .prod-table td {
@@ -1295,7 +1296,7 @@
                         }
 
                         printHtml += `
-                            <!-- THẺ FOOTER ĐẶT ĐẦU BODY ĐỂ CỐ ĐỊNH CHUẨN XÁC TẤT CẢ TRANG -->
+                            <!-- QUAN TRỌNG: THẺ FOOTER ĐẶT Ở ĐẦU BODY ĐỂ CHROME NẠP VÀ CỐ ĐỊNH CHUẨN XÁC TẤT CẢ TRANG -->
                             <div class="print-footer">
                                 <span>Pháp Chế_111124_ĐMX_VN</span>
                                 <span class="page-num"></span>
@@ -1818,7 +1819,7 @@
     };
 
     return {
-        name: "Tạo Hợp Đồng v2",
+        name: "Tạo Hợp Đồng v3",
         icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 15H7v-2h10v2zm0-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>`,
         bgColor: "#6c5ce7",
         action: runTool
