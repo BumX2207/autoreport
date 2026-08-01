@@ -329,11 +329,11 @@
                                 <input type="text" id="con-date-tl" value="14/04/2026" placeholder="dd/mm/yyyy">
                             </div>
                             <div class="con-col con-group" style="min-width: 110px;">
-                                <label>📐 Lề Trên Nội Dung (cm)</label>
+                                <label>📐 Lề Trên (cm)</label>
                                 <input type="number" id="con-print-margin-top" value="1.8" step="0.1" min="0" max="10" style="text-align: center;">
                             </div>
                             <div class="con-col con-group" style="min-width: 110px;">
-                                <label>📐 Lề Dưới Nội Dung (cm)</label>
+                                <label>📐 Lề Dưới (cm)</label>
                                 <input type="number" id="con-print-margin-bottom" value="1.5" step="0.1" min="1.0" max="10" style="text-align: center;">
                             </div>
                             <div class="con-col con-group" style="min-width: 180px;">
@@ -1128,8 +1128,8 @@
                             <style>
                             @page {
                                 size: A4;
-                                margin-top: ${marginTop}cm; /* Lề trên của văn bản */
-                                margin-bottom: ${marginBottom}cm; /* Lề dưới của văn bản */
+                                margin-top: ${marginTop}cm; 
+                                margin-bottom: ${marginBottom}cm; 
                                 margin-left: 2cm;
                                 margin-right: 1.5cm;
                             }
@@ -1156,31 +1156,33 @@
                                     line-height: 1.3 !important;
                                     position: static !important;
                                 }
+
+                                /* BỨC TƯỜNG BẢO VỆ CHỐNG ĐÈ VĂN BẢN LÊN FOOTER */
                                 .page-content {
-                                    padding-bottom: 0 !important;
+                                    padding-bottom: 1.2cm !important; /* Luôn tạo khoảng trống an toàn cho Footer */
                                 }
 
-                                /* ================================================================================== */
-                                /* CHÂN TRANG LAYER ĐỘC LẬP TỰ ĐỘNG CỐ ĐỊNH TẠI VỊ TRÍ 28.7CM (CÁCH ĐÁY GIẤY A4 ĐÚNG 1.0CM) */
-                                /* Không chịu ảnh hưởng bởi biến Lề Dưới và không gây đẻ trang phụ/đẩy trang */
-                                /* ================================================================================== */
+                                /* ========================================================================= */
+                                /* FOOTER CHUẨN PRINT ENGINE CHÂU ÂU - FULL WIDTH - KHÔNG VĂNG - KHÔNG ĐÈ CHỮ */
+                                /* ========================================================================= */
                                 .print-footer {
                                     position: fixed !important;
-                                    
-                                    /* 28.7cm = Tọa độ 1.0cm cách mép đáy A4. Trừ marginTop để triệt tiêu biến động gốc tọa độ */
-                                    top: calc(28cm - ${marginTop}cm) !important; 
-                                    
-                                    left: 2cm !important;
-                                    right: 1.5cm !important;
-                                    border-top: 1px solid black !important;
-                                    padding-top: 4px !important;
+                                    bottom: 0 !important;
+                                    left: 0 !important;
+                                    right: 0 !important;
+                                    width: 100% !important;
+                                    height: 25px !important;
+                                    line-height: 25px !important;
+                                    border-top: 1px solid #000000 !important;
+                                    padding-top: 2px !important;
                                     font-size: 9.5pt !important;
                                     font-weight: bold !important;
-                                    background: #fff !important;
+                                    background: #ffffff !important;
                                     display: flex !important;
                                     justify-content: space-between !important;
-                                    height: 0.8cm !important;
-                                    z-index: 9999;
+                                    align-items: center !important;
+                                    box-sizing: border-box !important;
+                                    z-index: 99999 !important;
                                 }
                                 .print-footer .page-num::after {
                                     content: counter(page);
