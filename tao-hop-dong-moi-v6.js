@@ -329,7 +329,7 @@
                                 <input type="text" id="con-date-tl" value="14/04/2026" placeholder="dd/mm/yyyy">
                             </div>
                             
-                            <!-- BỘ ĐIỀU CHỈNH FOOTER: ĐỔI TÊN THÀNH "Điều chỉnh Footer" Theo Yêu Cầu -->
+                            <!-- Ô NHẬP "Điều chỉnh Footer" ĐIỀU KHIỂN VỊ TRÍ FOOTER CÁCH ĐÁY GIẤY A4 -->
                             <div class="con-col con-group" style="min-width: 160px;">
                                 <label>📐 Điều chỉnh Footer (cm)</label>
                                 <input type="number" id="con-footer-pos" value="1.0" step="0.1" min="0.2" max="5.0" style="text-align: center;">
@@ -1125,8 +1125,8 @@
                                 size: A4;
                                 margin-top: 1.5cm; /* CỐ ĐỊNH LỀ TRÊN NỘI DUNG CHUẨN 1.5CM */
                                 
-                                /* TẠO MÀNG BẢO VỆ CHỐNG ĐÈ 1.5CM (~55PX) TÍNH TỪ VỊ TRÍ FOOTER */
-                                margin-bottom: ${footerPos + 1.5}cm; 
+                                /* ĐỊNH NGHĨA CHÍNH XÁC VÙNG TRỐNG CÁCH ĐÁY GIẤY = FOOTER POS */
+                                margin-bottom: ${footerPos}cm; 
                                 
                                 margin-left: 2cm;
                                 margin-right: 1.5cm;
@@ -1156,17 +1156,22 @@
                                     position: static !important;
                                 }
 
+                                /* ĐỆM AN TOÀN NỘI DUNG: Ép văn bản dừng lại trước Footer 0.8cm (~30px) */
                                 .page-content {
-                                    padding-bottom: 0 !important;
+                                    padding-bottom: 0.8cm !important;
+                                    margin-bottom: 0.8cm !important;
+                                }
+                                .page-content p, .page-content table, .page-content div {
+                                    margin-bottom: 8px !important;
                                 }
 
                                 /* ========================================================================= */
-                                /* FOOTER ĐẶT TẠI VỊ TRÍ 28.7CM TỪ ĐỈNH GIẤY (ĐÚNG 1.0CM CÁCH ĐÁY GIẤY A4)   */
-                                /* Đảm bảo văn bản dừng ở 27.2cm, Footer ở 28.7cm -> Hở ra 1.5cm không bao giờ đè */
+                                /* FOOTER ĐẶT ĐẦU BODY + BOTTOM = 0 => DÍNH CHẶT CHUẨN XÁC TẠI LỀ ĐÁY @PAGE  */
+                                /* Không bao giờ nhảy lên giữa trang 2, không đè chữ                         */
                                 /* ========================================================================= */
                                 .print-footer {
                                     position: fixed !important;
-                                    top: calc(29.7cm - ${footerPos}cm) !important;
+                                    bottom: 0 !important;
                                     left: 0 !important;
                                     right: 0 !important;
                                     width: 100% !important;
@@ -1187,7 +1192,7 @@
                                     z-index: 99999 !important;
                                 }
 
-                                /* TỰ ĐỘNG ĐẾM SỐ TRANG TỰ NHIÊN (1, 2, 3...) */
+                                /* SỐ TRANG TỰ ĐỘNG CỦA CHROME (1, 2, 3...) */
                                 .print-footer .page-num::after {
                                     content: counter(page) !important;
                                 }
@@ -1819,7 +1824,7 @@
     };
 
     return {
-        name: "Tạo Hợp Đồng v2",
+        name: "Tạo Hợp Đồng v3",
         icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 15H7v-2h10v2zm0-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>`,
         bgColor: "#6c5ce7",
         action: runTool
