@@ -1143,8 +1143,7 @@
 
                                 .page-container { 
                                     width: 100% !important; 
-                                    /* SỬ DỤNG CALC ĐỂ TÍNH TOÁN CHIỀU CAO CHUẨN XÁC GIÚP MANUAL FOOTER ĐỨNG ĐÚNG CHỖ */
-                                    height: calc(29.7cm - 1.5cm - ${footerPos}cm) !important;
+                                    min-height: auto !important; 
                                     box-sizing: border-box !important;
                                     display: block !important;
                                     padding: 0 !important;
@@ -1154,8 +1153,7 @@
                                     background: transparent !important;
                                     font-size: 10pt !important;
                                     line-height: 1.3 !important;
-                                    position: relative !important; /* ĐỂ ABSOLUTE CỦA MANUAL FOOTER HOẠT ĐỘNG CHUẨN */
-                                    page-break-after: always !important;
+                                    position: static !important;
                                 }
 
                                 .page-content {
@@ -1164,10 +1162,11 @@
                                 }
 
                                 /* ========================================================================= */
-                                /* FOOTER ĐÁNH SỐ THỦ CÔNG - KHẮC PHỤC HOÀN TOÀN LỖI HIỂN THỊ SỐ 0           */
+                                /* FOOTER ĐẶT ĐẦU BODY + BOTTOM = 0 => DÍNH CHẶT CHUẨN XÁC TẠI LỀ ĐÁY @PAGE  */
+                                /* Không bao giờ nhảy lên giữa trang 2, không đè chữ                         */
                                 /* ========================================================================= */
-                                .manual-footer {
-                                    position: absolute !important;
+                                .print-footer {
+                                    position: fixed !important;
                                     bottom: 0 !important;
                                     left: 0 !important;
                                     right: 0 !important;
@@ -1187,6 +1186,11 @@
                                     page-break-inside: avoid !important;
                                     break-inside: avoid !important;
                                     z-index: 99999 !important;
+                                }
+
+                                /* SỐ TRANG TỰ ĐỘNG CHUẨN ĐẾM CỦA CHROME (1, 2, 3...) */
+                                .print-footer .page-num::after {
+                                    content: counter(page) !important;
                                 }
 
                                 .info-table td, .prod-table th, .prod-table td {
@@ -1214,7 +1218,7 @@
                                     page-break-inside: avoid !important;
                                 }
                                 .page-break {
-                                    display: none !important; /* Không cần trang trống rỗng vì mỗi page-container đã tự động ngắt trang */
+                                    page-break-before: always !important;
                                     height: 0 !important;
                                     margin: 0 !important;
                                     border: none !important;
@@ -1231,7 +1235,7 @@
                             }
                             .page-container { 
                                 width: 21cm; 
-                                height: 29.7cm; /* Đóng khung cố định theo kích thước A4 chuẩn */
+                                min-height: 29.7cm; 
                                 box-sizing: border-box;
                                 background: #fff; 
                                 padding: 1.8cm 1.5cm 2.2cm 2cm; 
@@ -1240,19 +1244,30 @@
                                 display: block;
                                 position: relative;
                             }
-                            .manual-footer { 
-                                position: absolute;
-                                bottom: 1.0cm;
-                                left: 2cm;
-                                right: 1.5cm;
-                                border-top: 1px solid #000000;
-                                padding-top: 4px;
-                                font-size: 9.5pt;
-                                font-weight: bold;
-                                display: flex;
-                                justify-content: space-between;
-                                align-items: center;
-                                background: #ffffff;
+                            .print-footer { 
+                                display: none;
+                            }
+                            .print-footer-manual {
+                                position: absolute !important;
+                                bottom: ${footerPos}cm !important;
+                                left: 2cm !important;
+                                right: 1.5cm !important;
+                                height: 22px !important;
+                                line-height: 22px !important;
+                                border-top: 1px solid #000000 !important;
+                                padding-top: 2px !important;
+                                font-size: 9.5pt !important;
+                                font-weight: bold !important;
+                                background: #ffffff !important;
+                                display: flex !important;
+                                justify-content: space-between !important;
+                                align-items: center !important;
+                                box-sizing: border-box !important;
+                            }
+                            @media print {
+                                .print-footer-manual {
+                                    display: flex !important;
+                                }
                             }
                             .page-break {
                                 border-top: 1px dashed #cbd5e1;
@@ -1280,7 +1295,7 @@
                         <body>
                     `;
 
-                    // ==================== TRANG IN CHẾ ĐỘ: HỢP ĐỒNG MUA BÁN ====================
+                    // ==================== TRANG 1: HỢP ĐỒNG MUA BÁN ====================
                     if (docType === 'contract') {
                         let totalBeforeDisc = products.reduce((sum, p) => sum + (p.qty * p.price), 0);
                         let productRowsHtml = products.map(p => `
@@ -1304,252 +1319,293 @@
                         }
 
                         printHtml += `
-                            <!-- TRANG 1 -->
+                            <!-- TRANG 1 CỦA HỢP ĐỒNG -->
                             <div class="page-container">
-                                <div class="page-content">
-                                    <div style="text-align: center; font-weight: bold; font-size: 16pt; text-transform: uppercase; margin-bottom: 3px; letter-spacing: 0.5px;">
-                                        HỢP ĐỒNG MUA BÁN
-                                    </div>
-                                    <div style="text-align: center; font-size: 11.5pt; margin-bottom: 15px;">
-                                        Số./No.: ${conNo}
-                                    </div>
-                                    
-                                    <div style="margin-bottom: 15px;">Hôm nay, ngày ${dateHd} (“Ngày Ký”), chúng tôi gồm có:</div>
-
-                                    <table class="info-table">
-                                        <tr>
-                                            <td colspan="3" class="bold" style="background-color:#f2f2f2;">BÊN MUA (BÊN A): ${aName}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="width: 25%; font-weight: bold;">Trụ sở đăng ký</td>
-                                            <td style="text-align: center; font-weight: bold;">:</td>
-                                            <td>${aAddress}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="font-weight: bold;">Mã số thuế</td>
-                                            <td style="text-align: center; font-weight: bold;">:</td>
-                                            <td>${aTax}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="font-weight: bold;">Điện thoại – Fax</td>
-                                            <td style="text-align: center; font-weight: bold;">:</td>
-                                            <td>${aPhone}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="font-weight: bold;">Số tài khoản</td>
-                                            <td style="text-align: center; font-weight: bold;">:</td>
-                                            <td>${aBankAcc}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="font-weight: bold;">Tại ngân hàng</td>
-                                            <td style="text-align: center; font-weight: bold;">:</td>
-                                            <td>${aBankName}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="font-weight: bold;">Đại diện bởi</td>
-                                            <td style="text-align: center; font-weight: bold;">:</td>
-                                            <td>
-                                                <div class="bold">${aHonor}: ${aRep}</div>
-                                                <div>Chức vụ : ${aRole}</div>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td colspan="3" class="bold" style="background-color:#f2f2f2;">BÊN BÁN (BÊN B): ${bName}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="width: 25%; font-weight: bold;">Trụ sở đăng ký</td>
-                                            <td style="text-align: center; font-weight: bold;">:</td>
-                                            <td>${bAddress}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="font-weight: bold;">Tên Siêu Thị</td>
-                                            <td style="text-align: center; font-weight: bold;">:</td>
-                                            <td>${bStore}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="font-weight: bold;">Mã số thuế</td>
-                                            <td style="text-align: center; font-weight: bold;">:</td>
-                                            <td>${bTax}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="font-weight: bold;">Điện thoại – Fax</td>
-                                            <td style="text-align: center; font-weight: bold;">:</td>
-                                            <td>${bPhone}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="font-weight: bold;">Số tài khoản</td>
-                                            <td style="text-align: center; font-weight: bold;">:</td>
-                                            <td>${bBankAcc}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="font-weight: bold;">Tại ngân hàng</td>
-                                            <td style="text-align: center; font-weight: bold;">:</td>
-                                            <td>${bBankName}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="font-weight: bold;">Đại diện bởi</td>
-                                            <td style="text-align: center; font-weight: bold;">:</td>
-                                            <td>
-                                                <div class="bold">${bHonorHd}: ${bRepHd}</div>
-                                                <div class="bold">Chức vụ: ${bRoleHd}</div>
-                                                <div class="italic">(${bUq})</div>
-                                            </td>
-                                        </tr>
-                                    </table>
-
-                                    <div style="margin-top: 10px; margin-bottom: 10px;">Sau khi bàn bạc, hai bên thống nhất ký kết Hợp Đồng Mua Bán này (“Hợp Đồng”) với các điều khoản sau:</div>
-                                </div>
-                                <div class="manual-footer">
+                                <div class="print-footer-manual">
                                     <span>Pháp Chế_111124_ĐMX_VN</span>
-                                    <span>Trang 1</span>
+                                    <span>Trang 1/3</span>
                                 </div>
+                                <table style="width: 100%; border: none; border-collapse: collapse; margin: 0; padding: 0;">
+                                    <tbody>
+                                        <tr style="border: none;">
+                                            <td style="border: none; padding: 0;">
+                                                <div class="page-content">
+                                                    <div style="text-align: center; font-weight: bold; font-size: 16pt; text-transform: uppercase; margin-bottom: 3px; letter-spacing: 0.5px;">
+                                                        HỢP ĐỒNG MUA BÁN
+                                                    </div>
+                                                    <div style="text-align: center; font-size: 11.5pt; margin-bottom: 15px;">
+                                                        Số./No.: ${conNo}
+                                                    </div>
+                                                    
+                                                    <div style="margin-bottom: 15px;">Hôm nay, ngày ${dateHd} (“Ngày Ký”), chúng tôi gồm có:</div>
+
+                                                    <table class="info-table">
+                                                        <tr>
+                                                            <td colspan="3" class="bold" style="background-color:#f2f2f2;">BÊN MUA (BÊN A): ${aName}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="width: 25%; font-weight: bold;">Trụ sở đăng ký</td>
+                                                            <td style="text-align: center; font-weight: bold;">:</td>
+                                                            <td>${aAddress}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="font-weight: bold;">Mã số thuế</td>
+                                                            <td style="text-align: center; font-weight: bold;">:</td>
+                                                            <td>${aTax}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="font-weight: bold;">Điện thoại – Fax</td>
+                                                            <td style="text-align: center; font-weight: bold;">:</td>
+                                                            <td>${aPhone}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="font-weight: bold;">Số tài khoản</td>
+                                                            <td style="text-align: center; font-weight: bold;">:</td>
+                                                            <td>${aBankAcc}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="font-weight: bold;">Tại ngân hàng</td>
+                                                            <td style="text-align: center; font-weight: bold;">:</td>
+                                                            <td>${aBankName}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="font-weight: bold;">Đại diện bởi</td>
+                                                            <td style="text-align: center; font-weight: bold;">:</td>
+                                                            <td>
+                                                                <div class="bold">${aHonor}: ${aRep}</div>
+                                                                <div>Chức vụ : ${aRole}</div>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td colspan="3" class="bold" style="background-color:#f2f2f2;">BÊN BÁN (BÊN B): ${bName}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="width: 25%; font-weight: bold;">Trụ sở đăng ký</td>
+                                                            <td style="text-align: center; font-weight: bold;">:</td>
+                                                            <td>${bAddress}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="font-weight: bold;">Tên Siêu Thị</td>
+                                                            <td style="text-align: center; font-weight: bold;">:</td>
+                                                            <td>${bStore}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="font-weight: bold;">Mã số thuế</td>
+                                                            <td style="text-align: center; font-weight: bold;">:</td>
+                                                            <td>${bTax}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="font-weight: bold;">Điện thoại – Fax</td>
+                                                            <td style="text-align: center; font-weight: bold;">:</td>
+                                                            <td>${bPhone}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="font-weight: bold;">Số tài khoản</td>
+                                                            <td style="text-align: center; font-weight: bold;">:</td>
+                                                            <td>${bBankAcc}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="font-weight: bold;">Tại ngân hàng</td>
+                                                            <td style="text-align: center; font-weight: bold;">:</td>
+                                                            <td>${bBankName}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="font-weight: bold;">Đại diện bởi</td>
+                                                            <td style="text-align: center; font-weight: bold;">:</td>
+                                                            <td>
+                                                                <div class="bold">${bHonorHd}: ${bRepHd}</div>
+                                                                <div class="bold">Chức vụ: ${bRoleHd}</div>
+                                                                <div class="italic">(${bUq})</div>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot style="display: table-footer-group; border:none;">
+                                        <tr style="border:none;">
+                                            <td style="border:none; height: 0.8cm; padding:0;">&nbsp;</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
                             </div>
 
                             <div class="page-break"></div>
 
-                            <!-- TRANG 2 -->
+                            <!-- TRANG 2 CỦA HỢP ĐỒNG -->
                             <div class="page-container">
-                                <div class="page-content">
-                                    <div class="bold">ĐIỀU 1: ĐỐI TƯỢNG HỢP ĐỒNG</div>
-                                    <div style="text-align: justify; margin-bottom: 10px;">
-                                        1.1 Bên B đồng ý bán và Bên A đồng ý mua sản phẩm của Bên B với chủng loại, tính năng kỹ thuật và giá cả cụ thể như sau (Sau đây gọi tắt là “Sản Phẩm”):
-                                    </div>
-
-                                    <table class="prod-table">
-                                        <thead>
-                                            <tr>
-                                                <th style="width: 6%;">STT</th>
-                                                <th style="width: 50%;">Tên Sản Phẩm</th>
-                                                <th style="width: 10%;">Số Lượng</th>
-                                                <th style="width: 17%;">Đơn Giá (VND) - Đã bao gồm thuế VAT 8%</th>
-                                                <th style="width: 17%;">Thành Tiền (VND) - Đã bao gồm 8% VAT</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            ${productRowsHtml}
-                                            <tr class="bold" style="background:#f2f2f2;">
-                                                <td colspan="4" class="text-right">Tổng tiền (bao gồm VAT 8%)</td>
-                                                <td class="text-right">${UTILS.formatNumber(finalTotal)}</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-
-                                    <div class="bold" style="margin-bottom: 10px;">Tổng giá bằng chữ: ${finalWords}</div>
-
-                                    <div style="text-align: justify; font-size: 10.5pt; margin-bottom: 15px;">
-                                        1.2 Tổng tiền mà Bên A phải thanh toán cho Bên B theo quy định tại Điều 1.1 (“Giá Sản Phẩm”) là chi phí cố định không thay đổi trong suốt quá trình thực hiện Hợp Đồng và chưa bao gồm phần chi phí vật tư và/hoặc các chi phí khác phát sinh khi lắp đặt (nếu có). Các chi phí phát sinh này được quy định tại website: <b>https://www.dienmayxanh.com/kinh-nghiem-hay/chinh-sach-giao-hang-lap-dat-1261528</b> vào thời điểm lắp đặt.
-                                    </div>
-
-                                    <div style="text-align: justify; margin-bottom: 15px;">
-                                        1.3 Giá Sản Phẩm được Bên A thanh toán cho Bên B theo quy định tại Điều 3 Hợp Đồng này. Chi phí vật tư và/hoặc chi phí khác phát sinh khi lắp đặt sẽ được thanh toán bằng tiền mặt/chuyển khoản ngay khi Bên B lắp đặt cho Bên A hoàn tất.<br><br>
-                                        1.4 Trường hợp Sản Phẩm cần lắp đặt thì Bên A chịu trách nhiệm chuẩn bị các thiết bị sau và điểm chờ đấu nối cụ thể:<br>
-                                        a. Điểm lắp đặt cao trên 4m (tính từ sàn) thì Bên A tự chuẩn bị thang phù hợp hoặc dàn giáo.<br>
-                                        b. Liên quan đến thiết bị cần cấp và thoát nước, Bên A cần phải có ống âm chờ cấp vào máy và ra các thiết bị sẵn tại vị trí lắp máy (Đầu chờ nước cấp, đầu ra nóng, Bộ pha nước ra nóng lạnh, ống thoát nước, v.v.).
-                                    </div>
-
-                                    <div class="bold" style="margin-top: 15px;">ĐIỀU 2: THỜI GIAN VÀ ĐIỀU KIỆN GIAO HÀNG</div>
-                                    <div style="text-align: justify; margin-bottom: 15px;">
-                                        2.1 Thời gian giao hàng: Bên B thực hiện giao Hàng hóa trong vòng ba (03) ngày kể từ ngày Bên B được Ngân hàng báo có đúng, đầy đủ Giá Sản Phẩm vào tài khoản ngân hàng của Bên B. Trường hợp ngày Ngân hàng báo có rơi vào thứ bảy, chủ nhật hoặc ngày nghỉ Lễ, Tết theo quy định pháp luật thì thời hạn bắt đầu được tính từ ngày làm việc tiếp theo hoặc theo thông báo của Bên B (tùy trường hợp).<br><br>
-                                        2.2 Địa điểm giao hàng: ${aAddress}
-                                    </div>
-
-                                    <div class="bold" style="margin-top: 15px;">ĐIỀU 3: THANH TOÁN</div>
-                                    <div style="text-align: justify; margin-bottom: 15px;">
-                                        3.1 Bên A sẽ thanh toán 100% Giá Sản Phẩm cho Bên B bằng cách chuyển khoản vào tài khoản ngân hàng của Bên B sau khi Hợp Đồng được ký kết. Thông tin tài khoản ngân hàng của Bên B:<br>
-                                        <div style="margin-left: 20px;">
-                                            - Chủ tài khoản: <b>CÔNG TY CỔ PHẦN ĐẦU TƯ ĐIỆN MÁY XANH</b><br>
-                                            - Số tài khoản: <b>${bBankAcc}</b><br>
-                                            - Tại ngân hàng: <b>${bBankName}</b>
-                                        </div><br>
-                                        3.2 Xuất hóa đơn:<br>
-                                        a. Giao hàng khu vực Hồ Chí Minh: Bên B trực tiếp giao hàng và xuất hóa đơn cho Bên A.<br>
-                                        b. Giao hàng ở tỉnh: Bên B ủy quyền cho Chi nhánh của Bên B tại các tỉnh giao hàng và xuất hóa đơn cho Bên A.
-                                    </div>
-
-                                    <div class="bold" style="margin-top: 15px;">ĐIỀU 4: CHÍNH SÁCH BẢO HÀNH, ĐỔI, TRẢ SẢN PHẨM VÀ HOÀN TIỀN</div>
-                                    <div style="text-align: justify; font-size: 10.5pt; margin-bottom: 15px;">
-                                        4.1 Sản Phẩm do Bên B cung cấp sẽ được bảo hành theo tiêu chuẩn của nhà sản xuất hoặc nhà phân phối. Sản phẩm sẽ được kích hoạt bảo hành ngay tại thời điểm Bên B xuất hóa đơn VAT cho Bên A.<br>
-                                        4.2 chính sách bảo hành của nhà sản xuất hoặc nhà phân phối được đính kèm theo sản phẩm hoặc có thể tham khảo tại website của nhà sản xuất hoặc nhà phân phối.<br>
-                                        4.3 Nếu sản phẩm có áp dụng chính sách đổi trả hoặc hoàn tiền của Bên B vui lòng xem chính sách tại website https://www.dienmayxanh.com/bao-hanh-doi-tra (hoặc https://www.thegioididong.com/chinh-sach-bao-hanh-san-pham áp dụng tùy từng loại sản phẩm). Bên B bảo lưu quyền thay đổi các chính sách này tại từng thời điểm và không cần sự chấp thuận của Bên A.<br>
-                                        4.4 Cho mục đích bảo hành hoặc khiếu nại về Sản Phẩm Bên A liên hệ số điện thoại như được công khai tại website https://www.dienmayxanh.com/ hoặc https://www.thegioididong.com/.
-                                    </div>
-                                </div>
-                                <div class="manual-footer">
+                                <div class="print-footer-manual">
                                     <span>Pháp Chế_111124_ĐMX_VN</span>
-                                    <span>Trang 2</span>
+                                    <span>Trang 2/3</span>
                                 </div>
+                                <table style="width: 100%; border: none; border-collapse: collapse; margin: 0; padding: 0;">
+                                    <tbody>
+                                        <tr style="border: none;">
+                                            <td style="border: none; padding: 0;">
+                                                <div class="page-content">
+                                                    <div style="margin-top: 10px; margin-bottom: 10px;">Sau khi bàn bạc, hai bên thống nhất ký kết Hợp Đồng Mua Bán này (“Hợp Đồng”) với các điều khoản sau:</div>
+
+                                                    <div class="bold">ĐIỀU 1: ĐỐI TƯỢNG HỢP ĐỒNG</div>
+                                                    <div style="text-align: justify; margin-bottom: 10px;">
+                                                        1.1 Bên B đồng ý bán và Bên A đồng ý mua sản phẩm của Bên B với chủng loại, tính năng kỹ thuật và giá cả cụ thể như sau (Sau đây gọi tắt là “Sản Phẩm”):
+                                                    </div>
+
+                                                    <table class="prod-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th style="width: 6%;">STT</th>
+                                                                <th style="width: 50%;">Tên Sản Phẩm</th>
+                                                                <th style="width: 10%;">Số Lượng</th>
+                                                                <th style="width: 17%;">Đơn Giá (VND) - Đã bao gồm thuế VAT 8%</th>
+                                                                <th style="width: 17%;">Thành Tiền (VND) - Đã bao gồm 8% VAT</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            ${productRowsHtml}
+                                                            ${discountRowHtml}
+                                                            <tr class="bold" style="background:#f2f2f2;">
+                                                                <td colspan="4" class="text-right">Tổng tiền (bao gồm VAT 8%)</td>
+                                                                <td class="text-right">${UTILS.formatNumber(finalTotal)}</td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+
+                                                    <div class="bold" style="margin-bottom: 10px;">Tổng giá bằng chữ: ${finalWords}</div>
+
+                                                    <div style="text-align: justify; font-size: 10.5pt; margin-bottom: 15px;">
+                                                        1.2 Tổng tiền mà Bên A phải thanh toán cho Bên B theo quy định tại Điều 1.1 (“Giá Sản Phẩm”) là chi phí cố định không thay đổi trong suốt quá trình thực hiện Hợp Đồng và chưa bao gồm phần chi phí vật tư và/hoặc các chi phí khác phát sinh khi lắp đặt (nếu có). Các chi phí phát sinh này được quy định tại website: <b>https://www.dienmayxanh.com/kinh-nghiem-hay/chinh-sach-giao-hang-lap-dat-1261528</b> vào thời điểm lắp đặt.
+                                                    </div>
+
+                                                    <div style="text-align: justify; margin-bottom: 15px;">
+                                                        1.3 Giá Sản Phẩm được Bên A thanh toán cho Bên B theo quy định tại Điều 3 Hợp Đồng này. Chi phí vật tư và/hoặc chi phí khác phát sinh khi lắp đặt sẽ được thanh toán bằng tiền mặt/chuyển khoản ngay khi Bên B lắp đặt cho Bên A hoàn tất.<br><br>
+                                                        1.4 Trường hợp Sản Phẩm cần lắp đặt thì Bên A chịu trách nhiệm chuẩn bị các thiết bị sau và điểm chờ đấu nối cụ thể:<br>
+                                                        a. Điểm lắp đặt cao trên 4m (tính từ sàn) thì Bên A tự chuẩn bị thang phù hợp hoặc dàn giáo.<br>
+                                                        b. Liên quan đến thiết bị cần cấp và thoát nước, Bên A cần phải có ống âm chờ cấp vào máy và ra các thiết bị sẵn tại vị trí lắp máy (Đầu chờ nước cấp, đầu ra nóng, Bộ pha nước ra nóng lạnh, ống thoát nước, v.v.).
+                                                    </div>
+
+                                                    <div class="bold" style="margin-top: 15px;">ĐIỀU 2: THỜI GIAN VÀ ĐIỀU KIỆN GIAO HÀNG</div>
+                                                    <div style="text-align: justify; margin-bottom: 15px;">
+                                                        2.1 Thời gian giao hàng: Bên B thực hiện giao Hàng hóa trong vòng ba (03) ngày kể từ ngày Bên B được Ngân hàng báo có đúng, đầy đủ Giá Sản Phẩm vào tài khoản ngân hàng của Bên B. Trường hợp ngày Ngân hàng báo có rơi vào thứ bảy, chủ nhật hoặc ngày nghỉ Lễ, Tết theo quy định pháp luật thì thời hạn bắt đầu được tính từ ngày làm việc tiếp theo hoặc theo thông báo của Bên B (tùy trường hợp).<br><br>
+                                                        2.2 Địa điểm giao hàng: ${aAddress}
+                                                    </div>
+
+                                                    <div class="bold" style="margin-top: 15px;">ĐIỀU 3: THANH TOÁN</div>
+                                                    <div style="text-align: justify; margin-bottom: 15px;">
+                                                        3.1 Bên A sẽ thanh toán 100% Giá Sản Phẩm cho Bên B bằng cách chuyển khoản vào tài khoản ngân hàng của Bên B sau khi Hợp Đồng được ký kết. Thông tin tài khoản ngân hàng của Bên B:<br>
+                                                        <div style="margin-left: 20px;">
+                                                            - Chủ tài khoản: <b>CÔNG TY CỔ PHẦN ĐẦU TƯ ĐIỆN MÁY XANH</b><br>
+                                                            - Số tài khoản: <b>${bBankAcc}</b><br>
+                                                            - Tại ngân hàng: <b>${bBankName}</b>
+                                                        </div><br>
+                                                        3.2 Xuất hóa đơn:<br>
+                                                        a. Giao hàng khu vực Hồ Chí Minh: Bên B trực tiếp giao hàng và xuất hóa đơn cho Bên A.<br>
+                                                        b. Giao hàng ở tỉnh: Bên B ủy quyền cho Chi nhánh của Bên B tại các tỉnh giao hàng và xuất hóa đơn cho Bên A.
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot style="display: table-footer-group; border:none;">
+                                        <tr style="border:none;">
+                                            <td style="border:none; height: 0.8cm; padding:0;">&nbsp;</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
                             </div>
 
                             <div class="page-break"></div>
 
-                            <!-- TRANG 3 -->
+                            <!-- TRANG 3 CỦA HỢP ĐỒNG -->
                             <div class="page-container">
-                                <div class="page-content">
-                                    <div class="bold">ĐIỀU 5: NGHĨA VỤ CỦA CÁC BÊN</div>
-                                    <div style="text-align: justify; margin-bottom: 15px;">
-                                        5.1 Nghĩa vụ của Bên A:<br>
-                                        a. Cam kết không tiết lộ cho bên thứ ba bất kỳ thông tin nào có liên quan đến việc thực hiện Hợp đồng này.<br>
-                                        b. Thanh toán cho Bên B Giá Sản Phẩm và chi phí vật tư đúng và đầy đủ theo quy định Hợp Đồng này.<br>
-                                        c. Bên A đồng ý với chính sách thu thập thông tin và xử lý dữ liệu của Bên B theo các điều khoản và điều kiện đã được quy định tại website https://www.dienmayxanh.com/ hoặc https://www.thegioididong.com/.
-                                        d. Thực hiện đúng các cam kết được ghi trong Hợp Đồng này.<br><br>
-                                        5.2 Nghĩa vụ của Bên B:<br>
-                                        a. Đảm bảo cung cấp Sản Phẩm mới 100%, đúng với quy cách, giá cả, thời gian giao hàng theo cam kết tại Điều 1 and Điều 2 Hợp Đồng này.<br>
-                                        b. Cam kết không tiết lộ cho bên thứ ba bất kỳ thông tin nào có liên quan đến việc thực hiện Hợp đồng này.<br>
-                                        c. Thực hiện đúng các cam kết được ghi trong Hợp Đồng này.
-                                    </div>
-
-                                    <div class="bold" style="margin-top: 15px;">ĐIỀU 6: THỜI HẠN HỢP ĐỒNG</div>
-                                    <div style="text-align: justify; margin-bottom: 15px;">
-                                        Hợp Đồng này tự động chấm dứt trong trường hợp sau:<br>
-                                        6.1 Bên A không thực hiện nghĩa vụ thanh toán trong vòng 10 (mười) ngày làm việc kể từ Ngày Ký thì xem như Bên A không có nhu cầu mua hàng và Bên B không có nghĩa vụ giữ giá, hàng hóa cho Bên A. Khi đó, Hợp Đồng tự động chấm dứt. Trường hợp Bên A tiếp tục mua hàng thì Hai Bên phải ký lại Hợp Đồng mới; hoặc<br>
-                                        6.2 Bên A đã thực hiện nghĩa vụ thanh toán: Hợp đồng này tự động chấm dứt sau khi Hai Bên hoàn thành các nghĩa vụ quy định tại Hợp Đồng. Riêng các điều khoản về bảo hành vẫn có hiệu lực cho đến khi hết thời hạn bảo hành theo quy định của nhà sản xuất hoặc nhà phân phối.
-                                    </div>
-
-                                    <div class="bold" style="margin-top: 15px;">ĐIỀU 7: CAM KẾT CHỐNG THAM NHŨNG</div>
-                                    <div style="text-align: justify; margin-bottom: 15px;">
-                                        7.1 Các bên cam kết tuân thủ luật pháp chống tham nhũng, không tham gia bất kỳ hành vi hối lộ, gian lận, tặng quà hoặc gợi ý tặng quà dưới bất kỳ hình thức nào cho nhân viên của bên kia nhằm đạt được lợi ích quá trình thực hiện hợp đồng. Nếu phát hiện vi phạm, bên bị vi phạm có quyền chấm dứt hợp đồng ngay lập tức, và bên vi phạm phải bồi thường mọi thiệt hại phát sinh.<br>
-                                        7.2 Bên Mua chỉ thanh toán số tiền đã được các bên thống nhất trong hợp đồng hoặc các văn bản thanh toán liên quan. Bên Mua chỉ thanh toán vào tài khoản của Bên Bán như trên và không được thanh toán vào bất kỳ tài khoản cá nhân/tổ chức nào khác.
-                                    </div>
-
-                                    <div class="bold" style="margin-top: 15px;">ĐIỀU 8: CAM KẾT CHUNG</div>
-                                    <div style="text-align: justify; margin-bottom: 30px;">
-                                        8.1 Hai Bên cam kết thực hiện đúng những điều ghi trên Hợp Đồng này. Mọi sự thay đổi trong Hợp Đồng này phải lập phụ lục hợp đồng và phải có chữ ký xác nhận của cả Hai Bên. Nếu một trong Hai Bên cố ý vi phạm các điều khoản của Hợp Đồng này sẽ phải chịu trách nhiệm về các hành vi vi phạm đó.<br>
-                                        8.2 Trong trường hợp xảy ra tranh chấp, hai bên cố gắng cùng nhau bàn bạc các biện pháp giải quyết trên tinh thần hòa giải, có thiện chí và hợp tác. Nếu vẫn không thể thống nhất cách giải quyết thì hai bên sẽ đưa vụ việc ra Tòa án có thẩm quyền giải quyết, toàn bộ chi phí xét xử do bên thua chịu.<br>
-                                        8.3 Hợp đồng này được lập thành 02 (hai) bản, mỗi bên giữ 01 (một) bản có giá trị pháp lý như nhau.
-                                    </div>
-
-                                    <div class="avoid-break">
-                                        <table style="width:100%; border:none; margin-top:40px;">
-                                            <tr style="border:none;">
-                                                <td style="width: 50%; text-align: center; font-weight: bold; border:none; padding: 0;">
-                                                    Đại Diện Bên A<br><br><br><br><br><br>
-                                                    <div style="font-weight: normal; text-align: left; padding-left: 20px;">
-                                                        <b>Bởi:</b> ${aName}<br>
-                                                        <b>${aHonor} :</b> ${aRep}<br>
-                                                        <b>Chức vụ:</b> ${aRole}
-                                                    </div>
-                                                </td>
-                                                <td style="width: 50%; text-align: center; font-weight: bold; border:none; padding: 0;">
-                                                    Đại Diện Bên B<br><br><br><br><br><br>
-                                                    <div style="font-weight: normal; text-align: left; padding-left: 20px;">
-                                                        <b>Bởi:</b> ${bName}<br>
-                                                        <b>${bHonorHd} :</b> ${bRepHd}<br>
-                                                        <b>Chức vụ:</b> ${bRoleHd.toUpperCase()}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </div>
-                                </div>
-                                <div class="manual-footer">
+                                <div class="print-footer-manual">
                                     <span>Pháp Chế_111124_ĐMX_VN</span>
-                                    <span>Trang 3</span>
+                                    <span>Trang 3/3</span>
                                 </div>
+                                <table style="width: 100%; border: none; border-collapse: collapse; margin: 0; padding: 0;">
+                                    <tbody>
+                                        <tr style="border: none;">
+                                            <td style="border: none; padding: 0;">
+                                                <div class="page-content">
+                                                    <div class="bold" style="margin-top: 15px;">ĐIỀU 4: CHÍNH SÁCH BẢO HÀNH, ĐỔI, TRẢ SẢN PHẨM VÀ HOÀN TIỀN</div>
+                                                    <div style="text-align: justify; font-size: 10.5pt; margin-bottom: 15px;">
+                                                        4.1 Sản Phẩm do Bên B cung cấp sẽ được bảo hành theo tiêu chuẩn của nhà sản xuất hoặc nhà phân phối. Sản phẩm sẽ được kích hoạt bảo hành ngay tại thời điểm Bên B xuất hóa đơn VAT cho Bên A.<br>
+                                                        4.2 chính sách bảo hành của nhà sản xuất hoặc nhà phân phối được đính kèm theo sản phẩm hoặc có thể tham khảo tại website của nhà sản xuất hoặc nhà phân phối.<br>
+                                                        4.3 Nếu sản phẩm có áp dụng chính sách đổi trả hoặc hoàn tiền của Bên B vui lòng xem chính sách tại website https://www.dienmayxanh.com/bao-hanh-doi-tra (hoặc https://www.thegioididong.com/chinh-sach-bao-hanh-san-pham áp dụng tùy từng loại sản phẩm). Bên B bảo lưu quyền thay đổi các chính sách này tại từng thời điểm và không cần sự chấp thuận của Bên A.<br>
+                                                        4.4 Cho mục đích bảo hành hoặc khiếu nại về Sản Phẩm Bên A liên hệ số điện thoại như được công khai tại website https://www.dienmayxanh.com/ hoặc https://www.thegioididong.com/.
+                                                    </div>
+
+                                                    <div class="bold" style="margin-top: 15px;">ĐIỀU 5: NGHĨA VỤ CỦA CÁC BÊN</div>
+                                                    <div style="text-align: justify; margin-bottom: 15px;">
+                                                        5.1 Nghĩa vụ của Bên A:<br>
+                                                        a. Cam kết không tiết lộ cho bên thứ ba bất kỳ thông tin nào có liên quan đến việc thực hiện Hợp đồng này.<br>
+                                                        b. Thanh toán cho Bên B Giá Sản Phẩm và chi phí vật tư đúng và đầy đủ theo quy định Hợp Đồng này.<br>
+                                                        c. Bên A đồng ý với chính sách thu thập thông tin và xử lý dữ liệu của Bên B theo các điều khoản và điều kiện đã được quy định tại website https://www.dienmayxanh.com/ hoặc https://www.thegioididong.com/.
+                                                        d. Thực hiện đúng các cam kết được ghi trong Hợp Đồng này.<br><br>
+                                                        5.2 Nghĩa vụ của Bên B:<br>
+                                                        a. Đảm bảo cung cấp Sản Phẩm mới 100%, đúng với quy cách, giá cả, thời gian giao hàng theo cam kết tại Điều 1 and Điều 2 Hợp Đồng này.<br>
+                                                        b. Cam kết không tiết lộ cho bên thứ ba bất kỳ thông tin nào có liên quan đến việc thực hiện Hợp đồng này.<br>
+                                                        c. Thực hiện đúng các cam kết được ghi trong Hợp Đồng này.
+                                                    </div>
+
+                                                    <div class="bold" style="margin-top: 15px;">ĐIỀU 6: THỜI HẠN HỢP ĐỒNG</div>
+                                                    <div style="text-align: justify; margin-bottom: 15px;">
+                                                        Hợp Đồng này tự động chấm dứt trong trường hợp sau:<br>
+                                                        6.1 Bên A không thực hiện nghĩa vụ thanh toán trong vòng 10 (mười) ngày làm việc kể từ Ngày Ký thì xem như Bên A không có nhu cầu mua hàng và Bên B không có nghĩa vụ giữ giá, hàng hóa cho Bên A. Khi đó, Hợp Đồng tự động chấm dứt. Trường hợp Bên A tiếp tục mua hàng thì Hai Bên phải ký lại Hợp Đồng mới; hoặc<br>
+                                                        6.2 Bên A đã thực hiện nghĩa vụ thanh toán: Hợp đồng này tự động chấm dứt sau khi Hai Bên hoàn thành các nghĩa vụ quy định tại Hợp Đồng. Riêng các điều khoản về bảo hành vẫn có hiệu lực cho đến khi hết thời hạn bảo hành theo quy định của nhà sản xuất hoặc nhà phân phối.
+                                                    </div>
+
+                                                    <div class="bold" style="margin-top: 15px;">ĐIỀU 7: CAM KẾT CHỐNG THAM NHŨNG</div>
+                                                    <div style="text-align: justify; margin-bottom: 15px;">
+                                                        7.1 Các bên cam kết tuân thủ luật pháp chống tham nhũng, không tham gia bất kỳ hành vi hối lộ, gian lận, tặng quà hoặc gợi ý tặng quà dưới bất kỳ hình thức nào cho nhân viên của bên kia nhằm đạt được lợi ích quá trình thực hiện hợp đồng. Nếu phát hiện vi phạm, bên bị vi phạm có quyền chấm dứt hợp đồng ngay lập tức, và bên vi phạm phải bồi thường mọi thiệt hại phát sinh.<br>
+                                                        7.2 Bên Mua chỉ thanh toán số tiền đã được các bên thống nhất trong hợp đồng hoặc các văn bản thanh toán liên quan. Bên Mua chỉ thanh toán vào tài khoản của Bên Bán như trên và không được thanh toán vào bất kỳ tài khoản cá nhân/tổ chức nào khác.
+                                                    </div>
+
+                                                    <div class="bold" style="margin-top: 15px;">ĐIỀU 8: CAM KẾT CHUNG</div>
+                                                    <div style="text-align: justify; margin-bottom: 30px;">
+                                                        8.1 Hai Bên cam kết thực hiện đúng những điều ghi trên Hợp Đồng này. Mọi sự thay đổi trong Hợp Đồng này phải lập phụ lục hợp đồng và phải có chữ ký xác nhận của cả Hai Bên. Nếu một trong Hai Bên cố ý vi phạm các điều khoản của Hợp Đồng này sẽ phải chịu trách nhiệm về các hành vi vi phạm đó.<br>
+                                                        8.2 Trong trường hợp xảy ra tranh chấp, hai bên cố gắng cùng nhau bàn bạc các biện pháp giải quyết trên tinh thần hòa giải, có thiện chí và hợp tác. Nếu vẫn không thể thống nhất cách giải quyết thì hai bên sẽ đưa vụ việc ra Tòa án có thẩm quyền giải quyết, toàn bộ chi phí xét xử do bên thua chịu.<br>
+                                                        8.3 Hợp đồng này được lập thành 02 (hai) bản, mỗi bên giữ 01 (một) bản có giá trị pháp lý như nhau.
+                                                    </div>
+
+                                                    <div class="avoid-break">
+                                                        <table style="width:100%; border:none; margin-top:40px;">
+                                                            <tr style="border:none;">
+                                                                <td style="width: 50%; text-align: center; font-weight: bold; border:none; padding: 0;">
+                                                                    Đại Diện Bên A<br><br><br><br><br><br>
+                                                                    <div style="font-weight: normal; text-align: left; padding-left: 20px;">
+                                                                        <b>Bởi:</b> ${aName}<br>
+                                                                        <b>${aHonor} :</b> ${aRep}<br>
+                                                                        <b>Chức vụ:</b> ${aRole}
+                                                                    </div>
+                                                                </td>
+                                                                <td style="width: 50%; text-align: center; font-weight: bold; border:none; padding: 0;">
+                                                                    Đại Diện Bên B<br><br><br><br><br><br>
+                                                                    <div style="font-weight: normal; text-align: left; padding-left: 20px;">
+                                                                        <b>Bởi:</b> ${bName}<br>
+                                                                        <b>${bHonorHd} :</b> ${bRepHd}<br>
+                                                                        <b>Chức vụ:</b> ${bRoleHd.toUpperCase()}
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                    <!-- THẺ TFOOT BẮT BUỘC ÉP CHROME PHẢI TẠO NỔI KHOẢNG TRỐNG 0.8CM TRÊN MỌI TRANG IN -->
+                                    <tfoot style="display: table-footer-group; border:none;">
+                                        <tr style="border:none;">
+                                            <td style="border:none; height: 0.8cm; padding:0;">&nbsp;</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
                             </div>
                         `;
                     }
 
-                    // ==================== TRANG IN CHẾ ĐỘ: BIÊN BẢN NGHIỆM THU & THANH LÝ ====================
+                    // ==================== TRANG 2: BIÊN BẢN NGHIỆM THU & THANH LÝ ====================
                     if (docType === 'liquidation') {
                         let handoverProductsHtml = products.map(p => `
                             <tr>
@@ -1560,158 +1616,165 @@
                         `).join('');
 
                         printHtml += `
-                            <!-- TRANG 1: BIÊN BẢN NGHIỆM THU, GIAO NHẬN HÀNG HÓA -->
-                            <div class="page-container" style="font-family: 'Times New Roman', serif;">
-                                <div class="page-content">
-                                    <div>
-                                        <div style="text-align: center; font-size: 14pt; font-weight: bold;">
-                                            BIÊN BẢN NGHIỆM THU, GIAO NHẬN HÀNG HÓA
-                                        </div>
-                                        <div class="text-center red-text" style="font-weight: bold; font-size: 11pt; margin-top: 4px;">
-                                            Số: ${conNo.replace('/HĐMB', '')}-/BBNT
-                                        </div>
-                                        <div class="text-center red-text italic" style="font-size: 11.5pt; margin-top: 5px;">
-                                            Căn cứ Hợp đồng số ${conNo}
-                                        </div>
-                                        <div style="margin-left: 15px; font-size: 11.5pt; margin-top: 10px;">
-                                            - Căn cứ việc giao nhận hàng hóa, sản phẩm hoàn thành.
-                                        </div>
-                                        <div class="red-text italic" style="margin-left: 15px; font-weight: bold; margin-top: 5px;">
-                                            Hôm nay, ${formatVietnameseDate(dateTl)}
-                                        </div>
-
-                                        <div style="margin-top: 15px;">
-                                            <span class="bold red-text">Bên A :</span> <span class="bold">${aName}</span><br>
-                                            <div style="margin-left: 20px; line-height: 1.5;">
-                                                <span class="red-text">- Địa chỉ :</span> ${aAddress}<br>
-                                                <span class="red-text">- Đại diện là:</span> <span class="bold">${aRep}</span><br>
-                                                <span class="red-text">- Chức vụ:</span> Giám đốc
-                                            </div>
-                                        </div>
-
-                                        <div style="margin-top: 15px;">
-                                            <span class="bold">Bên B :</span> <span class="bold">${bName}</span><br>
-                                            <div style="margin-left: 20px; line-height: 1.5;">
-                                                <span class="red-text">- Địa chỉ :</span> <span class="red-text">${bStore.split(' - ')[1] || bAddress}</span><br>
-                                                <span class="red-text">- Đại diện là:</span> <span class="bold red-text">${bHonorTl}: ${bRepTl}</span><br>
-                                                <span class="red-text">- Chức vụ:</span> ${bRoleTl}
-                                            </div>
-                                        </div>
-
-                                        <div style="margin-top: 15px; margin-bottom: 10px;">
-                                            Tiến hành bàn giao hàng hóa, sản phẩm/Dịch vụ như sau: Bên B giao cho bên A:
-                                        </div>
-
-                                        <table class="prod-table">
-                                            <thead>
-                                                <tr class="red-text">
-                                                    <th style="width: 10%; color: red;">STT</th>
-                                                    <th style="width: 70%; color: red; text-align: left;">Mô tả hàng hóa</th>
-                                                    <th style="width: 20%; color: red;">Số lượng</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                ${handoverProductsHtml}
-                                            </tbody>
-                                        </table>
-
-                                        <div style="text-align: justify; margin-top: 20px; line-height: 1.4;">
-                                            Hai bên xác nhận số hàng hóa, sản phẩm trên đã được giao nhận đầy đủ và đúng theo yêu cầu và sẽ lập biên bản thanh lý hợp đồng này sau khi biên bản giao nhận được lập.<br><br>
-                                            Biên bản được làm thành 2 bản, có giá trị như nhau. Mỗi bên giữ 1 bản.
-                                        </div>
-
-                                        <div class="avoid-break">
-                                            <table style="width:100%; border:none; margin-top:40px;">
-                                                <tr style="border:none;">
-                                                    <td style="width: 50%; text-align: center; font-weight: bold; border:none; padding: 0;">ĐẠI DIỆN BÊN A</td>
-                                                    <td style="width: 50%; text-align: center; font-weight: bold; border:none; padding: 0;">ĐẠI DIỆN BÊN B</td>
-                                                </tr>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="manual-footer" style="font-family: 'Times New Roman', serif;">
-                                    <span style="font-weight: bold; color: #111;">dienmayxanh</span>
-                                    <span>Trang 1</span>
-                                </div>
+                            <!-- THẺ FOOTER ĐẶT ĐẦU BODY ĐỂ CỐ ĐỊNH CHUẨN XÁC TẤT CẢ TRANG -->
+                            <div class="print-footer" style="font-family: 'Times New Roman', serif;">
+                                <span style="font-weight: bold; color: #111;">dienmayxanh</span>
+                                <span class="page-num"></span>
                             </div>
 
-                            <div class="page-break"></div>
-
-                            <!-- TRANG 2: BIÊN BẢN THANH LÝ HỢP ĐỒNG -->
                             <div class="page-container" style="font-family: 'Times New Roman', serif;">
-                                <div class="page-content">
-                                    <div style="text-align: center; font-size: 14pt; font-weight: bold; text-transform: uppercase;">
-                                        BIÊN BẢN THANH LÝ HỢP ĐỒNG
-                                    </div>
-                                    <div class="text-center" style="font-weight: bold; font-size: 11pt; margin-top: 4px;">
-                                        Số: ${conNo.replace('HĐMB', 'BBTL')}
-                                    </div>
+                                <table style="width: 100%; border: none; border-collapse: collapse; margin: 0; padding: 0;">
+                                    <tbody>
+                                        <tr style="border: none;">
+                                            <td style="border: none; padding: 0;">
+                                                <div class="page-content">
+                                                    <div>
+                                                        <div style="text-align: center; font-size: 14pt; font-weight: bold;">
+                                                            BIÊN BẢN NGHIỆM THU, GIAO NHẬN HÀNG HÓA
+                                                        </div>
+                                                        <div class="text-center red-text" style="font-weight: bold; font-size: 11pt; margin-top: 4px;">
+                                                            Số: ${conNo.replace('/HĐMB', '')}-/BBNT
+                                                        </div>
+                                                        <div class="text-center red-text italic" style="font-size: 11.5pt; margin-top: 5px;">
+                                                            Căn cứ Hợp đồng số ${conNo}
+                                                        </div>
+                                                        <div style="margin-left: 15px; font-size: 11.5pt; margin-top: 10px;">
+                                                            - Căn cứ việc giao nhận hàng hóa, sản phẩm hoàn thành.
+                                                        </div>
+                                                        <div class="red-text italic" style="margin-left: 15px; font-weight: bold; margin-top: 5px;">
+                                                            Hôm nay, ${formatVietnameseDate(dateTl)}
+                                                        </div>
 
-                                    <div style="margin-left: 15px; margin-top: 20px; line-height: 1.5;">
-                                        <span class="red-text">- Căn cứ Hợp đồng số ${conNo}</span><br>
-                                        <span>- Căn cứ Biên bản giao nhận hàng hóa, sản phẩm/dịch vụ ngày:</span><br>
-                                        <span class="red-text">- Hôm nay ngày ${formatVietnameseDateCapital(dateTl)}.</span>
-                                    </div>
+                                                        <div style="margin-top: 15px;">
+                                                            <span class="bold red-text">Bên A :</span> <span class="bold">${aName}</span><br>
+                                                            <div style="margin-left: 20px; line-height: 1.5;">
+                                                                <span class="red-text">- Địa chỉ :</span> ${aAddress}<br>
+                                                                <span class="red-text">- Đại diện là:</span> <span class="bold">${aRep}</span><br>
+                                                                <span class="red-text">- Chức vụ:</span> Giám đốc
+                                                            </div>
+                                                        </div>
 
-                                    <div style="margin-top: 20px; margin-bottom: 20px;">
-                                        <div class="bold" style="text-decoration: underline; margin-bottom: 5px;">BÊN MUA (BÊN A): ${aName}</div>
-                                        <table style="width: 100%; border:none;">
-                                            <tr style="border:none;"><td style="width:25%; border:none; padding:2px 0;"><b>Trụ sở đăng ký</b></td><td style="width:2%; border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;">${aAddress}</td></tr>
-                                            <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Mã số thuế</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;">${aTax}</td></tr>
-                                            <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Đại diện bởi</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;"><b>${aRep}</b></td></tr>
-                                            <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Chức vụ</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;">Giám đốc</td></tr>
-                                        </table>
-                                    </div>
+                                                        <div style="margin-top: 15px;">
+                                                            <span class="bold">Bên B :</span> <span class="bold">${bName}</span><br>
+                                                            <div style="margin-left: 20px; line-height: 1.5;">
+                                                                <span class="red-text">- Địa chỉ :</span> <span class="red-text">${bStore.split(' - ')[1] || bAddress}</span><br>
+                                                                <span class="red-text">- Đại diện là:</span> <span class="bold red-text">${bHonorTl}: ${bRepTl}</span><br>
+                                                                <span class="red-text">- Chức vụ:</span> ${bRoleTl}
+                                                            </div>
+                                                        </div>
 
-                                    <div style="margin-top: 15px; margin-bottom: 25px;">
-                                        <div class="bold" style="text-decoration: underline; margin-bottom: 5px;">BÊN BÁN (BÊN B): ${bName}</div>
-                                        <table style="width: 100%; border:none;">
-                                            <tr style="border:none;"><td style="width:25%; border:none; padding:2px 0; color:red;"><b>Trụ sở đăng ký</b></td><td style="width:2%; border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0; color:red;"><b>${bAddress}</b></td></tr>
-                                            <tr style="border:none;"><td style="border:none; padding:2px 0; color:red;"><b>Siêu thị bán hàng</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0; color:red;"><b>${bStore}</b></td></tr>
-                                            <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Mã số thuế</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;"><span style="color:red; font-weight:bold;">${bTax}</span></td></tr>
-                                            <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Đại diện bởi</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0; color:red;"><b>${bHonorTl}: ${bRepTl}</b></td></tr>
-                                            <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Chức vụ</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0; color:red;"><b>Giám Đốc Vùng</b></td></tr>
-                                        </table>
-                                    </div>
+                                                        <div style="margin-top: 15px; margin-bottom: 10px;">
+                                                            Tiến hành bàn giao hàng hóa, sản phẩm/Dịch vụ như sau: Bên B giao cho bên A:
+                                                        </div>
 
-                                    <div style="margin-bottom: 15px;">Hai bên thống nhất thỏa thuận nội dung thanh lý hợp đồng như sau:</div>
+                                                        <table class="prod-table">
+                                                            <thead>
+                                                                <tr class="red-text">
+                                                                    <th style="width: 10%; color: red;">STT</th>
+                                                                    <th style="width: 70%; color: red; text-align: left;">Mô tả hàng hóa</th>
+                                                                    <th style="width: 20%; color: red;">Số lượng</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                ${handoverProductsHtml}
+                                                            </tbody>
+                                                        </table>
 
-                                    <div class="bold">Điều 1: Nội dung giao dịch</div>
-                                    <div style="margin-left: 20px; margin-bottom: 15px; line-height: 1.5;">
-                                        1.1 Bên A đã nhận đủ số lượng hàng hóa, sản phẩm/dịch vụ theo hợp đồng đã ký<br>
-                                        1.2 Chất lượng và Quy cách hàng hóa, sản phẩm : đảm bảo đạt yêu cầu<br>
-                                        1.3 Bên A đã nhận hóa đơn do bên B xuất theo quy định
-                                    </div>
+                                                        <div style="text-align: justify; margin-top: 20px; line-height: 1.4;">
+                                                            Hai bên xác nhận số hàng hóa, sản phẩm trên đã được giao nhận đầy đủ và đúng theo yêu cầu và sẽ lập biên bản thanh lý hợp đồng này sau khi biên bản giao nhận được lập.<br><br>
+                                                            Biên bản được làm thành 2 bản, có giá trị như nhau. Mỗi bên giữ 1 bản.
+                                                        </div>
 
-                                    <div class="bold">Điều 2: Giá trị thanh lý :</div>
-                                    <div style="margin-left: 20px; margin-bottom: 25px; line-height: 1.5;">
-                                        <span class="red-text">2.1 Tổng giá trị thanh lý : ${UTILS.formatNumber(finalTotal)} đồng (${finalWords}).</span><br>
-                                        <span class="red-text">2.2 Thời gian thanh toán : Trước khi bên B giao hàng</span>
-                                    </div>
+                                                        <div class="avoid-break">
+                                                            <table style="width:100%; border:none; margin-top:40px;">
+                                                                <tr style="border:none;">
+                                                                    <td style="width: 50%; text-align: center; font-weight: bold; border:none; padding: 0;">ĐẠI DIỆN BÊN A</td>
+                                                                    <td style="width: 50%; text-align: center; font-weight: bold; border:none; padding: 0;">ĐẠI DIỆN BÊN B</td>
+                                                                </tr>
+                                                            </table>
+                                                        </div>
+                                                    </div>
 
-                                    <div style="margin-bottom: 30px;">
-                                        Thanh lý hợp đồng này được làm thành 2 bản, có giá trị như nhau. Mỗi bên giữ 1 bản.
-                                    </div>
+                                                    <div class="page-break"></div>
 
-                                    <div class="avoid-break">
-                                        <table style="width:100%; border:none; margin-top:40px;">
-                                            <tr style="border:none;">
-                                                <td style="width: 50%; text-align: center; font-weight: bold; border:none; padding: 0;">ĐẠI DIỆN BÊN A</td>
-                                                <td style="width: 50%; text-align: center; font-weight: bold; border:none; padding: 0;">ĐẠI DIỆN BÊN B</td>
-                                            </tr>
-                                        </table>
-                                    </div>
-                                </div>
-                                <div class="manual-footer" style="font-family: 'Times New Roman', serif;">
-                                    <span style="font-weight: bold; color: #111;">dienmayxanh</span>
-                                    <span>Trang 2</span>
-                                </div>
+                                                    <div>
+                                                        <div style="text-align: center; font-size: 14pt; font-weight: bold; text-transform: uppercase;">
+                                                            BIÊN BẢN THANH LÝ HỢP ĐỒNG
+                                                        </div>
+                                                        <div class="text-center" style="font-weight: bold; font-size: 11pt; margin-top: 4px;">
+                                                            Số: ${conNo.replace('HĐMB', 'BBTL')}
+                                                        </div>
+
+                                                        <div style="margin-left: 15px; margin-top: 20px; line-height: 1.5;">
+                                                            <span class="red-text">- Căn cứ Hợp đồng số ${conNo}</span><br>
+                                                            <span>- Căn cứ Biên bản giao nhận hàng hóa, sản phẩm/dịch vụ ngày:</span><br>
+                                                            <span class="red-text">- Hôm nay ngày ${formatVietnameseDateCapital(dateTl)}.</span>
+                                                        </div>
+
+                                                        <div style="margin-top: 20px; margin-bottom: 20px;">
+                                                            <div class="bold" style="text-decoration: underline; margin-bottom: 5px;">BÊN MUA (BÊN A): ${aName}</div>
+                                                            <table style="width: 100%; border:none;">
+                                                                <tr style="border:none;"><td style="width:25%; border:none; padding:2px 0;"><b>Trụ sở đăng ký</b></td><td style="width:2%; border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;">${aAddress}</td></tr>
+                                                                <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Mã số thuế</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;">${aTax}</td></tr>
+                                                                <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Đại diện bởi</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;"><b>${aRep}</b></td></tr>
+                                                                <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Chức vụ</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;">Giám đốc</td></tr>
+                                                            </table>
+                                                        </div>
+
+                                                        <div style="margin-top: 15px; margin-bottom: 25px;">
+                                                            <div class="bold" style="text-decoration: underline; margin-bottom: 5px;">BÊN BÁN (BÊN B): ${bName}</div>
+                                                            <table style="width: 100%; border:none;">
+                                                                <tr style="border:none;"><td style="width:25%; border:none; padding:2px 0; color:red;"><b>Trụ sở đăng ký</b></td><td style="width:2%; border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0; color:red;"><b>${bAddress}</b></td></tr>
+                                                                <tr style="border:none;"><td style="border:none; padding:2px 0; color:red;"><b>Siêu thị bán hàng</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0; color:red;"><b>${bStore}</b></td></tr>
+                                                                <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Mã số thuế</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;"><span style="color:red; font-weight:bold;">${bTax}</span></td></tr>
+                                                                <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Đại diện bởi</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0; color:red;"><b>${bHonorTl}: ${bRepTl}</b></td></tr>
+                                                                <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Chức vụ</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0; color:red;"><b>Giám Đốc Vùng</b></td></tr>
+                                                            </table>
+                                                        </div>
+
+                                                        <div style="margin-bottom: 15px;">Hai bên thống nhất thỏa thuận nội dung thanh lý hợp đồng như sau:</div>
+
+                                                        <div class="bold">Điều 1: Nội dung giao dịch</div>
+                                                        <div style="margin-left: 20px; margin-bottom: 15px; line-height: 1.5;">
+                                                            1.1 Bên A đã nhận đủ số lượng hàng hóa, sản phẩm/dịch vụ theo hợp đồng đã ký<br>
+                                                            1.2 Chất lượng và Quy cách hàng hóa, sản phẩm : đảm bảo đạt yêu cầu<br>
+                                                            1.3 Bên A đã nhận hóa đơn do bên B xuất theo quy định
+                                                        </div>
+
+                                                        <div class="bold">Điều 2: Giá trị thanh lý :</div>
+                                                        <div style="margin-left: 20px; margin-bottom: 25px; line-height: 1.5;">
+                                                            <span class="red-text">2.1 Tổng giá trị thanh lý : ${UTILS.formatNumber(finalTotal)} đồng (${finalWords}).</span><br>
+                                                            <span class="red-text">2.2 Thời gian thanh toán : Trước khi bên B giao hàng</span>
+                                                        </div>
+
+                                                        <div style="margin-bottom: 30px;">
+                                                            Thanh lý hợp đồng này được làm thành 2 bản, có giá trị như nhau. Mỗi bên giữ 1 bản.
+                                                        </div>
+
+                                                        <div class="avoid-break">
+                                                            <table style="width:100%; border:none; margin-top:40px;">
+                                                                <tr style="border:none;">
+                                                                    <td style="width: 50%; text-align: center; font-weight: bold; border:none; padding: 0;">ĐẠI DIỆN BÊN A</td>
+                                                                    <td style="width: 50%; text-align: center; font-weight: bold; border:none; padding: 0;">ĐẠI DIỆN BÊN B</td>
+                                                                </tr>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot style="display: table-footer-group; border:none;">
+                                        <tr style="border:none;">
+                                            <td style="border:none; height: 0.8cm; padding:0;">&nbsp;</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
                             </div>
                         `;
                     }
 
-                    // ==================== TRANG IN CHẾ ĐỘ: BẢNG BÁO GIÁ ====================
+                    // ==================== TRANG 3: BẢNG BÁO GIÁ ====================
                     if (docType === 'quotation') {
                         const qClientName = app.querySelector('#con-q-client-name').value.trim();
                         const qClientPhone = app.querySelector('#con-q-client-phone').value.trim();
@@ -1827,10 +1890,6 @@
                                         <div style="font-weight: bold; font-style: italic; margin-top: 10px; font-size: 10pt;">Cảm ơn Quý khách hàng!</div>
                                     </div>
                                 </div>
-                                <div class="manual-footer" style="font-family: 'Times New Roman', Times, serif;">
-                                    <span style="font-weight: bold;">Điện máy Xanh</span>
-                                    <span>Trang 1</span>
-                                </div>
                             </div>
                         `;
                     }
@@ -1858,7 +1917,7 @@
     };
 
     return {
-        name: "Tạo Hợp Đồng v1",
+        name: "Tạo Hợp Đồng v2",
         icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 15H7v-2h10v2zm0-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>`,
         bgColor: "#6c5ce7",
         action: runTool
