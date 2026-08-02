@@ -329,7 +329,7 @@
                                 <input type="text" id="con-date-tl" value="14/04/2026" placeholder="dd/mm/yyyy">
                             </div>
                             
-                            <!-- Ô NHẬP "Điều chỉnh Footer" ĐIỀU KHIỂN VỊ TRÍ FOOTER CÁCH ĐÁY GIẤY A4 -->
+                            <!-- BỘ ĐIỀU CHỈNH FOOTER CÁCH ĐÁY GIẤY A4 -->
                             <div class="con-col con-group" style="min-width: 160px;">
                                 <label>📐 Điều chỉnh Footer (cm)</label>
                                 <input type="number" id="con-footer-pos" value="1.0" step="0.1" min="0.2" max="5.0" style="text-align: center;">
@@ -1124,7 +1124,10 @@
                             @page {
                                 size: A4;
                                 margin-top: 1.5cm; /* CỐ ĐỊNH LỀ TRÊN NỘI DUNG CHUẨN 1.5CM */
-                                margin-bottom: ${footerPos}cm; /* ĐỊNH NGHĨA LỀ ĐÁY VĂN BẢN CHUẨN XÁC THEO FOOTER POS */
+                                
+                                /* TẠO MÀNG BẢO VỆ CHỐNG ĐÈ 0.8CM (~30PX) PHÍA TRÊN FOOTER */
+                                margin-bottom: ${footerPos + 0.8}cm; 
+                                
                                 margin-left: 2cm;
                                 margin-right: 1.5cm;
                             }
@@ -1158,27 +1161,14 @@
                                     margin-bottom: 0 !important;
                                 }
 
-                                /* BẢNG LAYOUT BỌC BẢO VỆ CHỐNG ĐÈ VĂN BẢN LÊN FOOTER */
-                                .print-layout-table {
-                                    width: 100% !important;
-                                    border-collapse: collapse !important;
-                                    border: none !important;
-                                    margin: 0 !important;
-                                    padding: 0 !important;
-                                }
-                                .print-layout-table td {
-                                    border: none !important;
-                                    padding: 0 !important;
-                                }
-                                .print-layout-footer {
-                                    display: table-footer-group !important;
-                                }
-
-                                /* FOOTER TẠO BỞI TFOOT - ĐẾM ĐÚNG SỐ TRANG LIVE TỪNG TRANG (1, 2, 3...) */
-                                .footer-content {
-                                    display: flex !important;
-                                    justify-content: space-between !important;
-                                    align-items: center !important;
+                                /* ========================================================================= */
+                                /* FOOTER CỐ ĐỊNH TẠI VỊ TRÍ 28.7CM TỪ ĐỈNH GIẤY (ĐÚNG 1.0CM CÁCH ĐÁY GIẤY A4)   */
+                                /* ========================================================================= */
+                                .print-footer {
+                                    position: fixed !important;
+                                    top: calc(29.7cm - ${footerPos}cm) !important;
+                                    left: 0 !important;
+                                    right: 0 !important;
                                     width: 100% !important;
                                     height: 22px !important;
                                     line-height: 22px !important;
@@ -1187,13 +1177,14 @@
                                     font-size: 9.5pt !important;
                                     font-weight: bold !important;
                                     background: #ffffff !important;
+                                    display: flex !important;
+                                    justify-content: space-between !important;
+                                    align-items: center !important;
                                     box-sizing: border-box !important;
                                     overflow: hidden !important;
-                                }
-
-                                /* CHÍNH XÁC SỐ TRANG TỰ ĐỘNG CỦA CHROME (1, 2, 3...) */
-                                .footer-content .page-num::after {
-                                    content: counter(page) !important;
+                                    page-break-inside: avoid !important;
+                                    break-inside: avoid !important;
+                                    z-index: 99999 !important;
                                 }
 
                                 .info-table td, .prod-table th, .prod-table td {
@@ -1300,12 +1291,17 @@
                         }
 
                         printHtml += `
+                            <!-- THẺ FOOTER TRANG 1 VỚI SỐ TRANG THỦ CÔNG CỐ ĐỊNH = 1 -->
+                            <div class="print-footer">
+                                <span>Pháp Chế_111124_ĐMX_VN</span>
+                                <span>1</span>
+                            </div>
+
                             <div class="page-container">
-                                <!-- BỌC BẢNG LAYOUT BẮT BUỘC ĐỂ ÉP CHROME TẠO TFOOTER ĐẾM SỐ TRANG LIVE (1, 2, 3...) VÀ TẠO KHOẢNG ĐỆM CHỐNG ĐÈ -->
-                                <table class="print-layout-table">
+                                <table style="width: 100%; border: none; border-collapse: collapse; margin: 0; padding: 0;">
                                     <tbody>
-                                        <tr>
-                                            <td>
+                                        <tr style="border: none;">
+                                            <td style="border: none; padding: 0;">
                                                 <div class="page-content">
                                                     <div style="text-align: center; font-weight: bold; font-size: 16pt; text-transform: uppercase; margin-bottom: 3px; letter-spacing: 0.5px;">
                                                         HỢP ĐỒNG MUA BÁN
@@ -1522,15 +1518,10 @@
                                             </td>
                                         </tr>
                                     </tbody>
-                                    <!-- THẺ TFOOTER NÀY SẼ ÉP CHROME ĐẾM ĐÚNG SỐ TRANG LIVE (1, 2, 3...) VÀ TẠO KHOẢNG ĐỆM CHỐNG ĐÈ 100% -->
-                                    <tfoot class="print-layout-footer">
-                                        <tr>
-                                            <td>
-                                                <div class="footer-content">
-                                                    <span>Pháp Chế_111124_ĐMX_VN</span>
-                                                    <span class="page-num"></span>
-                                                </div>
-                                            </td>
+                                    <!-- THẺ TFOOT TẠO KHOẢNG ĐỆM TRỐNG 0.8CM TRÊN MỌI TRANG IN -->
+                                    <tfoot style="display: table-footer-group; border:none;">
+                                        <tr style="border:none;">
+                                            <td style="border:none; height: 0.8cm; padding:0;">&nbsp;</td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -1549,11 +1540,17 @@
                         `).join('');
 
                         printHtml += `
+                            <!-- TRANG 1 NGHIỆM THU: CÓ FOOTER CỐ ĐỊNH TRANG = 1 -->
+                            <div class="print-footer" style="font-family: 'Times New Roman', serif;">
+                                <span style="font-weight: bold; color: #111;">dienmayxanh</span>
+                                <span>1</span>
+                            </div>
+
                             <div class="page-container" style="font-family: 'Times New Roman', serif;">
-                                <table class="print-layout-table">
+                                <table style="width: 100%; border: none; border-collapse: collapse; margin: 0; padding: 0;">
                                     <tbody>
-                                        <tr>
-                                            <td>
+                                        <tr style="border: none;">
+                                            <td style="border: none; padding: 0;">
                                                 <div class="page-content">
                                                     <div>
                                                         <div style="text-align: center; font-size: 14pt; font-weight: bold;">
@@ -1624,7 +1621,13 @@
 
                                                     <div class="page-break"></div>
 
-                                                    <div>
+                                                    <!-- TRANG 2 THANH LÝ: CÓ FOOTER CỐ ĐỊNH TRANG = 2 -->
+                                                    <div style="position:relative;">
+                                                        <div class="print-footer" style="font-family: 'Times New Roman', serif;">
+                                                            <span style="font-weight: bold; color: #111;">dienmayxanh</span>
+                                                            <span>2</span>
+                                                        </div>
+                                                        
                                                         <div style="text-align: center; font-size: 14pt; font-weight: bold; text-transform: uppercase;">
                                                             BIÊN BẢN THANH LÝ HỢP ĐỒNG
                                                         </div>
@@ -1691,14 +1694,9 @@
                                             </td>
                                         </tr>
                                     </tbody>
-                                    <tfoot class="print-layout-footer">
-                                        <tr>
-                                            <td>
-                                                <div class="footer-content" style="font-family: 'Times New Roman', serif;">
-                                                    <span style="font-weight: bold; color: #111;">dienmayxanh</span>
-                                                    <span class="page-num"></span>
-                                                </div>
-                                            </td>
+                                    <tfoot style="display: table-footer-group; border:none;">
+                                        <tr style="border:none;">
+                                            <td style="border:none; height: 0.8cm; padding:0;">&nbsp;</td>
                                         </tr>
                                     </tfoot>
                                 </table>
