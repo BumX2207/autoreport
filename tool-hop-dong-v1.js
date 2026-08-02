@@ -1189,6 +1189,10 @@
                                 }
 
                                 /* SỬA LỖI SỐ TRANG = 0: HIỂN THỊ CHUẨN ĐẾM TỰ ĐỘNG CỦA CHROME (1, 2, 3...) */
+                                .print-footer .page-num {
+                                    display: inline-block !important;
+                                    counter-increment: page !important; /* Dòng lệnh giải quyết dứt điểm lỗi số 0 */
+                                }
                                 .print-footer .page-num::after {
                                     content: counter(page) !important;
                                 }
