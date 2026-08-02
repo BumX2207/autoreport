@@ -329,7 +329,7 @@
                                 <input type="text" id="con-date-tl" value="14/04/2026" placeholder="dd/mm/yyyy">
                             </div>
                             
-                            <!-- BỘ ĐIỀU CHỈNH FOOTER CÁCH ĐÁY GIẤY A4 -->
+                            <!-- Ô NHẬP "Điều chỉnh Footer" ĐIỀU KHIỂN VỊ TRÍ FOOTER CÁCH ĐÁY GIẤY A4 -->
                             <div class="con-col con-group" style="min-width: 160px;">
                                 <label>📐 Điều chỉnh Footer (cm)</label>
                                 <input type="number" id="con-footer-pos" value="1.0" step="0.1" min="0.2" max="5.0" style="text-align: center;">
@@ -1124,10 +1124,7 @@
                             @page {
                                 size: A4;
                                 margin-top: 1.5cm; /* CỐ ĐỊNH LỀ TRÊN NỘI DUNG CHUẨN 1.5CM */
-                                
-                                /* ĐỊNH NGHĨA VÙNG LỀ DƯỚI DÀNH RIÊNG CHO FOOTER CÁCH ĐÁY GIẤY */
-                                margin-bottom: ${footerPos}cm; 
-                                
+                                margin-bottom: ${footerPos}cm; /* ĐỊNH NGHĨA LỀ ĐÁY VĂN BẢN CHUẨN XÁC THEO FOOTER POS */
                                 margin-left: 2cm;
                                 margin-right: 1.5cm;
                             }
@@ -1161,15 +1158,27 @@
                                     margin-bottom: 0 !important;
                                 }
 
-                                /* ========================================================================= */
-                                /* FOOTER ĐẶT ĐẦU BODY + BOTTOM = 0 => DÍNH CHẶT CHUẨN XÁC TẠI LỀ ĐÁY @PAGE  */
-                                /* Không bao giờ nhảy lên giữa trang 2, không đè chữ                         */
-                                /* ========================================================================= */
-                                .print-footer {
-                                    position: fixed !important;
-                                    bottom: 0 !important;
-                                    left: 0 !important;
-                                    right: 0 !important;
+                                /* BẢNG LAYOUT BỌC BẢO VỆ CHỐNG ĐÈ VĂN BẢN LÊN FOOTER */
+                                .print-layout-table {
+                                    width: 100% !important;
+                                    border-collapse: collapse !important;
+                                    border: none !important;
+                                    margin: 0 !important;
+                                    padding: 0 !important;
+                                }
+                                .print-layout-table td {
+                                    border: none !important;
+                                    padding: 0 !important;
+                                }
+                                .print-layout-footer {
+                                    display: table-footer-group !important;
+                                }
+
+                                /* FOOTER TẠO BỞI TFOOT - ĐẾM ĐÚNG SỐ TRANG LIVE TỪNG TRANG (1, 2, 3...) */
+                                .footer-content {
+                                    display: flex !important;
+                                    justify-content: space-between !important;
+                                    align-items: center !important;
                                     width: 100% !important;
                                     height: 22px !important;
                                     line-height: 22px !important;
@@ -1178,22 +1187,12 @@
                                     font-size: 9.5pt !important;
                                     font-weight: bold !important;
                                     background: #ffffff !important;
-                                    display: flex !important;
-                                    justify-content: space-between !important;
-                                    align-items: center !important;
                                     box-sizing: border-box !important;
                                     overflow: hidden !important;
-                                    page-break-inside: avoid !important;
-                                    break-inside: avoid !important;
-                                    z-index: 99999 !important;
                                 }
 
-                                /* SỬA LỖI SỐ TRANG = 0: HIỂN THỊ CHUẨN ĐẾM TỰ ĐỘNG CỦA CHROME (1, 2, 3...) */
-                                .print-footer .page-num {
-                                    display: inline-block !important;
-                                    counter-increment: page !important; /* Dòng lệnh giải quyết dứt điểm lỗi số 0 */
-                                }
-                                .print-footer .page-num::after {
+                                /* CHÍNH XÁC SỐ TRANG TỰ ĐỘNG CỦA CHROME (1, 2, 3...) */
+                                .footer-content .page-num::after {
                                     content: counter(page) !important;
                                 }
 
@@ -1301,18 +1300,12 @@
                         }
 
                         printHtml += `
-                            <!-- THẺ FOOTER ĐẶT ĐẦU BODY ĐỂ CỐ ĐỊNH CHUẨN XÁC TẤT CẢ TRANG -->
-                            <div class="print-footer">
-                                <span>Pháp Chế_111124_ĐMX_VN</span>
-                                <span class="page-num"></span>
-                            </div>
-
                             <div class="page-container">
-                                <!-- BỌC BẢNG HTML CHUẨN W3C VỚI THẺ TFOOT ĐỂ TẠO KHOẢNG ĐỆM 0.8CM BẮT BUỘC TRÊN MỌI TRANG IN -->
-                                <table style="width: 100%; border: none; border-collapse: collapse; margin: 0; padding: 0;">
+                                <!-- BỌC BẢNG LAYOUT BẮT BUỘC ĐỂ ÉP CHROME TẠO TFOOTER ĐẾM SỐ TRANG LIVE (1, 2, 3...) VÀ TẠO KHOẢNG ĐỆM CHỐNG ĐÈ -->
+                                <table class="print-layout-table">
                                     <tbody>
-                                        <tr style="border: none;">
-                                            <td style="border: none; padding: 0;">
+                                        <tr>
+                                            <td>
                                                 <div class="page-content">
                                                     <div style="text-align: center; font-weight: bold; font-size: 16pt; text-transform: uppercase; margin-bottom: 3px; letter-spacing: 0.5px;">
                                                         HỢP ĐỒNG MUA BÁN
@@ -1529,10 +1522,15 @@
                                             </td>
                                         </tr>
                                     </tbody>
-                                    <!-- THẺ TFOOT BẮT BUỘC ÉP CHROME PHẢI TẠO NỔI KHOẢNG TRỐNG 0.8CM TRÊN MỌI TRANG IN -->
-                                    <tfoot style="display: table-footer-group; border:none;">
-                                        <tr style="border:none;">
-                                            <td style="border:none; height: 0.8cm; padding:0;">&nbsp;</td>
+                                    <!-- THẺ TFOOTER NÀY SẼ ÉP CHROME ĐẾM ĐÚNG SỐ TRANG LIVE (1, 2, 3...) VÀ TẠO KHOẢNG ĐỆM CHỐNG ĐÈ 100% -->
+                                    <tfoot class="print-layout-footer">
+                                        <tr>
+                                            <td>
+                                                <div class="footer-content">
+                                                    <span>Pháp Chế_111124_ĐMX_VN</span>
+                                                    <span class="page-num"></span>
+                                                </div>
+                                            </td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -1551,17 +1549,11 @@
                         `).join('');
 
                         printHtml += `
-                            <!-- THẺ FOOTER ĐẶT ĐẦU BODY ĐỂ CỐ ĐỊNH CHUẨN XÁC TẤT CẢ TRANG -->
-                            <div class="print-footer" style="font-family: 'Times New Roman', serif;">
-                                <span style="font-weight: bold; color: #111;">dienmayxanh</span>
-                                <span class="page-num"></span>
-                            </div>
-
                             <div class="page-container" style="font-family: 'Times New Roman', serif;">
-                                <table style="width: 100%; border: none; border-collapse: collapse; margin: 0; padding: 0;">
+                                <table class="print-layout-table">
                                     <tbody>
-                                        <tr style="border: none;">
-                                            <td style="border: none; padding: 0;">
+                                        <tr>
+                                            <td>
                                                 <div class="page-content">
                                                     <div>
                                                         <div style="text-align: center; font-size: 14pt; font-weight: bold;">
@@ -1699,9 +1691,14 @@
                                             </td>
                                         </tr>
                                     </tbody>
-                                    <tfoot style="display: table-footer-group; border:none;">
-                                        <tr style="border:none;">
-                                            <td style="border:none; height: 0.8cm; padding:0;">&nbsp;</td>
+                                    <tfoot class="print-layout-footer">
+                                        <tr>
+                                            <td>
+                                                <div class="footer-content" style="font-family: 'Times New Roman', serif;">
+                                                    <span style="font-weight: bold; color: #111;">dienmayxanh</span>
+                                                    <span class="page-num"></span>
+                                                </div>
+                                            </td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -1852,7 +1849,7 @@
     };
 
     return {
-        name: "Tạo Hợp Đồng v1",
+        name: "Tạo Hợp Đồng",
         icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 15H7v-2h10v2zm0-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>`,
         bgColor: "#6c5ce7",
         action: runTool
