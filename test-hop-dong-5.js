@@ -1115,10 +1115,10 @@
                         return "Thế giới Di động";
                     };
 
-                    let printHtml = `
-                        <html>
-                        <head>
-                            <meta charset="utf-8">
+                    let printHtml = `<!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="utf-8">
                             <title>Kết xuất báo cáo PDF - AutoBI</title>
                             <style>
                             @page {
@@ -1139,7 +1139,7 @@
                                     print-color-adjust: exact;
                                     margin: 0 !important;
                                     padding: 0 !important;
-                                    counter-reset: page 0; /* Khởi tạo bộ đếm trang gốc */
+                                    counter-reset: page 0; /* Khởi tạo lại bộ đếm trang khi ở chế độ Standards Mode */
                                 }
                             
                                 .page-container { 
@@ -1157,21 +1157,12 @@
                                     position: static !important;
                                 }
                             
-                                /* === SỬA LỖI TẠI ĐÂY: Hòa tan bảng bọc ngoài thành dạng block khi in === */
-                                .page-container > table,
-                                .page-container > table > tbody,
-                                .page-container > table > tbody > tr,
-                                .page-container > table > tbody > tr > td {
-                                    display: block !important;
-                                    width: 100% !important;
-                                }
-                                
-                                /* Ẩn tfoot đệm trống vì khoảng trống đáy đã được margin-bottom của @page xử lý */
-                                .page-container > table > tfoot {
-                                    display: none !important; 
+                                .page-content {
+                                    padding-bottom: 0 !important;
+                                    margin-bottom: 0 !important;
                                 }
                             
-                                /* Footer cố định hiển thị số trang tự động */
+                                /* KHỐI FOOTER CỐ ĐỊNH CHUẨN XÁC */
                                 .print-footer {
                                     position: fixed !important;
                                     bottom: 0 !important;
@@ -1193,10 +1184,10 @@
                                     page-break-inside: avoid !important;
                                     break-inside: avoid !important;
                                     z-index: 99999 !important;
-                                    /* Không đặt thuộc tính counter-increment ở đây */
+                                    /* Không đặt thuộc tính counter-increment ở đây để tránh lỗi lặp số trang */
                                 }
                             
-                                /* SỐ TRANG TỰ ĐỘNG CHUẨN ĐẾM CỦA CHROME (1, 2, 3...) */
+                                /* IN SỐ TRANG TỰ ĐỘNG CHẠY THEO TIÊU CHUẨN */
                                 .print-footer .page-num::after {
                                     content: counter(page) !important;
                                 }
@@ -1856,7 +1847,7 @@
     };
 
     return {
-        name: "Tạo Hợp Đồng v3",
+        name: "Tạo Hợp Đồng v1",
         icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 15H7v-2h10v2zm0-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>`,
         bgColor: "#6c5ce7",
         action: runTool
