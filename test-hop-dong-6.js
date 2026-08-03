@@ -1139,7 +1139,6 @@
                                     print-color-adjust: exact;
                                     margin: 0 !important;
                                     padding: 0 !important;
-                                    counter-reset: page 0; /* Khởi tạo lại bộ đếm trang khi ở chế độ Standards Mode */
                                 }
                             
                                 .page-container { 
@@ -1176,8 +1175,6 @@
                                 font-size: 9.5pt !important;
                                 font-weight: bold !important;
                                 background: #ffffff !important;
-                                
-                                /* CHUYỂN TỪ flex SANG TRUYỀN THỐNG ĐỂ TRÁNH BUG BỘ ĐẾM CỦA CHROME */
                                 display: block !important; 
                                 
                                 box-sizing: border-box !important;
