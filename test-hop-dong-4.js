@@ -1132,16 +1132,16 @@
                                 margin-right: 1.5cm;
                             }
                             @media print {
-                            html, body {
-                                background-color: #ffffff !important;
-                                background: #ffffff !important;
-                                -webkit-print-color-adjust: exact;
-                                print-color-adjust: exact;
-                                margin: 0 !important;
-                                padding: 0 !important;
-                                counter-reset: page 0; /* Giữ nguyên dòng này để trình duyệt kích hoạt bộ đếm trang */
-                            }
-
+                                html, body {
+                                    background-color: #ffffff !important;
+                                    background: #ffffff !important;
+                                    -webkit-print-color-adjust: exact;
+                                    print-color-adjust: exact;
+                                    margin: 0 !important;
+                                    padding: 0 !important;
+                                    counter-reset: page 0; /* Khởi tạo bộ đếm trang gốc */
+                                }
+                            
                                 .page-container { 
                                     width: 100% !important; 
                                     min-height: auto !important; 
@@ -1156,16 +1156,22 @@
                                     line-height: 1.3 !important;
                                     position: static !important;
                                 }
-
-                                .page-content {
-                                    padding-bottom: 0 !important;
-                                    margin-bottom: 0 !important;
+                            
+                                /* === SỬA LỖI TẠI ĐÂY: Hòa tan bảng bọc ngoài thành dạng block khi in === */
+                                .page-container > table,
+                                .page-container > table > tbody,
+                                .page-container > table > tbody > tr,
+                                .page-container > table > tbody > tr > td {
+                                    display: block !important;
+                                    width: 100% !important;
                                 }
-
-                                /* ========================================================================= */
-                                /* FOOTER ĐẶT ĐẦU BODY + BOTTOM = 0 => DÍNH CHẶT CHUẨN XÁC TẠI LỀ ĐÁY @PAGE  */
-                                /* Không bao giờ nhảy lên giữa trang 2, không đè chữ                         */
-                                /* ========================================================================= */
+                                
+                                /* Ẩn tfoot đệm trống vì khoảng trống đáy đã được margin-bottom của @page xử lý */
+                                .page-container > table > tfoot {
+                                    display: none !important; 
+                                }
+                            
+                                /* Footer cố định hiển thị số trang tự động */
                                 .print-footer {
                                     position: fixed !important;
                                     bottom: 0 !important;
@@ -1187,13 +1193,14 @@
                                     page-break-inside: avoid !important;
                                     break-inside: avoid !important;
                                     z-index: 99999 !important;
+                                    /* Không đặt thuộc tính counter-increment ở đây */
                                 }
-
+                            
                                 /* SỐ TRANG TỰ ĐỘNG CHUẨN ĐẾM CỦA CHROME (1, 2, 3...) */
-                                    .print-footer .page-num::after {
-                                        content: counter(page) !important;
-                                    }
-
+                                .print-footer .page-num::after {
+                                    content: counter(page) !important;
+                                }
+                            
                                 .info-table td, .prod-table th, .prod-table td {
                                     padding: 4px 6px !important;
                                 }
