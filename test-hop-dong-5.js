@@ -1164,33 +1164,43 @@
                             
                                 /* KHỐI FOOTER CỐ ĐỊNH CHUẨN XÁC */
                                 .print-footer {
-                                    position: fixed !important;
-                                    bottom: 0 !important;
-                                    left: 0 !important;
-                                    right: 0 !important;
-                                    width: 100% !important;
-                                    height: 22px !important;
-                                    line-height: 22px !important;
-                                    border-top: 1px solid #000000 !important;
-                                    padding-top: 2px !important;
-                                    font-size: 9.5pt !important;
-                                    font-weight: bold !important;
-                                    background: #ffffff !important;
-                                    display: flex !important;
-                                    justify-content: space-between !important;
-                                    align-items: center !important;
-                                    box-sizing: border-box !important;
-                                    overflow: hidden !important;
-                                    page-break-inside: avoid !important;
-                                    break-inside: avoid !important;
-                                    z-index: 99999 !important;
-                                    /* Không đặt thuộc tính counter-increment ở đây để tránh lỗi lặp số trang */
-                                }
-                            
-                                /* IN SỐ TRANG TỰ ĐỘNG CHẠY THEO TIÊU CHUẨN */
-                                .print-footer .page-num::after {
-                                    content: counter(page) !important;
-                                }
+                                position: fixed !important;
+                                bottom: 0 !important;
+                                left: 0 !important;
+                                right: 0 !important;
+                                width: 100% !important;
+                                height: 22px !important;
+                                line-height: 22px !important;
+                                border-top: 1px solid #000000 !important;
+                                padding-top: 2px !important;
+                                font-size: 9.5pt !important;
+                                font-weight: bold !important;
+                                background: #ffffff !important;
+                                
+                                /* CHUYỂN TỪ flex SANG TRUYỀN THỐNG ĐỂ TRÁNH BUG BỘ ĐẾM CỦA CHROME */
+                                display: block !important; 
+                                
+                                box-sizing: border-box !important;
+                                overflow: hidden !important;
+                                page-break-inside: avoid !important;
+                                break-inside: avoid !important;
+                                z-index: 99999 !important;
+                            }
+                        
+                            /* Đẩy chữ bên trái sang biên trái */
+                            .print-footer > span:first-child {
+                                float: left !important;
+                            }
+                        
+                            /* Đẩy số trang sang biên phải */
+                            .print-footer .page-num {
+                                float: right !important;
+                            }
+                        
+                            /* IN SỐ TRANG TỰ ĐỘNG CHUẨN (1, 2, 3...) */
+                            .print-footer .page-num::after {
+                                content: counter(page) !important;
+                            }
                             
                                 .info-table td, .prod-table th, .prod-table td {
                                     padding: 4px 6px !important;
