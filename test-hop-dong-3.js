@@ -1139,7 +1139,7 @@
                                 print-color-adjust: exact;
                                 margin: 0 !important;
                                 padding: 0 !important;
-                                counter-reset: page 0; /* <--- THÊM DÒNG NÀY ĐỂ KHỞI TẠO LẠI BỘ ĐẾM TRANG VỀ 0 */
+                                counter-reset: page 0; /* Giữ nguyên dòng này để trình duyệt kích hoạt bộ đếm trang */
                             }
 
                                 .page-container { 
@@ -1187,7 +1187,6 @@
                                     page-break-inside: avoid !important;
                                     break-inside: avoid !important;
                                     z-index: 99999 !important;
-                                    counter-increment: page; /* <--- THÊM DÒNG NÀY ĐỂ TỰ ĐỘNG CỘNG DỒN SỐ TRANG KHI QUA TRANG MỚI */
                                 }
 
                                 /* SỐ TRANG TỰ ĐỘNG CHUẨN ĐẾM CỦA CHROME (1, 2, 3...) */
