@@ -1132,14 +1132,15 @@
                                 margin-right: 1.5cm;
                             }
                             @media print {
-                                html, body {
-                                    background-color: #ffffff !important;
-                                    background: #ffffff !important;
-                                    -webkit-print-color-adjust: exact;
-                                    print-color-adjust: exact;
-                                    margin: 0 !important;
-                                    padding: 0 !important;
-                                }
+                            html, body {
+                                background-color: #ffffff !important;
+                                background: #ffffff !important;
+                                -webkit-print-color-adjust: exact;
+                                print-color-adjust: exact;
+                                margin: 0 !important;
+                                padding: 0 !important;
+                                counter-reset: page 0; /* <--- THÊM DÒNG NÀY ĐỂ KHỞI TẠO LẠI BỘ ĐẾM TRANG VỀ 0 */
+                            }
 
                                 .page-container { 
                                     width: 100% !important; 
@@ -1186,12 +1187,13 @@
                                     page-break-inside: avoid !important;
                                     break-inside: avoid !important;
                                     z-index: 99999 !important;
+                                    counter-increment: page; /* <--- THÊM DÒNG NÀY ĐỂ TỰ ĐỘNG CỘNG DỒN SỐ TRANG KHI QUA TRANG MỚI */
                                 }
 
                                 /* SỐ TRANG TỰ ĐỘNG CHUẨN ĐẾM CỦA CHROME (1, 2, 3...) */
-                                .print-footer .page-num::after {
-                                    content: counter(page) !important;
-                                }
+                                    .print-footer .page-num::after {
+                                        content: counter(page) !important;
+                                    }
 
                                 .info-table td, .prod-table th, .prod-table td {
                                     padding: 4px 6px !important;
@@ -1247,28 +1249,6 @@
                             .print-footer { 
                                 display: none;
                             }
-                            .print-footer-manual {
-                                position: absolute !important;
-                                bottom: ${footerPos}cm !important;
-                                left: 2cm !important;
-                                right: 1.5cm !important;
-                                height: 22px !important;
-                                line-height: 22px !important;
-                                border-top: 1px solid #000000 !important;
-                                padding-top: 2px !important;
-                                font-size: 9.5pt !important;
-                                font-weight: bold !important;
-                                background: #ffffff !important;
-                                display: flex !important;
-                                justify-content: space-between !important;
-                                align-items: center !important;
-                                box-sizing: border-box !important;
-                            }
-                            @media print {
-                                .print-footer-manual {
-                                    display: flex !important;
-                                }
-                            }
                             .page-break {
                                 border-top: 1px dashed #cbd5e1;
                                 margin: 40px 0;
@@ -1319,12 +1299,14 @@
                         }
 
                         printHtml += `
-                            <!-- TRANG 1 CỦA HỢP ĐỒNG -->
+                            <!-- THẺ FOOTER ĐẶT ĐẦU BODY ĐỂ CỐ ĐỊNH CHUẨN XÁC TẤT CẢ TRANG -->
+                            <div class="print-footer">
+                                <span>Pháp Chế_111124_ĐMX_VN</span>
+                                <span class="page-num"></span>
+                            </div>
+
                             <div class="page-container">
-                                <div class="print-footer-manual">
-                                    <span>Pháp Chế_111124_ĐMX_VN</span>
-                                    <span>Trang 1/3</span>
-                                </div>
+                                <!-- BỌC BẢNG BẮT BUỘC ĐỂ TẠO KHOẢNG ĐỆM 0.8CM TRỐNG TRƠN TRÊN FOOTER CHO MỌI TRANG IN -->
                                 <table style="width: 100%; border: none; border-collapse: collapse; margin: 0; padding: 0;">
                                     <tbody>
                                         <tr style="border: none;">
@@ -1419,31 +1401,7 @@
                                                             </td>
                                                         </tr>
                                                     </table>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                    <tfoot style="display: table-footer-group; border:none;">
-                                        <tr style="border:none;">
-                                            <td style="border:none; height: 0.8cm; padding:0;">&nbsp;</td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
 
-                            <div class="page-break"></div>
-
-                            <!-- TRANG 2 CỦA HỢP ĐỒNG -->
-                            <div class="page-container">
-                                <div class="print-footer-manual">
-                                    <span>Pháp Chế_111124_ĐMX_VN</span>
-                                    <span>Trang 2/3</span>
-                                </div>
-                                <table style="width: 100%; border: none; border-collapse: collapse; margin: 0; padding: 0;">
-                                    <tbody>
-                                        <tr style="border: none;">
-                                            <td style="border: none; padding: 0;">
-                                                <div class="page-content">
                                                     <div style="margin-top: 10px; margin-bottom: 10px;">Sau khi bàn bạc, hai bên thống nhất ký kết Hợp Đồng Mua Bán này (“Hợp Đồng”) với các điều khoản sau:</div>
 
                                                     <div class="bold">ĐIỀU 1: ĐỐI TƯỢNG HỢP ĐỒNG</div>
@@ -1463,7 +1421,6 @@
                                                         </thead>
                                                         <tbody>
                                                             ${productRowsHtml}
-                                                            ${discountRowHtml}
                                                             <tr class="bold" style="background:#f2f2f2;">
                                                                 <td colspan="4" class="text-right">Tổng tiền (bao gồm VAT 8%)</td>
                                                                 <td class="text-right">${UTILS.formatNumber(finalTotal)}</td>
@@ -1502,31 +1459,7 @@
                                                         a. Giao hàng khu vực Hồ Chí Minh: Bên B trực tiếp giao hàng và xuất hóa đơn cho Bên A.<br>
                                                         b. Giao hàng ở tỉnh: Bên B ủy quyền cho Chi nhánh của Bên B tại các tỉnh giao hàng và xuất hóa đơn cho Bên A.
                                                     </div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                    <tfoot style="display: table-footer-group; border:none;">
-                                        <tr style="border:none;">
-                                            <td style="border:none; height: 0.8cm; padding:0;">&nbsp;</td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
 
-                            <div class="page-break"></div>
-
-                            <!-- TRANG 3 CỦA HỢP ĐỒNG -->
-                            <div class="page-container">
-                                <div class="print-footer-manual">
-                                    <span>Pháp Chế_111124_ĐMX_VN</span>
-                                    <span>Trang 3/3</span>
-                                </div>
-                                <table style="width: 100%; border: none; border-collapse: collapse; margin: 0; padding: 0;">
-                                    <tbody>
-                                        <tr style="border: none;">
-                                            <td style="border: none; padding: 0;">
-                                                <div class="page-content">
                                                     <div class="bold" style="margin-top: 15px;">ĐIỀU 4: CHÍNH SÁCH BẢO HÀNH, ĐỔI, TRẢ SẢN PHẨM VÀ HOÀN TIỀN</div>
                                                     <div style="text-align: justify; font-size: 10.5pt; margin-bottom: 15px;">
                                                         4.1 Sản Phẩm do Bên B cung cấp sẽ được bảo hành theo tiêu chuẩn của nhà sản xuất hoặc nhà phân phối. Sản phẩm sẽ được kích hoạt bảo hành ngay tại thời điểm Bên B xuất hóa đơn VAT cho Bên A.<br>
@@ -1917,7 +1850,7 @@
     };
 
     return {
-        name: "Tạo Hợp Đồng v2",
+        name: "Tạo Hợp Đồng v3",
         icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 15H7v-2h10v2zm0-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>`,
         bgColor: "#6c5ce7",
         action: runTool
