@@ -15,6 +15,17 @@
         return new Intl.NumberFormat('en-US').format(Math.round(num || 0));
     };
 
+    const toTitleCase = (str) => {
+        if (!str) return "";
+        return str
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, ' ') // Xóa các khoảng trắng thừa ở giữa
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+    };
+
     // ===============================================================
     // CSS GIAO DIỆN (Dựng form nhập liệu màu sắc trực quan giống hình vẽ)
     // ===============================================================
@@ -185,39 +196,36 @@
         };
 
         const fillBFields = (info) => {
-            if (!info) return;
-            const activeApp = document.getElementById('con-app') || app;
-            if (!activeApp) return;
-
-            const fields = {
-                '#con-b-name': info.name,
-                '#con-b-address': info.address,
-                '#con-b-store': info.store,
-                '#con-b-tax': info.tax,
-                '#con-b-phone': info.phone,
-                '#con-b-bank-acc': info.bankAcc,
-                '#con-b-bank-name': info.bankName,
-                '#con-b-rep-hd': info.rep,
-                '#con-b-role-hd': info.role,
-                '#con-b-uq': info.uq,
-                '#con-b-rep-tl': info.repTl,
-                '#con-b-role-tl': info.roleTl,
-                '#con-b-honor-hd': info.honorHd,
-                '#con-b-honor-tl': info.honorTl,
-                '#con-q-drive-folder': info.driveFolderId,
-                '#con-common-phone': info.commonPhone,    
-                '#con-store-address': info.storeAddress,  
-                '#con-b-select': info.bSelectVal          
-            };
-            for (let selector in fields) {
-                const val = fields[selector];
-                if (val !== undefined) {
-                    const el = activeApp.querySelector(selector);
-                    if (el) el.value = val;
+                if (!info) return;
+                const activeApp = document.getElementById('con-app') || app;
+                if (!activeApp) return;
+            
+                const fields = {
+                    '#con-b-name': info.name,
+                    '#con-b-address': info.address,
+                    '#con-b-store': info.store,
+                    '#con-b-tax': info.tax,
+                    '#con-b-phone': info.phone,
+                    '#con-b-bank-acc': info.bankAcc,
+                    '#con-b-bank-name': info.bankName,
+                    '#con-b-rep-hd': info.rep,
+                    '#con-b-role-hd': info.role,
+                    '#con-b-uq': info.uq,
+                    '#con-b-honor-hd': info.honorHd,
+                    '#con-q-drive-folder': info.driveFolderId,
+                    '#con-common-phone': info.commonPhone,    
+                    '#con-store-address': info.storeAddress,  
+                    '#con-b-select': info.bSelectVal          
+                };
+                for (let selector in fields) {
+                    const val = fields[selector];
+                    if (val !== undefined) {
+                        const el = activeApp.querySelector(selector);
+                        if (el) el.value = val;
+                    }
                 }
-            }
-        };
-
+            };
+        
         const renderDraftDropdown = () => {
             const activeApp = document.getElementById('con-app') || app;
             if (!activeApp) return;
@@ -443,18 +451,7 @@
                                 <div class="con-col con-group" style="min-width:140px;"><label>Chức Vụ</label><input type="text" id="con-b-role-hd" value="Giám Đốc Bán Hàng"></div>
                             </div>
                             <div class="con-group"><label>Ủy Quyền</label><input type="text" id="con-b-uq" value="Theo giấy Uỷ Quyền số 12/2026/ĐMX/UQ ký ngày 24/03/2026"></div>
-                            <div class="con-row" style="gap:10px;">
-                                <div class="con-col con-group" style="min-width:80px; flex:0.4;">
-                                    <label>Danh xưng</label>
-                                    <select id="con-b-honor-tl">
-                                        <option value="Ông">Ông</option>
-                                        <option value="Bà" selected>Bà</option>
-                                    </select>
-                                </div>
-                                <div class="con-col con-group" style="min-width:140px; flex:1.6;"><label>Đại Diện</label><input type="text" id="con-b-rep-tl" value="ĐỖ THỊ THÁI THANH"></div>
-                                <div class="con-col con-group" style="min-width:140px;"><label>Chức Vụ</label><input type="text" id="con-b-role-tl" value="Giám Đốc Vùng (RSM)"></div>
                             </div>
-                        </div>
                     </div>
 
                     <!-- CHI TIẾT SẢN PHẨM & SỐ LƯỢNG -->
@@ -531,6 +528,23 @@
 
             // Đóng app
             app.querySelector('#con-btn-close').onclick = () => { app.style.display = 'none'; };
+
+            const targetInputs = [
+                '#con-a-rep',          // Đại diện bên A
+                '#con-a-role',         // Chức vụ bên A
+                '#con-b-rep-hd',       // Đại diện bên B duy nhất
+                '#con-b-role-hd',      // Chức vụ bên B duy nhất
+                '#con-q-client-name'   // Tên khách hàng (Báo giá)
+            ];
+            
+            targetInputs.forEach(selector => {
+                const el = app.querySelector(selector);
+                if (el) {
+                    el.addEventListener('blur', (e) => {
+                        e.target.value = toTitleCase(e.target.value);
+                    });
+                }
+            });
 
             // --- LOGIC CHUYỂN ĐỔI CHẾ ĐỘ HIỂN THỊ CÁC CỘT BÁO CÁO ---
             const toggleFileType = () => {
@@ -890,10 +904,7 @@
                         rep: app.querySelector('#con-b-rep-hd').value.trim(),
                         role: app.querySelector('#con-b-role-hd').value.trim(),
                         uq: app.querySelector('#con-b-uq').value.trim(),
-                        repTl: app.querySelector('#con-b-rep-tl').value.trim(),
-                        roleTl: app.querySelector('#con-b-role-tl').value.trim(),
                         honorHd: app.querySelector('#con-b-honor-hd').value,
-                        honorTl: app.querySelector('#con-b-honor-tl').value,
                         
                         driveFolderId: app.querySelector('#con-q-drive-folder').value.trim(), 
                         commonPhone: app.querySelector('#con-common-phone').value.trim(),     
@@ -1065,10 +1076,10 @@
                 const bRepHd = app.querySelector('#con-b-rep-hd').value.trim();
                 const bRoleHd = app.querySelector('#con-b-role-hd').value.trim();
                 const bUq = app.querySelector('#con-b-uq').value.trim();
-                const bRepTl = app.querySelector('#con-b-rep-tl').value.trim();
-                const bRoleTl = app.querySelector('#con-b-role-tl').value.trim();
                 const bHonorHd = app.querySelector('#con-b-honor-hd').value;
-                const bHonorTl = app.querySelector('#con-b-honor-tl').value;
+                const bRepTl = bRepHd;
+                const bRoleTl = bRoleHd;
+                const bHonorTl = bHonorHd;
 
                 // LẤY CẤU HÌNH VỊ TRÍ FOOTER TỪ UI (MẶC ĐỊNH 1.0CM CÁCH ĐÁY GIẤY)
                 const footerPos = parseFloat(app.querySelector('#con-footer-pos').value) || 1.0;
@@ -1378,7 +1389,7 @@
                                                             <td style="font-weight: bold;">Đại diện bởi</td>
                                                             <td style="text-align: center; font-weight: bold;">:</td>
                                                             <td>
-                                                                <div class="bold">${aHonor}: ${aRep}</div>
+                                                                <div class="bold">${aHonor} ${aRep}</div>
                                                                 <div>Chức vụ : ${aRole}</div>
                                                             </td>
                                                         </tr>
@@ -1419,7 +1430,7 @@
                                                             <td style="font-weight: bold;">Đại diện bởi</td>
                                                             <td style="text-align: center; font-weight: bold;">:</td>
                                                             <td>
-                                                                <div class="bold">${bHonorHd}: ${bRepHd}</div>
+                                                                <div class="bold">${bHonorHd} ${bRepHd}</div>
                                                                 <div class="bold">Chức vụ: ${bRoleHd}</div>
                                                                 <div class="italic">(${bUq})</div>
                                                             </td>
@@ -1628,7 +1639,7 @@
                                                             <span class="bold red-text">Bên A :</span> <span class="bold">${aName}</span><br>
                                                             <div style="margin-left: 20px; line-height: 1.5;">
                                                                 <span class="red-text">- Địa chỉ :</span> ${aAddress}<br>
-                                                                <span class="red-text">- Đại diện là:</span> <span class="bold">${aRep}</span><br>
+                                                                <span class="red-text">- Đại diện là</span> <span class="bold">${aRep}</span><br>
                                                                 <span class="red-text">- Chức vụ:</span> Giám đốc
                                                             </div>
                                                         </div>
@@ -1637,7 +1648,7 @@
                                                             <span class="bold">Bên B :</span> <span class="bold">${bName}</span><br>
                                                             <div style="margin-left: 20px; line-height: 1.5;">
                                                                 <span class="red-text">- Địa chỉ :</span> <span class="red-text">${bStore.split(' - ')[1] || bAddress}</span><br>
-                                                                <span class="red-text">- Đại diện là:</span> <span class="bold red-text">${bHonorTl}: ${bRepTl}</span><br>
+                                                                <span class="red-text">- Đại diện là</span> <span class="bold red-text">${bHonorTl}: ${bRepTl}</span><br>
                                                                 <span class="red-text">- Chức vụ:</span> ${bRoleTl}
                                                             </div>
                                                         </div>
@@ -1896,7 +1907,7 @@
     };
 
     return {
-        name: "Tạo Hợp Đồng",
+        name: "Tạo Hợp Đồng v1",
         icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 15H7v-2h10v2zm0-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>`,
         bgColor: "#6c5ce7",
         action: runTool
