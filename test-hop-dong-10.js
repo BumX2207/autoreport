@@ -375,11 +375,11 @@
                         <!-- BÊN MUA (BÊN A) -->
                         <div class="con-col con-panel" id="panel-side-a">
                             <div class="con-sec-title bg-buy">🏢 I/ BÊN MUA (BÊN A)</div>
-                            <div class="con-group"><label>Tên Đơn Vị Mua Hàng</label><input type="text" id="con-a-name" value="Phòng Giao Dịch Ngân Hàng Chính Sách Xã Hội Lăk"></div>
-                            <div class="con-group"><label>Địa Chỉ Trụ Sở Đăng Ký</label><input type="text" id="con-a-address" value="203 Nguyễn Tất Thành, Xã Liên Sơn Lắk, Tỉnh Đắk Lắk"></div>
+                            <div class="con-group"><label>Tên Đơn Vị Mua Hàng</label><input type="text" id="con-a-name" value="" placeholder="VD: Công ty cổ phần Chuyengia.vip"></div>
+                            <div class="con-group"><label>Địa Chỉ Trụ Sở Đăng Ký</label><input type="text" id="con-a-address" value="" placeholder="248 Nguyễn Tất Thành"></div>
                             <div class="con-row" style="gap:10px;">
-                                <div class="con-col con-group" style="min-width:140px;"><label>Mã Số Thuế</label><input type="text" id="con-a-tax" value="0100695387-043"></div>
-                                <div class="con-col con-group" style="min-width:140px;"><label>SĐT / Fax</label><input type="text" id="con-a-phone" value="0979435599"></div>
+                                <div class="con-col con-group" style="min-width:140px;"><label>Mã Số Thuế</label><input type="text" id="con-a-tax" value="" placeholder="VD: 0123456789-001"></div>
+                                <div class="con-col con-group" style="min-width:140px;"><label>SĐT / Fax</label><input type="text" id="con-a-phone" value="" placeholder="VD: 0979.47.17.67"></div>
                             </div>
                             <div class="con-row" style="gap:10px;">
                                 <div class="con-col con-group" style="min-width:140px;"><label>Số Tài Khoản</label><input type="text" id="con-a-bank-acc" value="" placeholder="STK bên A (nếu có)..."></div>
@@ -393,8 +393,8 @@
                                         <option value="Bà">Bà</option>
                                     </select>
                                 </div>
-                                <div class="con-col con-group" style="min-width:140px; flex:1.6;"><label>Người Đại Diện</label><input type="text" id="con-a-rep" value="Bùi Quang Tuyên"></div>
-                                <div class="con-col con-group" style="min-width:140px;"><label>Chức Vụ</label><input type="text" id="con-a-role" value="Giám Đốc"></div>
+                                <div class="con-col con-group" style="min-width:140px; flex:1.6;"><label>Người Đại Diện</label><input type="text" id="con-a-rep" value="" placeholder="VD: Ngô Hữu Thọ"></div>
+                                <div class="con-col con-group" style="min-width:140px;"><label>Chức Vụ</label><input type="text" id="con-a-role" value="" placeholder="VD: Chuyên gia"></div>
                             </div>
                         </div>
 
@@ -428,11 +428,11 @@
                         <!-- BÊN BÁN (BÊN B) -->
                         <div class="con-col con-panel" id="panel-side-b">
                             <div class="con-sec-title bg-sell">🏪 II/ BÊN BÁN (BÊN B)</div>
-                            <div class="con-group"><label>Tên Chi Nhánh / Công ty</label><input type="text" id="con-b-name" value="CHI NHÁNH CÔNG TY CỔ PHẦN ĐẦU TƯ ĐIỆY MÁY XANH"></div>
-                            <div class="con-group"><label>Địa Chỉ Trụ Sở Đăng Ký</label><input type="text" id="con-b-address" value="Số A12 Trần Hưng Đạo, Phường Buôn Ma Thuột, Tỉnh Đắk Lắk, Việt Nam"></div>
-                            <div class="con-group"><label>Siêu Thị Bán Hàng</label><input type="text" id="con-b-store" value="ĐMM_DLA_LAK - 248 Nguyễn Tất Thành (Liên Sơn)"></div>
+                            <div class="con-group"><label>Tên Chi Nhánh / Công ty</label><input type="text" id="con-b-name" value="Chi Nhánh Công Ty Cổ Phần Đầu Tư Điện Máy Xanh"></div>
+                            <div class="con-group"><label>Địa Chỉ Trụ Sở Đăng Ký</label><input type="text" id="con-b-address" value="" placeholder="VD: Số A12 Trần Hưng Đạo, Phường Buôn Ma Thuột, Tỉnh Đắk Lắk, Việt Nam"></div>
+                            <div class="con-group"><label>Siêu Thị Bán Hàng</label><input type="text" id="con-b-store" value="" placeholder="VD: ĐMM_DLA_LAK - 248 Nguyễn Tất Thành (Liên Sơn)"></div>
                             <div class="con-row" style="gap:10px;">
-                                <div class="con-col con-group" style="min-width:140px;"><label>Mã Số Thuế</label><input type="text" id="con-b-tax" value="0303217354-002"></div>
+                                <div class="con-col con-group" style="min-width:140px;"><label>Mã Số Thuế</label><input type="text" id="con-b-tax" value="" placeholder="VD: 0303217354-002"></div>
                                 <div class="con-col con-group" style="min-width:140px;"><label>Điện thoại / Fax</label><input type="text" id="con-b-phone" value="18001060 – (+84) 8 38125957"></div>
                             </div>
                             <div class="con-row" style="gap:10px;">
@@ -447,7 +447,7 @@
                                         <option value="Bà" selected>Bà</option>
                                     </select>
                                 </div>
-                                <div class="con-col con-group" style="min-width:140px; flex:1.6;"><label>Đại Diện</label><input type="text" id="con-b-rep-hd" value="Đỗ Thị Thái Thanh"></div>
+                                <div class="con-col con-group" style="min-width:140px; flex:1.6;"><label>Đại Diện</label><input type="text" id="con-b-rep-hd" value="" placeholder="VD: Đỗ Thị Thái Thanh"></div>
                                 <div class="con-col con-group" style="min-width:140px;"><label>Chức Vụ</label><input type="text" id="con-b-role-hd" value="Giám Đốc Bán Hàng"></div>
                             </div>
                             <div class="con-group"><label>Ủy Quyền</label><input type="text" id="con-b-uq" value="Theo giấy Uỷ Quyền số 12/2026/ĐMX/UQ ký ngày 24/03/2026"></div>
@@ -503,7 +503,7 @@
                         <div class="con-col con-group" style="flex:1; margin:0;"><label>Giá Trị Giảm (VNĐ)</label><input type="text" id="con-discount-val" placeholder="0" style="text-align:right;"></div>
                         <div class="con-col con-group" style="flex:1.5; margin:0;">
                             <label style="color:#c00000; font-weight:bold;">💰 TỔNG TIỀN CUỐI CÙNG (VNĐ)</label>
-                            <div class="con-grand-total" id="con-final-total">29,090,000</div>
+                            <div class="con-grand-total" id="con-final-total"></div>
                         </div>
                     </div>
                     <div class="con-panel con-group" style="margin-top:-10px;">
@@ -512,7 +512,7 @@
                     </div>
 
                     <!-- NÚT KẾT XUẤT -->
-                    <button id="btn-con-generate" class="con-btn-generate">🖨️ Tạo Hợp Đồng & Tải PDF</button>
+                    <button id="btn-con-generate" class="con-btn-generate">🖨️ Tạo Hợp Đồng</button>
                 </div>
             `;
             document.body.appendChild(app);
@@ -564,7 +564,7 @@
                     app.querySelectorAll('.con-p-desc').forEach(el => el.style.display = 'block');
                     app.querySelectorAll('.con-p-name').forEach(el => el.style.display = 'none');
                     priceHeader.innerText = "GIÁ ĐÃ GIẢM";
-                    btnGenerate.innerText = "🖨️ Tạo Báo Giá & Tải PDF";
+                    btnGenerate.innerText = "🖨️ Tạo Báo Giá";
                 } else {
                     panelA.style.display = 'block';
                     panelB.style.display = 'block';
@@ -574,7 +574,7 @@
                     app.querySelectorAll('.con-p-desc').forEach(el => el.style.display = 'none');
                     app.querySelectorAll('.con-p-name').forEach(el => el.style.display = 'block');
                     priceHeader.innerText = "ĐƠN GIÁ (VNĐ)";
-                    btnGenerate.innerText = "🖨️ Tạo Hợp Đồng & Tải PDF";
+                    btnGenerate.innerText = "🖨️ Tạo Hợp Đồng";
                 }
                 recalculateTotals();
             };
@@ -1639,8 +1639,8 @@
                                                             <span class="bold red-text">Bên A :</span> <span class="bold">${aName}</span><br>
                                                             <div style="margin-left: 20px; line-height: 1.5;">
                                                                 <span class="red-text">- Địa chỉ :</span> ${aAddress}<br>
-                                                                <span class="red-text">- Đại diện là</span> <span class="bold">${aRep}</span><br>
-                                                                <span class="red-text">- Chức vụ:</span> Giám đốc
+                                                                <span class="red-text">- Đại diện là</span> <span class="bold">${aHonor} ${aRep}</span><br>
+                                                                <span class="red-text">- Chức vụ:</span> ${aRole}
                                                             </div>
                                                         </div>
 
@@ -1706,8 +1706,8 @@
                                                             <table style="width: 100%; border:none;">
                                                                 <tr style="border:none;"><td style="width:25%; border:none; padding:2px 0;"><b>Trụ sở đăng ký</b></td><td style="width:2%; border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;">${aAddress}</td></tr>
                                                                 <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Mã số thuế</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;">${aTax}</td></tr>
-                                                                <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Đại diện bởi</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;"><b>${aRep}</b></td></tr>
-                                                                <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Chức vụ</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;">Giám đốc</td></tr>
+                                                                <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Đại diện bởi</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;"><b>${aHonor} ${aRepHd}</b></td></tr>
+                                                                <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Chức vụ</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;">${aRole}$</td></tr>
                                                             </table>
                                                         </div>
 
@@ -1717,8 +1717,8 @@
                                                                 <tr style="border:none;"><td style="width:25%; border:none; padding:2px 0; color:red;"><b>Trụ sở đăng ký</b></td><td style="width:2%; border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0; color:red;"><b>${bAddress}</b></td></tr>
                                                                 <tr style="border:none;"><td style="border:none; padding:2px 0; color:red;"><b>Siêu thị bán hàng</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0; color:red;"><b>${bStore}</b></td></tr>
                                                                 <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Mã số thuế</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;"><span style="color:red; font-weight:bold;">${bTax}</span></td></tr>
-                                                                <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Đại diện bởi</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0; color:red;"><b>${bHonorTl}: ${bRepTl}</b></td></tr>
-                                                                <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Chức vụ</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0; color:red;"><b>Giám Đốc Vùng</b></td></tr>
+                                                                <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Đại diện bởi</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0; color:red;"><b>${bHonorHd} ${bRepHd}</b></td></tr>
+                                                                <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Chức vụ</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0; color:red;"><b>${bRoleHd}</b></td></tr>
                                                             </table>
                                                         </div>
 
