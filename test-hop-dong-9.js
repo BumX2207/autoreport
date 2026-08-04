@@ -225,15 +225,7 @@
                     }
                 }
             };
-            for (let selector in fields) {
-                const val = fields[selector];
-                if (val !== undefined) {
-                    const el = activeApp.querySelector(selector);
-                    if (el) el.value = val;
-                }
-            }
-        };
-
+        
         const renderDraftDropdown = () => {
             const activeApp = document.getElementById('con-app') || app;
             if (!activeApp) return;
