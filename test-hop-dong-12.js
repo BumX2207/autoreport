@@ -1706,8 +1706,8 @@
                                                             <table style="width: 100%; border:none;">
                                                                 <tr style="border:none;"><td style="width:25%; border:none; padding:2px 0;"><b>Trụ sở đăng ký</b></td><td style="width:2%; border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;">${aAddress}</td></tr>
                                                                 <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Mã số thuế</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;">${aTax}</td></tr>
-                                                                <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Đại diện bởi</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;"><b>${aHonor} ${aRepHd}</b></td></tr>
-                                                                <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Chức vụ</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;">${aRole}$</td></tr>
+                                                                <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Đại diện bởi</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;"><b>${aHonor} ${aRep}</b></td></tr>
+                                                                <tr style="border:none;"><td style="border:none; padding:2px 0;"><b>Chức vụ</b></td><td style="border:none; padding:2px 0;">:</td><td style="border:none; padding:2px 0;">${aRole}</td></tr>
                                                             </table>
                                                         </div>
 
