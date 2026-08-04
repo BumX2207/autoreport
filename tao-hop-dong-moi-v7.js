@@ -1115,18 +1115,16 @@
                         return "Thế giới Di động";
                     };
 
-                    let printHtml = `
-                        <html>
-                        <head>
-                            <meta charset="utf-8">
+                    let printHtml = `<!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="utf-8">
                             <title>Kết xuất báo cáo PDF - AutoBI</title>
                             <style>
                             @page {
                                 size: A4;
-                                margin-top: 1.5cm; /* CỐ ĐỊNH LỀ TRÊN NỘI DUNG CHUẨN 1.5CM */
-                                
-                                /* ĐỊNH NGHĨA CHÍNH XÁC VÙNG CẮT NỘI DUNG CÁCH ĐÁY GIẤY = FOOTER POS */
-                                margin-bottom: ${footerPos}cm; 
+                                margin-top: 1.5cm;
+                                margin-bottom: ${footerPos + 0.8}cm; 
                                 
                                 margin-left: 2cm;
                                 margin-right: 1.5cm;
@@ -1140,7 +1138,7 @@
                                     margin: 0 !important;
                                     padding: 0 !important;
                                 }
-
+                            
                                 .page-container { 
                                     width: 100% !important; 
                                     min-height: auto !important; 
@@ -1155,44 +1153,50 @@
                                     line-height: 1.3 !important;
                                     position: static !important;
                                 }
-
+                            
                                 .page-content {
                                     padding-bottom: 0 !important;
                                     margin-bottom: 0 !important;
                                 }
-
-                                /* ========================================================================= */
-                                /* FOOTER ĐẶT ĐẦU BODY + BOTTOM = 0 => DÍNH CHẶT CHUẨN XÁC TẠI LỀ ĐÁY @PAGE  */
-                                /* Không bao giờ nhảy lên giữa trang 2, không đè chữ                         */
-                                /* ========================================================================= */
+                            
+                                /* KHỐI FOOTER CỐ ĐỊNH CHUẨN XÁC */
                                 .print-footer {
-                                    position: fixed !important;
-                                    bottom: 0 !important;
-                                    left: 0 !important;
-                                    right: 0 !important;
-                                    width: 100% !important;
-                                    height: 22px !important;
-                                    line-height: 22px !important;
-                                    border-top: 1px solid #000000 !important;
-                                    padding-top: 2px !important;
-                                    font-size: 9.5pt !important;
-                                    font-weight: bold !important;
-                                    background: #ffffff !important;
-                                    display: flex !important;
-                                    justify-content: space-between !important;
-                                    align-items: center !important;
-                                    box-sizing: border-box !important;
-                                    overflow: hidden !important;
-                                    page-break-inside: avoid !important;
-                                    break-inside: avoid !important;
-                                    z-index: 99999 !important;
-                                }
-
-                                /* SỐ TRANG TỰ ĐỘNG CHUẨN ĐẾM CỦA CHROME (1, 2, 3...) */
-                                .print-footer .page-num::after {
-                                    content: counter(page) !important;
-                                }
-
+                                position: fixed !important;
+                                bottom: 0 !important;
+                                left: 0 !important;
+                                right: 0 !important;
+                                width: 100% !important;
+                                height: 22px !important;
+                                line-height: 22px !important;
+                                border-top: 1px solid #000000 !important;
+                                padding-top: 2px !important;
+                                font-size: 9.5pt !important;
+                                font-weight: bold !important;
+                                background: #ffffff !important;
+                                display: block !important; 
+                                
+                                box-sizing: border-box !important;
+                                overflow: hidden !important;
+                                page-break-inside: avoid !important;
+                                break-inside: avoid !important;
+                                z-index: 99999 !important;
+                            }
+                        
+                            /* Đẩy chữ bên trái sang biên trái */
+                            .print-footer > span:first-child {
+                                float: left !important;
+                            }
+                        
+                            /* Đẩy số trang sang biên phải */
+                            .print-footer .page-num {
+                                float: right !important;
+                            }
+                        
+                            /* IN SỐ TRANG TỰ ĐỘNG CHUẨN (1, 2, 3...) */
+                            .print-footer .page-num::after {
+                                content: counter(page) !important;
+                            }
+                            
                                 .info-table td, .prod-table th, .prod-table td {
                                     padding: 4px 6px !important;
                                 }
@@ -1244,8 +1248,8 @@
                                 display: block;
                                 position: relative;
                             }
-                            .print-footer { 
-                                display: none;
+                            .print-footer {
+                                display: none !important;
                             }
                             .page-break {
                                 border-top: 1px dashed #cbd5e1;
@@ -1297,6 +1301,28 @@
                         }
 
                         printHtml += `
+                            <style>
+                            @page {
+                                @bottom-left {
+                                    content: "Pháp Chế_111124_ĐMX_VN";
+                                    font-family: "Times New Roman", Times, serif;
+                                    font-size: 9.5pt;
+                                    font-weight: bold;
+                                    border-top: 1px solid #000000;
+                                    padding-top: 3px;
+                                    vertical-align: top;
+                                }
+                                @bottom-right {
+                                    content: "Trang " counter(page);
+                                    font-family: "Times New Roman", Times, serif;
+                                    font-size: 9.5pt;
+                                    font-weight: bold;
+                                    border-top: 1px solid #000000;
+                                    padding-top: 3px;
+                                    vertical-align: top;
+                                }
+                            }
+                            </style>
                             <!-- THẺ FOOTER ĐẶT ĐẦU BODY ĐỂ CỐ ĐỊNH CHUẨN XÁC TẤT CẢ TRANG -->
                             <div class="print-footer">
                                 <span>Pháp Chế_111124_ĐMX_VN</span>
@@ -1547,6 +1573,28 @@
                         `).join('');
 
                         printHtml += `
+                            <style>
+                            @page {
+                                @bottom-left {
+                                    content: "dienmayxanh";
+                                    font-family: "Times New Roman", Times, serif;
+                                    font-size: 9.5pt;
+                                    font-weight: bold;
+                                    border-top: 1px solid #000000;
+                                    padding-top: 3px;
+                                    vertical-align: top;
+                                }
+                                @bottom-right {
+                                    content: "Trang " counter(page);
+                                    font-family: "Times New Roman", Times, serif;
+                                    font-size: 9.5pt;
+                                    font-weight: bold;
+                                    border-top: 1px solid #000000;
+                                    padding-top: 3px;
+                                    vertical-align: top;
+                                }
+                            }
+                            </style>
                             <!-- THẺ FOOTER ĐẶT ĐẦU BODY ĐỂ CỐ ĐỊNH CHUẨN XÁC TẤT CẢ TRANG -->
                             <div class="print-footer" style="font-family: 'Times New Roman', serif;">
                                 <span style="font-weight: bold; color: #111;">dienmayxanh</span>
@@ -1848,7 +1896,7 @@
     };
 
     return {
-        name: "Tạo Hợp Đồng v1",
+        name: "Tạo Hợp Đồng",
         icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 15H7v-2h10v2zm0-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>`,
         bgColor: "#6c5ce7",
         action: runTool
