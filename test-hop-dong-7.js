@@ -1123,10 +1123,8 @@
                             <style>
                             @page {
                                 size: A4;
-                                margin-top: 1.5cm; /* CỐ ĐỊNH LỀ TRÊN NỘI DUNG CHUẨN 1.5CM */
-                                
-                                /* ĐỊNH NGHĨA CHÍNH XÁC VÙNG CẮT NỘI DUNG CÁCH ĐÁY GIẤY = FOOTER POS */
-                                margin-bottom: ${footerPos}cm; 
+                                margin-top: 1.5cm;
+                                margin-bottom: ${footerPos + 0.8}cm; 
                                 
                                 margin-left: 2cm;
                                 margin-right: 1.5cm;
@@ -1250,8 +1248,8 @@
                                 display: block;
                                 position: relative;
                             }
-                            .print-footer { 
-                                display: none;
+                            .print-footer {
+                                display: none !important;
                             }
                             .page-break {
                                 border-top: 1px dashed #cbd5e1;
@@ -1303,6 +1301,28 @@
                         }
 
                         printHtml += `
+                            <style>
+                            @page {
+                                @bottom-left {
+                                    content: "Pháp Chế_111124_ĐMX_VN";
+                                    font-family: "Times New Roman", Times, serif;
+                                    font-size: 9.5pt;
+                                    font-weight: bold;
+                                    border-top: 1px solid #000000;
+                                    padding-top: 3px;
+                                    vertical-align: top;
+                                }
+                                @bottom-right {
+                                    content: "Trang " counter(page);
+                                    font-family: "Times New Roman", Times, serif;
+                                    font-size: 9.5pt;
+                                    font-weight: bold;
+                                    border-top: 1px solid #000000;
+                                    padding-top: 3px;
+                                    vertical-align: top;
+                                }
+                            }
+                            </style>
                             <!-- THẺ FOOTER ĐẶT ĐẦU BODY ĐỂ CỐ ĐỊNH CHUẨN XÁC TẤT CẢ TRANG -->
                             <div class="print-footer">
                                 <span>Pháp Chế_111124_ĐMX_VN</span>
@@ -1553,6 +1573,28 @@
                         `).join('');
 
                         printHtml += `
+                            <style>
+                            @page {
+                                @bottom-left {
+                                    content: "dienmayxanh";
+                                    font-family: "Times New Roman", Times, serif;
+                                    font-size: 9.5pt;
+                                    font-weight: bold;
+                                    border-top: 1px solid #000000;
+                                    padding-top: 3px;
+                                    vertical-align: top;
+                                }
+                                @bottom-right {
+                                    content: "Trang " counter(page);
+                                    font-family: "Times New Roman", Times, serif;
+                                    font-size: 9.5pt;
+                                    font-weight: bold;
+                                    border-top: 1px solid #000000;
+                                    padding-top: 3px;
+                                    vertical-align: top;
+                                }
+                            }
+                            </style>
                             <!-- THẺ FOOTER ĐẶT ĐẦU BODY ĐỂ CỐ ĐỊNH CHUẨN XÁC TẤT CẢ TRANG -->
                             <div class="print-footer" style="font-family: 'Times New Roman', serif;">
                                 <span style="font-weight: bold; color: #111;">dienmayxanh</span>
