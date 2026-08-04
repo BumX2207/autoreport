@@ -679,7 +679,7 @@
                 const selVal = e.target.value;
                 if (!selVal) return;
                 const storeName = userCfg[selVal] || "";
-                app.querySelector('#con-b-store').value = storeName.toUpperCase();
+                app.querySelector('#con-b-store').value = storeName;
             };
 
             // --- CHỌN BẢN NHÁP TỪ DROPDOWN ---
@@ -1120,7 +1120,7 @@
 
                     const getBrandName = (storeName) => {
                         if (!storeName) return "Thế giới Di động";
-                        const firstChar = storeName.trim().charAt(0).toUpperCase();
+                        const firstChar = storeName.trim().charAt(0);
                         if (firstChar === 'Đ') return "Điện máy Xanh";
                         if (firstChar === 'A') return "Topzone";
                         return "Thế giới Di động";
@@ -1552,7 +1552,7 @@
                                                                     <div style="font-weight: normal; text-align: left; padding-left: 20px;">
                                                                         <b>Bởi:</b> ${bName}<br>
                                                                         <b>${bHonorHd} :</b> ${bRepHd}<br>
-                                                                        <b>Chức vụ:</b> ${bRoleHd.toUpperCase()}
+                                                                        <b>Chức vụ:</b> ${bRoleHd}
                                                                     </div>
                                                                 </td>
                                                             </tr>
@@ -1809,8 +1809,8 @@
                                     <table style="width: 100%; border: none; margin-bottom: 15px;">
                                         <tr style="border: none;">
                                             <td style="width: 60%; text-align: left; vertical-align: top; border: none; padding: 0; line-height: 1.45;">
-                                                <div style="font-weight: 900; font-size: 12.5pt; text-transform: uppercase;">CHI NHÁNH CÔNG TY CỔ PHẦN ĐẦU TƯ</div>
-                                                <div style="font-weight: 900; font-size: 12.5pt; text-transform: uppercase; margin-bottom: 5px;">ĐIỆN MÁY XANH</div>
+                                                <div style="font-weight: 900; font-size: 12.5pt;">Chi Nhánh Công Ty Cổ Phần Đầu Tư</div>
+                                                <div style="font-weight: 900; font-size: 12.5pt; margin-bottom: 5px;">Điện Máy Xanh</div>
                                                 <div style="font-size: 9.5pt; color: red; font-weight: bold;">Địa chỉ: ${storeAddress}</div>
                                                 <div style="font-size: 9.5pt; font-weight: bold;">Điện thoại: ${bPhone}</div>
                                                 <div style="font-size: 9.5pt; color: red; font-weight: bold;">Mã số thuế: ${bTax}</div>
