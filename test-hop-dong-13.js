@@ -1647,8 +1647,8 @@
                                                         <div style="margin-top: 15px;">
                                                             <span class="bold">Bên B :</span> <span class="bold">${bName}</span><br>
                                                             <div style="margin-left: 20px; line-height: 1.5;">
-                                                                <span class="red-text">- Địa chỉ :</span> <span class="red-text">${bStore.split(' - ')[1] || bAddress}</span><br>
-                                                                <span class="red-text">- Đại diện là</span> <span class="bold red-text">${bHonorTl}: ${bRepTl}</span><br>
+                                                                <span class="red-text">- Địa chỉ :</span> <span class="red-text">${storeAddress}</span><br>
+                                                                <span class="red-text">- Đại diện là</span> <span class="bold red-text">${bHonorTl} ${bRepTl}</span><br>
                                                                 <span class="red-text">- Chức vụ:</span> ${bRoleTl}
                                                             </div>
                                                         </div>
