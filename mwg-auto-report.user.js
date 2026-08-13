@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         AutoBI 13.9
+// @name         AutoBI 13.8
 // @namespace    http://tampermonkey.net/
-// @version      13.9
+// @version      13.8
 // @description  Tool báo cáo tự động cho quản lý MWG.
 // @author       42060
 // @match        https://bi.thegioididong.com/*
