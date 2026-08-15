@@ -374,12 +374,8 @@
                                 <label>📁 ID Thư mục Google Drive lưu ảnh</label>
                                 <input type="text" id="con-q-drive-folder" value="" placeholder="Dán ID hoặc Link thư mục Drive của bạn...">
                             </div>
-                            <div class="con-col con-group" style="min-width: 250px; display:none;" id="group-rental-size">
-                                <label>📐 Kích thước rạp (Thuê rạp)</label>
-                                <input type="text" id="con-rental-size" value="C. Rộng: 4m2, C. Dài: 5m2, C. Cao : 3m">
-                            </div>
                             <div class="con-col con-group" style="min-width: 180px;">
-                                <label>📄 Loại văn bản kết xuất</label>
+                                <label>📄 ...Loại văn bản kết xuất</label>
                                 <select id="con-file-type">
                                     <option value="contract">In hợp đồng mua bán</option>
                                     <option value="liquidation">Biên bản bàn giao thanh lý</option>
@@ -395,7 +391,7 @@
                         <!-- BÊN MUA (BÊN A / HOẶC BÊN CHO THUÊ) -->
                         <div class="con-col con-panel" id="panel-side-a">
                             <div class="con-sec-title bg-buy">🏢 I/ BÊN MUA (BÊN A)</div>
-                            <div class="con-group"><label>Tên Đơn Vị Mua Hàng / Cho Thuê</label><input type="text" id="con-a-name" value="" placeholder="VD: Công ty cổ phần Chuyengia.vip"></div>
+                            <div class="con-group"><label id="lbl-a-name">Tên Đơn Vị Mua Hàng</label><input type="text" id="con-a-name" value="" placeholder="VD: Công ty cổ phần Chuyengia.vip"></div>
                             <div class="con-group"><label>Địa Chỉ Trụ Sở Đăng Ký</label><input type="text" id="con-a-address" value="" placeholder="248 Nguyễn Tất Thành"></div>
                             <div class="con-row" style="gap:10px;">
                                 <div class="con-col con-group" style="min-width:140px;"><label>Mã Số Thuế (nếu có)</label><input type="text" id="con-a-tax" value="" placeholder="VD: 0123456789-001"></div>
@@ -419,8 +415,8 @@
                                         <option value="Chị">Chị</option>
                                     </select>
                                 </div>
-                                <div class="con-col con-group" style="min-width:140px; flex:1.6;"><label>Người Đại Diện</label><input type="text" id="con-a-rep" value="" placeholder="VD: Ngô Hữu Thọ"></div>
-                                <div class="con-col con-group" style="min-width:140px;"><label>Chức Vụ</label><input type="text" id="con-a-role" value="" placeholder="VD: Chuyên gia"></div>
+                                <div class="con-col con-group" style="min-width:140px; flex:1.6;"><label id="lbl-a-rep">Người Đại Diện</label><input type="text" id="con-a-rep" value="" placeholder="VD: Ngô Hữu Thọ"></div>
+                                <div class="con-col con-group" style="min-width:140px;"><label id="lbl-a-role">Chức Vụ</label><input type="text" id="con-a-role" value="" placeholder="VD: Chuyên gia"></div>
                             </div>
                         </div>
 
@@ -451,7 +447,7 @@
                             </div>
                         </div>
 
-                        <!-- BÊN BÁN (BÊN B) -->
+                        <!-- BÊN BÁN (BÊN B / HOẶC BÊN THUÊ) -->
                         <div class="con-col con-panel" id="panel-side-b">
                             <div class="con-sec-title bg-sell">🏪 II/ BÊN BÁN (BÊN B)</div>
                             <div class="con-group"><label>Tên Chi Nhánh / Công ty</label><input type="text" id="con-b-name" value="Chi Nhánh Công Ty Cổ Phần Đầu Tư Điện Máy Xanh"></div>
@@ -491,7 +487,7 @@
                                 <tr>
                                     <th style="width:40px;">STT</th>
                                     <th class="col-image" style="width:80px; display:none;">Hình ảnh</th>
-                                    <th>TÊN SẢN PHẨM / MÔ TẢ CHI TIẾT</th>
+                                    <th id="th-product-header">TÊN SẢN PHẨM / MÔ TẢ CHI TIẾT</th>
                                     <th style="width:70px;">SL</th>
                                     <th class="col-retail-price" style="width:130px; display:none;">Giá gốc</th>
                                     <th class="col-price-header" style="width:130px;">ĐƠN GIÁ</th>
@@ -580,6 +576,13 @@
                 const panelQuotation = app.querySelector('#panel-quotation-client');
                 const priceHeader = app.querySelector('.col-price-header');
                 const btnGenerate = app.querySelector('#btn-con-generate');
+                
+                const titleA = panelA.querySelector('.con-sec-title');
+                const titleB = panelB.querySelector('.con-sec-title');
+                const lblNameA = panelA.querySelector('#lbl-a-name') || panelA.querySelector('#con-a-name').closest('.con-group').querySelector('label');
+                const lblRepA = panelA.querySelector('#lbl-a-rep') || panelA.querySelector('#con-a-rep').closest('.con-group').querySelector('label');
+                const lblRoleA = panelA.querySelector('#lbl-a-role') || panelA.querySelector('#con-a-role').closest('.con-group').querySelector('label');
+                const thProductHeader = app.querySelector('#th-product-header');
 
                 if (fileType === 'quotation') {
                     panelA.style.display = 'none';
@@ -587,8 +590,11 @@
                     panelQuotation.style.display = 'block';
                     
                     app.querySelector('#row-a-extra-rental').style.display = 'none';
-                    app.querySelector('#group-rental-size').style.display = 'none';
-                    app.querySelector('#panel-side-a .con-sec-title').innerText = "🏢 I/ BÊN MUA (BÊN A)";
+                    titleA.innerText = "🏢 I/ BÊN MUA (BÊN A)";
+                    lblNameA.innerText = "Tên Đơn Vị Mua Hàng";
+                    lblRepA.innerText = "Người Đại Diện";
+                    lblRoleA.innerText = "Chức Vụ";
+                    thProductHeader.innerText = "TÊN SẢN PHẨM / MÔ TẢ CHI TIẾT";
 
                     app.querySelectorAll('.col-image, .col-retail-price').forEach(el => el.style.display = 'table-cell');
                     app.querySelectorAll('.con-p-desc').forEach(el => el.style.display = 'block');
@@ -597,17 +603,21 @@
                     btnGenerate.innerText = "🖨️ Tạo Báo Giá";
                 } else if (fileType === 'rental') {
                     panelA.style.display = 'block';
-                    panelB.style.display = 'none';
+                    panelB.style.display = 'block';
                     panelQuotation.style.display = 'none';
                     
                     app.querySelector('#row-a-extra-rental').style.display = 'flex';
-                    app.querySelector('#group-rental-size').style.display = 'block';
-                    app.querySelector('#panel-side-a .con-sec-title').innerText = "🏢 I/ BÊN CHO THUÊ (BÊN B)";
+                    titleA.innerText = "🏢 I/ BÊN CHO THUÊ (BÊN B)";
+                    titleB.innerText = "🏪 II/ BÊN THUÊ (BÊN A)";
+                    lblNameA.innerText = "Tên Đơn Vị Cho Thuê (Bên B)";
+                    lblRepA.innerText = "Người Đại Diện Cho Thuê";
+                    lblRoleA.innerText = "Chức Vụ Bên Cho Thuê";
+                    thProductHeader.innerText = "KÍCH THƯỚC RẠP (CHI TIẾT RẠP THUÊ)";
 
                     app.querySelectorAll('.col-image, .col-retail-price').forEach(el => el.style.display = 'none');
                     app.querySelectorAll('.con-p-desc').forEach(el => el.style.display = 'none');
                     app.querySelectorAll('.con-p-name').forEach(el => el.style.display = 'block');
-                    priceHeader.innerText = "ĐƠN GIÁ (VNĐ)";
+                    priceHeader.innerText = "ĐƠN GIÁ CHƯA VAT";
                     btnGenerate.innerText = "🖨️ Tạo HĐ Thuê Rạp";
                 } else {
                     panelA.style.display = 'block';
@@ -615,8 +625,12 @@
                     panelQuotation.style.display = 'none';
                     
                     app.querySelector('#row-a-extra-rental').style.display = 'none';
-                    app.querySelector('#group-rental-size').style.display = 'none';
-                    app.querySelector('#panel-side-a .con-sec-title').innerText = "🏢 I/ BÊN MUA (BÊN A)";
+                    titleA.innerText = "🏢 I/ BÊN MUA (BÊN A)";
+                    titleB.innerText = "🏪 II/ BÊN BÁN (BÊN B)";
+                    lblNameA.innerText = "Tên Đơn Vị Mua Hàng";
+                    lblRepA.innerText = "Người Đại Diện";
+                    lblRoleA.innerText = "Chức Vụ";
+                    thProductHeader.innerText = "TÊN SẢN PHẨM / MÔ TẢ CHI TIẾT";
 
                     app.querySelectorAll('.col-image, .col-retail-price').forEach(el => el.style.display = 'none');
                     app.querySelectorAll('.con-p-desc').forEach(el => el.style.display = 'none');
@@ -760,7 +774,6 @@
                 
                 app.querySelector('#con-a-dob').value = draft.aDob || '26/08/1980';
                 app.querySelector('#con-a-cccd').value = draft.aCccd || '030080002021';
-                app.querySelector('#con-rental-size').value = draft.rentalSize || 'C. Rộng: 4m2, C. Dài: 5m2, C. Cao : 3m';
 
                 app.querySelector('#con-q-client-name').value = draft.qClientName || '';
                 app.querySelector('#con-q-client-phone').value = draft.qClientPhone || '';
@@ -839,7 +852,6 @@
                 
                 app.querySelector('#con-a-dob').value = "26/08/1980";
                 app.querySelector('#con-a-cccd').value = "030080002021";
-                app.querySelector('#con-rental-size').value = "C. Rộng: 4m2, C. Dài: 5m2, C. Cao : 3m";
 
                 app.querySelector('#con-q-client-name').value = "";
                 app.querySelector('#con-q-client-phone').value = "";
@@ -935,7 +947,6 @@
                         
                         aDob: app.querySelector('#con-a-dob').value.trim(),
                         aCccd: app.querySelector('#con-a-cccd').value.trim(),
-                        rentalSize: app.querySelector('#con-rental-size').value.trim(),
 
                         qClientName: app.querySelector('#con-q-client-name').value.trim(),
                         qClientPhone: app.querySelector('#con-q-client-phone').value.trim(),
@@ -1030,6 +1041,7 @@
             
             // Hàm tính toán tổng tiền
             const recalculateTotals = () => {
+                const fileType = app.querySelector('#con-file-type').value;
                 const rows = tbody.querySelectorAll('.con-product-row');
                 let grandTotal = 0;
 
@@ -1038,7 +1050,11 @@
 
                     const qty = parseInt(row.querySelector('.con-p-qty').value) || 0;
                     const price = UTILS.parseFormattedNumber(row.querySelector('.con-p-price').value) || 0;
-                    const total = qty * price;
+                    
+                    let total = qty * price;
+                    if (fileType === 'rental') {
+                        total = Math.round(total * 1.10); // Tự động nhân thêm 10% VAT
+                    }
 
                     row.querySelector('.con-p-total').innerText = UTILS.formatNumber(total);
                     grandTotal += total;
@@ -1127,7 +1143,6 @@
                 
                 const aDob = app.querySelector('#con-a-dob').value.trim();
                 const aCccd = app.querySelector('#con-a-cccd').value.trim();
-                const rentalSize = app.querySelector('#con-rental-size').value.trim();
 
                 const bName = app.querySelector('#con-b-name').value.trim();
                 const bAddress = app.querySelector('#con-b-address').value.trim();
@@ -1834,27 +1849,20 @@
                         const netPaymentVal = Math.round(finalTotal * 0.9);
                         const netPaymentWords = convertNumberToWords(netPaymentVal);
                         
+                        // Lấy kích thước rạp từ tên dòng sản phẩm đầu tiên
+                        const sizeVal = products[0] ? products[0].name : "C. Rộng: 4m2, C. Dài: 5m2, C. Cao : 3m";
+                        
                         printHtml += `
                             <style>
                             @page {
-                                @bottom-left {
-                                    content: "Pháp Chế_111124_ĐMX_VN";
+                                @bottom-center {
+                                    content: counter(page);
                                     font-family: "Times New Roman", Times, serif;
-                                    font-size: 9.5pt;
-                                    font-weight: bold;
-                                    border-top: 1px solid #000000;
-                                    padding-top: 3px;
-                                    vertical-align: top;
+                                    font-size: 10pt;
+                                    font-weight: normal;
                                 }
-                                @bottom-right {
-                                    content: "Trang " counter(page);
-                                    font-family: "Times New Roman", Times, serif;
-                                    font-size: 9.5pt;
-                                    font-weight: bold;
-                                    border-top: 1px solid #000000;
-                                    padding-top: 3px;
-                                    vertical-align: top;
-                                }
+                                @bottom-left { content: none !important; }
+                                @bottom-right { content: none !important; }
                             }
                             </style>
                             <div class="page-container" style="font-family: 'Times New Roman', Times, serif; line-height: 1.4;">
@@ -1896,9 +1904,10 @@
                                                     </table>
 
                                                     <!-- THÔNG TIN BÊN B (BÊN CHO THUÊ) - Lấy từ config Bên A của UI -->
-                                                    <div class="bold" style="text-transform: uppercase; margin-bottom: 5px; text-decoration: underline;">BÊN CHO THUÊ (BÊN B): ${aName || "Công ty cổ phần ABC"}</div>
+                                                    <div class="bold" style="text-transform: uppercase; margin-bottom: 5px; text-decoration: underline;">BÊN CHO THUÊ (BÊN B):</div>
                                                     <table style="width: 100%; border: none; margin-bottom: 12px; line-height:1.4;">
-                                                        <tr style="border:none;"><td style="width: 18%; font-weight: bold; border: none; padding: 2px 0;">-Ông/Bà</td><td style="width: 2%; text-align: center; font-weight: bold; border: none; padding: 2px 0;">:</td><td style="border: none; padding: 2px 0; font-weight: bold;">${aHonor} ${aRep}</td></tr>
+                                                        <tr style="border:none;"><td style="width: 18%; font-weight: bold; border: none; padding: 2px 0;">-Tên đơn vị</td><td style="width: 2%; text-align: center; font-weight: bold; border: none; padding: 2px 0;">:</td><td style="border: none; padding: 2px 0; font-weight: bold;">${aName || "Công ty cổ phần ABC"}</td></tr>
+                                                        <tr style="border:none;"><td style="font-weight: bold; border: none; padding: 2px 0;">-Ông/Bà</td><td style="text-align: center; font-weight: bold; border: none; padding: 2px 0;">:</td><td style="border: none; padding: 2px 0; font-weight: bold;">${aHonor} ${aRep}</td></tr>
                                                         <tr style="border:none;"><td style="font-weight: bold; border: none; padding: 2px 0;">-Năm sinh</td><td style="text-align: center; font-weight: bold; border: none; padding: 2px 0;">:</td><td style="border: none; padding: 2px 0; font-weight: bold;">${aDob} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- Số CCCD: ${aCccd}</td></tr>
                                                         <tr style="border:none;"><td style="font-weight: bold; border: none; padding: 2px 0;">-Địa chỉ</td><td style="text-align: center; font-weight: bold; border: none; padding: 2px 0;">:</td><td style="border: none; padding: 2px 0; font-weight: bold;">${aAddress || "..........................."}</td></tr>
                                                         <tr style="border:none;"><td style="font-weight: bold; border: none; padding: 2px 0;">-Mã số thuế (nếu có)</td><td style="text-align: center; font-weight: bold; border: none; padding: 2px 0;">:</td><td style="border: none; padding: 2px 0; font-weight: bold;">${aTax || "..........................."} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- Số điện thoại: ${aPhone}</td></tr>
@@ -1916,7 +1925,7 @@
                                                     <div style="margin-left: 15px; margin-bottom: 12px; line-height:1.45;">
                                                         1/. Bên B đồng ý cho bên A thuê rạp với mục đích: <b>Bán hàng giá sốc</b><br>
                                                         2/. Địa điểm: <b>${storeAddress}</b><br>
-                                                        3/. Kích thước: <b>${rentalSize}</b><br>
+                                                        3/. Kích thước: <b>${sizeVal}</b><br>
                                                         4/. Số lượng: <b>${products[0] ? products[0].qty : 1}</b><br>
                                                         5/. Thời gian thuê: <b>${durationDays} ngày từ ngày ${dateHd} đến ngày ${dateTl}</b>
                                                     </div>
