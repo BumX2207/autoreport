@@ -1053,7 +1053,7 @@
                     
                     let total = qty * price;
                     if (fileType === 'rental') {
-                        total = Math.round(total * 1.10); // Tự động nhân thêm 10% VAT
+                        total = Math.round(total / 0.9); // Áp dụng công thức Gross-up ngược chuẩn 10%
                     }
 
                     row.querySelector('.con-p-total').innerText = UTILS.formatNumber(total);
