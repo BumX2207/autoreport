@@ -348,7 +348,7 @@
                                 <input type="text" id="con-date-hd" value="12/04/2026" placeholder="dd/mm/yyyy">
                             </div>
                             <div class="con-col con-group" style="min-width: 150px;">
-                                <label>Ngày nghiệm thu / Kết thúc thuê</label>
+                                <label>Ngày nghiệm thu/End</label>
                                 <input type="text" id="con-date-tl" value="14/04/2026" placeholder="dd/mm/yyyy">
                             </div>
                             
@@ -367,15 +367,15 @@
                                 <input type="text" id="con-common-phone" value="0979435599 - Hữu Thọ" placeholder="Số điện thoại - Tên người liên hệ">
                             </div>
                             <div class="con-col con-group" style="min-width: 250px;">
-                                <label>📍 Địa chỉ siêu thị (Báo giá / Thuê rạp)</label>
+                                <label>📍 Địa chỉ siêu thị</label>
                                 <input type="text" id="con-store-address" value="248 Nguyễn Tất Thành, Liên Sơn, Lắk, Đắk Lắk" placeholder="Nhập địa chỉ siêu thị bán hàng...">
                             </div>
                             <div class="con-col con-group" style="min-width: 250px;" id="group-drive-folder">
-                                <label>📁 ID Thư mục Google Drive lưu ảnh</label>
+                                <label>📁 ID Thư mục Google Drive</label>
                                 <input type="text" id="con-q-drive-folder" value="" placeholder="Dán ID hoặc Link thư mục Drive của bạn...">
                             </div>
                             <div class="con-col con-group" style="min-width: 180px;">
-                                <label>📄 ...Loại văn bản kết xuất</label>
+                                <label>📄 Loại văn bản kết xuất</label>
                                 <select id="con-file-type">
                                     <option value="contract">In hợp đồng mua bán</option>
                                     <option value="liquidation">Biên bản bàn giao thanh lý</option>
@@ -398,12 +398,12 @@
                                 <div class="con-col con-group" style="min-width:140px;"><label>SĐT / Fax</label><input type="text" id="con-a-phone" value="" placeholder="VD: 0979.47.17.67"></div>
                             </div>
                             <div class="con-row" style="gap:10px;">
-                                <div class="con-col con-group" style="min-width:140px;"><label>Số Tài Khoản</label><input type="text" id="con-a-bank-acc" value="" placeholder="STK bên A (nếu có)..."></div>
-                                <div class="con-col con-group" style="min-width:140px;"><label>Ngân Hàng</label><input type="text" id="con-a-bank-name" value="" placeholder="Tên ngân hàng bên A (nếu có)..."></div>
+                                <div class="con-col con-group" style="min-width:140px;"><label>Số Tài Khoản</label><input type="text" id="con-a-bank-acc" value="" placeholder="STK ngân hàng (nếu có)..."></div>
+                                <div class="con-col con-group" style="min-width:140px;"><label>Ngân Hàng</label><input type="text" id="con-a-bank-name" value="" placeholder="Tên ngân hàng ..."></div>
                             </div>
                             <div class="con-row" style="gap:10px; display:none;" id="row-a-extra-rental">
-                                <div class="con-col con-group" style="min-width:140px;"><label>Năm sinh (Bên B cho thuê)</label><input type="text" id="con-a-dob" value="26/08/1980" placeholder="dd/mm/yyyy"></div>
-                                <div class="con-col con-group" style="min-width:140px;"><label>Số CCCD (Bên B cho thuê)</label><input type="text" id="con-a-cccd" value="030080002021" placeholder="Số CCCD..."></div>
+                                <div class="con-col con-group" style="min-width:140px;"><label>Năm sinh</label><input type="text" id="con-a-dob" value="20/09/1991" placeholder="dd/mm/yyyy"></div>
+                                <div class="con-col con-group" style="min-width:140px;"><label>Số CCCD</label><input type="text" id="con-a-cccd" value="0660910045" placeholder="Số CCCD..."></div>
                             </div>
                             <div class="con-row" style="gap:10px;">
                                 <div class="con-col con-group" style="min-width:80px; flex:0.4;">
@@ -611,8 +611,8 @@
                     titleB.innerText = "🏪 II/ BÊN THUÊ (BÊN A)";
                     lblNameA.innerText = "Tên Đơn Vị Cho Thuê (Bên B)";
                     lblRepA.innerText = "Người Đại Diện Cho Thuê";
-                    lblRoleA.innerText = "Chức Vụ Bên Cho Thuê";
-                    thProductHeader.innerText = "KÍCH THƯỚC RẠP (CHI TIẾT RẠP THUÊ)";
+                    lblRoleA.innerText = "Chức Vụ";
+                    thProductHeader.innerText = "KÍCH THƯỚC RẠP";
 
                     app.querySelectorAll('.col-image, .col-retail-price').forEach(el => el.style.display = 'none');
                     app.querySelectorAll('.con-p-desc').forEach(el => el.style.display = 'none');
