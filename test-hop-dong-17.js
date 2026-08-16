@@ -345,11 +345,11 @@
                             </div>
                             <div class="con-col con-group" style="min-width: 150px;">
                                 <label>Ngày Ký Hợp Đồng</label>
-                                <input type="text" id="con-date-hd" value="12/04/2026" placeholder="dd/mm/yyyy">
+                                <input type="text" id="con-date-hd" value="01/08/2026" placeholder="dd/mm/yyyy">
                             </div>
                             <div class="con-col con-group" style="min-width: 150px;">
                                 <label>Ngày nghiệm thu/End</label>
-                                <input type="text" id="con-date-tl" value="14/04/2026" placeholder="dd/mm/yyyy">
+                                <input type="text" id="con-date-tl" value="02/08/2026" placeholder="dd/mm/yyyy">
                             </div>
                             
                             <!-- BỘ ĐIỀU CHỈNH FOOTER -->
@@ -506,13 +506,13 @@
                                         </div>
                                     </td>
                                     <td style="vertical-align:middle;">
-                                        <input type="text" class="con-p-name" value="Máy lạnh âm trần LG Inverter 2.5 HP ZTNQ24GPLA0" style="width:100%;">
+                                        <input type="text" class="con-p-name" value="02/08/2026" placeholder="dd/mm/yyyy" style="width:100%;">
                                         <textarea class="con-p-desc" style="width:100%; display:none; height:65px; border:1px solid #cbd5e1; border-radius:8px; padding:6px; font-size:13px; font-weight:bold; outline:none; resize:none;" placeholder="- Nhập mô tả sản phẩm (Enter để xuống dòng...)"></textarea>
                                     </td>
                                     <td style="vertical-align:middle;"><input type="number" class="con-p-qty" value="1" min="1" style="width:100%; text-align:center;"></td>
-                                    <td class="col-retail-price" style="display:none; vertical-align:middle;"><input type="text" class="con-p-retail-price" value="18,990,000" style="width:100%; text-align:right;"></td>
-                                    <td style="vertical-align:middle;"><input type="text" class="con-p-price" value="18,490,000" style="width:100%; text-align:right;"></td>
-                                    <td class="con-p-total bold" style="text-align:right; padding:6px; background:#f5f6fa; vertical-align:middle;">18,490,000</td>
+                                    <td class="col-retail-price" style="display:none; vertical-align:middle;"><input type="text" class="con-p-retail-price" value="" style="width:100%; text-align:right;"></td>
+                                    <td style="vertical-align:middle;"><input type="text" class="con-p-price" value="" style="width:100%; text-align:right;"></td>
+                                    <td class="con-p-total bold" style="text-align:right; padding:6px; background:#f5f6fa; vertical-align:middle;"></td>
                                     <td style="text-align:center; vertical-align:middle;"><button class="con-btn-del-row">✖</button></td>
                                 </tr>
                             </tbody>
@@ -837,7 +837,7 @@
                 currentDraftId = "draft_" + Date.now();
                 app.querySelector('#con-draft-select').value = "";
 
-                app.querySelector('#con-no').value = "0104-2026 /KD-ĐMX/HĐMB";
+                app.querySelector('#con-no').value = "0108-2026/KD-ĐMX/HĐMB";
                 
                 app.querySelector('#con-a-name').value = "";
                 app.querySelector('#con-a-address').value = "";
@@ -850,8 +850,8 @@
                 app.querySelector('#con-a-honor').value = "Ông";
                 app.querySelector('#con-footer-pos').value = "1.0";
                 
-                app.querySelector('#con-a-dob').value = "26/08/1980";
-                app.querySelector('#con-a-cccd').value = "030080002021";
+                app.querySelector('#con-a-dob').value = "20/09/1991";
+                app.querySelector('#con-a-cccd').value = "06609100459";
 
                 app.querySelector('#con-q-client-name').value = "";
                 app.querySelector('#con-q-client-phone').value = "";
