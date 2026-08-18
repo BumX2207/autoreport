@@ -2112,7 +2112,7 @@
                                     </div>
 
                                     <div style="text-align: center; font-size: 9.5pt; line-height: 1.4;">
-                                        <div>Nếu quý khách cần hỗ trợ thêm thông tin, vui lòng liên hệ with:</div>
+                                        <div>Nếu quý khách cần hỗ trợ thêm thông tin, vui lòng liên hệ với:</div>
                                         <div style="font-weight: bold; color: red; margin-top: 1px;">Siêu thị : ${getBrandName(bStore)} - ${storeAddress}</div>
                                         <div style="font-weight: bold; margin-top: 1px;">Điện thoại: ${commonPhone}</div>
                                         <div style="font-weight: bold; font-style: italic; margin-top: 10px; font-size: 10pt;">Cảm ơn Quý khách hàng!</div>
