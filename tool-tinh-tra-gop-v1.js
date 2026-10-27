@@ -331,6 +331,8 @@
                                             <option value="8">8</option> <option value="9">9</option>
                                             <option value="10">10</option> <option value="11">11</option>
                                             <option value="12">12</option>
+                                            <option value="18">18</option>
+                                            <option value="24">24</option>
                                         </select>
                                         <span style="font-size:13px; width: 40px; text-align:center;">tháng</span>
                                     </div>
