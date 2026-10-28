@@ -1,9 +1,9 @@
 ((context) => {
     // ===============================================================
-    // 1. CƠ SỞ DỮ LIỆU TỪ 3 ẢNH (BẢNG GIÁ, GÓI LÕI, MODEL MÁY)
+    // 1. CƠ SỞ DỮ LIỆU CHUẨN XÁC (TỪ 3 ẢNH ĐÍNH KÈM)
     // ===============================================================
 
-    // Bảng giá gốc & số lượng lõi (Nguồn: Ảnh 3)
+    // Bảng giá gốc & Tổng số lõi lũy kế (Nguồn: Ảnh 3)
     const PRICING_DB = {
         "Hòa Phát gói 1": {
             y1: { qty: 6, price: 656000 }, y2: { qty: 12, price: 1229000 },
@@ -107,136 +107,146 @@
         }
     };
 
-    // Chi tiết từng lõi lọc trong từng gói (Nguồn: Ảnh 1)
+    // Tiến độ 16 Quý (T1-3, T4-6, T7-9, T10-12 qua 4 năm) theo chu kỳ (Ảnh 1)
+    // 6 tháng: [0,1,0,1] mỗi năm
+    // 9 tháng: Y1: [0,0,1,0], Y2: [0,1,0,0], Y3: [1,0,0,1], Y4: [0,0,1,0] -> Y3 thay 2 lần!
+    // 12 tháng: [0,0,0,1] mỗi năm
+    const SCHEDULE_CYCLES = {
+        6:  [ [0,1,0,1], [0,1,0,1], [0,1,0,1], [0,1,0,1] ],
+        9:  [ [0,0,1,0], [0,1,0,0], [1,0,0,1], [0,0,1,0] ],
+        12: [ [0,0,0,1], [0,0,0,1], [0,0,0,1], [0,0,0,1] ]
+    };
+
+    // Danh sách lõi lọc cấu thành cho từng gói (Nguồn: Ảnh 1)
     const FILTER_DETAILS_DB = {
         "Hòa Phát gói 1": [
-            { pos: 1, code: "1114169000248", name: "Lõi lọc thô số 1 đúc nguyên khối PP 5 micron", cycle: 6, y1: 2, y2: 2, y3: 2, y4: 2 },
-            { pos: 2, code: "1114169000248", name: "Lõi lọc thô số 1 đúc nguyên khối PP 5 micron", cycle: 6, y1: 2, y2: 2, y3: 2, y4: 2 },
-            { pos: 3, code: "1114169000249", name: "Lõi lọc thô số 2 đúc nguyên khối GAC", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 4, code: "1114169000250", name: "Lõi lọc thô số 3 đúc nguyên khối PP 1 micron", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1114169000248", name: "Lõi lọc thô số 1 đúc nguyên khối PP 5 micron", cycle: 6 },
+            { pos: 2, code: "1114169000248", name: "Lõi lọc thô số 1 đúc nguyên khối PP 5 micron", cycle: 6 },
+            { pos: 3, code: "1114169000249", name: "Lõi lọc thô số 2 đúc nguyên khối GAC", cycle: 9 },
+            { pos: 4, code: "1114169000250", name: "Lõi lọc thô số 3 đúc nguyên khối PP 1 micron", cycle: 9 }
         ],
         "Hòa Phát Gói 2": [
-            { pos: 1, code: "1114169000200", name: "Lõi lọc thô số 1 PP 5 micron Hòa Phát", cycle: 6, y1: 2, y2: 2, y3: 2, y4: 2 },
-            { pos: 2, code: "1394169000039", name: "Lõi lọc thô Hòa Phát số 2 CTO - 10 inch", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 3, code: "1114169000202", name: "Lõi lọc thô số 3 PP 1 micron Hòa Phát", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1114169000200", name: "Lõi lọc thô số 1 PP 5 micron Hòa Phát", cycle: 6 },
+            { pos: 2, code: "1394169000039", name: "Lõi lọc thô Hòa Phát số 2 CTO - 10 inch", cycle: 9 },
+            { pos: 3, code: "1114169000202", name: "Lõi lọc thô số 3 PP 1 micron Hòa Phát", cycle: 9 }
         ],
         "Hòa Phát lõi thường": [
-            { pos: 1, code: "1114169000200", name: "Lõi lọc thô số 1 PP 5 micron Hòa Phát", cycle: 6, y1: 2, y2: 2, y3: 2, y4: 2 },
-            { pos: 2, code: "1114169000201", name: "Lõi lọc thô số 2 than hoạt tính Hòa Phát", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 3, code: "1114169000202", name: "Lõi lọc thô số 3 PP 1 micron Hòa Phát", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1114169000200", name: "Lõi lọc thô số 1 PP 5 micron Hòa Phát", cycle: 6 },
+            { pos: 2, code: "1114169000201", name: "Lõi lọc thô số 2 than hoạt tính Hòa Phát", cycle: 9 },
+            { pos: 3, code: "1114169000202", name: "Lõi lọc thô số 3 PP 1 micron Hòa Phát", cycle: 9 }
         ],
         "Hòa Phát lõi đúc": [
-            { pos: 1, code: "1114169000248", name: "Lõi lọc thô số 1 đúc nguyên khối PP 5 micron", cycle: 6, y1: 2, y2: 2, y3: 2, y4: 2 },
-            { pos: 2, code: "1114169000249", name: "Lõi lọc thô số 2 đúc nguyên khối GAC Hòa Phát", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 3, code: "1114169000250", name: "Lõi lọc thô số 3 đúc nguyên khối PP 1 micron", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1114169000248", name: "Lõi lọc thô số 1 đúc nguyên khối PP 5 micron", cycle: 6 },
+            { pos: 2, code: "1114169000249", name: "Lõi lọc thô số 2 đúc nguyên khối GAC Hòa Phát", cycle: 9 },
+            { pos: 3, code: "1114169000250", name: "Lõi lọc thô số 3 đúc nguyên khối PP 1 micron", cycle: 9 }
         ],
         "KAROFI": [
-            { pos: 1, code: "1114169000181", name: "Lõi lọc thô Smax Pro V1 Karofi", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 2, code: "1114169000182", name: "Lõi lọc thô Smax Pro V2 Karofi", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 3, code: "1114169000183", name: "Lõi lọc thô Smax Pro V3 Karofi", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1114169000181", name: "Lõi lọc thô Smax Pro V1 Karofi", cycle: 12 },
+            { pos: 2, code: "1114169000182", name: "Lõi lọc thô Smax Pro V2 Karofi", cycle: 12 },
+            { pos: 3, code: "1114169000183", name: "Lõi lọc thô Smax Pro V3 Karofi", cycle: 12 }
         ],
         "Karofi Gói 1": [
-            { pos: 1, code: "1394169000072", name: "Lõi Karofi số 1 Smax Master F1 (XL)", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 2, code: "1394169000073", name: "Lõi Karofi số 2 Smax Master F2 (XL)", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 3, code: "1394169000074", name: "Lõi Karofi số 3 Smax Master F3 (XL)", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1394169000072", name: "Lõi Karofi số 1 Smax Master F1 (XL)", cycle: 12 },
+            { pos: 2, code: "1394169000073", name: "Lõi Karofi số 2 Smax Master F2 (XL)", cycle: 12 },
+            { pos: 3, code: "1394169000074", name: "Lõi Karofi số 3 Smax Master F3 (XL)", cycle: 12 }
         ],
         "Kangaroo gói 1": [
-            { pos: 1, code: "4842053000279", name: "Lõi Kangaroo số 1 sợi pp 5 micron", cycle: 6, y1: 2, y2: 2, y3: 2, y4: 2 },
-            { pos: 2, code: "4842053000280", name: "Lõi Kangaroo số 2 than hoạt tính", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 3, code: "1394169000003", name: "Lõi Cation", cycle: 6, y1: 2, y2: 2, y3: 2, y4: 2 },
-            { pos: 4, code: "4842053000281", name: "Lõi Kangaroo số 3 sợi pp 1 micron", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "4842053000279", name: "Lõi Kangaroo số 1 sợi pp 5 micron", cycle: 6 },
+            { pos: 2, code: "4842053000280", name: "Lõi Kangaroo số 2 than hoạt tính", cycle: 9 },
+            { pos: 3, code: "1394169000003", name: "Lõi Cation", cycle: 6 },
+            { pos: 4, code: "4842053000281", name: "Lõi Kangaroo số 3 sợi pp 1 micron", cycle: 12 }
         ],
         "Kangaroo Gói 2": [
-            { pos: 1, code: "1394169000069", name: "Lõi số 1 Kangaroo Purion-PP 5µm (XB)", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 2, code: "1394169000070", name: "Lõi số 2 Kangaroo Purion-Activated Carbon", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 3, code: "1394169000071", name: "Lõi số 3 Kangaroo Purion-PP 1µm (XB)", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1394169000069", name: "Lõi số 1 Kangaroo Purion-PP 5µm (XB)", cycle: 12 },
+            { pos: 2, code: "1394169000070", name: "Lõi số 2 Kangaroo Purion-Activated Carbon", cycle: 12 },
+            { pos: 3, code: "1394169000071", name: "Lõi số 3 Kangaroo Purion-PP 1µm (XB)", cycle: 12 }
         ],
         "Kangaroo lõi thường": [
-            { pos: 1, code: "4842053000279", name: "Lõi Kangaroo số 1 sợi pp 5 micron", cycle: 6, y1: 2, y2: 2, y3: 2, y4: 2 },
-            { pos: 2, code: "4842053000280", name: "Lõi Kangaroo số 2 than hoạt tính", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 3, code: "4842053000281", name: "Lõi Kangaroo số 3 sợi pp 1 micron", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "4842053000279", name: "Lõi Kangaroo số 1 sợi pp 5 micron", cycle: 6 },
+            { pos: 2, code: "4842053000280", name: "Lõi Kangaroo số 2 than hoạt tính", cycle: 9 },
+            { pos: 3, code: "4842053000281", name: "Lõi Kangaroo số 3 sợi pp 1 micron", cycle: 12 }
         ],
         "Kangaroo lõi đúc": [
-            { pos: 1, code: "1114169000116", name: "Lõi Kangaroo T33 to PP 5M trắng sứ (SX)", cycle: 6, y1: 2, y2: 2, y3: 2, y4: 2 },
-            { pos: 2, code: "1114169000117", name: "Lõi Kangaroo T33 to than GAC trắng sứ (SX)", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 3, code: "1114169000118", name: "Lõi Kangaroo T33 to PP 1M trắng sứ (SX)", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1114169000116", name: "Lõi Kangaroo T33 to PP 5M trắng sứ (SX)", cycle: 6 },
+            { pos: 2, code: "1114169000117", name: "Lõi Kangaroo T33 to than GAC trắng sứ (SX)", cycle: 9 },
+            { pos: 3, code: "1114169000118", name: "Lõi Kangaroo T33 to PP 1M trắng sứ (SX)", cycle: 12 }
         ],
         "Mutosi gói 1": [
-            { pos: 1, code: "1114169000149", name: "Lõi Mutosi số 1 PP5 micron 10 inch đầu nhanh", cycle: 6, y1: 2, y2: 2, y3: 2, y4: 2 },
-            { pos: 2, code: "1114169000149", name: "Lõi Mutosi số 1 PP5 micron 10 inch đầu nhanh", cycle: 6, y1: 2, y2: 2, y3: 2, y4: 2 },
-            { pos: 3, code: "1114169000150", name: "Lõi Mutosi số 2 OCB-GAC 10 inch nối nhanh", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 4, code: "1114169000151", name: "Lõi Mutosi số 3 PP1 micron 10 inch nối nhanh", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1114169000149", name: "Lõi Mutosi số 1 PP5 micron 10 inch đầu nhanh", cycle: 6 },
+            { pos: 2, code: "1114169000149", name: "Lõi Mutosi số 1 PP5 micron 10 inch đầu nhanh", cycle: 6 },
+            { pos: 3, code: "1114169000150", name: "Lõi Mutosi số 2 OCB-GAC 10 inch nối nhanh", cycle: 9 },
+            { pos: 4, code: "1114169000151", name: "Lõi Mutosi số 3 PP1 micron 10 inch nối nhanh", cycle: 9 }
         ],
         "Mutosi gói 2": [
-            { pos: 1, code: "1114169000146", name: "Lõi Mutosi số 1 PP5 micron 10 inch", cycle: 6, y1: 2, y2: 2, y3: 2, y4: 2 },
-            { pos: 2, code: "1114169000150", name: "Lõi Mutosi số 2 OCB-GAC 10 inch nối nhanh", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 3, code: "1114169000151", name: "Lõi Mutosi số 3 PP1 micron 10 inch nối nhanh", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1114169000146", name: "Lõi Mutosi số 1 PP5 micron 10 inch", cycle: 6 },
+            { pos: 2, code: "1114169000150", name: "Lõi Mutosi số 2 OCB-GAC 10 inch nối nhanh", cycle: 9 },
+            { pos: 3, code: "1114169000151", name: "Lõi Mutosi số 3 PP1 micron 10 inch nối nhanh", cycle: 9 }
         ],
         "Mutosi gói 3": [
-            { pos: 1, code: "1394169000014", name: "Lõi Mutosi Xtra PP5 micron", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 2, code: "1394169000015", name: "Lõi Mutosi Xtra CTO tích hợp PP1", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1394169000014", name: "Lõi Mutosi Xtra PP5 micron", cycle: 12 },
+            { pos: 2, code: "1394169000015", name: "Lõi Mutosi Xtra CTO tích hợp PP1", cycle: 12 }
         ],
         "Mutosi gói 4": [
-            { pos: 1, code: "1114169000146", name: "Lõi Mutosi số 1 PP5 micron 10 inch", cycle: 6, y1: 2, y2: 2, y3: 2, y4: 2 },
-            { pos: 2, code: "1394169000010", name: "Lõi lọc tích hợp PP1 và CTO", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1114169000146", name: "Lõi Mutosi số 1 PP5 micron 10 inch", cycle: 6 },
+            { pos: 2, code: "1394169000010", name: "Lõi lọc tích hợp PP1 và CTO", cycle: 9 }
         ],
         "Mutosi gói 5": [
-            { pos: 1, code: "1114169000146", name: "Lõi Mutosi số 1 PP5 micron 10 inch", cycle: 6, y1: 2, y2: 2, y3: 2, y4: 2 },
-            { pos: 2, code: "1114169000156", name: "Lõi lọc Mutosi số 3 CTO 10 inch", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 3, code: "1114169000148", name: "Lõi Mutosi số 3 PP1 micron 10 inch", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1114169000146", name: "Lõi Mutosi số 1 PP5 micron 10 inch", cycle: 6 },
+            { pos: 2, code: "1114169000156", name: "Lõi lọc Mutosi số 3 CTO 10 inch", cycle: 9 },
+            { pos: 3, code: "1114169000148", name: "Lõi Mutosi số 3 PP1 micron 10 inch", cycle: 9 }
         ],
         "Mutosi lõi thường": [
-            { pos: 1, code: "1114169000146", name: "Lõi Mutosi số 1 PP5 micron 10 inch", cycle: 6, y1: 2, y2: 2, y3: 2, y4: 2 },
-            { pos: 2, code: "1114169000147", name: "Lõi Mutosi số 2 OCB-GAC 10 inch", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 3, code: "1114169000148", name: "Lõi Mutosi số 3 PP1 micron 10 inch", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1114169000146", name: "Lõi Mutosi số 1 PP5 micron 10 inch", cycle: 6 },
+            { pos: 2, code: "1114169000147", name: "Lõi Mutosi số 2 OCB-GAC 10 inch", cycle: 9 },
+            { pos: 3, code: "1114169000148", name: "Lõi Mutosi số 3 PP1 micron 10 inch", cycle: 9 }
         ],
         "Mutosi lõi đúc": [
-            { pos: 1, code: "1114169000149", name: "Lõi Mutosi số 1 PP5 micron 10 inch nối nhanh", cycle: 6, y1: 2, y2: 2, y3: 2, y4: 2 },
-            { pos: 2, code: "1114169000150", name: "Lõi Mutosi số 2 OCB-GAC 10 inch nối nhanh", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 3, code: "1114169000151", name: "Lõi Mutosi số 3 PP1 micron 10 inch nối nhanh", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1114169000149", name: "Lõi Mutosi số 1 PP5 micron 10 inch nối nhanh", cycle: 6 },
+            { pos: 2, code: "1114169000150", name: "Lõi Mutosi số 2 OCB-GAC 10 inch nối nhanh", cycle: 9 },
+            { pos: 3, code: "1114169000151", name: "Lõi Mutosi số 3 PP1 micron 10 inch nối nhanh", cycle: 9 }
         ],
         "Sunhouse Gói 1": [
-            { pos: 1, code: "1394169000050", name: "Lõi Ultra365 PP5 Micron", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 2, code: "1394169000051", name: "Lõi Ultra365 CTO", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 3, code: "1394169000052", name: "Lõi Ultra365 PP1 Micron", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1394169000050", name: "Lõi Ultra365 PP5 Micron", cycle: 12 },
+            { pos: 2, code: "1394169000051", name: "Lõi Ultra365 CTO", cycle: 12 },
+            { pos: 3, code: "1394169000052", name: "Lõi Ultra365 PP1 Micron", cycle: 12 }
         ],
         "Sunhouse lõi thường": [
-            { pos: 1, code: "4842053000287", name: "Lõi Sunhouse số 1 sợi PP 5 micron", cycle: 6, y1: 2, y2: 2, y3: 2, y4: 2 },
-            { pos: 2, code: "4842053000288", name: "Lõi Sunhouse số 2 than hoạt tính", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 3, code: "4842053000289", name: "Lõi Sunhouse số 3 sợi PP 1 micron", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "4842053000287", name: "Lõi Sunhouse số 1 sợi PP 5 micron", cycle: 6 },
+            { pos: 2, code: "4842053000288", name: "Lõi Sunhouse số 2 than hoạt tính", cycle: 9 },
+            { pos: 3, code: "4842053000289", name: "Lõi Sunhouse số 3 sợi PP 1 micron", cycle: 9 }
         ],
         "Sunhouse lõi đúc": [
-            { pos: 1, code: "1114169000237", name: "Lõi lọc thô số 1 PP 5 micron SHA-WFPP5", cycle: 6, y1: 2, y2: 2, y3: 2, y4: 2 },
-            { pos: 2, code: "1114169000238", name: "Lõi lọc thô số 2 than hoạt tính SHA-WFGAC", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 3, code: "1114169000239", name: "Lõi lọc thô số 3 PP 1 micron SHA-WFPP1", cycle: 9, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1114169000237", name: "Lõi lọc thô số 1 PP 5 micron SHA-WFPP5", cycle: 6 },
+            { pos: 2, code: "1114169000238", name: "Lõi lọc thô số 2 than hoạt tính SHA-WFGAC", cycle: 9 },
+            { pos: 3, code: "1114169000239", name: "Lõi lọc thô số 3 PP 1 micron SHA-WFPP1", cycle: 9 }
         ],
         "Toshiba": [
-            { pos: 1, code: "1114169000251", name: "Lõi lọc thô số 1 FPC-S1 Toshiba", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1114169000251", name: "Lõi lọc thô số 1 FPC-S1 Toshiba", cycle: 12 }
         ],
         "Toshiba gói 1": [
-            { pos: 1, code: "1394169000058", name: "Lõi Lọc Toshiba F-A3-PP PLUS", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 2, code: "1394169000059", name: "Lõi Lọc F-A3-CTO", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 3, code: "1394169000060", name: "Lõi Lọc Toshiba F-A3-PP", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1394169000058", name: "Lõi Lọc Toshiba F-A3-PP PLUS", cycle: 12 },
+            { pos: 2, code: "1394169000059", name: "Lõi Lọc F-A3-CTO", cycle: 12 },
+            { pos: 3, code: "1394169000060", name: "Lõi Lọc Toshiba F-A3-PP", cycle: 12 }
         ],
         "Livotec": [
-            { pos: 1, code: "1394169000040", name: "Lõi Livotec Max Performance 1", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 2, code: "1394169000041", name: "Lõi Livotec Max Performance 2", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 3, code: "1394169000042", name: "Lõi Livotec Max Performance 3", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1394169000040", name: "Lõi Livotec Max Performance 1", cycle: 12 },
+            { pos: 2, code: "1394169000041", name: "Lõi Livotec Max Performance 2", cycle: 12 },
+            { pos: 3, code: "1394169000042", name: "Lõi Livotec Max Performance 3", cycle: 12 }
         ],
         "Korihome Gói 1": [
-            { pos: 1, code: "1114169000025", name: "Lõi Sediment sợi PP 5 micron", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 2, code: "1114169000026", name: "Lõi Pre-Carbon than hoạt tính", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 3, code: "1114169000026", name: "Lõi Pre-Carbon than hoạt tính", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1114169000025", name: "Lõi Sediment sợi PP 5 micron", cycle: 12 },
+            { pos: 2, code: "1114169000026", name: "Lõi Pre-Carbon than hoạt tính", cycle: 12 },
+            { pos: 3, code: "1114169000026", name: "Lõi Pre-Carbon than hoạt tính", cycle: 12 }
         ],
         "Korihome Gói 2": [
-            { pos: 1, code: "1114169000025", name: "Lõi Sediment sợi PP 5 micron", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 2, code: "1114169000025", name: "Lõi Sediment sợi PP 5 micron", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 3, code: "1114169000026", name: "Lõi Pre-Carbon than hoạt tính", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 },
-            { pos: 4, code: "1114169000026", name: "Lõi Pre-Carbon than hoạt tính", cycle: 12, y1: 1, y2: 1, y3: 1, y4: 1 }
+            { pos: 1, code: "1114169000025", name: "Lõi Sediment sợi PP 5 micron", cycle: 12 },
+            { pos: 2, code: "1114169000025", name: "Lõi Sediment sợi PP 5 micron", cycle: 12 },
+            { pos: 3, code: "1114169000026", name: "Lõi Pre-Carbon than hoạt tính", cycle: 12 },
+            { pos: 4, code: "1114169000026", name: "Lõi Pre-Carbon than hoạt tính", cycle: 12 }
         ]
     };
 
-    // Danh sách máy lọc nước đại diện (Nguồn: Ảnh 2)
+    // Danh sách sản phẩm máy lọc nước (Nguồn: Ảnh 2)
     const PRODUCTS_DB = [
         { code: "1114171000204", name: "Máy lọc nước RO nóng lạnh tủ đứng Hydrogen ion kiềm Hòa Phát HyperS HPA886 12 lõi (Imei)", brand: "Hòa Phát", pkg: "Hòa Phát Gói 2" },
         { code: "1114171000197", name: "Máy lọc nước RO nóng lạnh tủ đứng Hòa Phát HPN639 12 lõi (Imei)", brand: "Hòa Phát", pkg: "Hòa Phát Gói 2" },
@@ -246,7 +256,6 @@
         { code: "1114171000121", name: "Máy lọc nước RO nóng lạnh tủ đứng Hòa Phát HWBS3A 1021 10 lõi (Imei)", brand: "Hòa Phát", pkg: "Hòa Phát lõi thường" },
         { code: "1114171000126", name: "Máy lọc nước RO nóng lạnh tủ đứng Hòa Phát HPN635 10 lõi (Imei)", brand: "Hòa Phát", pkg: "Hòa Phát lõi thường" },
         { code: "1114172000070", name: "Máy lọc nước RO âm tủ Hòa Phát HWU1A 1022 10 lõi (Imei)", brand: "Hòa Phát", pkg: "Hòa Phát lõi thường" },
-        
         { code: "1114171000206", name: "Máy lọc nước RO nóng nguội lạnh tủ đứng Karofi KAD-X69 12 lõi (Imei)", brand: "KAROFI", pkg: "KAROFI" },
         { code: "1114171000209", name: "Máy lọc nước RO nóng nguội lạnh tủ đứng Hydro-ion kiềm Karofi KAE-S695 13 lõi (Imei)", brand: "KAROFI", pkg: "KAROFI" },
         { code: "1114171000200", name: "Máy lọc nước RO nóng nguội lạnh tủ đứng Hydro-ion kiềm Karofi KAE-S688 12 lõi (Imei)", brand: "KAROFI", pkg: "KAROFI" },
@@ -258,7 +267,6 @@
         { code: "1114171000091", name: "Máy lọc nước RO nóng lạnh Karofi KAD-X60 10 lõi (Imei)", brand: "KAROFI", pkg: "KAROFI" },
         { code: "1114171000237", name: "Máy lọc nước RO nóng nguội lạnh tủ đứng Karofi PLATINUM S6 12 lõi (Imei)", brand: "KAROFI", pkg: "Karofi Gói 1" },
         { code: "1114171000238", name: "Máy lọc nước RO tủ đứng Karofi PLATINUM S2 12 lõi (Imei)", brand: "KAROFI", pkg: "Karofi Gói 1" },
-
         { code: "1114171000162", name: "Máy lọc nước RO nóng lạnh tủ đứng Kangaroo KG12A8 12 lõi (IMEI)", brand: "Kangaroo", pkg: "Kangaroo gói 1" },
         { code: "1114171000119", name: "Máy lọc nước RO nóng lạnh tủ đứng Kangaroo KG10A13 10 lõi (IMEI)", brand: "Kangaroo", pkg: "Kangaroo lõi đúc" },
         { code: "1114171000137", name: "Máy lọc nước RO nóng nguội lạnh tủ đứng Kangaroo KG10A17 10 lõi (IMEI)", brand: "Kangaroo", pkg: "Kangaroo lõi đúc" },
@@ -268,7 +276,6 @@
         { code: "1114171000188", name: "Máy lọc nước RO tủ đứng nóng lạnh ion kiềm Kangaroo KGHC12A2 12 lõi (IMEI)", brand: "Kangaroo", pkg: "Kangaroo lõi thường" },
         { code: "1114171000223", name: "Máy lọc nước RO nóng nguội lạnh tủ đứng Kangaroo KGHC11A4 11 lõi (IMEI)", brand: "Kangaroo", pkg: "Kangaroo Gói 2" },
         { code: "1114171000226", name: "Máy lọc nước RO nóng nguội lạnh tủ đứng Kangaroo KG12S3H3 12 lõi (IMEI)", brand: "Kangaroo", pkg: "Kangaroo Gói 2" },
-
         { code: "1114171000068", name: "Máy lọc nước RO âm tủ Mutosi MP-1101 11 lõi KG (Imei)", brand: "MUTOSI", pkg: "Mutosi gói 1" },
         { code: "1114171000199", name: "Máy lọc nước RO nóng lạnh Ion kiềm tủ đứng Mutosi MP-P89K 9 lõi (Imei)", brand: "MUTOSI", pkg: "Mutosi gói 4" },
         { code: "1114171000240", name: "Máy lọc nước RO nguội lạnh ion kiềm Hydrogen tủ đứng Mutosi MP-P88N 10 lõi (Imei)", brand: "MUTOSI", pkg: "Mutosi gói 3" },
@@ -276,21 +283,17 @@
         { code: "1114171000210", name: "Máy lọc nước RO tủ đứng Mutosi MP-S126 10 lõi (Imei)", brand: "MUTOSI", pkg: "Mutosi gói 3" },
         { code: "1114172000101", name: "Máy lọc nước RO âm tủ Mutosi MP-U28H 11 lõi (Imei)", brand: "MUTOSI", pkg: "Mutosi gói 5" },
         { code: "1114171000115", name: "Máy lọc nước RO nóng nguội lạnh tủ đứng Mutosi MP-S1011 10 lõi KG (Imei)", brand: "MUTOSI", pkg: "Mutosi lõi đúc" },
-
         { code: "1114171000216", name: "Máy lọc nước RO nóng lạnh tủ đứng Sunhouse UltraX SHA76656LA 12 lõi (Imei)", brand: "Sunhouse", pkg: "Sunhouse Gói 1" },
         { code: "1114171000217", name: "Máy lọc nước RO nóng lạnh tủ đứng Sunhouse UltraX SHA76258LA 12 lõi (Imei)", brand: "Sunhouse", pkg: "Sunhouse Gói 1" },
         { code: "1114171000196", name: "Máy lọc nước RO nóng lạnh tủ đứng Sunhouse UltraX SHA76688SH 11 lõi (Imei)", brand: "Sunhouse", pkg: "Sunhouse lõi đúc" },
         { code: "1114171000133", name: "Máy lọc nước RO nóng lạnh tủ đứng Sunhouse SHA76622KL 10 lõi (Imei)", brand: "Sunhouse", pkg: "Sunhouse lõi đúc" },
         { code: "1114171000181", name: "Máy lọc nước RO nóng lạnh tủ đứng Sunhouse SHA76623KL 11 lõi (Imei)", brand: "Sunhouse", pkg: "Sunhouse lõi thường" },
         { code: "1114171000106", name: "Máy lọc nước RO nóng lạnh Sunhouse SHA76219CK 10 lõi KG (Imei)", brand: "Sunhouse", pkg: "Sunhouse lõi thường" },
-
         { code: "1114171000225", name: "Máy lọc nước RO nóng lạnh tủ đứng Toshiba TWP-IW2469SVN(K) 10 lõi (IMEI)", brand: "Toshiba", pkg: "Toshiba" },
         { code: "1114171000174", name: "Máy lọc nước RO nóng lạnh tủ đứng Toshiba TWP-W2399SVN(M) 10 lõi (IMEI)", brand: "Toshiba", pkg: "Toshiba" },
         { code: "1114171000219", name: "Máy lọc nước RO nóng nguội lạnh tủ đứng Toshiba TWP-WA3SVN(K) 10 lõi (IMEI)", brand: "Toshiba", pkg: "Toshiba gói 1" },
-
         { code: "1113219000083", name: "Máy lọc nước nóng lạnh RO Korihome WPK-903 (Imei)", brand: "KoriHome", pkg: "Korihome Gói 1" },
         { code: "1114171000215", name: "Máy lọc nước RO nóng nguội lạnh tủ đứng Korihome WPK-965 12 lõi (Imei)", brand: "KoriHome", pkg: "Korihome Gói 2" },
-
         { code: "1114171000221", name: "Máy lọc nước RO nóng nguội lạnh tủ đứng Livotec 828 12 lõi (Imei)", brand: "LIVOTEC", pkg: "Livotec" },
         { code: "1114171000183", name: "Máy lọc nước RO tủ đứng Livotec 638 10 lõi (Imei)", brand: "LIVOTEC", pkg: "Livotec" },
         { code: "1114171000186", name: "Máy lọc nước RO tủ đứng Livotec 608 10 lõi (Imei)", brand: "LIVOTEC", pkg: "Livotec" }
@@ -308,16 +311,20 @@
         .ll-btn-close { position:absolute; right:20px; background:#ffeaa7; color:#d63031; border:none; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; transition:0.2s; }
         .ll-btn-close:hover { background:#d63031; color:white; }
 
-        .ll-body { padding:20px; display:flex; flex-direction:column; gap:16px; max-width:650px; margin:0 auto; width:100%; }
+        .ll-body { padding:20px; display:flex; flex-direction:column; gap:16px; max-width:680px; margin:0 auto; width:100%; }
         .ll-card { background:#fff; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.05); padding:16px; border:1px solid #e1e8ed; }
 
-        /* Search Autocomplete */
-        .ll-search-wrap { position:relative; width:100%; }
-        .ll-search-input { width:100%; padding:10px 14px; border:2px solid #0984e3; border-radius:8px; font-size:14px; outline:none; transition:0.2s; }
+        /* Search Input & Clear Button */
+        .ll-search-wrap { position:relative; width:100%; display:flex; align-items:center; }
+        .ll-search-input { width:100%; padding:10px 38px 10px 14px; border:2px solid #0984e3; border-radius:8px; font-size:14px; outline:none; transition:0.2s; }
         .ll-search-input:focus { box-shadow:0 0 8px rgba(9,132,227,0.3); }
+        .ll-btn-clear { position:absolute; right:10px; background:#dfe6e9; border:none; border-radius:50%; width:22px; height:22px; display:none; align-items:center; justify-content:center; cursor:pointer; font-size:12px; font-weight:bold; color:#636e72; }
+        .ll-btn-clear:hover { background:#ff7675; color:white; }
+
+        /* Autocomplete List */
         .ll-autocomplete-list { position:absolute; top:calc(100% + 4px); left:0; right:0; background:#fff; border:1px solid #dfe6e9; border-radius:8px; max-height:220px; overflow-y:auto; z-index:99; box-shadow:0 6px 20px rgba(0,0,0,0.15); display:none; }
         .ll-autocomplete-item { padding:10px 12px; font-size:13px; cursor:pointer; border-bottom:1px solid #f1f2f6; display:flex; flex-direction:column; gap:2px; }
-        .ll-autocomplete-item:hover, .ll-autocomplete-item.active { background:#e8f4fd; }
+        .ll-autocomplete-item:hover { background:#e8f4fd; }
         .ll-item-name { font-weight:600; color:#2d3436; }
         .ll-item-sub { font-size:11px; color:#636e72; }
 
@@ -329,19 +336,28 @@
         .ll-badge { display:inline-block; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:11px; background:#e1f5fe; color:#0288d1; }
         .ll-badge-danger { background:#ffebee; color:#c62828; }
 
-        .ll-sec-title { font-size:14px; font-weight:bold; color:#0984e3; text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:6px; border-bottom:2px solid #0984e3; padding-bottom:5px; }
+        .ll-sec-title { font-size:14px; font-weight:bold; color:#0984e3; text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid #0984e3; padding-bottom:5px; }
         .ll-txt-right { text-align:right !important; }
         .ll-txt-left { text-align:left !important; }
         .ll-txt-bold { font-weight:bold; }
         .ll-price-sale { color:#d63031; font-weight:bold; }
+
+        /* Nút Xem chi tiết tiến độ */
+        .ll-btn-toggle { background:#e8f4fd; color:#0984e3; border:1px solid #0984e3; padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s; }
+        .ll-btn-toggle:hover { background:#0984e3; color:white; }
+
+        /* Bảng Tiến độ Quý/Tháng (Ảnh 1) */
+        .ll-timeline-box { display:none; margin-top:14px; animation:fadeIn 0.25s forwards; }
+        .ll-subth { font-size:11px; background:#fff3e0 !important; font-weight:600; }
+        .ll-cell-active { background:#e8f5e9; color:#2e7d32; font-weight:bold; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(-5px); } to { opacity:1; transform:translateY(0); } }
     `;
 
     // ===============================================================
-    // 3. TIỆN ÍCH TÍNH TOÁN VÀ RENDER
+    // 3. TIỆN ÍCH TÍNH TOÁN
     // ===============================================================
     const formatNum = (x) => x ? Number(x).toLocaleString('vi-VN') + ' đ' : '0 đ';
     
-    // Chuẩn hóa loại bỏ dấu tiếng Việt để tìm kiếm thông minh
     const normalizeStr = (str) => {
         return (str || "").toLowerCase()
             .normalize("NFD")
@@ -368,6 +384,7 @@
                         </label>
                         <div class="ll-search-wrap">
                             <input type="text" id="ll-search" class="ll-search-input" placeholder="Ví dụ: KAD-X69, Hòa Phát, 886, S695, MP-P89K..." autocomplete="off">
+                            <button id="ll-btn-clear" class="ll-btn-clear" title="Xóa tìm kiếm">✖</button>
                             <div id="ll-suggestions" class="ll-autocomplete-list"></div>
                         </div>
                     </div>
@@ -411,9 +428,13 @@
                             </table>
                         </div>
 
-                        <!-- Bảng 3: Chi Tiết Từng Lõi Lọc Sẽ Thay (Ảnh 1) -->
+                        <!-- Bảng 3: Chi Tiết Lõi Lọc & Số Lượng Thay Từng Năm -->
                         <div class="ll-card">
-                            <div class="ll-sec-title">🔧 Chi Tiết Lõi Lọc & Chu Kỳ Thay</div>
+                            <div class="ll-sec-title">
+                                <span>🔧 Chi Tiết Lõi Lọc & Chu Kỳ</span>
+                                <button id="btn-toggle-timeline" class="ll-btn-toggle">📅 Xem lịch trình chi tiết ▼</button>
+                            </div>
+
                             <div style="overflow-x:auto;">
                                 <table class="ll-table" id="res-detail-table">
                                     <thead>
@@ -432,6 +453,35 @@
                                     <tbody></tbody>
                                 </table>
                             </div>
+
+                            <!-- Panel Mở Rộng: Lịch Trình Quý/Tháng (Ảnh 1) -->
+                            <div id="ll-timeline-box" class="ll-timeline-box">
+                                <div style="font-size:12px; font-weight:bold; color:#e67e22; margin-bottom:6px;">
+                                    📋 TIẾN ĐỘ THAY LÕI CHI TIẾT THEO TỪNG THÁNG/QUÝ (4 NĂM):
+                                </div>
+                                <div style="overflow-x:auto;">
+                                    <table class="ll-table" id="res-schedule-table" style="font-size:11px;">
+                                        <thead>
+                                            <tr>
+                                                <th rowspan="2">VT</th>
+                                                <th rowspan="2" style="min-width:120px;">Tên Lõi</th>
+                                                <th colspan="4" style="background:#e3f2fd;">NĂM 1</th>
+                                                <th colspan="4" style="background:#fff3e0;">NĂM 2</th>
+                                                <th colspan="4" style="background:#e8f5e9;">NĂM 3</th>
+                                                <th colspan="4" style="background:#fce4ec;">NĂM 4</th>
+                                            </tr>
+                                            <tr>
+                                                <th class="ll-subth">T1-3</th><th class="ll-subth">T4-6</th><th class="ll-subth">T7-9</th><th class="ll-subth">T10-12</th>
+                                                <th class="ll-subth">T1-3</th><th class="ll-subth">T4-6</th><th class="ll-subth">T7-9</th><th class="ll-subth">T10-12</th>
+                                                <th class="ll-subth">T1-3</th><th class="ll-subth">T4-6</th><th class="ll-subth">T7-9</th><th class="ll-subth">T10-12</th>
+                                                <th class="ll-subth">T1-3</th><th class="ll-subth">T4-6</th><th class="ll-subth">T7-9</th><th class="ll-subth">T10-12</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
                         </div>
 
                     </div>
@@ -444,17 +494,41 @@
             document.head.appendChild(style);
 
             // ===============================================================
-            // 4. LOGIC TRA CỨU VÀ TƯƠNG TÁC
+            // 4. LOGIC XỬ LÝ SỰ KIỆN & GIAO DIỆN
             // ===============================================================
             const searchInput = app.querySelector('#ll-search');
+            const clearBtn = app.querySelector('#ll-btn-clear');
             const suggestBox = app.querySelector('#ll-suggestions');
             const resultWrap = app.querySelector('#ll-result-container');
+            const btnToggleTimeline = app.querySelector('#btn-toggle-timeline');
+            const timelineBox = app.querySelector('#ll-timeline-box');
 
             app.querySelector('#ll-btn-close').onclick = () => { app.style.display = 'none'; };
 
-            // Gợi ý khi gõ tìm kiếm
+            // Nút Xem chi tiết tiến độ
+            btnToggleTimeline.onclick = () => {
+                const isHidden = timelineBox.style.display === 'none' || timelineBox.style.display === '';
+                timelineBox.style.display = isHidden ? 'block' : 'none';
+                btnToggleTimeline.innerText = isHidden ? '▲ Thu gọn chi tiết' : '📅 Xem lịch trình chi tiết ▼';
+            };
+
+            // Nút Xóa nhanh (X)
+            clearBtn.onclick = () => {
+                searchInput.value = '';
+                clearBtn.style.display = 'none';
+                suggestBox.style.display = 'none';
+                resultWrap.style.display = 'none';
+                timelineBox.style.display = 'none';
+                btnToggleTimeline.innerText = '📅 Xem lịch trình chi tiết ▼';
+                searchInput.focus();
+            };
+
+            // Tìm kiếm khi gõ
             searchInput.addEventListener('input', (e) => {
-                const q = normalizeStr(e.target.value.trim());
+                const val = e.target.value;
+                clearBtn.style.display = val ? 'flex' : 'none';
+
+                const q = normalizeStr(val.trim());
                 if (!q) {
                     suggestBox.style.display = 'none';
                     return;
@@ -464,23 +538,20 @@
                     normalizeStr(p.name).includes(q) || 
                     normalizeStr(p.code).includes(q) || 
                     normalizeStr(p.brand).includes(q)
-                ).slice(0, 10); // Giới hạn 10 gợi ý
+                ).slice(0, 10);
 
                 if (matches.length > 0) {
                     suggestBox.innerHTML = matches.map((p, idx) => `
                         <div class="ll-autocomplete-item" data-idx="${idx}">
                             <span class="ll-item-name">${p.name}</span>
-                            <span class="ll-item-sub">Hãng: <b>${p.brand}</b> | Mã SP: ${p.code} | Gói: <b>${p.pkg}</b></span>
+                            <span class="ll-item-sub">Hãng: <b>${p.brand}</b> | Gói: <b>${p.pkg}</b></span>
                         </div>
                     `).join('');
-                    
                     suggestBox.style.display = 'block';
 
-                    // Gán sự kiện click vào từng gợi ý
                     suggestBox.querySelectorAll('.ll-autocomplete-item').forEach(el => {
                         el.addEventListener('click', () => {
-                            const selected = matches[el.getAttribute('data-idx')];
-                            showProductDetail(selected);
+                            showProductDetail(matches[el.getAttribute('data-idx')]);
                         });
                     });
                 } else {
@@ -489,16 +560,17 @@
                 }
             });
 
-            // Ẩn bảng gợi ý khi click ra ngoài
+            // Ẩn bảng gợi ý khi click bên ngoài
             document.addEventListener('click', (e) => {
                 if (!searchInput.contains(e.target) && !suggestBox.contains(e.target)) {
                     suggestBox.style.display = 'none';
                 }
             });
 
-            // Hàm hiển thị toàn bộ chi tiết sau khi chọn máy
+            // Hàm hiển thị toàn bộ thông tin
             const showProductDetail = (p) => {
                 searchInput.value = p.name;
+                clearBtn.style.display = 'flex';
                 suggestBox.style.display = 'none';
                 resultWrap.style.display = 'flex';
 
@@ -521,7 +593,6 @@
 
                     priceTableTbody.innerHTML = discounts.map(d => {
                         const item = pricing[d.key];
-                        // Làm tròn giá giảm đến hàng nghìn
                         const salePrice = Math.round((item.price * (1 - d.rate)) / 1000) * 1000;
                         return `
                             <tr>
@@ -533,49 +604,79 @@
                             </tr>
                         `;
                     }).join('');
-                } else {
-                    priceTableTbody.innerHTML = `<tr><td colspan="5">Chưa có dữ liệu giá cho gói này.</td></tr>`;
                 }
 
-                // Bảng 3: Chi tiết từng lõi lọc & chu kỳ
+                // Bảng 3 & Bảng Timeline chi tiết (Ảnh 1)
                 const filters = FILTER_DETAILS_DB[p.pkg] || [];
                 const detailTbody = app.querySelector('#res-detail-table tbody');
+                const scheduleTbody = app.querySelector('#res-schedule-table tbody');
 
                 if (filters.length > 0) {
                     let totalY1 = 0, totalY2 = 0, totalY3 = 0, totalY4 = 0;
+                    let scheduleRowsHtml = '';
 
                     let rowsHtml = filters.map(f => {
-                        const sum4Y = (f.y1 + f.y2 + f.y3 + f.y4);
-                        totalY1 += f.y1; totalY2 += f.y2; totalY3 += f.y3; totalY4 += f.y4;
+                        const sched = SCHEDULE_CYCLES[f.cycle] || SCHEDULE_CYCLES[12];
+                        const cntY1 = sched[0].reduce((a, b) => a + b, 0);
+                        const cntY2 = sched[1].reduce((a, b) => a + b, 0);
+                        const cntY3 = sched[2].reduce((a, b) => a + b, 0);
+                        const cntY4 = sched[3].reduce((a, b) => a + b, 0);
+                        const totalFilter = cntY1 + cntY2 + cntY3 + cntY4;
+
+                        totalY1 += cntY1; totalY2 += cntY2; totalY3 += cntY3; totalY4 += cntY4;
+
+                        // Tạo các ô cho bảng timeline quý/tháng
+                        const allQuarters = [...sched[0], ...sched[1], ...sched[2], ...sched[3]];
+                        const tdQuarters = allQuarters.map(q => q > 0 ? `<td class="ll-cell-active">${q}</td>` : `<td>-</td>`).join('');
+                        
+                        scheduleRowsHtml += `
+                            <tr>
+                                <td>${f.pos}</td>
+                                <td class="ll-txt-left">${f.name}</td>
+                                ${tdQuarters}
+                            </tr>
+                        `;
+
                         return `
                             <tr>
                                 <td>${f.pos}</td>
-                                <td class="ll-txt-left" style="font-weight:600;">${f.name}</td>
+                                <td class="ll-txt-left ll-txt-bold">${f.name}</td>
                                 <td style="font-size:11px; color:#636e72;">${f.code}</td>
                                 <td><span class="ll-badge">${f.cycle} tháng</span></td>
-                                <td>${f.y1}</td>
-                                <td>${f.y2}</td>
-                                <td>${f.y3}</td>
-                                <td>${f.y4}</td>
-                                <td class="ll-txt-bold" style="color:#d63031;">${sum4Y}</td>
+                                <td>${cntY1}</td>
+                                <td>${cntY2}</td>
+                                <td>${cntY3}</td>
+                                <td>${cntY4}</td>
+                                <td class="ll-txt-bold" style="color:#d63031;">${totalFilter}</td>
                             </tr>
                         `;
                     }).join('');
 
-                    // Thêm dòng tổng cộng
+                    // Dòng Tổng số lõi từng năm
                     rowsHtml += `
                         <tr style="background:#f8f9fa; font-weight:bold;">
-                            <td colspan="4" class="ll-txt-right">TỔNG SỐ LÕI THAY:</td>
+                            <td colspan="4" class="ll-txt-right">SỐ LÕI THAY TRONG NĂM:</td>
                             <td style="color:#0984e3;">${totalY1}</td>
                             <td style="color:#0984e3;">${totalY2}</td>
                             <td style="color:#0984e3;">${totalY3}</td>
                             <td style="color:#0984e3;">${totalY4}</td>
                             <td style="color:#d63031;">${totalY1 + totalY2 + totalY3 + totalY4}</td>
                         </tr>
+                        <tr style="background:#e8f4fd; font-weight:bold;">
+                            <td colspan="4" class="ll-txt-right" style="color:#d63031;">TỔNG LŨY KẾ GÓI:</td>
+                            <td style="color:#d63031;">${totalY1}</td>
+                            <td style="color:#d63031;">${totalY1 + totalY2}</td>
+                            <td style="color:#d63031;">${totalY1 + totalY2 + totalY3}</td>
+                            <td style="color:#d63031;">${totalY1 + totalY2 + totalY3 + totalY4}</td>
+                            <td style="color:#d63031;">${totalY1 + totalY2 + totalY3 + totalY4}</td>
+                        </tr>
                     `;
+
                     detailTbody.innerHTML = rowsHtml;
+                    scheduleTbody.innerHTML = scheduleRowsHtml;
                 } else {
-                    detailTbody.innerHTML = `<tr><td colspan="9">Đang cập nhật chi tiết các lõi lọc...</td></tr>`;
+                    detailTbody.innerHTML = `<tr><td colspan="9">Đang cập nhật chi tiết...</td></tr>`;
+                    scheduleTbody.innerHTML = `<tr><td colspan="18">Đang cập nhật chi tiết...</td></tr>`;
                 }
             };
         }
